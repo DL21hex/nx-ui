@@ -189,5 +189,9 @@ gallery/             la galería (usa <nx-sidemenu> como su propia navegación)
 **Navegadores:** Chrome/Edge 123+, Safari 17.5+ y Firefox 125+. Importar la librería en el
 servidor (SSR) no lanza errores: los elementos solo se registran en el navegador.
 
-Los íconos de `nx-ui/icons` son de [Lucide](https://lucide.dev) (licencia ISC). Para regenerarlos:
-`node scripts/gen-icons.mjs`.
+Los íconos de `nx-ui/icons` son de [Lucide](https://lucide.dev) (licencia ISC, ver
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)). Para regenerarlos: `node scripts/gen-icons.mjs`.
+
+## Licencia
+
+[MIT](LICENSE).
