@@ -710,3 +710,58 @@ td:first-child {
   font-weight: 600;
   text-align: center;
 }
+
+/* ---------------------------------------------------------------- demo de captura */
+
+.cap-actions {
+  margin-block-end: 12px;
+}
+#cap-demo {
+  max-inline-size: none;
+}
+
+/* ---------------------------------------------------------------- demo de la tabla */
+
+.grid-try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-block-end: 12px;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+
+  & button {
+    padding: 4px 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: 14px;
+    background: var(--nx-card);
+    color: var(--nx-foreground);
+    font: inherit;
+    cursor: pointer;
+    &:hover {
+      background: var(--nx-hover);
+    }
+    &[aria-pressed="true"] {
+      border-color: var(--nx-primary-border);
+      background: var(--nx-primary-soft);
+      color: var(--nx-primary);
+    }
+  }
+}
+.grid-locale {
+  padding: 3px 8px;
+  border: 1px solid var(--nx-border);
+  border-radius: 14px;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+}
+.grid-mode {
+  display: inline-flex;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+#grid-demo {
+  max-inline-size: none;
+}

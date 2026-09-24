@@ -3,8 +3,9 @@ import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
-import { registerIcons, type MenuItem, type NxAiAnswer, type NxButton, type NxSelect, type NxSidemenu, type RunContext } from "../src/index";
+import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDocCapture, type NxGrid, type NxSelect, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
+import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 
 registerIcons(lucide);
 
@@ -73,7 +74,9 @@ const NAV: MenuItem[] = [
   { id: "sidemenu", label: "SideMenu", href: "#/sidemenu", icon: "clipboard-list", section: "Componentes" },
   { id: "button", label: "Button", href: "#/button", icon: "inbox", section: "Componentes" },
   { id: "select", label: "Select", href: "#/select", icon: "users", section: "Componentes" },
-  { id: "ai", label: "IA", href: "#/ai", icon: "circle-help", section: "Componentes", badge: "Nuevo" },
+  { id: "ai", label: "IA", href: "#/ai", icon: "circle-help", section: "Componentes" },
+  { id: "capture", label: "Captura", href: "#/capture", icon: "receipt", section: "Componentes" },
+  { id: "grid", label: "Tabla", href: "#/grid", icon: "chart-column", section: "Componentes", badge: "Nuevo" },
 ];
 nav.items = NAV;
 
@@ -84,6 +87,8 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/button": { template: "page-button", mount: mountButtonDemo },
   "#/select": { template: "page-select", mount: mountSelectDemo },
   "#/ai": { template: "page-ai", mount: mountAiDemo },
+  "#/capture": { template: "page-capture", mount: mountCaptureDemo },
+  "#/grid": { template: "page-grid", mount: mountGridDemo },
 };
 
 const page = document.querySelector<HTMLElement>("#page")!;
@@ -407,4 +412,88 @@ function mountPalettes(root: HTMLElement) {
     next.focus();
     next.click();
   });
+}
+
+// ---------------------------------------------------------------- demo de captura
+
+
+function mountCaptureDemo(root: HTMLElement) {
+  // Dentro de la función: `route()` corre al cargar el módulo, antes de las constantes de abajo.
+  const INVOICE_SCHEMA: CaptureSchemaItem[] = [
+    { key: "prov", label: "Proveedor", section: "Encabezado" },
+    { key: "nit", label: "NIT", section: "Encabezado" },
+    { key: "num", label: "Nº factura", section: "Encabezado" },
+    { key: "fecha", label: "Fecha", type: "date", section: "Encabezado" },
+    { key: "vence", label: "Vence", type: "date", section: "Encabezado" },
+    { key: "oc", label: "Orden de compra", section: "Encabezado" },
+    {
+      key: "items",
+      label: "Ítems",
+      type: "table",
+      section: "Detalle",
+      columns: [
+        { key: "desc", label: "Descripción" },
+        { key: "cantidad", label: "Cant.", type: "number" },
+        { key: "unitario", label: "V. unit.", type: "money" },
+        { key: "total", label: "Total", type: "money" },
+      ],
+    },
+    { key: "subtotal", label: "Subtotal", type: "money", section: "Totales" },
+    { key: "iva", label: "IVA 19 %", type: "money", section: "Totales" },
+    { key: "total", label: "Total", type: "money", section: "Totales" },
+  ];
+  const cap = root.querySelector<NxDocCapture>("#cap-demo")!;
+  cap.schema = INVOICE_SCHEMA;
+  const sample = root.querySelector<NxButton>("#cap-sample")!;
+  // El botón solo espera la descarga del ejemplo; el avance de la lectura lo muestra el componente.
+  sample.addEventListener("click", () =>
+    void sample.run(async () => {
+      const blob = await (await fetch("/demo/capture/factura.svg")).blob();
+      void cap.extract(new File([blob], "factura_aceros_sep.pdf", { type: "application/pdf" }));
+    }),
+  );
+  const log = root.querySelector<HTMLOListElement>("#cap-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 5) log.lastElementChild!.remove();
+  };
+  cap.addEventListener("nx-capture-start", (e) => add(`nx-capture-start → ${e.detail.fileName}`));
+  cap.addEventListener("nx-capture-done", (e) => add(`nx-capture-done → por revisar: ${e.detail.pending.join(", ") || "nada"}`));
+  cap.addEventListener("nx-capture-change", (e) => add(`nx-capture-change → ${e.detail.key} = ${e.detail.value}`));
+  cap.addEventListener("nx-capture-submit", (e) => add(`nx-capture-submit → ${Object.keys(e.detail.values).length} campos · confirmados: ${e.detail.confirmed.join(", ")}`));
+}
+
+// ---------------------------------------------------------------- demo de la tabla
+
+function mountGridDemo(root: HTMLElement) {
+  const grid = root.querySelector<NxGrid>("#grid-demo")!;
+  grid.columns = PURCHASE_COLUMNS;
+  grid.rows = purchaseRows(600);
+  // Cliente (600 filas en el navegador) o servidor (20.000 filas, por bloques).
+  for (const b of root.querySelectorAll<HTMLButtonElement>("[data-grid-mode]")) {
+    b.addEventListener("click", () => {
+      root.querySelectorAll("[data-grid-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      grid.filters = [];
+      if (b.dataset.gridMode === "server") grid.source = "/demo/grid/rows";
+      else {
+        grid.source = null;
+        grid.rows = purchaseRows(600);
+      }
+    });
+  }
+  const loc = root.querySelector<HTMLSelectElement>(".grid-locale")!;
+  loc.addEventListener("change", () => (grid.locale = loc.value));
+  for (const b of root.querySelectorAll<HTMLButtonElement>("[data-grid-ask]")) b.addEventListener("click", () => void grid.ask(b.textContent ?? ""));
+  const log = root.querySelector<HTMLOListElement>("#grid-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 5) log.lastElementChild!.remove();
+  };
+  grid.addEventListener("nx-grid-filter", (e) => add(`nx-grid-filter → ${e.detail.count} filas · ${JSON.stringify(e.detail.filters)}${e.detail.sort ? ` · orden ${e.detail.sort.key} ${e.detail.sort.dir}` : ""}${e.detail.groupBy ? ` · grupo ${e.detail.groupBy}` : ""}`));
+  grid.addEventListener("nx-grid-change", (e) => add(`nx-grid-change → ${e.detail.changes.map((c) => `${c.id}.${c.key} = ${JSON.stringify(c.value)}`).join(", ")}`));
+  grid.addEventListener("nx-grid-columns", (e) => add(`nx-grid-columns → ${e.detail.columns.map((c) => c.key).join(", ")}`));
 }

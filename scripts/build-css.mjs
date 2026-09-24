@@ -10,6 +10,8 @@ const entries = {
   button: "src/components/button/button.css",
   select: "src/components/select/select.css",
   ai: "src/components/ai/ai-answer.css",
+  capture: "src/components/capture/doc-capture.css",
+  grid: "src/components/grid/grid.css",
 };
 
 await build({

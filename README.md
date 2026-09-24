@@ -9,8 +9,10 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-button>` + núcleo (ESM) | ≈ 4,1 KB |
 | `<nx-select>` + núcleo (ESM) | ≈ 5,7 KB |
 | `<nx-ai-answer>` + núcleo (ESM) | ≈ 5,6 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 6,1 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 18,5 KB |
+| `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 9,4 KB |
+| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,3 KB, se carga al exportar | ≈ 17 KB |
+| `nx-ui.css` (tokens + todos los componentes) | ≈ 9,5 KB |
+| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 41 KB |
 
 Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
 
@@ -27,6 +29,20 @@ o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
    superior, clic fuera, Escape y devolución del foco sin código propio.
 4. **Neutro y tematizable.** Todo el color sale de variables `--nx-*` (el mismo vocabulario que el
    design system de nx32), con claro y oscuro vía `light-dark()`.
+5. **Habla el formato de quien la usa.** Números, montos, fechas y tiempos salen de `Intl` con el
+   locale de cada componente: su atributo `locale`, o el `lang` más cercano (el de la página), o
+   «es-CO». Es un solo formateador compartido (`nxFormat`), cacheado por locale. Los textos de la
+   interfaz van aparte, en `labels`.
+6. **Rápida con muchos datos, no solo liviana.** Reglas para todos los componentes:
+   - solo se pinta lo que se ve: filas virtualizadas que se reutilizan al desplazarse, o un tope
+     (`limit`);
+   - un nodo que ya está en pantalla se actualiza en su lugar, no se recrea;
+   - el trabajo caro se hace una vez y se reutiliza: quitar tildes o armar el orden alfabético se
+     calcula una vez por dato, no una vez por tecla o por comparación;
+   - no se recalcula lo que no cambió: ordenar no vuelve a filtrar;
+   - lo que se usa poco se carga al usarlo (el generador de Excel);
+   - se mide: `npm run size` hace cumplir un límite de peso por pieza, y `npm run bench` mide la
+     lógica con datos grandes (100.000 filas, 10.000 opciones).
 
 ## Paletas
 
@@ -214,7 +230,100 @@ entrega los eventos: `begin(q)`, `push(evento)`, `end()`.
 | Métodos | `ask(q)`, `stop()`, `begin(q)`, `push(evento)`, `end()`, `state`, `text` |
 | Eventos | `nx-ai-start`, `nx-ai-done` `{question, text, sources, status}`, `nx-ai-action` `{id, label, data}`, `nx-ai-feedback` `{value, question, text}` |
 
+## `<nx-doc-capture>`
+
+Captura inteligente de documentos. Sueltas una factura, una remisión o un soporte, y el formulario
+se llena solo. Cada dato trae su **confianza** y su **evidencia**: al pasar por un campo se ilumina
+el recuadro del documento de donde salió, y al revés. Lo dudoso (bajo `review-below`) se revisa con
+un clic: una sugerencia, una corrección a mano o ✓. Las validaciones cruzadas del backend avisan
+(`warn`) o bloquean (`error`), y nada se registra sin que una persona confirme.
+
+No sabe de OCR ni de modelos. Hace `POST` multipart (`file`) a `endpoint` y pinta el mismo
+transporte que la IA, con sus propios eventos:
+
+```
+{"type":"page","n":1,"src":"/docs/7/p1.png","width":1240,"height":1754}
+{"type":"field","key":"nit","value":"900.123.456-7","confidence":0.99,"box":{"page":1,"x":0.06,"y":0.07,"w":0.2,"h":0.02}}
+{"type":"field","key":"vence","value":"12/1O/2026","confidence":0.61,"box":{…},"hint":"¿O o 0?","suggest":"12/10/2026"}
+{"type":"field","key":"items.0.cantidad","value":"40","confidence":0.95,"box":{…}}
+{"type":"check","id":"iva","status":"ok","message":"El IVA es el 19 % del subtotal","fields":["iva","subtotal"]}
+{"type":"done"}
+```
+
+```js
+cap.schema = [
+  { key: "nit", label: "NIT", section: "Encabezado" },
+  { key: "items", label: "Ítems", type: "table", section: "Detalle",
+    columns: [{ key: "desc", label: "Descripción" }, { key: "cantidad", label: "Cant.", type: "number" }] },
+  { key: "total", label: "Total", type: "money", section: "Totales" },
+];
+cap.addEventListener("nx-capture-submit", (e) => guardar(e.detail.values)); // o action="/url"
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `schema`, `endpoint`, `action`, `review-below`, `accept`, `labels` |
+| Métodos | `extract(file)`, `begin()`, `push(evento)`, `end()`, `setCheck()`, `reset()`, `values`, `pending`, `state` |
+| Eventos | `nx-capture-file` (cancelable), `nx-capture-start`, `nx-capture-done`, `nx-capture-change`, `nx-capture-submit` (cancelable) |
+
 La referencia completa y la demo en vivo están en la galería.
+
+## `<nx-grid>`
+
+Una tabla de datos que se explora sola:
+
+- **Histogramas que filtran.** Cada cabecera muestra cómo se reparten los datos de su columna: el
+  total en gris y lo que queda tras los filtros en color. Un clic filtra: en una categoría suma o
+  quita el valor; en números y fechas elige un rango, y Mayús+clic lo extiende.
+- **Filtro en lenguaje natural.** «pendientes de marzo de más de 5 millones», «sin anulados»,
+  «atraso mayor a 3». Lo resuelve un analizador local con el vocabulario de las columnas y los
+  datos. Lo que no entiende lo dice; con `nl-endpoint`, esas frases van al backend.
+- **Panel de filtros.** Facetas con casillas y conteos, con la misma regla del tablón de nx32:
+  - las opciones de una faceta se suman (O) y las facetas se restringen entre sí (Y);
+  - cada opción se cuenta con los demás filtros, nunca con el suyo;
+  - una opción en 0 queda deshabilitada.
+- **Un solo modelo de filtros.** La barra, la casilla y la frase producen el mismo filtro y el mismo
+  chip.
+- **Hoja de cálculo.** Navegación con teclado, rangos con suma, promedio, mínimo y máximo, copiar y
+  pegar con Excel (TSV) y edición en línea (`nx-grid-change`, cancelable).
+- **Agrupación con subtotales** por cualquier columna de categorías o por mes.
+- **Exportar a .xlsx.** Es un Excel de verdad: números, montos y fechas como valores, cabecera fija
+  y autofiltro. El generador no tiene dependencias y se carga solo al exportar.
+- **Columnas de IA.** Un nombre y un prompt; `ai-endpoint` recibe las filas visibles, en lotes, y
+  responde celda por celda en streaming.
+- **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques
+  al desplazarse, y el backend devuelve los agregados.
+- **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
+  En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo; más allá, `source`.
+- **Locale.** Números, montos, fechas, lo que se escribe en una celda y el orden alfabético salen
+  de `Intl` con `locale` («es-CO», «en-US», «pt-BR»…; por defecto, el `lang` de la página). Un
+  `currency` ISO («COP», «USD») usa el formato de moneda del locale. Los textos de la interfaz van
+  aparte, en `labels`, y el filtro en lenguaje natural local entiende español (otros idiomas, con
+  `nl-endpoint`).
+
+```js
+grid.columns = [
+  { key: "oc", label: "Pedido" },
+  { key: "estado", label: "Estado", type: "status", options: [{ value: "pend", label: "Pendiente", tone: "warning" }] },
+  { key: "fecha", label: "Fecha", type: "date" },
+  { key: "monto", label: "Monto", type: "money", editable: true },
+];
+grid.rows = pedidos; // o grid.source = "/compras/pedidos/buscar"
+grid.addEventListener("nx-grid-change", (e) => guardar(e.detail.changes));
+```
+
+```
+source       POST {offset, limit, sort, filters} → {rows, total, histograms?, facets?, totals?}
+ai-endpoint  POST {prompt, column, label, columns, rows:[{id, …}]} → {"type":"cell","id":"2201","value":"Alto","tone":"danger"} por línea
+nl-endpoint  POST {q, columns} → {filters, unknown?}
+filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?} · {key, op:"contains", value}
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `labels` |
+| Métodos | `ask(frase)`, `clearFilters()`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()` |
+| Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns` |
 
 ## Desarrollo
 
@@ -224,6 +333,7 @@ npm run dev            # galería en http://localhost:5173
 npm run build          # dist/: ESM, IIFE, CSS, adaptador Solid, tipos y chequeo de tamaño
 npm test               # vitest: lógica (node), render/ARIA (happy-dom) y dist/ si existe
 npm run typecheck
+npm run bench          # rendimiento de la lógica con datos grandes (mediana de varias corridas)
 npm run example:solid  # ejemplo con @solidjs/router sobre dist/ (hace falta build antes)
 ```
 

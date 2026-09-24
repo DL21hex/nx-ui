@@ -1,5 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import { EMPLOYEE_FIELDS, EMPLOYEES } from "./gallery/demo-data";
+import { aiCell, purchasePage } from "./gallery/demo-grid";
+import { invoiceEvents, invoiceSvg } from "./gallery/demo-invoice";
 import { searchOptions } from "./src/components/select/logic";
 
 /**
@@ -85,6 +87,91 @@ function demoAi(): Plugin {
   };
 }
 
+/**
+ * Solo en la galería: un «lector de documentos» de mentira para <nx-doc-capture>. Sirve la
+ * factura como imagen y transmite sus campos, recuadros y validaciones con pausas reales.
+ */
+function demoCapture(): Plugin {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  return {
+    name: "nx-demo-capture",
+    configureServer(server) {
+      server.middlewares.use("/demo/capture/factura.svg", (_req, res) => {
+        res.setHeader("Content-Type", "image/svg+xml");
+        res.end(invoiceSvg());
+      });
+      server.middlewares.use("/demo/capture/registrar", async (req, res) => {
+        for await (const _ of req) void _;
+        await sleep(700);
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ ok: true }));
+      });
+      server.middlewares.use("/demo/capture", async (req, res, next) => {
+        if (req.method !== "POST") return next();
+        for await (const _ of req) void _; // el archivo: la demo siempre «lee» la misma factura
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-store");
+        let closed = false;
+        req.on("close", () => (closed = true));
+        await sleep(350);
+        for (const ev of invoiceEvents()) {
+          if (closed) return;
+          res.write(`${JSON.stringify(ev)}\n`);
+          const type = (ev as { type: string }).type;
+          await sleep(type === "page" ? 500 : type === "check" ? 260 : 90 + Math.random() * 140);
+        }
+        res.write(`${JSON.stringify({ type: "done" })}\n`);
+        res.end();
+      });
+    },
+  };
+}
+
+/**
+ * Solo en la galería: el backend de <nx-grid>. `/demo/grid/rows` pagina 20.000 filas con filtros,
+ * orden, histogramas y facetas; `/demo/grid/ai` «calcula» una columna de IA fila por fila, en
+ * streaming y en desorden, como lo haría un modelo con varias peticiones en paralelo.
+ */
+function demoGrid(): Plugin {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const body = async (req: AsyncIterable<Buffer>) => {
+    let s = "";
+    for await (const c of req) s += c;
+    try {
+      return JSON.parse(s);
+    } catch {
+      return {};
+    }
+  };
+  return {
+    name: "nx-demo-grid",
+    configureServer(server) {
+      server.middlewares.use("/demo/grid/rows", async (req, res) => {
+        const q = await body(req);
+        await sleep(120 + Math.random() * 180);
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(purchasePage(q)));
+      });
+      server.middlewares.use("/demo/grid/ai", async (req, res) => {
+        const q = await body(req);
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-store");
+        let closed = false;
+        req.on("close", () => (closed = true));
+        const rows: Record<string, unknown>[] = Array.isArray(q.rows) ? [...q.rows] : [];
+        rows.sort(() => Math.random() - 0.5);
+        await sleep(300);
+        for (const row of rows) {
+          if (closed) return;
+          res.write(`${JSON.stringify({ type: "cell", id: row.id, ...aiCell(String(q.prompt ?? ""), row) })}\n`);
+          await sleep(25 + Math.random() * 70);
+        }
+        res.end(`${JSON.stringify({ type: "done" })}\n`);
+      });
+    },
+  };
+}
+
 /** Solo en la galería: un endpoint que transmite NDJSON con pausas reales, para probar
  *  `<nx-button stream>` contra un servidor de verdad. `?fail=1` falla en el paso 4. */
 function demoStream(): Plugin {
@@ -125,7 +212,7 @@ function demoStream(): Plugin {
 // `vite build`      → librería ESM, una entrada por subruta del package
 // `vite build --mode iife` → dist/nx-ui.iife.js, todo-en-uno para <script>
 export default defineConfig(({ command, mode }) => {
-  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi()] };
+  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi(), demoCapture(), demoGrid()] };
 
   if (mode === "iife") {
     return {
@@ -148,6 +235,8 @@ export default defineConfig(({ command, mode }) => {
           button: "src/components/button/index.ts",
           select: "src/components/select/index.ts",
           ai: "src/components/ai/index.ts",
+          capture: "src/components/capture/index.ts",
+          grid: "src/components/grid/index.ts",
           icons: "src/icons/index.ts",
           bdui: "src/bdui.ts",
         },

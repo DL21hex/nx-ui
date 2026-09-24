@@ -1,5 +1,6 @@
 /**
- * Adaptador para SolidJS: tipos JSX de las etiquetas y un envoltorio `<SideMenu>`.
+ * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
+ * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`).
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -20,6 +21,12 @@ import type { SelectChangeDetail, SelectField, SelectLabels, SelectOption } from
 import "../components/ai/index";
 import type { NxAiAnswer } from "../components/ai/ai-answer";
 import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels } from "../components/ai/types";
+import "../components/capture/index";
+import type { NxDocCapture } from "../components/capture/doc-capture";
+import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues } from "../components/capture/types";
+import "../components/grid/index";
+import type { NxGrid } from "../components/grid/grid";
+import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort } from "../components/grid/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -27,12 +34,17 @@ export type { MenuItem, SidemenuLabels, SelectDetail, ToggleDetail, OpenChangeDe
 export type { NxButton, ButtonLabels, ButtonVariant, DoneDetail, LogMode };
 export type { NxSelect, SelectChangeDetail, SelectField, SelectLabels, SelectOption };
 export type { NxAiAnswer, AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels };
+export type { NxDocCapture, CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues };
+export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort };
+
+type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
 
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[];
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | undefined;
+      schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
       progress: number | null | undefined;
@@ -40,6 +52,10 @@ declare module "solid-js" {
       fields: SelectField[];
       value: string | string[] | undefined;
       selection: SelectOption[] | undefined;
+      columns: GridColumn[];
+      rows: GridRow[] | undefined;
+      filters: GridFilter[] | undefined;
+      sort: GridSort | null | undefined;
     }
     interface ExplicitAttributes {
       active: string | undefined;
@@ -55,6 +71,15 @@ declare module "solid-js" {
       name: string | undefined;
       endpoint: string | undefined;
       question: string | undefined;
+      action: string | undefined;
+      "review-below": string | undefined;
+      "ai-endpoint": string | undefined;
+      "nl-endpoint": string | undefined;
+      "group-by": string | undefined;
+      "row-key": string | undefined;
+      filename: string | undefined;
+      height: string | undefined;
+      locale: string | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -67,6 +92,7 @@ declare module "solid-js" {
       clearable: boolean;
       avatar: boolean;
       feedback: boolean;
+      "facets-open": boolean;
     }
     interface CustomEvents {
       "nx-select": CustomEvent<SelectDetail>;
@@ -77,12 +103,19 @@ declare module "solid-js" {
       "nx-ai-done": CustomEvent<AiDoneDetail>;
       "nx-ai-action": CustomEvent<AiActionDetail>;
       "nx-ai-feedback": CustomEvent<AiFeedbackDetail>;
+      "nx-capture-done": CustomEvent<{ values: CaptureValues; pending: string[] }>;
+      "nx-capture-submit": CustomEvent<CaptureSubmitDetail>;
+      "nx-grid-filter": CustomEvent<GridFilterDetail>;
+      "nx-grid-change": CustomEvent<{ changes: GridChange[] }>;
+      "nx-grid-columns": CustomEvent<{ columns: GridColumn[] }>;
     }
     interface IntrinsicElements {
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
       "nx-button": HTMLAttributes<NxButton> & { label?: string; icon?: string; variant?: ButtonVariant };
       "nx-select": HTMLAttributes<NxSelect> & { label?: string; placeholder?: string };
       "nx-ai-answer": HTMLAttributes<NxAiAnswer> & { endpoint?: string; placeholder?: string };
+      "nx-doc-capture": HTMLAttributes<NxDocCapture> & { endpoint?: string };
+      "nx-grid": HTMLAttributes<NxGrid> & { source?: string };
     }
   }
 }
@@ -297,6 +330,89 @@ export function AIAnswer(props: AIAnswerProps): JSX.Element {
       on:nx-ai-done={(e) => local.onDone?.(e)}
       on:nx-ai-action={(e) => local.onAction?.(e)}
       on:nx-ai-feedback={(e) => local.onFeedback?.(e)}
+    />
+  );
+}
+
+export interface DocCaptureProps extends Omit<JSX.HTMLAttributes<NxDocCapture>, "onSubmit"> {
+  /** Qué se captura: campos y tablas. */
+  schema: CaptureSchemaItem[];
+  /** URL que lee el documento (POST multipart `file`, responde en streaming). */
+  endpoint?: string;
+  /** URL que registra lo capturado (POST JSON `{values, confirmed}`). */
+  action?: string;
+  /** Confianza por debajo de la cual un campo exige revisión (0–1). */
+  reviewBelow?: number;
+  labels?: Partial<CaptureLabels>;
+  onDone?: (e: CustomEvent<{ values: CaptureValues; pending: string[] }>) => void;
+  /** Cancelable: con `preventDefault()` la app registra por su cuenta. */
+  onSubmit?: (e: CustomEvent<CaptureSubmitDetail>) => void;
+}
+
+export function DocCapture(props: DocCaptureProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["schema", "endpoint", "action", "reviewBelow", "labels", "onDone", "onSubmit"]);
+  return (
+    <nx-doc-capture
+      {...rest}
+      prop:schema={local.schema}
+      prop:labels={local.labels}
+      attr:endpoint={local.endpoint}
+      attr:action={local.action}
+      attr:review-below={local.reviewBelow === undefined ? undefined : String(local.reviewBelow)}
+      on:nx-capture-done={(e) => local.onDone?.(e)}
+      on:nx-capture-submit={(e) => local.onSubmit?.(e)}
+    />
+  );
+}
+
+export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> {
+  columns: GridColumn[];
+  /** Filas en el cliente. Sin `source`, se filtra, ordena y agrega aquí. */
+  rows?: GridRow[];
+  /** URL de datos en el servidor (POST `{offset, limit, sort, filters}` → `GridPage`). */
+  source?: string;
+  /** URL que calcula las columnas de IA. Sin ella no aparece «Columna IA». */
+  aiEndpoint?: string;
+  /** URL opcional para frases que el analizador local no entiende. */
+  nlEndpoint?: string;
+  filters?: GridFilter[];
+  sort?: GridSort | null;
+  groupBy?: string;
+  rowKey?: string;
+  facetsOpen?: boolean;
+  height?: number;
+  filename?: string;
+  /** Formato de números, montos, fechas y orden (`es-CO`, `en-US`…). Por defecto, el `lang` de la página. */
+  locale?: string;
+  labels?: Partial<GridLabels>;
+  onFilter?: (e: CustomEvent<GridFilterDetail>) => void;
+  /** Cancelable: con `preventDefault()` la edición no se aplica. */
+  onChange?: (e: CustomEvent<{ changes: GridChange[] }>) => void;
+  onColumns?: (e: CustomEvent<{ columns: GridColumn[] }>) => void;
+}
+
+export function Grid(props: GridProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["columns", "rows", "source", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns"]);
+  return (
+    <nx-grid
+      {...rest}
+      prop:columns={local.columns}
+      prop:rows={local.rows}
+      prop:filters={local.filters}
+      prop:sort={local.sort}
+      prop:labels={local.labels}
+      attr:source={local.source}
+      attr:ai-endpoint={local.aiEndpoint}
+      attr:nl-endpoint={local.nlEndpoint}
+      attr:group-by={local.groupBy}
+      attr:row-key={local.rowKey}
+      attr:height={local.height === undefined ? undefined : String(local.height)}
+      attr:filename={local.filename}
+      attr:locale={local.locale}
+      bool:facets-open={!!local.facetsOpen}
+      on:nx-grid-filter={(e) => local.onFilter?.(e)}
+      on:nx-grid-change={(e) => local.onChange?.(e)}
+      on:nx-grid-columns={(e) => local.onColumns?.(e)}
     />
   );
 }

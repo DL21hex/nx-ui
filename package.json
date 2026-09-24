@@ -34,6 +34,14 @@
       "types": "./dist/types/components/ai/index.d.ts",
       "import": "./dist/ai.js"
     },
+    "./capture": {
+      "types": "./dist/types/components/capture/index.d.ts",
+      "import": "./dist/capture.js"
+    },
+    "./grid": {
+      "types": "./dist/types/components/grid/index.d.ts",
+      "import": "./dist/grid.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -53,7 +61,9 @@
     "./sidemenu.css": "./dist/sidemenu.css",
     "./button.css": "./dist/button.css",
     "./select.css": "./dist/select.css",
-    "./ai.css": "./dist/ai.css"
+    "./ai.css": "./dist/ai.css",
+    "./capture.css": "./dist/capture.css",
+    "./grid.css": "./dist/grid.css"
   },
   "sideEffects": [
     "*.css",
@@ -67,6 +77,7 @@
     "dev": "vite",
     "build": "rm -rf dist && vite build && vite build --mode iife && node scripts/build-css.mjs && node scripts/build-solid.mjs && tsc -p tsconfig.build.json && node scripts/size.mjs",
     "size": "node scripts/size.mjs",
+    "bench": "node scripts/bench.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "example:solid": "vite --config examples/solid/vite.config.ts"

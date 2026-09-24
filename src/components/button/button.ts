@@ -17,6 +17,7 @@ import { Base, boolAttr } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
 import { formatElapsed } from "../../core/format";
+import { resolveLocale } from "../../core/locale";
 import { readLines } from "../../core/stream";
 import { normalizeProgress, parseStreamLine } from "./logic";
 import type { ButtonLabels, LogLevel, LogLine, LogMode, RunContext, StreamEvent } from "./types";
@@ -156,7 +157,7 @@ export class NxButton extends Base {
     const last = this.#lines[this.#lines.length - 1];
     if (!ok && last) last.level = "error";
     if (msg) this.#lines.push({ t: ms, msg, level: ok ? "ok" : "error" });
-    this.#result = { ok, msg: msg ?? `${ok ? this.#labels.done : this.#labels.failed} · ${formatElapsed(ms)}` };
+    this.#result = { ok, msg: msg ?? `${ok ? this.#labels.done : this.#labels.failed} · ${formatElapsed(ms, resolveLocale(this))}` };
     if (this.#status) this.#status.textContent = this.#result.msg;
     this.#bool("busy", false);
     clearTimeout(this.#resultTimer);
@@ -352,13 +353,13 @@ export class NxButton extends Base {
     // Reloj y barra.
     this.#time!.hidden = !busy;
     if (busy && !this.#tick) {
-      this.#tick = window.setInterval(() => this.#time && (this.#time.textContent = formatElapsed(performance.now() - this.#start)), 100);
+      this.#tick = window.setInterval(() => this.#time && (this.#time.textContent = formatElapsed(performance.now() - this.#start, resolveLocale(this))), 100);
     }
     if (!busy && this.#tick) {
       clearInterval(this.#tick);
       this.#tick = 0;
     }
-    if (busy) this.#time!.textContent = formatElapsed(performance.now() - this.#start);
+    if (busy) this.#time!.textContent = formatElapsed(performance.now() - this.#start, resolveLocale(this));
     const p = this.progress;
     this.#bar!.hidden = !busy;
     this.#bar!.classList.toggle("nx-button__bar--indeterminate", busy && p === null);
@@ -385,7 +386,7 @@ export class NxButton extends Base {
         return h(
           "div",
           { class: `nx-button__line nx-button__line--${level}` },
-          h("span", { class: "nx-button__t" }, `+${formatElapsed(l.t)}`),
+          h("span", { class: "nx-button__t" }, `+${formatElapsed(l.t, resolveLocale(this))}`),
           h("span", { class: "nx-button__mark", "aria-hidden": "true" }, mark),
           h("span", { class: "nx-button__m" }, l.msg),
           running ? h("span", { class: "nx-button__cursor", "aria-hidden": "true" }) : null,

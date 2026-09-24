@@ -1,17 +1,30 @@
 // Tamaños (minificado + gzip) y presupuesto. Falla si algo se pasa.
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { build } from "esbuild";
 
 // Cada pieza tiene su límite: el JS de cada componente (con el núcleo que arrastra), su CSS y
 // los tokens. Los paquetes agregados (todo el CSS, el IIFE) solo se informan: crecen con cada
 // componente nuevo sin que ninguno haya engordado, así que un tope fijo ahí no mide nada.
+// Los chunks que un componente carga con `import()` (p. ej. el XLSX del grid) no cuentan en su
+// entrada: se miden aparte, con su propio límite.
+const lazy = (name) => `dist/${readdirSync("dist").find((f) => f.startsWith(`${name}-`) && f.endsWith(".js")) ?? `${name}.js`}`;
+const dynamicExternal = {
+  name: "dynamic-external",
+  setup(b) {
+    b.onResolve({ filter: /.*/ }, (a) => (a.kind === "dynamic-import" ? { path: a.path, external: true } : undefined));
+  },
+};
+
 const BUDGET = [
   // [archivo, límite gzip en bytes (null = solo se informa), descripción]
   ["dist/sidemenu.js", 6 * 1024, "sidemenu + núcleo (ESM)"],
   ["dist/button.js", 4.5 * 1024, "button + núcleo (ESM)"],
   ["dist/select.js", 6 * 1024, "select + núcleo (ESM)"],
   ["dist/ai.js", 6 * 1024, "ai-answer + núcleo (ESM)"],
+  ["dist/capture.js", 10 * 1024, "doc-capture + button + núcleo (ESM)"],
+  ["dist/grid.js", 18 * 1024, "grid + núcleo (ESM)"],
+  [lazy("xlsx"), 3 * 1024, "generador de XLSX (se carga al exportar)"],
   ["dist/bdui.js", 1024, "adaptador BDUI"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -19,6 +32,8 @@ const BUDGET = [
   ["dist/button.css", 2 * 1024, "button (CSS)"],
   ["dist/select.css", 2 * 1024, "select (CSS)"],
   ["dist/ai.css", 2.5 * 1024, "ai-answer (CSS)"],
+  ["dist/capture.css", 3 * 1024, "doc-capture (CSS)"],
+  ["dist/grid.css", 3.5 * 1024, "grid (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];
@@ -36,7 +51,7 @@ for (const [file, limit, desc] of BUDGET) {
   // El ESM se publica sin minificar y repartido en chunks compartidos: se mide la entrada con
   // todo lo que importa, minificada, que es lo que termina en el bundle de la app.
   if (file.endsWith(".js")) {
-    const out = await build({ entryPoints: [file], bundle: true, minify: true, format: "esm", target: "es2022", write: false });
+    const out = await build({ entryPoints: [file], bundle: true, minify: true, format: "esm", target: "es2022", write: false, plugins: [dynamicExternal] });
     code = out.outputFiles[0].text;
   }
   const size = gzipSync(code, { level: 9 }).length;

@@ -4,3 +4,5 @@
 @import "../components/button/button.css";
 @import "../components/select/select.css";
 @import "../components/ai/ai-answer.css";
+@import "../components/capture/doc-capture.css";
+@import "../components/grid/grid.css";

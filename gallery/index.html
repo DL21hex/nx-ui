@@ -114,6 +114,192 @@ import { SideMenu } from "nx-ui/solid";   // tipos JSX + envoltorio</code></pre>
 /* Forzar tema: .dark / .light o data-theme="dark|light" en cualquier ancestro */</code></pre>
     </template>
 
+    <!-- ================================================================ Captura -->
+    <template id="page-capture">
+      <p class="eyebrow">Componentes</p>
+      <h1>Captura de documentos <code class="tag">&lt;nx-doc-capture&gt;</code></h1>
+      <p class="lead">
+        Sueltas una factura y el formulario se llena solo. Cada dato trae su confianza y su evidencia en el documento; lo
+        dudoso se revisa con un clic, las validaciones cruzadas avisan, y nada se registra sin que una persona confirme.
+      </p>
+      <p class="sel-tip">
+        Usa la factura de ejemplo (o suelta cualquier archivo: la demo siempre «lee» la misma). Pasa el mouse por un campo o
+        por el documento, corrige «Vence» y registra.
+      </p>
+      <div class="cap-actions">
+        <nx-button id="cap-sample" label="Usar la factura de ejemplo" icon="file-text" variant="primary" log-mode="none"></nx-button>
+      </div>
+      <nx-doc-capture id="cap-demo" endpoint="/demo/capture" action="/demo/capture/registrar"></nx-doc-capture>
+      <ol class="stage__log btn-events" id="cap-log"></ol>
+
+      <h2>Protocolo</h2>
+      <p>
+        El mismo transporte que la IA (NDJSON o <code>data:</code> de SSE). El componente hace <code>POST</code> multipart
+        (campo <code>file</code>) a <code>endpoint</code>. Los recuadros van en coordenadas 0–1 de la página.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Evento</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>page</code></td><td><code>{"type":"page","n":1,"src":"/docs/7/p1.png","width":1240,"height":1754}</code>: cada página como imagen (el PDF ya rasterizado).</td></tr>
+            <tr><td><code>field</code></td><td><code>{"type":"field","key":"nit","value":"900.123.456-7","confidence":0.99,"box":{"page":1,"x":0.06,"y":0.07,"w":0.2,"h":0.02}}</code>. Opcionales: <code>detail</code> (una línea bajo el campo), <code>hint</code> y <code>suggest</code> (para lo dudoso). Una celda de tabla: <code>"key":"items.0.cantidad"</code>.</td></tr>
+            <tr><td><code>check</code></td><td><code>{"type":"check","id":"iva","status":"ok","message":"El IVA es el 19 %","fields":["iva","subtotal"]}</code>. <code>error</code> bloquea el registro; <code>warn</code> solo avisa.</td></tr>
+            <tr><td><code>error</code>, <code>done</code></td><td>Como en la IA. Cerrar el stream también termina.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+          <button role="tab" aria-selected="false">BDUI</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-doc-capture id="cap" endpoint="/compras/facturas/leer" action="/compras/facturas/registrar"&gt;&lt;/nx-doc-capture&gt;
+
+cap.schema = [
+  { key: "proveedor", label: "Proveedor", section: "Encabezado" },
+  { key: "nit", label: "NIT", section: "Encabezado" },
+  { key: "vence", label: "Vence", type: "date", section: "Encabezado" },
+  { key: "items", label: "Ítems", type: "table", section: "Detalle",
+    columns: [{ key: "desc", label: "Descripción" }, { key: "cantidad", label: "Cant.", type: "number" }] },
+  { key: "total", label: "Total", type: "money", section: "Totales" },
+];
+cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values, e.detail.confirmed));</code></pre>
+        <pre role="tabpanel" hidden><code>import { DocCapture } from "nx-ui/solid";
+
+&lt;DocCapture schema={SCHEMA} endpoint="/compras/facturas/leer" reviewBelow={0.85}
+  onSubmit={(e) =&gt; { e.preventDefault(); registrar(e.detail.values); }} /&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>{ "component": "DocCapture", "props": {
+    "schema": [ … ],
+    "endpoint": "/compras/facturas/leer",
+    "action": "/compras/facturas/registrar",
+    "reviewBelow": 0.8 } }</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>schema</code></td><td>Campos <code>{key, label, type?, section?}</code> (tipos <code>text</code>, <code>date</code>, <code>number</code>, <code>money</code>) y tablas <code>{key, label, type: "table", columns}</code>.</td></tr>
+            <tr><td><code>endpoint</code></td><td>Lee el documento: <code>POST</code> multipart (<code>file</code>) y responde con el protocolo.</td></tr>
+            <tr><td><code>action</code></td><td>Registra: <code>POST</code> JSON <code>{values, confirmed}</code>, con el botón ocupado mientras tanto. Sin ella, solo el evento.</td></tr>
+            <tr><td><code>review-below</code></td><td>Confianza bajo la cual un campo exige revisión (0–1, por defecto 0,8).</td></tr>
+            <tr><td><code>accept</code>, <code>labels</code></td><td>Tipos de archivo del selector y textos de la interfaz.</td></tr>
+            <tr><td><code>extract(file)</code></td><td>Leer un archivo desde código (<code>nx-capture-file</code>, cancelable, deja usar otro transporte).</td></tr>
+            <tr><td><code>begin()</code>, <code>push(evento)</code>, <code>end()</code>, <code>setCheck()</code>, <code>reset()</code></td><td>Transporte propio; recalcular una validación tras una corrección; volver a la zona de soltar.</td></tr>
+            <tr><td><code>values</code>, <code>pending</code>, <code>state</code></td><td>Lo capturado (tablas como arreglos de filas), los campos por revisar y el estado.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-capture-start</code>, <code>nx-capture-done</code> <code>{values, pending}</code>, <code>nx-capture-change</code> <code>{key, value, values}</code>, <code>nx-capture-submit</code> <code>{values, confirmed, checks}</code> (cancelable).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- ================================================================ Tabla -->
+    <template id="page-grid">
+      <p class="eyebrow">Componentes</p>
+      <h1>Tabla <code class="tag">&lt;nx-grid&gt;</code></h1>
+      <p class="lead">
+        Una tabla que se explora sola. Cada columna muestra cómo se reparten sus datos y filtra con un clic. También
+        filtras escribiendo una frase o con el panel de filtros, trabajas como en una hoja de cálculo, agrupas con
+        subtotales, exportas a Excel y agregas columnas que calcula una IA con los datos de cada fila.
+      </p>
+      <div class="grid-try">
+        <span>Prueba:</span>
+        <button type="button" data-grid-ask>pendientes de más de 5 millones</button>
+        <button type="button" data-grid-ask>aceros de marzo sin anulados</button>
+        <button type="button" data-grid-ask>atraso mayor a 5</button>
+        <select class="grid-locale" aria-label="Formato (locale)">
+          <option value="es-CO">es-CO</option>
+          <option value="en-US">en-US</option>
+          <option value="pt-BR">pt-BR</option>
+          <option value="de-DE">de-DE</option>
+        </select>
+        <span class="grid-mode" role="group" aria-label="Origen de los datos">
+          <button type="button" data-grid-mode="client" aria-pressed="true">Cliente · 600</button>
+          <button type="button" data-grid-mode="server" aria-pressed="false">Servidor · 20.000</button>
+        </span>
+      </div>
+      <nx-grid id="grid-demo" locale="es-CO" ai-endpoint="/demo/grid/ai" facets-open filename="necesidades-de-compra"></nx-grid>
+      <ol class="stage__log btn-events" id="grid-log"></ol>
+
+      <h2>Cómo se usa</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Para</th><th>Haz esto</th></tr></thead>
+          <tbody>
+            <tr><td>Filtrar con el histograma</td><td>Clic en una barra. En una categoría suma o quita el valor; en números y fechas elige ese rango, y <kbd>Mayús</kbd>+clic lo extiende. La barra gris es el total y la de color lo que queda tras los filtros.</td></tr>
+            <tr><td>Filtrar con palabras</td><td>«pendientes de marzo de más de 5 millones», «sin anulados», «entre 1 y 2 millones», «atraso mayor a 3», o texto entre comillas. Lo que no entiende te lo dice. Con <code>nl-endpoint</code>, esas frases van al backend.</td></tr>
+            <tr><td>Panel de filtros</td><td>Las opciones de una faceta se suman y las facetas se combinan entre sí. Cada conteo refleja los demás filtros; una opción en 0 queda deshabilitada.</td></tr>
+            <tr><td>Hoja de cálculo</td><td>Flechas, <kbd>Inicio</kbd>/<kbd>Fin</kbd>, <kbd>RePág</kbd>/<kbd>AvPág</kbd>, <kbd>Mayús</kbd> para seleccionar un rango (o arrastrar); el pie muestra suma, promedio, mínimo y máximo. <kbd>Ctrl</kbd>+<kbd>C</kbd> copia para pegar en Excel, y <kbd>Ctrl</kbd>+<kbd>V</kbd> pega desde Excel en las columnas editables.</td></tr>
+            <tr><td>Editar</td><td>Doble clic, <kbd>Enter</kbd>, <kbd>F2</kbd> o simplemente escribir. <kbd>Enter</kbd> guarda y baja, <kbd>Tab</kbd> guarda y avanza, <kbd>Esc</kbd> cancela, <kbd>Supr</kbd> borra. Las celdas editadas llevan una marca.</td></tr>
+            <tr><td>Columna IA</td><td>«Riesgo de retraso según proveedor, monto y atraso», «¿Es una compra recurrente?», «Ahorro posible si se negocia». Solo se calculan las filas que ves, en lotes.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Protocolo</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Petición → respuesta</th></tr></thead>
+          <tbody>
+            <tr><td><code>source</code></td><td><code>POST {"offset":0,"limit":100,"sort":{"key":"monto","dir":-1},"filters":[…]}</code> → <code>{"rows":[…],"total":20000,"histograms":{"monto":{"kind":"bins","labels":[…],"counts":[…],"filtered":[…],"edges":[…]}},"facets":[{"key":"prov","label":"Proveedor","options":[{"value":"…","count":12}]}],"totals":{"monto":…}}</code>. Los agregados son opcionales; sin ellos, la tabla no muestra histogramas ni facetas.</td></tr>
+            <tr><td><code>ai-endpoint</code></td><td><code>POST {"prompt","column","label","columns":[…],"rows":[{"id":"2201","monto":…}]}</code> → NDJSON o SSE, una línea por celda y en cualquier orden: <code>{"type":"cell","id":"2201","value":"Alto","tone":"danger"}</code>. El tono (<code>success</code>, <code>warning</code>, <code>danger</code>, <code>info</code>) es opcional.</td></tr>
+            <tr><td><code>nl-endpoint</code></td><td><code>POST {"q","columns"}</code> → <code>{"filters":[…],"unknown":["…"]}</code>. Solo se llama si el analizador local no entendió todo.</td></tr>
+            <tr><td>Filtros</td><td><code>{"key","op":"in","values":[…]}</code>, <code>"notIn"</code>, <code>{"op":"range","min","max"}</code> (<code>min</code> incluido, <code>max</code> excluido; números o fechas ISO) y <code>{"op":"contains","value"}</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+          <button role="tab" aria-selected="false">BDUI</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-grid id="grid" ai-endpoint="/ia/columna" facets-open&gt;&lt;/nx-grid&gt;
+
+grid.columns = [
+  { key: "oc", label: "Pedido" },
+  { key: "prov", label: "Proveedor" },
+  { key: "fecha", label: "Fecha", type: "date" },
+  { key: "estado", label: "Estado", type: "status", options: [{ value: "pend", label: "Pendiente", tone: "warning" }] },
+  { key: "monto", label: "Monto", type: "money", editable: true },
+];
+grid.rows = pedidos;                 // o: grid.source = "/compras/pedidos/buscar"
+grid.addEventListener("nx-grid-change", (e) =&gt; guardar(e.detail.changes));</code></pre>
+        <pre role="tabpanel" hidden><code>import { Grid } from "nx-ui/solid";
+
+&lt;Grid columns={COLUMNAS} source="/compras/pedidos/buscar" aiEndpoint="/ia/columna" facetsOpen
+  onChange={(e) =&gt; { if (!puedeEditar()) e.preventDefault(); else guardar(e.detail.changes); }} /&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>{ "component": "Grid", "props": {
+    "columns": [ … ],
+    "source": "/compras/pedidos/buscar",
+    "groupBy": "prov",
+    "filters": [{ "key": "estado", "op": "in", "values": ["pend"] }] } }</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>columns</code></td><td><code>{key, label, type?, width?, editable?, options?, histogram?, facet?, currency?, ai?}</code>. Tipos: <code>text</code>, <code>number</code>, <code>money</code>, <code>date</code> (ISO) y <code>status</code> (con <code>options</code> y tono).</td></tr>
+            <tr><td><code>rows</code> / <code>source</code></td><td>Filas en el cliente (se copian: ediciones y valores de IA quedan en <code>grid.rows</code>) o URL de datos en el servidor.</td></tr>
+            <tr><td><code>filters</code>, <code>sort</code>, <code>group-by</code></td><td>El estado, serializable. Agrupar solo funciona en el cliente.</td></tr>
+            <tr><td><code>ai-endpoint</code>, <code>nl-endpoint</code></td><td>Columnas de IA y frases que el analizador local no entiende.</td></tr>
+            <tr><td><code>locale</code></td><td>Formato de números, montos, fechas, lo que se escribe en una celda y el orden alfabético (<code>es-CO</code>, <code>en-US</code>…). Por defecto, el <code>lang</code> de la página. Con <code>currency</code> ISO en la columna (<code>"COP"</code>, <code>"USD"</code>), el formato de moneda del locale.</td></tr>
+            <tr><td><code>facets-open</code>, <code>height</code>, <code>row-key</code>, <code>filename</code>, <code>labels</code></td><td>Panel de filtros abierto, alto en px (o <code>--nx-grid-height</code>), campo identificador (<code>id</code>), nombre del .xlsx y textos.</td></tr>
+            <tr><td><code>ask(frase)</code>, <code>clearFilters()</code>, <code>exportXlsx()</code>, <code>addAiColumn(nombre, prompt)</code>, <code>removeColumn(key)</code>, <code>refresh()</code></td><td>Lo mismo que la interfaz, desde código.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-grid-filter</code> <code>{filters, sort, groupBy, count}</code>, <code>nx-grid-change</code> <code>{changes: [{id, key, value, old}]}</code> (cancelable) y <code>nx-grid-columns</code> <code>{columns}</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
     <!-- ================================================================ IA -->
     <template id="page-ai">
       <p class="eyebrow">Componentes</p>

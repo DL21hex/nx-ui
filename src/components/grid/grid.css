@@ -1,0 +1,765 @@
+/*
+ * <nx-grid>. Variables propias:
+ *   --nx-grid-height (440px): alto del área con scroll (o el atributo `height`)
+ *   --nx-grid-facets-width (248px): ancho del panel de filtros
+ */
+
+nx-grid {
+  --nx-grid-height: 440px;
+  --nx-grid-warn: light-dark(oklch(0.68 0.15 70), oklch(0.8 0.14 75));
+  display: block;
+  container-type: inline-size;
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--nx-foreground);
+}
+nx-grid *,
+nx-grid *::before,
+nx-grid *::after {
+  box-sizing: border-box;
+}
+nx-grid [hidden] {
+  display: none !important;
+}
+nx-grid .nx-glyph {
+  display: inline-flex;
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- barra */
+
+.nx-grid__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 8px;
+}
+.nx-grid__ask {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: 8px;
+  block-size: 36px;
+  padding-inline: 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast);
+
+  &:focus-within {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+  & .nx-glyph {
+    color: var(--nx-primary);
+  }
+}
+.nx-grid__ask-input {
+  flex: 1;
+  min-inline-size: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+
+  &::placeholder {
+    color: var(--nx-text-tertiary);
+  }
+}
+.nx-grid__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: 36px;
+  padding-inline: 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--nx-motion-fast);
+
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+  &[aria-expanded="true"] {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary);
+  }
+  &.is-primary {
+    justify-content: center;
+    border-color: transparent;
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+  }
+}
+.nx-grid__badge,
+.nx-grid__facet-n {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 18px;
+  block-size: 18px;
+  padding-inline: 5px;
+  border-radius: 9px;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+
+  &:empty {
+    display: none;
+  }
+}
+.nx-grid__note {
+  margin: -2px 0 8px;
+  padding-inline: 4px;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------- chips */
+
+.nx-grid__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-block-end: 8px;
+}
+.nx-grid__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  block-size: 26px;
+  padding-inline: 10px 3px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: 13px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  font-size: 12px;
+  font-weight: 500;
+  animation: nx-grid-in var(--nx-motion-base) var(--nx-ease-out);
+
+  & button {
+    display: grid;
+    place-items: center;
+    inline-size: 20px;
+    block-size: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    &:hover {
+      background: var(--nx-primary-soft);
+    }
+  }
+  & .nx-glyph {
+    inline-size: 12px;
+    block-size: 12px;
+  }
+}
+.nx-grid__clear {
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- facetas */
+
+.nx-grid__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.nx-grid__facets {
+  flex: 0 0 var(--nx-grid-facets-width, 248px);
+  max-block-size: var(--nx-grid-height);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  animation: nx-grid-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-grid__facets-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-block-size: 24px;
+  margin-block-end: 4px;
+}
+.nx-grid__facet {
+  padding-block: 10px 6px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+.nx-grid__facet-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nx-grid__facet-q {
+  inline-size: 100%;
+  block-size: 28px;
+  margin-block-end: 4px;
+  padding-inline: 8px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-background);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+.nx-grid__opts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-grid__opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--nx-radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &.is-zero {
+    opacity: 0.45;
+    cursor: default;
+  }
+  & input {
+    margin: 0;
+    accent-color: var(--nx-primary);
+  }
+}
+.nx-grid__opt-label {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nx-grid__opt-n {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-grid__more {
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: var(--nx-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- tabla */
+
+.nx-grid__scroll {
+  position: relative;
+  flex: 1;
+  min-inline-size: 0;
+  block-size: var(--nx-grid-height);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  outline: 0;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--nx-ring);
+  }
+}
+.nx-grid__head,
+.nx-grid__row {
+  display: grid;
+  grid-template-columns: var(--_cols);
+  inline-size: max(100%, var(--_w));
+}
+.nx-grid__head {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  border-block-end: 1px solid var(--nx-border);
+  background: var(--nx-card);
+}
+.nx-grid__th {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-inline-size: 0;
+  padding: 7px 10px 6px;
+  border-inline-end: 1px solid var(--nx-border-subtle);
+}
+.nx-grid__sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--nx-foreground);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  .is-num > & {
+    justify-content: flex-end;
+  }
+  .is-ai > & {
+    padding-inline-end: 18px;
+  }
+}
+.nx-grid__th-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+nx-grid .nx-grid__sort-icon {
+  inline-size: 12px;
+  block-size: 12px;
+  opacity: 0;
+  transition:
+    opacity var(--nx-motion-fast),
+    rotate var(--nx-motion-fast);
+}
+.nx-grid__sort:hover .nx-grid__sort-icon {
+  opacity: 0.4;
+}
+.nx-grid__th[data-sort="asc"] .nx-grid__sort-icon,
+.nx-grid__th[data-sort="desc"] .nx-grid__sort-icon {
+  opacity: 1;
+  color: var(--nx-primary);
+}
+.nx-grid__th[data-sort="desc"] .nx-grid__sort-icon {
+  rotate: 180deg;
+}
+nx-grid .nx-grid__ai-mark {
+  inline-size: 13px;
+  block-size: 13px;
+  color: var(--nx-primary);
+}
+.nx-grid__ai-prompt {
+  display: -webkit-box;
+  block-size: 26px;
+  overflow: hidden;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  line-height: 13px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.nx-grid__rm {
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-end: 4px;
+  display: grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--nx-text-tertiary);
+  opacity: 0;
+  cursor: pointer;
+
+  .nx-grid__th:hover > &,
+  &:focus-visible {
+    opacity: 1;
+  }
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  & .nx-glyph {
+    inline-size: 12px;
+    block-size: 12px;
+  }
+}
+
+/* Histograma: la barra gris es el total; la de color, lo que queda tras los filtros. */
+.nx-grid__hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  block-size: 26px;
+}
+.nx-grid__hbar {
+  position: relative;
+  flex: 1;
+  min-inline-size: 2px;
+  block-size: 100%;
+  cursor: pointer;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    border-radius: 2px 2px 0 0;
+  }
+  &::before {
+    block-size: calc(var(--_a) * 100%);
+    background: var(--nx-border);
+  }
+  &::after {
+    block-size: calc(var(--_f) * 100%);
+    background: color-mix(in oklab, var(--nx-primary) 55%, transparent);
+    transition: block-size var(--nx-motion-base) var(--nx-ease-out);
+  }
+  &:hover::before {
+    background: var(--nx-border-strong);
+  }
+  &:hover::after,
+  &.is-on::after {
+    background: var(--nx-primary);
+  }
+}
+.nx-grid__peek {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline: 6px;
+  z-index: 1;
+  padding: 2px 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--nx-foreground);
+  color: var(--nx-card);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.nx-grid__body {
+  position: relative;
+  inline-size: max(100%, var(--_w));
+}
+.nx-grid__rows {
+  position: absolute;
+  inset-inline: 0;
+}
+.nx-grid__row {
+  block-size: 32px;
+}
+.nx-grid__cell {
+  min-inline-size: 0;
+  padding-inline: 10px;
+  overflow: hidden;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  border-inline-end: 1px solid var(--nx-border-subtle);
+  line-height: 31px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: cell;
+  user-select: none;
+
+  &.is-num {
+    text-align: end;
+  }
+  .nx-grid__row:hover > & {
+    background: var(--nx-hover);
+  }
+  &.is-sel {
+    background: var(--nx-primary-soft) !important;
+  }
+  &.is-active {
+    box-shadow: inset 0 0 0 2px var(--nx-primary);
+  }
+  .nx-grid__scroll:not(:focus-within) &.is-active {
+    box-shadow: inset 0 0 0 1px var(--nx-primary-border);
+  }
+  &.is-edited {
+    background-image: linear-gradient(225deg, var(--nx-primary) 5px, transparent 5px);
+  }
+  &.is-editing {
+    padding: 0;
+    overflow: visible;
+  }
+}
+.is-copied .nx-grid__cell:is(.is-sel, .is-active) {
+  animation: nx-grid-copy 0.6s ease-out;
+}
+.nx-grid__input {
+  inline-size: 100%;
+  block-size: 100%;
+  padding-inline: 8px;
+  border: 0;
+  outline: 2px solid var(--nx-primary);
+  outline-offset: -2px;
+  background: var(--nx-background);
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+}
+.nx-grid__pill {
+  --_bg: var(--nx-hover);
+  --_fg: var(--nx-muted-foreground);
+  display: inline-block;
+  max-inline-size: 100%;
+  padding-inline: 8px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--_bg);
+  color: var(--_fg);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+
+  &[data-tone="info"] {
+    --_bg: var(--nx-primary-soft);
+    --_fg: var(--nx-primary);
+  }
+  &[data-tone="success"] {
+    --_bg: var(--nx-success-soft);
+    --_fg: var(--nx-success);
+  }
+  &[data-tone="warning"] {
+    --_bg: color-mix(in oklab, var(--nx-grid-warn) 16%, transparent);
+    --_fg: light-dark(oklch(0.5 0.12 65), var(--nx-grid-warn));
+  }
+  &[data-tone="danger"] {
+    --_bg: var(--nx-danger-soft);
+    --_fg: var(--nx-danger);
+  }
+}
+.nx-grid__shim,
+.is-loading .nx-grid__cell::before {
+  content: "";
+  display: inline-block;
+  inline-size: 70%;
+  block-size: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--nx-border-subtle), var(--nx-primary-soft), var(--nx-border-subtle)) 0 0 / 200% 100%;
+  vertical-align: middle;
+  animation: nx-grid-shim 1.2s linear infinite;
+}
+.is-loading .nx-grid__cell::before {
+  inline-size: 55%;
+  background: var(--nx-border-subtle);
+  animation: none;
+}
+
+/* Grupos: subtotales bajo sus columnas y una barra para comparar grupos. */
+.nx-grid__row--group > .nx-grid__cell {
+  background: var(--nx-canvas);
+  font-weight: 600;
+
+  &:first-child {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  &.has-bar {
+    position: relative;
+  }
+  &.has-bar::after {
+    content: "";
+    position: absolute;
+    inset-block-end: 4px;
+    inset-inline-end: 10px;
+    inline-size: calc(var(--_p) * (100% - 20px));
+    block-size: 3px;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--nx-primary) 45%, transparent);
+  }
+}
+nx-grid .nx-grid__chev {
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--nx-text-tertiary);
+  cursor: pointer;
+  transition: rotate var(--nx-motion-fast);
+
+  [aria-expanded="true"] & {
+    rotate: 90deg;
+  }
+  &:dir(rtl) {
+    scale: -1 1;
+  }
+}
+.nx-grid__g-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.nx-grid__g-n {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+}
+.nx-grid__empty {
+  position: absolute;
+  inset-block-start: 55%;
+  inset-inline: 0;
+  margin: 0;
+  color: var(--nx-text-tertiary);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- pie y columna IA */
+
+.nx-grid__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  min-block-size: 26px;
+  padding: 8px 4px 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-grid__foot-k {
+  color: var(--nx-text-tertiary);
+}
+.nx-grid__pop {
+  position: fixed;
+  inset: auto;
+  inline-size: 340px;
+  max-inline-size: calc(100vw - 16px);
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+}
+.nx-grid__ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  & label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--nx-muted-foreground);
+    font-size: 12px;
+    font-weight: 500;
+  }
+}
+.nx-grid__field {
+  padding: 7px 9px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-background);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+
+  &:focus {
+    border-color: var(--nx-primary-border);
+    outline: 2px solid var(--nx-primary-soft);
+  }
+}
+
+@container (width < 640px) {
+  .nx-grid__main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nx-grid__facets {
+    flex-basis: auto;
+    max-block-size: 280px;
+  }
+  .nx-grid__ask {
+    flex-basis: 100%;
+  }
+}
+
+@keyframes nx-grid-in {
+  from {
+    opacity: 0;
+    translate: 0 -3px;
+  }
+}
+@keyframes nx-grid-shim {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes nx-grid-copy {
+  from {
+    background-color: color-mix(in oklab, var(--nx-primary) 30%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-grid *,
+  nx-grid *::before,
+  nx-grid *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-grid__cell.is-sel {
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+  .nx-grid__hbar::after {
+    background: Highlight;
+  }
+}

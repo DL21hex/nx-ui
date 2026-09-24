@@ -11,6 +11,7 @@
 import { Base, boolAttr } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { formatElapsed } from "../../core/format";
+import { resolveLocale } from "../../core/locale";
 import { glyph } from "../../core/icons";
 import { lineData, readLines } from "../../core/stream";
 import { parseAiEvent, parseBlocks, plainText, type Inline } from "./logic";
@@ -442,7 +443,7 @@ export class NxAiAnswer extends Base {
     this.#traceEl!.hidden = !hasSteps || (!busy && !this.#traceOpen);
     this.#summaryEl!.hidden = !hasSteps || busy;
     if (hasSteps && !busy) {
-      const parts = [`${this.#labels.thought} ${this.#steps.length} ${this.#labels.steps}`, formatElapsed(this.#elapsed)];
+      const parts = [`${this.#labels.thought} ${this.#steps.length} ${this.#labels.steps}`, formatElapsed(this.#elapsed, resolveLocale(this))];
       if (this.#sources.length) parts.push(`${this.#sources.length} ${this.#labels.sources}`);
       this.#summaryEl!.setAttribute("aria-expanded", String(this.#traceOpen));
       this.#summaryEl!.replaceChildren(
@@ -517,7 +518,7 @@ export class NxAiAnswer extends Base {
         this.#stepEls.set(s.id, li);
         this.#traceEl!.append(li);
       }
-      const sig = `${s.status}|${s.label}|${s.detail ?? ""}|${s.ms === undefined ? "" : formatElapsed(s.ms)}`;
+      const sig = `${s.status}|${s.label}|${s.detail ?? ""}|${s.ms === undefined ? "" : formatElapsed(s.ms, resolveLocale(this))}`;
       if (li.dataset.sig === sig) continue;
       li.dataset.sig = sig;
       li.className = `nx-ai__step nx-ai__step--${s.status}`;
@@ -525,7 +526,7 @@ export class NxAiAnswer extends Base {
         s.status === "run" ? h("span", { class: "nx-spinner" }) : glyph(s.status === "done" ? CHECK : X),
         h("span", { class: "nx-ai__step-label" }, s.label),
         s.detail ? h("span", { class: "nx-ai__step-detail" }, s.detail) : "",
-        s.ms !== undefined ? h("span", { class: "nx-ai__step-ms" }, formatElapsed(s.ms)) : "",
+        s.ms !== undefined ? h("span", { class: "nx-ai__step-ms" }, formatElapsed(s.ms, resolveLocale(this))) : "",
       );
     }
   }

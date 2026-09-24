@@ -39,18 +39,42 @@ export interface Match {
  * un punto más. A igual puntaje se conserva el orden original.
  */
 export function matchOption(option: SelectOption, fields: readonly SelectField[], query: string): Match | null {
+  return matchPrepared(option, fields, prepare(fields, query));
+}
+
+type Prepared = { fields: SelectField[]; toks: string[] };
+
+/** La consulta se analiza una vez por búsqueda, no una vez por opción. */
+function prepare(fields: readonly SelectField[], query: string): Prepared {
   const scope = searchScope(fields, query);
-  const toks = scope.digitsOnly ? [onlyDigits(query)] : tokens(query);
-  if (!toks.length) return { option, fields: [], score: 0 };
+  return { fields: scope.fields, toks: scope.digitsOnly ? [onlyDigits(query)] : tokens(query) };
+}
+
+// El texto normalizado de cada columna se calcula una vez por opción (quitar tildes es lo caro) y
+// se reutiliza en cada tecla. Se recalcula si cambia el valor.
+const folded = new WeakMap<SelectOption, Map<string, [string, string]>>();
+function searchable(option: SelectOption, f: SelectField): string {
+  const raw = fieldText(option, f.key);
+  let byKey = folded.get(option);
+  if (!byKey) folded.set(option, (byKey = new Map()));
+  const id = `${f.kind ?? ""}:${f.key}`;
+  const hit = byKey.get(id);
+  if (hit && hit[0] === raw) return hit[1];
+  const v = f.kind === "digits" ? onlyDigits(raw) : foldText(raw);
+  byKey.set(id, [raw, v]);
+  return v;
+}
+
+function matchPrepared(option: SelectOption, fields: readonly SelectField[], p: Prepared): Match | null {
+  if (!p.toks.length) return { option, fields: [], score: 0 };
   const matched = new Set<string>();
   let score = 0;
-  for (const tok of toks) {
+  for (const tok of p.toks) {
     let hit = false;
-    for (const f of scope.fields) {
-      const digits = f.kind === "digits";
-      const t = digits ? onlyDigits(tok) : tok;
+    for (const f of p.fields) {
+      const t = f.kind === "digits" ? onlyDigits(tok) : tok;
       if (!t) continue;
-      const v = digits ? onlyDigits(fieldText(option, f.key)) : foldText(fieldText(option, f.key));
+      const v = searchable(option, f);
       const i = v.indexOf(t);
       if (i < 0) continue;
       hit = true;
@@ -63,9 +87,10 @@ export function matchOption(option: SelectOption, fields: readonly SelectField[]
 }
 
 export function searchOptions(options: readonly SelectOption[], fields: readonly SelectField[], query: string): Match[] {
+  const p = prepare(fields, query);
   const out: Match[] = [];
   for (const o of options) {
-    const m = matchOption(o, fields, query);
+    const m = matchPrepared(o, fields, p);
     if (m) out.push(m);
   }
   return out.sort((a, b) => b.score - a.score);
