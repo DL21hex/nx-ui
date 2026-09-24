@@ -16,6 +16,7 @@ interface Entry {
 const registry = new Map<string, Entry>([
   ["SideMenu", { tag: "nx-sidemenu", props: ["items", "active", "collapsed", "collapsible", "autoCollapse", "labels"] }],
   ["Select", { tag: "nx-select", props: ["options", "fields", "value", "selection", "multiple", "placeholder", "source", "name", "required", "disabled", "clearable", "avatar", "labels", "limit"] }],
+  ["AIAnswer", { tag: "nx-ai-answer", props: ["endpoint", "method", "question", "placeholder", "suggestions", "context", "labels", "feedback"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

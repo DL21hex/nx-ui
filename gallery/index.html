@@ -100,6 +100,96 @@ import { SideMenu } from "nx-ui/solid";   // tipos JSX + envoltorio</code></pre>
 /* Forzar tema: .dark / .light o data-theme="dark|light" en cualquier ancestro */</code></pre>
     </template>
 
+    <!-- ================================================================ IA -->
+    <template id="page-ai">
+      <p class="eyebrow">Componentes</p>
+      <h1>IA <code class="tag">&lt;nx-ai-answer&gt;</code></h1>
+      <p class="lead">
+        Preguntar y ver a la IA pensar: los pasos en vivo, la respuesta en streaming con citas que iluminan su fuente, y
+        al final un resumen plegable, acciones y valoración. No depende de ningún modelo: habla un protocolo de streaming
+        que cualquier backend puede emitir.
+      </p>
+
+      <div class="ai-demo">
+        <nx-ai-answer id="ai-demo" endpoint="/demo/ai" feedback></nx-ai-answer>
+      </div>
+      <ol class="stage__log btn-events" id="ai-log"></ol>
+
+      <h2>Protocolo</h2>
+      <p>
+        Una línea por evento, en NDJSON o como <code>data:</code> de SSE. El componente hace <code>POST</code> a
+        <code>endpoint</code> con <code>{"question", "context"}</code>. Un tipo que no conoce se ignora, así que el backend
+        puede evolucionar sin romper versiones viejas.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Evento</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>step</code></td><td><code>{"type":"step","id":"s1","label":"Consultando costos","status":"run"}</code> → luego <code>"status":"done"</code> (o <code>"error"</code>) con <code>"detail"</code> opcional.</td></tr>
+            <tr><td><code>text</code></td><td><code>{"type":"text","delta":"El costo subió **11,4 %**[^mayor]"}</code>. Markdown mínimo: <code>**negrita**</code>, <code>`código`</code>, listas con <code>- </code>, párrafos. <code>[^id]</code> cita una fuente. Nunca HTML.</td></tr>
+            <tr><td><code>source</code></td><td><code>{"type":"source","id":"mayor","title":"Libro mayor · agosto","detail":"…","href":"/…"}</code></td></tr>
+            <tr><td><code>action</code></td><td><code>{"type":"action","label":"Ver órdenes","href":"/…"}</code> (enlace) o <code>{"type":"action","label":"Redactar reclamo","id":"reclamo","data":{…}}</code> (emite <code>nx-ai-action</code>).</td></tr>
+            <tr><td><code>note</code></td><td><code>{"type":"note","label":"cifras verificadas","tone":"success"}</code>: chip junto al resumen (<code>neutral</code>, <code>success</code>, <code>warning</code>, <code>danger</code>).</td></tr>
+            <tr><td><code>error</code>, <code>done</code></td><td><code>{"type":"error","message":"…"}</code> termina con el mensaje; <code>{"type":"done"}</code> (o <code>[DONE]</code>, o cerrar el stream) termina bien.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+          <button role="tab" aria-selected="false">Backend</button>
+          <button role="tab" aria-selected="false">Transporte propio</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-ai-answer id="ai" endpoint="/ai/preguntar" feedback&gt;&lt;/nx-ai-answer&gt;
+
+ai.suggestions = ["¿Qué proveedores se retrasaron este mes?"];
+ai.context = { registro: 2291 };            // viaja con cada pregunta
+ai.addEventListener("nx-ai-action", (e) =&gt; abrirReclamo(e.detail.data));
+ai.addEventListener("nx-ai-feedback", (e) =&gt; guardarVoto(e.detail));</code></pre>
+        <pre role="tabpanel" hidden><code>import { AIAnswer } from "nx-ui/solid";
+
+&lt;AIAnswer endpoint="/ai/preguntar" feedback context={{ registro: id() }}
+  suggestions={["¿Por qué subió el costo?"]}
+  onAction={(e) =&gt; navigate(`/reclamos/nuevo?proveedor=${e.detail.data.proveedor}`)} /&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>// Cualquier servidor, cualquier modelo: solo escribe líneas.
+res.setHeader("Content-Type", "application/x-ndjson");
+const send = (e) =&gt; res.write(JSON.stringify(e) + "\n");
+
+send({ type: "step", id: "q", label: "Consultando órdenes", status: "run" });
+const ordenes = await db.ordenesRetrasadas();
+send({ type: "step", id: "q", status: "done", detail: `${ordenes.length} órdenes` });
+ordenes.forEach((o) =&gt; send({ type: "source", id: o.id, title: o.titulo, href: o.url }));
+
+for await (const trozo of modelo.stream(pregunta, ordenes)) send({ type: "text", delta: trozo });
+send({ type: "done" });</code></pre>
+        <pre role="tabpanel" hidden><code>// WebSocket, un SDK propio…: la app entrega los eventos y el componente pinta.
+ai.begin("¿Qué pasó con la línea 2?");
+socket.onmessage = (m) =&gt; ai.push(JSON.parse(m.data));   // mismos eventos del protocolo
+socket.onclose = () =&gt; ai.end();</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>endpoint</code>, <code>method</code></td><td>URL que responde con el protocolo (<code>POST</code> por defecto, cuerpo <code>{question, context}</code>).</td></tr>
+            <tr><td><code>question</code></td><td>Pregunta inicial; con <code>endpoint</code> se pregunta al conectar.</td></tr>
+            <tr><td><code>suggestions</code>, <code>placeholder</code></td><td>Preguntas sugeridas antes de la primera, y el texto de la caja.</td></tr>
+            <tr><td><code>context</code></td><td>Datos (JSON) que viajan con cada pregunta: el registro que se está viendo, los filtros…</td></tr>
+            <tr><td><code>feedback</code></td><td>👍/👎 al terminar (<code>nx-ai-feedback</code>).</td></tr>
+            <tr><td><code>ask(q)</code>, <code>stop()</code></td><td>Preguntar y detener (lo recibido se queda).</td></tr>
+            <tr><td><code>begin(q)</code>, <code>push(evento)</code>, <code>end()</code></td><td>Transporte propio: la app entrega los eventos.</td></tr>
+            <tr><td><code>state</code>, <code>text</code></td><td><code>idle</code>, <code>working</code>, <code>streaming</code>, <code>done</code>, <code>error</code>, <code>stopped</code>; y el texto sin marcas.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-ai-start</code>, <code>nx-ai-done</code> <code>{question, text, sources, status}</code>, <code>nx-ai-action</code> <code>{id, label, data}</code>, <code>nx-ai-feedback</code> <code>{value, question, text}</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
     <!-- ================================================================ Select -->
     <template id="page-select">
       <p class="eyebrow">Componentes</p>

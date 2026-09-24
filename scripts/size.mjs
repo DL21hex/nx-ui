@@ -11,11 +11,13 @@ const BUDGET = [
   ["dist/sidemenu.js", 6 * 1024, "sidemenu + núcleo (ESM)"],
   ["dist/button.js", 4.5 * 1024, "button + núcleo (ESM)"],
   ["dist/select.js", 6 * 1024, "select + núcleo (ESM)"],
+  ["dist/ai.js", 6 * 1024, "ai-answer + núcleo (ESM)"],
   ["dist/bdui.js", 1024, "adaptador BDUI"],
   ["dist/tokens.css", 1024, "tokens"],
   ["dist/sidemenu.css", 3 * 1024, "sidemenu (CSS)"],
   ["dist/button.css", 2 * 1024, "button (CSS)"],
   ["dist/select.css", 2 * 1024, "select (CSS)"],
+  ["dist/ai.css", 2.5 * 1024, "ai-answer (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

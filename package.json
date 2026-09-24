@@ -30,6 +30,10 @@
       "types": "./dist/types/components/select/index.d.ts",
       "import": "./dist/select.js"
     },
+    "./ai": {
+      "types": "./dist/types/components/ai/index.d.ts",
+      "import": "./dist/ai.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -47,7 +51,8 @@
     "./tokens.css": "./dist/tokens.css",
     "./sidemenu.css": "./dist/sidemenu.css",
     "./button.css": "./dist/button.css",
-    "./select.css": "./dist/select.css"
+    "./select.css": "./dist/select.css",
+    "./ai.css": "./dist/ai.css"
   },
   "sideEffects": [
     "*.css",

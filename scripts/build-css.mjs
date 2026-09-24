@@ -8,6 +8,7 @@ const entries = {
   sidemenu: "src/components/sidemenu/sidemenu.css",
   button: "src/components/button/button.css",
   select: "src/components/select/select.css",
+  ai: "src/components/ai/ai-answer.css",
 };
 
 await build({

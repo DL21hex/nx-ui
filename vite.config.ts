@@ -2,6 +2,89 @@ import { defineConfig, type Plugin } from "vite";
 import { EMPLOYEE_FIELDS, EMPLOYEES } from "./gallery/demo-data";
 import { searchOptions } from "./src/components/select/logic";
 
+/**
+ * Solo en la galería: un "modelo" de mentira que habla el protocolo de IA de nx-ui, con pausas
+ * reales. Tres guiones según la pregunta (proveedores, costos, genérico); «error» falla a mitad.
+ */
+function demoAi(): Plugin {
+  type Line = Record<string, unknown>;
+  const script = (q: string): { steps: [string, string, string?][]; sources: Line[]; text: string; notes: Line[]; actions: Line[] } => {
+    const t = q.toLowerCase();
+    if (/proveedor|retras|entreg/.test(t))
+      return {
+        steps: [["s1", "Consultando órdenes de compra de septiembre", "212 órdenes"], ["s2", "Cruzando fechas de entrega con recepciones"], ["s3", "Agrupando retrasos por proveedor", "3 proveedores"]],
+        sources: [
+          { id: "oc2291", title: "OC-2291 · Aceros del Caribe", detail: "recibida el 12 sep, vencía el 5 sep", href: "#/ai" },
+          { id: "oc2310", title: "OC-2310 · Empaques Andinos", detail: "recibida el 18 sep, vencía el 14 sep", href: "#/ai" },
+          { id: "ctg04", title: "Ruta CTG-04 · Transportes Rivera", detail: "3 de 5 viajes con novedad" },
+        ],
+        text: "Este mes se retrasaron **3 proveedores**:\n\n- **Aceros del Caribe**: 4 entregas tarde, 6,2 días en promedio[^oc2291].\n- **Empaques Andinos**: 2 entregas tarde[^oc2310].\n- **Transportes Rivera**: solo en la ruta a Cartagena[^ctg04].\n\nAceros del Caribe es el más crítico: sus retrasos detuvieron la línea 2 dos veces.",
+        notes: [{ label: "datos de hoy", tone: "neutral" }],
+        actions: [{ label: "Ver las 7 órdenes", href: "#/ai" }, { label: "Redactar reclamo a Aceros del Caribe", id: "reclamo", data: { proveedor: "Aceros del Caribe" } }],
+      };
+    if (/cost|produc|gast/.test(t))
+      return {
+        steps: [["s1", "Consultando costos de producción · jul–ago", "14 centros de costo"], ["s2", "Comparando contra el presupuesto"], ["s3", "Buscando causas en órdenes y novedades"], ["s4", "Verificando cifras contra el libro mayor"]],
+        sources: [
+          { id: "mayor", title: "Libro mayor · agosto", detail: "cuentas 7105–7120" },
+          { id: "acero", title: "Lista de precios · Aceros del Caribe", detail: "vigente desde el 3 ago" },
+          { id: "paro", title: "Novedad N-8812 · paro de la empacadora", detail: "línea 2, 31 h" },
+        ],
+        text: "El costo de producción de agosto subió **11,4 %**[^mayor] por dos causas:\n\n- El acero laminado aumentó **18 %** desde el 3 de agosto[^acero].\n- La línea 2 perdió **31 horas** por el paro de la empacadora, que se cubrieron con horas extra[^paro].\n\nSin el paro, el alza habría sido de **6,8 %**.",
+        notes: [{ label: "cifras verificadas", tone: "success" }],
+        actions: [{ label: "Abrir el análisis de costos", href: "#/ai" }],
+      };
+    return {
+      steps: [["s1", "Entendiendo la pregunta"], ["s2", "Buscando en el sistema"]],
+      sources: [],
+      text: "Esto es una demo con respuestas de ejemplo. Prueba con **«¿Qué proveedores se retrasaron este mes?»** o **«¿Por qué subió el costo de producción en agosto?»**, o incluye la palabra `error` para ver cómo se muestra un fallo.",
+      notes: [],
+      actions: [],
+    };
+  };
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  return {
+    name: "nx-demo-ai",
+    configureServer(server) {
+      server.middlewares.use("/demo/ai", async (req, res) => {
+        let raw = "";
+        for await (const chunk of req) raw += chunk;
+        const question = String((JSON.parse(raw || "{}") as { question?: string }).question ?? "");
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-store");
+        let closed = false;
+        req.on("close", () => (closed = true));
+        const send = (o: Line) => !closed && res.write(`${JSON.stringify(o)}\n`);
+        const s = script(question);
+        for (const [id, label, detail] of s.steps) {
+          send({ type: "step", id, label, status: "run" });
+          await sleep(500 + Math.random() * 500);
+          send({ type: "step", id, status: "done", ...(detail ? { detail } : {}) });
+        }
+        if (/error/i.test(question)) {
+          send({ type: "text", delta: "Empecé a revisar las órdenes, pero " });
+          await sleep(400);
+          send({ type: "error", message: "el servicio de compras no respondió (timeout)" });
+          return res.end();
+        }
+        for (const src of s.sources) send({ type: "source", ...src });
+        // El texto sale en trozos de 1–3 palabras, como un modelo.
+        const words = s.text.split(/(?<=\s)/);
+        for (let i = 0; i < words.length && !closed; ) {
+          const n = 1 + Math.floor(Math.random() * 3);
+          send({ type: "text", delta: words.slice(i, i + n).join("") });
+          i += n;
+          await sleep(35 + Math.random() * 45);
+        }
+        for (const n of s.notes) send({ type: "note", ...n });
+        for (const a of s.actions) send({ type: "action", ...a });
+        send({ type: "done" });
+        res.end();
+      });
+    },
+  };
+}
+
 /** Solo en la galería: un endpoint que transmite NDJSON con pausas reales, para probar
  *  `<nx-button stream>` contra un servidor de verdad. `?fail=1` falla en el paso 4. */
 function demoStream(): Plugin {
@@ -42,7 +125,7 @@ function demoStream(): Plugin {
 // `vite build`      → librería ESM, una entrada por subruta del package
 // `vite build --mode iife` → dist/nx-ui.iife.js, todo-en-uno para <script>
 export default defineConfig(({ command, mode }) => {
-  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream()] };
+  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi()] };
 
   if (mode === "iife") {
     return {
@@ -64,6 +147,7 @@ export default defineConfig(({ command, mode }) => {
           sidemenu: "src/components/sidemenu/index.ts",
           button: "src/components/button/index.ts",
           select: "src/components/select/index.ts",
+          ai: "src/components/ai/index.ts",
           icons: "src/icons/index.ts",
           bdui: "src/bdui.ts",
         },

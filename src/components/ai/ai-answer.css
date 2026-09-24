@@ -1,0 +1,483 @@
+/*
+ * <nx-ai-answer>. Variables propias:
+ *   --nx-ai-a / --nx-ai-b: los dos colores del borde animado mientras piensa
+ *   (por defecto el acento y un violeta)
+ */
+
+@property --nx-ai-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+nx-ai-answer {
+  --nx-ai-a: var(--nx-primary);
+  --nx-ai-b: light-dark(oklch(0.58 0.2 305), oklch(0.74 0.15 305));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: var(--nx-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--nx-foreground);
+}
+nx-ai-answer *,
+nx-ai-answer *::before {
+  box-sizing: border-box;
+}
+nx-ai-answer [hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- la barra de pregunta */
+
+.nx-ai__ask {
+  --_ring: var(--nx-border);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 5px 5px 5px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background:
+    linear-gradient(var(--nx-card), var(--nx-card)) padding-box,
+    linear-gradient(var(--_ring), var(--_ring)) border-box;
+  transition: box-shadow var(--nx-motion-fast);
+}
+.nx-ai__ask:focus-within {
+  --_ring: var(--nx-primary-border);
+  box-shadow: 0 0 0 3px var(--nx-primary-soft);
+}
+/* Pensando: el borde gira con los dos colores de la IA. */
+nx-ai-answer:is([data-state="working"], [data-state="streaming"]) .nx-ai__ask {
+  background:
+    linear-gradient(var(--nx-card), var(--nx-card)) padding-box,
+    conic-gradient(from var(--nx-ai-angle), var(--nx-ai-a), var(--nx-ai-b), var(--nx-ai-a)) border-box;
+  animation: nx-ai-spin 2.4s linear infinite;
+}
+.nx-ai__spark {
+  inline-size: 18px;
+  block-size: 18px;
+  color: var(--nx-ai-b);
+}
+nx-ai-answer:is([data-state="working"], [data-state="streaming"]) .nx-ai__spark {
+  animation: nx-ai-pulse 1.2s ease-in-out infinite;
+}
+.nx-ai__input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 34px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+
+  &::placeholder {
+    color: var(--nx-text-quaternary);
+  }
+}
+.nx-ai__send {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  cursor: pointer;
+
+  & .nx-glyph {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+nx-ai-answer:is([data-state="working"], [data-state="streaming"]) .nx-ai__send {
+  background: var(--nx-foreground);
+  color: var(--nx-background);
+}
+
+/* ---------------------------------------------------------------- sugerencias */
+
+.nx-ai__suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nx-ai__chip {
+  padding: 4px 11px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    border-color var(--nx-motion-fast),
+    color var(--nx-motion-fast);
+
+  &:hover {
+    border-color: var(--nx-primary-border);
+    color: var(--nx-foreground);
+  }
+}
+
+/* ---------------------------------------------------------------- la respuesta */
+
+.nx-ai__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: nx-ai-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-ai__trace {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-sidebar);
+  list-style: none;
+  font-size: 13px;
+}
+.nx-ai__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--nx-muted-foreground);
+  animation: nx-ai-in var(--nx-motion-base) var(--nx-ease-out);
+
+  & .nx-glyph {
+    inline-size: 14px;
+    block-size: 14px;
+  }
+  & .nx-spinner {
+    --_fg: var(--nx-foreground);
+    --_accent: var(--nx-ai-b);
+    inline-size: 14px;
+    block-size: 14px;
+  }
+}
+.nx-ai__step--run {
+  color: var(--nx-foreground);
+}
+.nx-ai__step--done .nx-glyph {
+  color: var(--nx-success);
+}
+.nx-ai__step--error {
+  color: var(--nx-danger);
+}
+.nx-ai__step-detail {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+.nx-ai__step-ms {
+  margin-inline-start: auto;
+  color: var(--nx-text-quaternary);
+  font-family: var(--nx-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-ai__summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 2px 6px 2px 2px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-text-tertiary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--nx-foreground);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+  }
+}
+.nx-ai__chev {
+  inline-size: 14px;
+  block-size: 14px;
+  transition: rotate var(--nx-motion-fast);
+}
+.nx-ai__summary[aria-expanded="true"] .nx-ai__chev {
+  rotate: 90deg;
+}
+:dir(rtl) .nx-ai__chev svg {
+  scale: -1 1;
+}
+.nx-ai__note {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 11px;
+}
+.nx-ai__note--success {
+  background: var(--nx-success-soft);
+  color: var(--nx-success);
+}
+.nx-ai__note--warning {
+  background: light-dark(oklch(0.75 0.14 80 / 0.16), oklch(0.8 0.13 80 / 0.16));
+  color: light-dark(oklch(0.52 0.12 70), oklch(0.82 0.13 80));
+}
+.nx-ai__note--danger {
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+}
+.nx-ai__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  & span {
+    block-size: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--nx-hover) 25%, color-mix(in oklch, var(--nx-ai-b) 18%, transparent) 50%, var(--nx-hover) 75%);
+    background-size: 300% 100%;
+    animation: nx-ai-shimmer 1.4s linear infinite;
+  }
+  & span:nth-child(1) {
+    inline-size: 92%;
+  }
+  & span:nth-child(2) {
+    inline-size: 78%;
+  }
+  & span:nth-child(3) {
+    inline-size: 54%;
+  }
+}
+.nx-ai__answer {
+  & p,
+  & ul {
+    margin: 0 0 10px;
+  }
+  & > :last-child {
+    margin-block-end: 0;
+  }
+  & ul {
+    padding-inline-start: 20px;
+  }
+  & strong {
+    font-weight: 650;
+  }
+  & code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--nx-hover);
+    font-family: var(--nx-font-mono);
+    font-size: 0.88em;
+  }
+}
+.nx-ai__cursor {
+  display: inline-block;
+  inline-size: 8px;
+  block-size: 1em;
+  margin-inline-start: 2px;
+  border-radius: 2px;
+  background: var(--nx-ai-b);
+  vertical-align: -0.12em;
+  animation: nx-ai-blink 1s steps(1) infinite;
+}
+.nx-ai__cite {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 17px;
+  block-size: 17px;
+  margin-inline: 2px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: 0.35em;
+  cursor: pointer;
+  transition:
+    background-color var(--nx-motion-fast),
+    color var(--nx-motion-fast);
+}
+.nx-ai__cite.is-lit {
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+}
+.nx-ai__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.nx-ai__source {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  border-inline-start: 2px solid var(--nx-border);
+  color: var(--nx-muted-foreground);
+  text-decoration: none;
+  transition:
+    background-color var(--nx-motion-fast),
+    border-color var(--nx-motion-fast);
+
+  &.is-lit,
+  &:focus-visible {
+    border-inline-start-color: var(--nx-primary);
+    outline: none;
+    background: var(--nx-primary-soft);
+  }
+}
+a.nx-ai__source:hover .nx-ai__source-title {
+  text-decoration: underline;
+}
+.nx-ai__source-n {
+  flex: none;
+  color: var(--nx-primary);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.nx-ai__source-title {
+  color: var(--nx-foreground);
+}
+.nx-ai__source-detail {
+  color: var(--nx-text-tertiary);
+}
+.nx-ai__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.nx-ai__action {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--nx-primary-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.nx-ai__vote {
+  display: inline-flex;
+  gap: 2px;
+  margin-inline-start: auto;
+
+  & button {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 28px;
+    block-size: 28px;
+    border: 0;
+    border-radius: var(--nx-radius-sm);
+    background: none;
+    color: var(--nx-text-tertiary);
+    cursor: pointer;
+  }
+  & button:hover,
+  & button[aria-pressed="true"] {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  & .nx-glyph {
+    inline-size: 15px;
+    block-size: 15px;
+  }
+}
+.nx-ai__error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+  font-size: 13px;
+}
+.nx-ai__stopped {
+  margin: 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+}
+
+@keyframes nx-ai-spin {
+  to {
+    --nx-ai-angle: 360deg;
+  }
+}
+@keyframes nx-ai-pulse {
+  50% {
+    opacity: 0.45;
+    scale: 0.88;
+  }
+}
+@keyframes nx-ai-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@keyframes nx-ai-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes nx-ai-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-ai-answer *,
+  nx-ai-answer .nx-ai__ask {
+    animation: none !important;
+    transition-duration: 0s !important;
+  }
+  /* El spinner de un paso sí gira: es la única señal de que algo corre. */
+  nx-ai-answer .nx-spinner {
+    animation: nx-spin 1.4s linear infinite !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-ai__ask {
+    border-color: CanvasText;
+  }
+  .nx-ai__cite.is-lit,
+  .nx-ai__source.is-lit {
+    outline: 2px solid Highlight;
+  }
+}

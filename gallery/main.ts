@@ -2,7 +2,7 @@ import "../src/styles/nx-ui.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
-import { registerIcons, type MenuItem, type NxButton, type NxSelect, type NxSidemenu, type RunContext } from "../src/index";
+import { registerIcons, type MenuItem, type NxAiAnswer, type NxButton, type NxSelect, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 
 registerIcons(lucide);
@@ -45,6 +45,7 @@ const NAV: MenuItem[] = [
   { id: "sidemenu", label: "SideMenu", href: "#/sidemenu", icon: "clipboard-list", section: "Componentes" },
   { id: "button", label: "Button", href: "#/button", icon: "inbox", section: "Componentes" },
   { id: "select", label: "Select", href: "#/select", icon: "users", section: "Componentes" },
+  { id: "ai", label: "IA", href: "#/ai", icon: "circle-help", section: "Componentes", badge: "Nuevo" },
 ];
 nav.items = NAV;
 
@@ -54,6 +55,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/sidemenu": { template: "page-sidemenu", mount: mountSidemenuDemo },
   "#/button": { template: "page-button", mount: mountButtonDemo },
   "#/select": { template: "page-select", mount: mountSelectDemo },
+  "#/ai": { template: "page-ai", mount: mountAiDemo },
 };
 
 const page = document.querySelector<HTMLElement>("#page")!;
@@ -294,4 +296,23 @@ function mountSelectDemo(root: HTMLElement) {
     e.preventDefault();
     root.querySelector("#sel-form-out")!.textContent = `FormData: ${JSON.stringify(Object.fromEntries(new FormData(form)))}`;
   });
+}
+
+// ---------------------------------------------------------------- demo de IA
+
+function mountAiDemo(root: HTMLElement) {
+  const ai = root.querySelector<NxAiAnswer>("#ai-demo")!;
+  ai.suggestions = ["¿Qué proveedores se retrasaron este mes?", "¿Por qué subió el costo de producción en agosto?", "Provoca un error"];
+  ai.context = { pantalla: "galería" };
+  const log = root.querySelector<HTMLOListElement>("#ai-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 5) log.lastElementChild!.remove();
+  };
+  ai.addEventListener("nx-ai-start", (e) => add(`nx-ai-start → «${e.detail.question}»`));
+  ai.addEventListener("nx-ai-done", (e) => add(`nx-ai-done → ${e.detail.status} · ${e.detail.sources.length} fuentes · ${e.detail.text.length} caracteres`));
+  ai.addEventListener("nx-ai-action", (e) => add(`nx-ai-action → ${e.detail.id} ${JSON.stringify(e.detail.data)}`));
+  ai.addEventListener("nx-ai-feedback", (e) => add(`nx-ai-feedback → ${e.detail.value}`));
 }

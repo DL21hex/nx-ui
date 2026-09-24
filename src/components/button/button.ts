@@ -16,7 +16,9 @@
 import { Base, boolAttr } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
-import { formatElapsed, normalizeProgress, parseStreamLine, splitLines } from "./logic";
+import { formatElapsed } from "../../core/format";
+import { readLines } from "../../core/stream";
+import { normalizeProgress, parseStreamLine } from "./logic";
 import type { ButtonLabels, LogLevel, LogLine, LogMode, RunContext, StreamEvent } from "./types";
 
 export const BUTTON_LABELS: ButtonLabels = {
@@ -300,26 +302,15 @@ export class NxButton extends Base {
         credentials: "same-origin",
         headers: { Accept: "application/x-ndjson, text/event-stream, text/plain" },
       });
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let rest = "";
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       let final: StreamEvent | null = null;
-      const handle = (raw: string) => {
+      await readLines(res, (raw) => {
         const ev = parseStreamLine(raw);
         if (!ev) return;
         if (ev.progress !== undefined) progress(ev.progress);
         if (ev.done) final = ev;
         else if (ev.msg) log(ev.msg, ev.level);
-      };
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const split = splitLines(rest + decoder.decode(value, { stream: true }));
-        rest = split.rest;
-        split.lines.forEach(handle);
-      }
-      handle(rest + decoder.decode());
+      });
       const end = final as StreamEvent | null;
       if (end?.ok === false) throw new Error(end.msg ?? this.#labels.failed);
       if (end?.msg) log(end.msg, "ok");

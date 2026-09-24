@@ -8,8 +8,9 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-sidemenu>` + núcleo (ESM) | ≈ 5,8 KB |
 | `<nx-button>` + núcleo (ESM) | ≈ 4,1 KB |
 | `<nx-select>` + núcleo (ESM) | ≈ 5,7 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 4,8 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 14,7 KB |
+| `<nx-ai-answer>` + núcleo (ESM) | ≈ 5,6 KB |
+| `nx-ui.css` (tokens + todos los componentes) | ≈ 6,1 KB |
+| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 18,5 KB |
 
 Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
 
@@ -160,6 +161,35 @@ sel.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", 
 | Propiedades / atributos | `fields`, `options`, `source`, `value`, `selection`, `multiple`, `placeholder`, `label`, `name`, `required`, `disabled`, `clearable`, `avatar`, `limit`, `labels` |
 | Métodos | `show()`, `hide()`, `open` |
 | Eventos | `nx-change` `{value, options}` |
+
+## `<nx-ai-answer>` y el protocolo de IA
+
+Preguntar y ver a la IA pensar: los pasos del agente en vivo, la respuesta en streaming con citas
+que iluminan su fuente, y al terminar un resumen plegable («Razonó en 4 pasos · 4,0 s · 3
+fuentes»), acciones y 👍/👎.
+
+No depende de ningún modelo. Hace `POST` a `endpoint` con `{question, context}` y pinta un
+**protocolo de streaming** (NDJSON o `data:` de SSE, una línea por evento) que cualquier backend
+puede emitir:
+
+```
+{"type":"step","id":"s1","label":"Consultando costos","status":"run"}      → luego "status":"done"
+{"type":"source","id":"mayor","title":"Libro mayor · agosto","href":"/…"}
+{"type":"text","delta":"El costo subió **11,4 %**[^mayor] por…"}           ← [^id] cita una fuente
+{"type":"note","label":"cifras verificadas","tone":"success"}
+{"type":"action","label":"Ver órdenes","href":"/…"}                          (o "id" + "data": nx-ai-action)
+{"type":"done"}                                                              (o {"type":"error","message":"…"})
+```
+
+El texto admite un Markdown mínimo (negrita, código, listas, párrafos) y nunca se interpreta como
+HTML. Un tipo de evento desconocido se ignora. Con otro transporte (WebSocket, SDK propio) la app
+entrega los eventos: `begin(q)`, `push(evento)`, `end()`.
+
+| | |
+|---|---|
+| Propiedades / atributos | `endpoint`, `method`, `question`, `placeholder`, `suggestions`, `context`, `feedback`, `labels` |
+| Métodos | `ask(q)`, `stop()`, `begin(q)`, `push(evento)`, `end()`, `state`, `text` |
+| Eventos | `nx-ai-start`, `nx-ai-done` `{question, text, sources, status}`, `nx-ai-action` `{id, label, data}`, `nx-ai-feedback` `{value, question, text}` |
 
 La referencia completa y la demo en vivo están en la galería.
 

@@ -17,18 +17,24 @@ import type { ButtonLabels, ButtonVariant, DoneDetail, LogMode } from "../compon
 import "../components/select/index";
 import type { NxSelect } from "../components/select/select";
 import type { SelectChangeDetail, SelectField, SelectLabels, SelectOption } from "../components/select/types";
+import "../components/ai/index";
+import type { NxAiAnswer } from "../components/ai/ai-answer";
+import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels } from "../components/ai/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
 export type { MenuItem, SidemenuLabels, SelectDetail, ToggleDetail, OpenChangeDetail, NxSidemenu };
 export type { NxButton, ButtonLabels, ButtonVariant, DoneDetail, LogMode };
 export type { NxSelect, SelectChangeDetail, SelectField, SelectLabels, SelectOption };
+export type { NxAiAnswer, AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels };
 
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[];
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | undefined;
+      suggestions: string[] | undefined;
+      context: unknown;
       progress: number | null | undefined;
       options: SelectOption[];
       fields: SelectField[];
@@ -47,6 +53,8 @@ declare module "solid-js" {
       placeholder: string | undefined;
       source: string | undefined;
       name: string | undefined;
+      endpoint: string | undefined;
+      question: string | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -58,6 +66,7 @@ declare module "solid-js" {
       required: boolean;
       clearable: boolean;
       avatar: boolean;
+      feedback: boolean;
     }
     interface CustomEvents {
       "nx-select": CustomEvent<SelectDetail>;
@@ -65,11 +74,15 @@ declare module "solid-js" {
       "nx-open-change": CustomEvent<OpenChangeDetail>;
       "nx-done": CustomEvent<DoneDetail>;
       "nx-change": CustomEvent<SelectChangeDetail>;
+      "nx-ai-done": CustomEvent<AiDoneDetail>;
+      "nx-ai-action": CustomEvent<AiActionDetail>;
+      "nx-ai-feedback": CustomEvent<AiFeedbackDetail>;
     }
     interface IntrinsicElements {
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
       "nx-button": HTMLAttributes<NxButton> & { label?: string; icon?: string; variant?: ButtonVariant };
       "nx-select": HTMLAttributes<NxSelect> & { label?: string; placeholder?: string };
+      "nx-ai-answer": HTMLAttributes<NxAiAnswer> & { endpoint?: string; placeholder?: string };
     }
   }
 }
@@ -235,6 +248,55 @@ export function Select(props: SelectProps): JSX.Element {
       bool:clearable={!!local.clearable}
       bool:avatar={!!local.avatar}
       on:nx-change={(e) => local.onChange?.(e)}
+    />
+  );
+}
+
+export interface AIAnswerProps extends JSX.HTMLAttributes<NxAiAnswer> {
+  /** URL que responde con el protocolo de streaming de nx-ui (POST `{question, context}`). */
+  endpoint?: string;
+  method?: string;
+  /** Pregunta inicial; con `endpoint`, se pregunta al montar. */
+  question?: string;
+  placeholder?: string;
+  suggestions?: string[];
+  /** Datos que viajan con cada pregunta (el registro que se está viendo…). */
+  context?: unknown;
+  feedback?: boolean;
+  labels?: Partial<AiLabels>;
+  onDone?: (e: CustomEvent<AiDoneDetail>) => void;
+  onAction?: (e: CustomEvent<AiActionDetail>) => void;
+  onFeedback?: (e: CustomEvent<AiFeedbackDetail>) => void;
+}
+
+export function AIAnswer(props: AIAnswerProps): JSX.Element {
+  const [local, rest] = splitProps(props, [
+    "endpoint",
+    "method",
+    "question",
+    "placeholder",
+    "suggestions",
+    "context",
+    "feedback",
+    "labels",
+    "onDone",
+    "onAction",
+    "onFeedback",
+  ]);
+  return (
+    <nx-ai-answer
+      {...rest}
+      attr:endpoint={local.endpoint}
+      attr:method={local.method}
+      attr:question={local.question}
+      attr:placeholder={local.placeholder}
+      prop:suggestions={local.suggestions}
+      prop:context={local.context}
+      prop:labels={local.labels}
+      bool:feedback={!!local.feedback}
+      on:nx-ai-done={(e) => local.onDone?.(e)}
+      on:nx-ai-action={(e) => local.onAction?.(e)}
+      on:nx-ai-feedback={(e) => local.onFeedback?.(e)}
     />
   );
 }
