@@ -3,7 +3,7 @@ import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
-import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDialog, type NxDocCapture, type GridRow, type NxGrid, type NxSelect, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
+import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDialog, type NxDocCapture, type GridRow, type NxAgent, type NxGrid, type NxSelect, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
@@ -800,4 +800,12 @@ function mountHrDemo(root: HTMLElement) {
     void emp.show(origin);
   };
   grid.addEventListener("nx-grid-open", (e) => openEmployee(e.detail.row, e.detail.origin));
+
+  // El agente trabaja sobre la misma tabla (`for="th-grid"`).
+  const agent = root.querySelector<NxAgent>("#th-agent")!;
+  agent.suggestions = ["Pide los documentos faltantes a las personas en período de prueba", "¿Qué contratos vencen este mes?"];
+  agent.addEventListener("nx-agent-state", (e) => {
+    const st = e.detail.state as { scenario?: string; count?: number };
+    add(`Estado compartido del agente → ${st.scenario ?? "—"} · ${st.count ?? 0} personas`);
+  });
 }

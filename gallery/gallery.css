@@ -885,6 +885,31 @@ td:first-child {
 #th-grid {
   max-inline-size: none;
 }
+.th-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  max-inline-size: none !important;
+
+  &[data-agent] {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  }
+  & nx-agent {
+    --nx-agent-height: 650px;
+    position: sticky;
+    inset-block-start: 12px;
+  }
+}
+@media (max-width: 1180px) {
+  .th-layout[data-agent] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .th-layout nx-agent {
+    --nx-agent-height: 520px;
+    position: static;
+  }
+}
 .th-bulk select {
   block-size: 36px;
   padding-inline: 10px;

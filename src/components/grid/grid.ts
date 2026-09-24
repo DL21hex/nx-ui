@@ -281,6 +281,10 @@ export class NxGrid extends Base {
     this.#picked = new Set(Array.isArray(v) ? v.map(String) : []);
     this.#paintPicked(false);
   }
+  /** Cuántas filas pasan los filtros. */
+  get count(): number {
+    return this.#rowCount();
+  }
   /** Las filas seleccionadas (las que están cargadas). */
   get selectedRows(): GridRow[] {
     return this.selected.map((id) => this.#byId.get(id)).filter((r): r is GridRow => !!r);

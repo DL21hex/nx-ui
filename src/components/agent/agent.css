@@ -1,0 +1,360 @@
+/* <nx-agent>. Variable propia: --nx-agent-height (100%): alto del panel (la conversación hace scroll). */
+
+nx-agent {
+  display: flex;
+  flex-direction: column;
+  block-size: var(--nx-agent-height, 100%);
+  min-block-size: 360px;
+  overflow: hidden;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+nx-agent *,
+nx-agent *::before {
+  box-sizing: border-box;
+}
+nx-agent [hidden] {
+  display: none !important;
+}
+nx-agent .nx-glyph {
+  display: inline-flex;
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+.nx-agent__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 14px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-agent__spark {
+  color: var(--nx-primary);
+}
+.nx-agent__title {
+  font-weight: 600;
+}
+.nx-agent__ctx {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nx-agent__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-text-tertiary);
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+}
+
+.nx-agent__empty {
+  padding: 18px 14px 0;
+  color: var(--nx-muted-foreground);
+  & p {
+    margin: 0 0 10px;
+  }
+}
+.nx-agent__thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-block-size: 0;
+  padding: 14px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.nx-agent__user {
+  align-self: flex-end;
+  max-inline-size: 88%;
+  padding: 7px 12px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--nx-primary-soft);
+  white-space: pre-wrap;
+  animation: nx-agent-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-agent__turn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nx-agent__answer {
+  font-size: 13.5px;
+}
+
+/* Lo que el agente hizo en la pantalla. */
+.nx-agent__did {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  animation: nx-agent-in var(--nx-motion-base) var(--nx-ease-out);
+  & .nx-glyph {
+    inline-size: 14px;
+    block-size: 14px;
+    color: var(--nx-success);
+  }
+}
+
+/* Tarjetas: aprobar, preguntar, mostrar. */
+.nx-agent__card {
+  padding: 12px;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  animation: nx-agent-in var(--nx-motion-base) var(--nx-ease-out);
+
+  &[data-tone="danger"] {
+    border-color: color-mix(in oklch, var(--nx-danger) 45%, transparent);
+  }
+  &.is-done {
+    border-color: var(--nx-border-subtle);
+    background: none;
+  }
+  &.nx-agent__show {
+    padding: 8px;
+  }
+}
+.nx-agent__card-title {
+  margin: 0;
+  font-weight: 600;
+}
+.nx-agent__card-detail {
+  margin: 2px 0 0;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.nx-agent__impact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-canvas);
+  list-style: none;
+  font-size: 12.5px;
+
+  & li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  & li > span:last-child:not(:first-child) {
+    color: var(--nx-muted-foreground);
+    text-align: end;
+  }
+  & li[data-tone="warning"] > span:last-child {
+    color: light-dark(oklch(0.5 0.12 65), oklch(0.82 0.13 75));
+  }
+  & li[data-tone="danger"] > span:last-child {
+    color: var(--nx-danger);
+  }
+  & li[data-tone="success"] > span:last-child {
+    color: var(--nx-success);
+  }
+}
+.nx-agent__card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 12px;
+}
+.nx-agent__verdict {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-weight: 600;
+  &.is-yes {
+    color: var(--nx-success);
+  }
+}
+.nx-agent__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 10px;
+}
+.nx-agent__option {
+  padding: 5px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: start;
+  cursor: pointer;
+  &:hover {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+  }
+}
+.nx-agent__ask {
+  display: flex;
+  gap: 6px;
+  margin-block-start: 10px;
+}
+.nx-agent__field {
+  flex: 1;
+  min-inline-size: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-background);
+  color: inherit;
+  font: inherit;
+}
+.nx-agent__reply {
+  margin: 8px 0 0;
+  color: var(--nx-primary);
+  font-weight: 550;
+}
+
+/* Un resultado; con deshacer, el anillo marca el tiempo que queda. */
+@property --nx-agent-left {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+.nx-agent__notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-success-soft);
+  color: var(--nx-success);
+  font-weight: 550;
+  animation: nx-agent-in var(--nx-motion-base) var(--nx-ease-out);
+
+  & > span:first-child {
+    flex: 1;
+  }
+  &[data-tone="neutral"] {
+    background: var(--nx-hover);
+    color: var(--nx-muted-foreground);
+  }
+  &[data-tone="warning"],
+  &[data-tone="danger"] {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+}
+.nx-agent__undo {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  &:hover {
+    background: color-mix(in oklch, currentColor 12%, transparent);
+  }
+}
+.nx-agent__ring {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: 50%;
+  background: conic-gradient(currentColor calc(var(--nx-agent-left) * 1turn), color-mix(in oklch, currentColor 20%, transparent) 0);
+  mask: radial-gradient(circle, transparent 4px, #000 4.5px);
+  animation: nx-agent-left var(--_dur, 7s) linear forwards;
+}
+
+/* Composer. */
+.nx-agent__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 0 10px 10px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-background);
+  &:focus-within {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+}
+.nx-agent__input {
+  flex: 1;
+  min-inline-size: 0;
+  max-block-size: 160px;
+  padding: 5px 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  resize: none;
+}
+.nx-agent__send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  cursor: pointer;
+  nx-agent[data-running] & {
+    background: var(--nx-foreground);
+    color: var(--nx-card);
+  }
+}
+nx-agent :is(button, textarea, input):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 1px;
+}
+
+@keyframes nx-agent-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+@keyframes nx-agent-left {
+  to {
+    --nx-agent-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-agent * {
+    animation: none !important;
+  }
+}

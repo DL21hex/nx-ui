@@ -28,6 +28,7 @@ const BUDGET = [
   ["dist/dialog.js", 5.5 * 1024, "dialog + núcleo (ESM)"],
   ["dist/confirm.js", 10 * 1024, "confirm + dialog + button + núcleo (ESM)"],
   ["dist/toast.js", 2.5 * 1024, "toast + núcleo (ESM)"],
+  ["dist/agent.js", 15 * 1024, "agent + ai + button + bdui + núcleo (ESM)"],
   ["dist/bdui.js", 1024, "adaptador BDUI"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -40,6 +41,7 @@ const BUDGET = [
   ["dist/dialog.css", 2.5 * 1024, "dialog (CSS)"],
   ["dist/confirm.css", 1 * 1024, "confirm (CSS, además de dialog y button)"],
   ["dist/toast.css", 1.5 * 1024, "toast (CSS)"],
+  ["dist/agent.css", 2.5 * 1024, "agent (CSS, además de ai y button)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

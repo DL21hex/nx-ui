@@ -94,7 +94,7 @@ const visible = (el: Element | null | undefined): el is HTMLElement => !!el?.isC
  * su animación de entrada o salida).
  */
 function morph(from: Element | null, to: Element | null, update: () => void): void {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } };
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void>; ready: Promise<void>; updateCallbackDone: Promise<void> } };
   if (!doc.startViewTransition || reduced() || !visible(from) || !to) return update();
   const name = "nx-dialog-morph";
   (from as HTMLElement).style.viewTransitionName = name;
@@ -104,7 +104,12 @@ function morph(from: Element | null, to: Element | null, update: () => void): vo
     (to as HTMLElement).style.viewTransitionName = name;
     update();
   });
-  void t.finished.finally(() => {
+  // Si el navegador no puede animar (pestaña oculta, otra transición), la transición se aborta: el
+  // cambio igual se aplica, y sus promesas rechazadas no deben quedar sin atender.
+  const quiet = () => {};
+  t.ready.catch(quiet);
+  t.updateCallbackDone.catch(quiet);
+  t.finished.catch(quiet).finally(() => {
     (to as HTMLElement).style.viewTransitionName = "";
     delete (to as HTMLElement).dataset.morph;
   });

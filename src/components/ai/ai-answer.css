@@ -481,3 +481,9 @@ a.nx-ai__source:hover .nx-ai__source-title {
     outline: 2px solid Highlight;
   }
 }
+
+/* `bare`: solo la respuesta (sin caja de pregunta ni sugerencias), para usarla dentro de otro
+   componente que pone la conversación, como <nx-agent>. */
+nx-ai-answer[bare] > :is(.nx-ai__ask, .nx-ai__suggest) {
+  display: none;
+}

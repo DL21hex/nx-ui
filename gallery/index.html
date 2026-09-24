@@ -436,6 +436,7 @@ if (await nxConfirm({
         impacto antes de confirmar.
       </p>
       <div class="th-inbox" id="th-inbox"></div>
+      <div class="th-layout" data-agent>
       <nx-grid id="th-grid" selectable locale="es-CO" height="520" filename="directorio-th">
         <div slot="bulk" class="th-bulk">
           <select id="th-turno" aria-label="Cambiar turno">
@@ -448,6 +449,8 @@ if (await nxConfirm({
           <nx-button id="th-docs-btn" label="Pedir documentos" icon="inbox" variant="secondary" log-mode="none"></nx-button>
         </div>
       </nx-grid>
+      <nx-agent id="th-agent" for="th-grid" endpoint="/demo/agent" heading="Asistente de TH"></nx-agent>
+      </div>
       <ol class="stage__log btn-events" id="th-log"></ol>
       <nx-dialog id="th-emp" mode="panel" url=""></nx-dialog>
       <nx-dialog id="th-contract" mode="panel" url=""></nx-dialog>
@@ -461,6 +464,7 @@ if (await nxConfirm({
             <tr><td><code>&lt;nx-grid selectable&gt;</code></td><td>Facetas, frase en lenguaje natural («operarios de producción en período de prueba»), sede y turno editables en la celda, casillas para acciones en lote (<code>slot="bulk"</code>) y exportar a Excel.</td></tr>
             <tr><td>Panel apilado</td><td>Clic en el nombre (o <kbd>Enter</kbd>): el detalle se abre al lado y la lista, con sus filtros, sigue ahí. Persona → contrato es un segundo nivel; «atrás» del navegador lo cierra.</td></tr>
             <tr><td>Deshacer</td><td>Cambiar el turno de varias personas no pregunta: se aplica y se puede deshacer.</td></tr>
+            <tr><td><code>&lt;nx-agent for="th-grid"&gt;</code></td><td>Un agente que habla AG-UI: filtra y selecciona en la tabla (lo ves pasar), pide aprobación con el impacto antes de enviar nada, y lo que hace se puede deshacer mientras corre el tiempo. El backend de la demo es un guion; uno real usaría un modelo con sus herramientas.</td></tr>
             <tr><td>Confirmación con impacto</td><td>Retirar muestra la liquidación estimada, lo que hay que devolver y los accesos que se revocan, y bloquea el retiro si la persona tiene una incapacidad activa.</td></tr>
           </tbody>
         </table>

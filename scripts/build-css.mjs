@@ -15,6 +15,7 @@ const entries = {
   dialog: "src/components/dialog/dialog.css",
   confirm: "src/components/confirm/confirm.css",
   toast: "src/components/toast/toast.css",
+  agent: "src/components/agent/agent.css",
 };
 
 await build({

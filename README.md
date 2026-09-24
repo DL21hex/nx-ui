@@ -14,8 +14,9 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-dialog>` + núcleo (ESM) | ≈ 4,2 KB |
 | `nxToast()` + núcleo (ESM) | ≈ 2,2 KB |
 | `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 8,6 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 11,5 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 47 KB |
+| `<nx-agent>` + IA + botón + BDUI + núcleo (ESM) | ≈ 14 KB |
+| `nx-ui.css` (tokens + todos los componentes) | ≈ 12,6 KB |
+| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 54 KB |
 
 Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
 
@@ -378,6 +379,50 @@ if (await nxConfirm({ heading: "Anular OC-2291", impact: "/compras/oc/2291/impac
 | `nxToast()` | `{message, tone?, undo?, action?, duration?}` → `"undo"`, `"action"`, `"timeout"` o `"dismiss"`. Se pausa con el mouse o el foco encima; al cerrar la página, los pendientes terminan como `"timeout"` |
 | `nxConfirm()` | `{heading, message?, impact?, body?, confirmLabel?, tone?, hold?}` → `true` / `false` |
 | `<nx-button hold>` | Mantener pulsado (ms, 1000 por defecto) para activarlo; con teclado, mantener Enter o Espacio |
+
+## `<nx-agent>` (AG-UI)
+
+Un agente que actúa, no solo responde. Conversa en varios turnos y muestra lo que hace: pasos,
+herramientas del backend y razonamiento, con el mismo pintado de `<nx-ai-answer>`. Mueve la pantalla
+que la persona está viendo: con `for`, filtra y selecciona en esa `<nx-grid>`. Antes de cambiar
+datos pide aprobación con el impacto a la vista, y lo reversible se puede deshacer mientras corre
+el tiempo.
+
+Habla [AG-UI](https://docs.ag-ui.com). Hace un POST de un `RunAgentInput`
+(`threadId`, `runId`, `state`, `messages`, `tools`, `context`) y lee los eventos en SSE o NDJSON.
+Sirve cualquier backend AG-UI: CopilotKit, Microsoft Agent Framework, AWS Bedrock AgentCore o uno
+propio. La «cabina» son herramientas del navegador que el agente llama y el componente atiende;
+la respuesta vuelve como mensaje `tool` en la corrida siguiente.
+
+| Herramienta | Qué hace | Devuelve |
+|---|---|---|
+| `nx_confirm` | Tarjeta de aprobación con impacto (`tone: "danger"` → mantener pulsado) | `{approved}` |
+| `nx_ask` | Pregunta con opciones o texto libre | `{answer}` |
+| `nx_notify` | Un resultado; con `undo`, espera 7 s por si la persona lo deshace | `{undone}` |
+| `nx_show` | Pinta un componente de nx-ui (nodo BDUI, con su lista de props permitidas) | `{shown}` |
+| `nx_grid_filter`, `nx_grid_select` | Filtra o selecciona en la tabla de `for` (y la tabla viaja como contexto) | `{rows}`, `{selected}` |
+
+```html
+<nx-grid id="personas" selectable></nx-grid>
+<nx-agent for="personas" endpoint="/ia/agente"></nx-agent>
+<script>
+  agente.tools = [{ name: "crear_tarea", description: "Crea una tarea", parameters: { type: "object", properties: { titulo: { type: "string" } } } }];
+  agente.addEventListener("nx-agent-tool", (e) => {
+    if (e.detail.name !== "crear_tarea") return;
+    e.preventDefault();
+    crearTarea(e.detail.args).then((t) => e.detail.respond({ id: t.id }));
+  });
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `endpoint`, `for`, `heading`, `placeholder`, `suggestions`, `tools`, `context`, `state`, `labels` · `messages`, `threadId`, `running` (lectura) |
+| Métodos | `send(texto)`, `stop()`, `reset()` |
+| Eventos | `nx-agent-tool` (herramientas de la app), `nx-agent-send` (ajustar la entrada), `nx-agent-state`, `nx-agent-custom`, `nx-agent-event` (cada evento AG-UI) |
+
+Nada que cambie datos ocurre en el navegador: las herramientas de la cabina solo muestran,
+preguntan y mueven la pantalla. Escribir datos lo hace el backend, después de la aprobación.
 
 ## Desarrollo
 

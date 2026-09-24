@@ -1,6 +1,6 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
- * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`), y `nxToast` / `nxConfirm`.
+ * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -32,6 +32,9 @@ import type { NxDialog } from "../components/dialog/dialog";
 import type { CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize } from "../components/dialog/types";
 export { nxConfirm } from "../components/confirm/index";
 export { nxToast } from "../components/toast/index";
+import "../components/agent/index";
+import type { NxAgent } from "../components/agent/agent";
+import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool } from "../components/agent/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -40,6 +43,7 @@ export type { NxButton, ButtonLabels, ButtonVariant, DoneDetail, LogMode };
 export type { NxSelect, SelectChangeDetail, SelectField, SelectLabels, SelectOption };
 export type { NxAiAnswer, AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels };
 export type { NxDocCapture, CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues };
+export type { NxAgent, AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool };
 export type { NxDialog, CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize };
 export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort };
 
@@ -49,7 +53,7 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[];
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -63,6 +67,7 @@ declare module "solid-js" {
       filters: GridFilter[] | undefined;
       sort: GridSort | null | undefined;
       selected: string[] | undefined;
+      tools: AguiTool[] | undefined;
     }
     interface ExplicitAttributes {
       active: string | undefined;
@@ -93,6 +98,7 @@ declare module "solid-js" {
       size: DialogSize | undefined;
       url: string | undefined;
       hold: string | undefined;
+      for: string | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -125,6 +131,9 @@ declare module "solid-js" {
       "nx-grid-columns": CustomEvent<{ columns: GridColumn[] }>;
       "nx-dialog-close": CustomEvent<DialogCloseDetail>;
       "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
+      "nx-agent-tool": CustomEvent<AgentToolDetail>;
+      "nx-agent-state": CustomEvent<{ state: unknown }>;
+      "nx-agent-event": CustomEvent<AguiEvent>;
       "nx-grid-open": CustomEvent<{ id: string; row: GridRow; key: string; origin: HTMLElement | null }>;
     }
     interface IntrinsicElements {
@@ -135,6 +144,7 @@ declare module "solid-js" {
       "nx-doc-capture": HTMLAttributes<NxDocCapture> & { endpoint?: string };
       "nx-grid": HTMLAttributes<NxGrid> & { source?: string };
       "nx-dialog": HTMLAttributes<NxDialog> & { heading?: string };
+      "nx-agent": HTMLAttributes<NxAgent> & { endpoint?: string };
     }
   }
 }
@@ -496,5 +506,48 @@ export function Dialog(props: DialogProps): JSX.Element {
     >
       {local.children}
     </nx-dialog>
+  );
+}
+
+export interface AgentProps extends JSX.HTMLAttributes<NxAgent> {
+  /** URL del agente AG-UI (POST de un `RunAgentInput`, eventos en streaming). */
+  endpoint: string;
+  /** Id de un `<nx-grid>` que el agente puede filtrar y seleccionar. */
+  for?: string;
+  heading?: string;
+  placeholder?: string;
+  suggestions?: string[];
+  /** Herramientas propias de la app; se atienden en `onTool` llamando a `e.detail.respond(...)`. */
+  tools?: AguiTool[];
+  context?: AguiContext[];
+  labels?: Partial<AgentLabels>;
+  onTool?: (e: CustomEvent<AgentToolDetail>) => void;
+  onState?: (e: CustomEvent<{ state: unknown }>) => void;
+  onEvent?: (e: CustomEvent<AguiEvent>) => void;
+}
+
+export function Agent(props: AgentProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["endpoint", "for", "heading", "placeholder", "suggestions", "tools", "context", "labels", "onTool", "onState", "onEvent"]);
+  return (
+    <nx-agent
+      {...rest}
+      attr:endpoint={local.endpoint}
+      attr:for={local.for}
+      attr:heading={local.heading}
+      attr:placeholder={local.placeholder}
+      prop:suggestions={local.suggestions}
+      prop:tools={local.tools}
+      prop:context={local.context}
+      prop:labels={local.labels}
+      on:nx-agent-tool={(e) => {
+        // Quien pasa `onTool` atiende la herramienta: se marca para que no responda «no disponible».
+        if (local.onTool) {
+          e.preventDefault();
+          local.onTool(e);
+        }
+      }}
+      on:nx-agent-state={(e) => local.onState?.(e)}
+      on:nx-agent-event={(e) => local.onEvent?.(e)}
+    />
   );
 }

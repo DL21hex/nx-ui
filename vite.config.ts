@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import { EMPLOYEE_FIELDS, EMPLOYEES } from "./gallery/demo-data";
 import { aiCell, purchasePage } from "./gallery/demo-grid";
+import { agentRun } from "./gallery/demo-agent";
 import { hrEmployees, hrExitImpact } from "./gallery/demo-hr";
 import { invoiceEvents, invoiceSvg } from "./gallery/demo-invoice";
 import { searchOptions } from "./src/components/select/logic";
@@ -205,6 +206,32 @@ function demoImpact(): Plugin {
         }
         res.end(`${JSON.stringify({ type: "done" })}\n`);
       });
+      // Un agente AG-UI de guion sobre el directorio (SSE, un evento por `data:`).
+      server.middlewares.use("/demo/agent", async (req, res) => {
+        let raw = "";
+        for await (const c of req) raw += c;
+        let input;
+        try {
+          input = JSON.parse(raw);
+        } catch {
+          res.statusCode = 400;
+          return res.end();
+        }
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-store");
+        let closed = false;
+        req.on("close", () => (closed = true));
+        for (const ev of agentRun(input, people)) {
+          if (closed) return;
+          if (ev.type === "PAUSE") {
+            await sleep(Number(ev.ms));
+            continue;
+          }
+          res.write(`data: ${JSON.stringify(ev)}\n\n`);
+          await sleep(ev.type === "TEXT_MESSAGE_CONTENT" ? 25 + Math.random() * 45 : ev.type === "TOOL_CALL_ARGS" ? 10 : 160);
+        }
+        res.end();
+      });
       server.middlewares.use("/demo/impact", async (req, res) => {
         for await (const _ of req) void _;
         const oc = new URL(req.url ?? "", "http://x").searchParams.get("oc") ?? "2291";
@@ -292,6 +319,7 @@ export default defineConfig(({ command, mode }) => {
           dialog: "src/components/dialog/index.ts",
           confirm: "src/components/confirm/index.ts",
           toast: "src/components/toast/index.ts",
+          agent: "src/components/agent/index.ts",
           icons: "src/icons/index.ts",
           bdui: "src/bdui.ts",
         },

@@ -7,5 +7,6 @@ export * from "./components/grid/index";
 export * from "./components/dialog/index";
 export * from "./components/confirm/index";
 export * from "./components/toast/index";
+export * from "./components/agent/index";
 export { registerIcons, hasIcon } from "./core/icons";
 export { nxFormat, resolveLocale, type NxFormat } from "./core/locale";

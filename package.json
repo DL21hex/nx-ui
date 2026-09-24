@@ -54,6 +54,10 @@
       "types": "./dist/types/components/toast/index.d.ts",
       "import": "./dist/toast.js"
     },
+    "./agent": {
+      "types": "./dist/types/components/agent/index.d.ts",
+      "import": "./dist/agent.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -78,7 +82,8 @@
     "./grid.css": "./dist/grid.css",
     "./dialog.css": "./dist/dialog.css",
     "./confirm.css": "./dist/confirm.css",
-    "./toast.css": "./dist/toast.css"
+    "./toast.css": "./dist/toast.css",
+    "./agent.css": "./dist/agent.css"
   },
   "sideEffects": [
     "*.css",
