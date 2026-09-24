@@ -5,6 +5,7 @@ const target = ["chrome114", "firefox125", "safari17"];
 const entries = {
   "nx-ui": "src/styles/nx-ui.css",
   tokens: "src/styles/tokens.css",
+  palettes: "src/styles/palettes.css",
   sidemenu: "src/components/sidemenu/sidemenu.css",
   button: "src/components/button/button.css",
   select: "src/components/select/select.css",

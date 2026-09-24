@@ -590,3 +590,123 @@ td:first-child {
   border-radius: var(--nx-radius-lg);
   background: var(--nx-card);
 }
+
+/* ---------------------------------------------------------------- paletas */
+
+.palettes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+/* Cada opción se pinta con SU paleta (data-nx-palette en la opción). */
+.palette {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "swatches preview" "text preview";
+  align-items: center;
+  gap: 10px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--nx-border);
+  border-radius: 12px;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast),
+    translate var(--nx-motion-fast);
+}
+.palette:hover {
+  border-color: var(--nx-primary-border);
+  translate: 0 -1px;
+}
+.palette:focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+.palette[aria-checked="true"] {
+  border-color: var(--nx-primary);
+  box-shadow: 0 0 0 3px var(--nx-primary-soft);
+}
+.palette[aria-checked="true"]::after {
+  content: "✓";
+  position: absolute;
+  inset-block-start: -8px;
+  inset-inline-end: -8px;
+  display: grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font-size: 11px;
+  font-weight: 700;
+}
+.palette__swatches {
+  grid-area: swatches;
+  display: flex;
+
+  & span {
+    inline-size: 24px;
+    block-size: 24px;
+    border: 2px solid var(--nx-card);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--nx-border);
+  }
+  & span + span {
+    margin-inline-start: -6px;
+  }
+}
+.palette__text {
+  grid-area: text;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.palette__name {
+  font-weight: 650;
+}
+.palette__desc {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+/* Una mini interfaz con la paleta: un ítem de menú activo y un botón primario. */
+.palette__preview {
+  grid-area: preview;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-sidebar);
+  font-size: 11px;
+}
+.palette__nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 5px;
+  background: var(--nx-nav-active-bg);
+  color: var(--nx-primary);
+  font-weight: 600;
+
+  & i {
+    inline-size: 2px;
+    block-size: 10px;
+    border-radius: 2px;
+    background: var(--nx-primary);
+  }
+}
+.palette__btn {
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font-weight: 600;
+  text-align: center;
+}

@@ -84,6 +84,15 @@ import { SideMenu } from "nx-ui/solid";   // tipos JSX + envoltorio</code></pre>
         Toda la paleta es neutra y sale de variables CSS. Redefine las que quieras para aplicar tu marca; el modo
         oscuro las acompaña solo.
       </p>
+      <h2>Paletas</h2>
+      <p>
+        Nueve paletas listas: elige una y se aplica a toda la galería. En tu proyecto basta con
+        <code>nx-ui/palettes.css</code> y <code>&lt;html data-nx-palette="oceano"&gt;</code>; también sirve en una zona de la
+        página.
+      </p>
+      <div class="palettes" id="palettes" role="radiogroup" aria-label="Paleta"></div>
+
+      <h2>Acento a mano</h2>
       <div class="brand-picker">
         <label>Acento <input type="color" id="primary-picker" value="#3b6ff5" /></label>
         <button type="button" class="btn" id="primary-reset">Restablecer</button>
@@ -91,12 +100,17 @@ import { SideMenu } from "nx-ui/solid";   // tipos JSX + envoltorio</code></pre>
       </div>
       <div class="swatches" id="swatches"></div>
       <h2>Aplicar tu marca</h2>
-      <pre><code>:root {
-  --nx-primary: light-dark(#0e7490, #22d3ee);
-  --nx-primary-soft: color-mix(in oklch, var(--nx-primary) 12%, transparent);
-  --nx-nav-active-bg: color-mix(in oklch, var(--nx-primary) 10%, transparent);
-  --nx-font-sans: "Geist Sans", system-ui, sans-serif;
+      <pre><code>/* Tu propia paleta: solo los parámetros; claro, oscuro y todos los derivados salen solos. */
+[data-nx-palette="mi-marca"] {
+  --nx-accent-h: 200;        /* tono del acento (0–360) */
+  --nx-accent-c: 0.14;       /* croma: cuánto color (0 = gris) */
+  --nx-accent-l: 0.55;       /* luminosidad en claro; --nx-accent-l-dark en oscuro */
+  --nx-neutral-h: 210;       /* tono de los grises */
+  --nx-tint: 1.8;            /* cuánto color llevan los grises (1 = casi nada) */
 }
+
+/* O fijar un token directamente */
+:root { --nx-font-sans: "Geist Sans", system-ui, sans-serif; }
 /* Forzar tema: .dark / .light o data-theme="dark|light" en cualquier ancestro */</code></pre>
     </template>
 

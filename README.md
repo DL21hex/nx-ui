@@ -28,6 +28,29 @@ o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
 4. **Neutro y tematizable.** Todo el color sale de variables `--nx-*` (el mismo vocabulario que el
    design system de nx32), con claro y oscuro vía `light-dark()`.
 
+## Paletas
+
+`nx-ui/palettes.css` trae nueve paletas listas: `indigo` (por defecto), `oceano`, `esmeralda`,
+`bosque`, `terracota`, `frambuesa`, `violeta`, `medianoche` y `grafito`. Se aplican con un atributo,
+en `<html>` o en cualquier zona de la página:
+
+```html
+<link rel="stylesheet" href="nx-ui/palettes.css" />
+<html data-nx-palette="oceano">
+```
+
+Una paleta propia son cinco números; claro, oscuro y todos los tokens derivados salen solos:
+
+```css
+[data-nx-palette="mi-marca"] {
+  --nx-accent-h: 200;   /* tono del acento */
+  --nx-accent-c: 0.14;  /* croma (0 = gris) */
+  --nx-accent-l: 0.55;  /* luminosidad en claro; --nx-accent-l-dark en oscuro */
+  --nx-neutral-h: 210;  /* tono de los grises */
+  --nx-tint: 1.8;       /* cuánto color llevan los grises (1 = casi nada) */
+}
+```
+
 ## Uso
 
 **HTML plano**, sin build:

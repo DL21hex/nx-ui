@@ -2,51 +2,69 @@
  * Tokens de nx-ui. Mismo vocabulario que el design system de nx32 (`--nx-*`), con valores
  * neutros: grises fríos y un acento azul. Para aplicar una marca basta con redefinirlos.
  *
+ * Los colores salen de unos pocos parámetros; una paleta (`palettes.css`, o la tuya) solo
+ * cambia estos números y todo lo demás se recalcula, en claro y en oscuro:
+ *   --nx-accent-h / -c / -l / -l-dark   tono, croma y luminosidad del acento (claro / oscuro)
+ *   --nx-neutral-h, --nx-tint           tono de los grises y cuánto color llevan (1 = casi nada)
+ * Se aplican en `:root` o en cualquier elemento con `data-nx-palette`, así que una zona de la
+ * página puede tener su propia paleta.
+ *
  * El tema sale de `color-scheme` y `light-dark()`: sigue al sistema, y se fuerza con
  * `.dark` / `[data-theme="dark"]` o `.light` / `[data-theme="light"]` en cualquier ancestro.
  */
+:root,
+[data-nx-palette] {
+  --_h: var(--nx-accent-h, 262);
+  --_c: var(--nx-accent-c, 0.19);
+  --_l: var(--nx-accent-l, 0.54);
+  --_ld: var(--nx-accent-l-dark, 0.72);
+  --_n: var(--nx-neutral-h, 260);
+  --_t: var(--nx-tint, 1);
+
+  /* Superficies */
+  --nx-canvas: light-dark(oklch(0.985 calc(0.002 * var(--_t)) var(--_n)), oklch(0.165 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-background: light-dark(oklch(1 0 0), oklch(0.185 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-sidebar: light-dark(oklch(0.975 calc(0.003 * var(--_t)) var(--_n)), oklch(0.19 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-popover: light-dark(oklch(1 0 0), oklch(0.235 calc(0.006 * var(--_t)) var(--_n)));
+
+  /* Bordes */
+  --nx-border-subtle: light-dark(oklch(0.925 calc(0.004 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 calc(0.005 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 calc(0.006 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.17));
+
+  /* Texto */
+  --nx-foreground: light-dark(oklch(0.2 calc(0.008 * var(--_t)) var(--_n)), oklch(0.955 calc(0.003 * var(--_t)) var(--_n)));
+  --nx-muted-foreground: light-dark(oklch(0.44 calc(0.01 * var(--_t)) var(--_n)), oklch(0.76 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-text-tertiary: light-dark(oklch(0.55 calc(0.01 * var(--_t)) var(--_n)), oklch(0.64 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-text-quaternary: light-dark(oklch(0.66 calc(0.008 * var(--_t)) var(--_n)), oklch(0.53 calc(0.007 * var(--_t)) var(--_n)));
+
+  /* Acento (en oscuro, más luz y un poco menos de croma) */
+  --nx-primary: light-dark(oklch(var(--_l) var(--_c) var(--_h)), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h)));
+  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 calc(var(--_c) * 0.1) var(--_h)));
+  --nx-primary-soft: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.1), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.15));
+  --nx-primary-border: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.35), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.4));
+
+  /* Estados */
+  --nx-hover: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.05), oklch(1 0 0 / 0.06));
+  --nx-nav-active-bg: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.09), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.13));
+  --nx-ring: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.6), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.7));
+  --nx-backdrop: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.4), oklch(0 0 0 / 0.6));
+}
+
 :root {
   color-scheme: light dark;
 
   --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
 
-  /* Superficies */
-  --nx-canvas: light-dark(oklch(0.985 0.002 260), oklch(0.165 0.004 260));
-  --nx-background: light-dark(oklch(1 0 0), oklch(0.185 0.004 260));
-  --nx-sidebar: light-dark(oklch(0.975 0.003 260), oklch(0.19 0.005 260));
-  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 0.005 260));
-  --nx-popover: light-dark(oklch(1 0 0), oklch(0.235 0.006 260));
-
-  /* Bordes */
-  --nx-border-subtle: light-dark(oklch(0.925 0.004 260), oklch(1 0 0 / 0.07));
-  --nx-border: light-dark(oklch(0.885 0.005 260), oklch(1 0 0 / 0.11));
-  --nx-border-strong: light-dark(oklch(0.82 0.006 260), oklch(1 0 0 / 0.17));
-
-  /* Texto */
-  --nx-foreground: light-dark(oklch(0.2 0.008 260), oklch(0.955 0.003 260));
-  --nx-muted-foreground: light-dark(oklch(0.44 0.01 260), oklch(0.76 0.006 260));
-  --nx-text-tertiary: light-dark(oklch(0.55 0.01 260), oklch(0.64 0.007 260));
-  --nx-text-quaternary: light-dark(oklch(0.66 0.008 260), oklch(0.53 0.007 260));
-
-  /* Acento */
-  --nx-primary: light-dark(oklch(0.54 0.19 262), oklch(0.72 0.14 262));
-  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 0.02 262));
-  --nx-primary-soft: light-dark(oklch(0.54 0.19 262 / 0.1), oklch(0.72 0.14 262 / 0.15));
-  --nx-primary-border: light-dark(oklch(0.54 0.19 262 / 0.35), oklch(0.72 0.14 262 / 0.4));
-
-  /* Resultado */
+  /* Resultado (no cambian con la paleta: verde es éxito y rojo es error en cualquier marca) */
   --nx-success: light-dark(oklch(0.55 0.14 150), oklch(0.74 0.14 150));
   --nx-success-soft: light-dark(oklch(0.55 0.14 150 / 0.1), oklch(0.74 0.14 150 / 0.14));
   --nx-danger: light-dark(oklch(0.55 0.2 27), oklch(0.7 0.17 27));
   --nx-danger-foreground: light-dark(oklch(0.99 0 0), oklch(0.18 0.03 27));
   --nx-danger-soft: light-dark(oklch(0.55 0.2 27 / 0.1), oklch(0.7 0.17 27 / 0.15));
 
-  /* Estados */
-  --nx-hover: light-dark(oklch(0.2 0.01 260 / 0.05), oklch(1 0 0 / 0.06));
-  --nx-nav-active-bg: light-dark(oklch(0.54 0.19 262 / 0.09), oklch(0.72 0.14 262 / 0.13));
-  --nx-ring: light-dark(oklch(0.54 0.19 262 / 0.6), oklch(0.72 0.14 262 / 0.7));
-  --nx-backdrop: light-dark(oklch(0.2 0.01 260 / 0.4), oklch(0 0 0 / 0.6));
   --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
     0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
 

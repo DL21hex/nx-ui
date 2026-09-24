@@ -49,6 +49,7 @@
     },
     "./nx-ui.css": "./dist/nx-ui.css",
     "./tokens.css": "./dist/tokens.css",
+    "./palettes.css": "./dist/palettes.css",
     "./sidemenu.css": "./dist/sidemenu.css",
     "./button.css": "./dist/button.css",
     "./select.css": "./dist/select.css",

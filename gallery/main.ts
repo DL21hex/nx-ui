@@ -1,4 +1,5 @@
 import "../src/styles/nx-ui.css";
+import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
@@ -35,6 +36,33 @@ document.addEventListener("click", (e) => {
     /* sin almacenamiento: el tema dura lo que la visita */
   }
 });
+
+// ---------------------------------------------------------------- paleta de la galería
+
+const PALETTE_KEY = "nx-ui-gallery-palette";
+const PALETTES = [
+  { id: "indigo", name: "Índigo", desc: "La de siempre: azul eléctrico sobre grises fríos." },
+  { id: "oceano", name: "Océano", desc: "Azul profundo y grises con un toque de mar." },
+  { id: "esmeralda", name: "Esmeralda", desc: "Verde joya, fresco y sereno." },
+  { id: "bosque", name: "Bosque", desc: "Verde musgo sobre grises salvia." },
+  { id: "terracota", name: "Terracota", desc: "Arcilla cálida sobre piedra." },
+  { id: "frambuesa", name: "Frambuesa", desc: "Rosa intenso, con carácter." },
+  { id: "violeta", name: "Violeta", desc: "Púrpura vibrante y creativo." },
+  { id: "medianoche", name: "Medianoche", desc: "Azul marino sobrio, casi corporativo." },
+  { id: "grafito", name: "Grafito", desc: "Monocromo: todo el color lo pone el contenido." },
+];
+function applyPalette(id: string) {
+  if (id && id !== "indigo") document.documentElement.dataset.nxPalette = id;
+  else delete document.documentElement.dataset.nxPalette;
+}
+function storedPalette(): string {
+  try {
+    return localStorage.getItem(PALETTE_KEY) ?? "indigo";
+  } catch {
+    return "indigo";
+  }
+}
+applyPalette(storedPalette());
 
 // ---------------------------------------------------------------- navegación (dogfooding)
 
@@ -94,6 +122,7 @@ function wireTabs(root: HTMLElement) {
 // ---------------------------------------------------------------- página de tokens
 
 function mountTokens(root: HTMLElement) {
+  mountPalettes(root);
   const names = [
     "--nx-canvas", "--nx-sidebar", "--nx-card", "--nx-popover",
     "--nx-border-subtle", "--nx-border", "--nx-border-strong",
@@ -128,6 +157,8 @@ function mountTokens(root: HTMLElement) {
     }
   };
   picker.addEventListener("input", () => setPrimary(picker.value));
+  // Elegir una paleta quita el acento a mano (si no, lo taparía).
+  root.addEventListener("nx-palette", () => setPrimary(null));
   root.querySelector("#primary-reset")!.addEventListener("click", () => setPrimary(null));
 }
 
@@ -315,4 +346,65 @@ function mountAiDemo(root: HTMLElement) {
   ai.addEventListener("nx-ai-done", (e) => add(`nx-ai-done → ${e.detail.status} · ${e.detail.sources.length} fuentes · ${e.detail.text.length} caracteres`));
   ai.addEventListener("nx-ai-action", (e) => add(`nx-ai-action → ${e.detail.id} ${JSON.stringify(e.detail.data)}`));
   ai.addEventListener("nx-ai-feedback", (e) => add(`nx-ai-feedback → ${e.detail.value}`));
+}
+
+/**
+ * La lista de paletas. Cada opción lleva su propio `data-nx-palette`, así que sus muestras se
+ * pintan con los colores de ESA paleta (y del tema actual), sin calcular nada aquí.
+ */
+function mountPalettes(root: HTMLElement) {
+  const box = root.querySelector<HTMLElement>("#palettes")!;
+  const current = () => document.documentElement.dataset.nxPalette ?? "indigo";
+  const render = () => {
+    box.replaceChildren(
+      ...PALETTES.map((p) => {
+        const opt = document.createElement("button");
+        opt.type = "button";
+        opt.className = "palette";
+        opt.dataset.nxPalette = p.id;
+        opt.setAttribute("role", "radio");
+        opt.setAttribute("aria-checked", String(p.id === current()));
+        opt.innerHTML = `
+          <span class="palette__swatches" aria-hidden="true">
+            <span style="background: var(--nx-primary)"></span>
+            <span style="background: var(--nx-nav-active-bg)"></span>
+            <span style="background: var(--nx-sidebar)"></span>
+            <span style="background: var(--nx-muted-foreground)"></span>
+            <span style="background: var(--nx-foreground)"></span>
+          </span>
+          <span class="palette__text"><span class="palette__name"></span><span class="palette__desc"></span></span>
+          <span class="palette__preview" aria-hidden="true">
+            <span class="palette__nav"><i></i>Inicio</span>
+            <span class="palette__btn">Guardar</span>
+          </span>`;
+        opt.querySelector(".palette__name")!.textContent = p.name;
+        opt.querySelector(".palette__desc")!.textContent = p.desc;
+        return opt;
+      }),
+    );
+  };
+  render();
+  box.addEventListener("click", (e) => {
+    const opt = (e.target as Element).closest<HTMLElement>(".palette");
+    if (!opt) return;
+    const id = opt.dataset.nxPalette!;
+    applyPalette(id);
+    try {
+      localStorage.setItem(PALETTE_KEY, id);
+    } catch {
+      /* sin almacenamiento: dura lo que la visita */
+    }
+    root.dispatchEvent(new Event("nx-palette"));
+    for (const o of box.querySelectorAll(".palette")) o.setAttribute("aria-checked", String(o === opt));
+  });
+  // Flechas dentro del grupo, como un radiogroup.
+  box.addEventListener("keydown", (e) => {
+    if (!["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft"].includes(e.key)) return;
+    const opts = [...box.querySelectorAll<HTMLElement>(".palette")];
+    const i = opts.indexOf(document.activeElement as HTMLElement);
+    const next = opts[(i + (e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : -1) + opts.length) % opts.length];
+    e.preventDefault();
+    next.focus();
+    next.click();
+  });
 }

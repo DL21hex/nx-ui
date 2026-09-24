@@ -1,0 +1,73 @@
+/*
+ * Paletas predefinidas de nx-ui (opcional: `nx-ui/palettes.css`). Se aplican con un atributo en
+ * <html> o en cualquier zona de la página:
+ *
+ *   <html data-nx-palette="oceano">
+ *
+ * Cada una solo fija los parámetros de `tokens.css`; claro y oscuro salen solos. `indigo` es la
+ * paleta por defecto (la de los tokens sin paleta).
+ */
+[data-nx-palette="indigo"] {
+  --nx-accent-h: 262;
+}
+[data-nx-palette="oceano"] {
+  --nx-accent-h: 222;
+  --nx-accent-c: 0.13;
+  --nx-accent-l: 0.53;
+  --nx-neutral-h: 225;
+  --nx-tint: 1.8;
+}
+[data-nx-palette="esmeralda"] {
+  --nx-accent-h: 162;
+  --nx-accent-c: 0.13;
+  --nx-accent-l: 0.53;
+  --nx-accent-l-dark: 0.75;
+  --nx-neutral-h: 170;
+  --nx-tint: 1.4;
+}
+[data-nx-palette="bosque"] {
+  --nx-accent-h: 138;
+  --nx-accent-c: 0.1;
+  --nx-accent-l: 0.48;
+  --nx-accent-l-dark: 0.74;
+  --nx-neutral-h: 115;
+  --nx-tint: 2.2;
+}
+[data-nx-palette="terracota"] {
+  --nx-accent-h: 38;
+  --nx-accent-c: 0.15;
+  --nx-accent-l: 0.56;
+  --nx-accent-l-dark: 0.74;
+  --nx-neutral-h: 60;
+  --nx-tint: 2.4;
+}
+[data-nx-palette="frambuesa"] {
+  --nx-accent-h: 358;
+  --nx-accent-c: 0.19;
+  --nx-accent-l: 0.55;
+  --nx-accent-l-dark: 0.73;
+  --nx-neutral-h: 350;
+  --nx-tint: 1.2;
+}
+[data-nx-palette="violeta"] {
+  --nx-accent-h: 300;
+  --nx-accent-c: 0.2;
+  --nx-accent-l: 0.53;
+  --nx-accent-l-dark: 0.74;
+  --nx-neutral-h: 295;
+  --nx-tint: 1.6;
+}
+[data-nx-palette="medianoche"] {
+  --nx-accent-h: 255;
+  --nx-accent-c: 0.09;
+  --nx-accent-l: 0.36;
+  --nx-accent-l-dark: 0.82;
+  --nx-neutral-h: 255;
+  --nx-tint: 2.6;
+}
+[data-nx-palette="grafito"] {
+  --nx-accent-c: 0;
+  --nx-accent-l: 0.27;
+  --nx-accent-l-dark: 0.92;
+  --nx-tint: 0.5;
+}
