@@ -13,10 +13,15 @@
           <span class="brand__mark" aria-hidden="true">nx</span>
           <span class="brand__text">nx-ui <small>v0.1</small></span>
         </a>
-        <div slot="footer" class="theme" role="group" aria-label="Tema">
-          <button type="button" data-theme-set="auto" title="Tema del sistema">Auto</button>
-          <button type="button" data-theme-set="light" title="Tema claro">Claro</button>
-          <button type="button" data-theme-set="dark" title="Tema oscuro">Oscuro</button>
+        <div slot="footer">
+          <button type="button" class="search-btn" popovertarget="cmd">
+            <span class="search-btn__text">Buscar…</span> <kbd data-mod>Ctrl K</kbd>
+          </button>
+          <div class="theme" role="group" aria-label="Tema">
+            <button type="button" data-theme-set="auto" title="Tema del sistema">Auto</button>
+            <button type="button" data-theme-set="light" title="Tema claro">Claro</button>
+            <button type="button" data-theme-set="dark" title="Tema oscuro">Oscuro</button>
+          </div>
         </div>
       </nx-sidemenu>
 
@@ -24,10 +29,13 @@
         <header class="topbar">
           <button type="button" class="icon-btn" popovertarget="nav" aria-label="Abrir menú">☰</button>
           <span class="topbar__title">nx-ui</span>
+          <button type="button" class="icon-btn topbar__search" popovertarget="cmd" aria-label="Buscar">⌕</button>
         </header>
         <main id="page" class="page" tabindex="-1"></main>
       </div>
     </div>
+    <!-- La paleta de comandos de toda la galería: ⌘K / Ctrl+K desde cualquier página. -->
+    <nx-command id="cmd" menu="nav" source="/demo/command"></nx-command>
 
     <!-- ================================================================ Introducción -->
     <template id="page-intro">
@@ -421,6 +429,231 @@ if (await nxConfirm({
             <tr><td><code>nxToast(opciones)</code></td><td><code>{message, tone?, undo?, action?, duration?}</code> → <code>"undo" | "action" | "timeout" | "dismiss"</code>. Se pausa con el mouse o el foco encima.</td></tr>
             <tr><td><code>nxConfirm(opciones)</code></td><td><code>{heading, message?, impact?, body?, confirmLabel?, tone?, hold?}</code> → <code>true</code> o <code>false</code>.</td></tr>
             <tr><td><code>&lt;nx-button hold&gt;</code></td><td>Mantener pulsado (ms, 1000 por defecto) para activar. Con teclado, mantener <kbd>Enter</kbd> o <kbd>Espacio</kbd>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- ================================================================ Paleta de comandos -->
+    <template id="page-command">
+      <p class="eyebrow">Componentes</p>
+      <h1>Paleta de comandos <code class="tag">&lt;nx-command&gt;</code></h1>
+      <p class="lead">
+        Una sola caja para ir a cualquier pantalla, encontrar un registro, ejecutar una acción y, si nada de eso
+        responde, preguntarle al asistente. Aprende: lo que eliges seguido sube, y sin escribir nada aparece en
+        «Recientes».
+      </p>
+      <div class="dlg-row">
+        <button type="button" class="cmd-open" popovertarget="cmd">
+          <span>Busca una pantalla, un registro o una acción…</span> <kbd data-mod>Ctrl K</kbd>
+        </button>
+      </div>
+      <p class="sel-tip">
+        Es la misma paleta de toda la galería. Prueba <kbd>np</kbd> (iniciales de «Nuevo pedido»), <kbd>porteria</kbd>
+        (sin tilde, sale del menú), <kbd>OC-23</kbd> o <kbd>ana</kbd> (registros del servidor), <kbd>cambiar pa</kbd>
+        (un submenú: Escape vuelve), o una pregunta en la página del Directorio de TH, donde hay un asistente.
+      </p>
+      <ol class="stage__log btn-events" id="cmd-log"></ol>
+
+      <h2>De dónde salen las entradas</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fuente</th><th>Qué aporta</th></tr></thead>
+          <tbody>
+            <tr><td><code>items</code></td><td>Entradas propias: acciones (<code>nx-command-select</code>), enlaces (<code>href</code>) y submenús (<code>children</code>). Cada una con <code>group</code>, <code>hint</code>, <code>keywords</code> (sinónimos), <code>icon</code> y <code>shortcut</code>.</td></tr>
+            <tr><td><code>menu="id"</code></td><td>Las pantallas de un <code>&lt;nx-sidemenu&gt;</code>, con su ruta como pista («Ventas › Pedidos»). Se leen al abrir: siempre al día.</td></tr>
+            <tr><td><code>source="/url"</code></td><td>Registros del servidor mientras se escribe: <code>GET /url?q=…</code> → <code>[{label, href, group, hint, …}]</code> (o <code>{items}</code>). Van después de las coincidencias locales, en el orden del servidor.</td></tr>
+            <tr><td><code>agent="id"</code></td><td>Lo que se escribe se le puede preguntar a ese <code>&lt;nx-agent&gt;</code> (<code>nx-command-ask</code>, cancelable).</td></tr>
+            <tr><td>Recientes</td><td>Lo que se elige se recuerda en <code>localStorage</code> (solo en ese navegador; <code>storage="none"</code> lo desactiva). Pesa más lo usado seguido y reciente: cada semana cuenta la mitad.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;button popovertarget="cmd"&gt;Buscar… ⌘K&lt;/button&gt;
+&lt;nx-command id="cmd" menu="nav" source="/buscar" agent="asistente"&gt;&lt;/nx-command&gt;
+
+cmd.items = [
+  { id: "nuevo", label: "Nuevo pedido", group: "Acciones", keywords: ["crear"], shortcut: "N" },
+  { id: "tema", label: "Cambiar tema", group: "Acciones",
+    children: [{ id: "claro", label: "Claro" }, { id: "oscuro", label: "Oscuro" }] },
+];
+cmd.addEventListener("nx-command-select", (e) =&gt; ejecutar(e.detail.item.id));</code></pre>
+        <pre role="tabpanel" hidden><code>import { Command } from "nx-ui/solid";
+
+&lt;Command menu="nav" source="/buscar" items={acciones()}
+  onSelect={(e) =&gt; ejecutar(e.detail.item.id)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>items</code>, <code>menu</code>, <code>source</code>, <code>agent</code></td><td>Las fuentes (arriba).</td></tr>
+            <tr><td><code>hotkey</code></td><td>Atajo global (<code>"mod+k"</code>; <code>mod</code> es ⌘ o Ctrl). <code>"none"</code> lo quita. <code>&lt;button popovertarget&gt;</code> la abre sin JS.</td></tr>
+            <tr><td><code>placeholder</code>, <code>limit</code>, <code>storage</code>, <code>labels</code></td><td>Texto de la caja, máximo de filas (50), clave de lo reciente y textos.</td></tr>
+            <tr><td><code>show(q?)</code>, <code>hide()</code>, <code>clearHistory()</code></td><td>Abrir (con la consulta ya escrita), cerrar y olvidar lo reciente.</td></tr>
+            <tr><td>Teclado</td><td><kbd>↑</kbd><kbd>↓</kbd> moverse, <kbd>↵</kbd> abrir, <kbd>⌘/Ctrl</kbd>+<kbd>↵</kbd> en otra pestaña, <kbd>Esc</kbd> sale del submenú y luego cierra, <kbd>⌫</kbd> vacío vuelve.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-command-select</code> <code>{item, query, newTab}</code> (cancelable), <code>nx-command-ask</code> <code>{query}</code> (cancelable), <code>nx-open-change</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- ================================================================ Explicar cifras -->
+    <template id="page-explain">
+      <p class="eyebrow">Componentes</p>
+      <h1>¿De dónde sale este número? <code class="tag">&lt;nx-explain&gt;</code></h1>
+      <p class="lead">
+        Cualquier cifra se abre en su desglose: la fórmula término a término, la comparación con otro período, las
+        fuentes y una explicación breve. Cada término se puede abrir a su vez, hasta el documento de origen. Y lo que
+        muestra se comprueba: si los términos no suman la cifra, lo dice.
+      </p>
+      <div class="xp-board" lang="es-CO">
+        <article class="xp-card">
+          <p class="xp-card__label">Factura FE-10482 · Aceros del Caribe</p>
+          <p class="xp-card__value"><nx-explain endpoint="/demo/explain?id=factura">$ 10.601.500</nx-explain></p>
+          <p class="xp-card__hint">Abre el subtotal y el IVA: cada uno tiene su propio desglose.</p>
+        </article>
+        <article class="xp-card">
+          <p class="xp-card__label">Costo de producción · agosto</p>
+          <p class="xp-card__value"><nx-explain endpoint="/demo/explain?id=costo">$ 482,3 M</nx-explain></p>
+          <p class="xp-card__hint">Contra julio y contra el presupuesto; subir es malo.</p>
+        </article>
+        <article class="xp-card">
+          <p class="xp-card__label">Margen bruto · agosto</p>
+          <p class="xp-card__value"><nx-explain endpoint="/demo/explain?id=margen">31,4 %</nx-explain></p>
+          <p class="xp-card__hint">Una división: aquí no hay suma que comprobar.</p>
+        </article>
+        <article class="xp-card">
+          <p class="xp-card__label">Saldo en bancos · hoy</p>
+          <p class="xp-card__value"><nx-explain endpoint="/demo/explain?id=bancos">$ 1.284,5 M</nx-explain></p>
+          <p class="xp-card__hint">Los extractos no dan la cifra: el componente lo detecta.</p>
+        </article>
+      </div>
+      <p lang="es-CO">
+        También dentro de un texto: el IVA de esta factura es de
+        <nx-explain id="xp-inline">$ 1.729.000</nx-explain>, y ese desglose viene en la propia página (<code>explanation</code>),
+        sin pedir nada al servidor.
+      </p>
+      <ol class="stage__log btn-events" id="xp-log"></ol>
+
+      <h2>Protocolo</h2>
+      <p>
+        Una línea por evento (NDJSON o <code>data:</code> de SSE). El componente hace <code>GET</code> a <code>endpoint</code>
+        (o <code>POST</code> con <code>{context}</code> si <code>method="POST"</code>). Lo que no conoce lo ignora.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Evento</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>value</code></td><td><code>{"type":"value","label":"Total factura","value":10601500,"format":"money","currency":"COP"}</code>: la cifra. <code>format</code>: <code>money</code>, <code>number</code> o <code>percent</code> (0,19 = 19 %).</td></tr>
+            <tr><td><code>term</code></td><td><code>{"type":"term","label":"IVA 19 %","value":1729000,"op":"+","detail":"…","source":"fe","explain":"/…","href":"/…"}</code>. <code>op</code>: <code>+</code> (por defecto), <code>-</code>, <code>×</code>, <code>÷</code> o <code>=</code> (subtotal). <code>explain</code> abre su desglose; <code>href</code>, el documento.</td></tr>
+            <tr><td><code>total</code></td><td><code>{"type":"total","value":10601500}</code>: contra qué se comprueban los términos (por defecto, la cifra). Solo se comprueban sumas y restas.</td></tr>
+            <tr><td><code>compare</code></td><td><code>{"type":"compare","label":"julio","value":432900000,"better":"down"}</code>: «▲ 11,4 % vs. julio», en rojo si subir es malo.</td></tr>
+            <tr><td><code>source</code>, <code>text</code>, <code>note</code></td><td>Como en la IA: fuentes con enlace, explicación con <code>**negrita**</code> y citas <code>[^id]</code>, y marcas («cifras del cierre»).</td></tr>
+            <tr><td><code>error</code>, <code>done</code></td><td>Terminan el desglose.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">En línea</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>Total: &lt;nx-explain endpoint="/explicar/factura/10482"&gt;$ 10.601.500&lt;/nx-explain&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>iva.explanation = [
+  { type: "value", label: "IVA 19 %", value: 1729000, currency: "COP" },
+  { type: "term", label: "Base gravable", value: 9100000 },
+  { type: "term", label: "Tarifa general", value: 0.19, op: "×", format: "percent" },
+];</code></pre>
+        <pre role="tabpanel" hidden><code>import { Explain } from "nx-ui/solid";
+
+&lt;Explain endpoint={`/explicar/factura/${id()}`}&gt;{total()}&lt;/Explain&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>endpoint</code>, <code>method</code>, <code>context</code></td><td>De dónde sale el desglose (<code>GET</code>; con <code>POST</code>, el cuerpo es <code>{context}</code>).</td></tr>
+            <tr><td><code>explanation</code></td><td>El desglose ya armado: los mismos eventos, sin servidor.</td></tr>
+            <tr><td><code>locale</code>, <code>labels</code></td><td>Formato de los números (o el <code>lang</code> de la página) y textos.</td></tr>
+            <tr><td><code>show()</code>, <code>hide()</code>, <code>refresh()</code>, <code>state</code></td><td>Abrir, cerrar, olvidar lo traído (se guarda por URL) y el desglose que se ve.</td></tr>
+            <tr><td>Teclado</td><td><kbd>↵</kbd> o <kbd>Espacio</kbd> abren; <kbd>Esc</kbd> vuelve un nivel y luego cierra; el foco vuelve a la cifra.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-open-change</code> <code>{open}</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- ================================================================ Bandeja -->
+    <template id="page-inbox">
+      <p class="eyebrow">Componentes</p>
+      <h1>Bandeja de aprobaciones <code class="tag">&lt;nx-inbox&gt;</code></h1>
+      <p class="lead">
+        Aprobar con el teclado: <kbd>J</kbd>/<kbd>K</kbd> para moverse, <kbd>A</kbd> para aprobar, <kbd>R</kbd> para
+        rechazar con un motivo, <kbd>X</kbd> para seleccionar varios. Al decidir, el ítem sale y el siguiente queda listo.
+        Nada pregunta «¿está seguro?»: todo se deshace mientras corre el tiempo.
+      </p>
+      <nx-inbox id="inbox-demo" heading="Órdenes por aprobar" locale="es-CO"></nx-inbox>
+      <div class="dlg-row">
+        <button type="button" class="dlg-plain" id="inbox-reset">Volver a llenar la bandeja</button>
+      </div>
+      <ol class="stage__log btn-events" id="inbox-log"></ol>
+
+      <h2>Cómo decide</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Paso</th><th>Qué pasa</th></tr></thead>
+          <tbody>
+            <tr><td>Impacto</td><td>El detalle muestra qué pasa si se aprueba: una lista, o transmitido desde <code>impact</code> (el protocolo de <code>nxConfirm</code>, <code>POST {id, data}</code>). Un <code>block</code> impide aprobar ese ítem y lo marca con un candado. Prueba la OC-2310.</td></tr>
+            <tr><td><code>nx-inbox-decide</code></td><td>Antes de aplicar (cancelable): <code>{decision, ids, items, reason?}</code>.</td></tr>
+            <tr><td>Deshacer</td><td>La decisión se ve al instante y se puede deshacer durante <code>undo</code> ms (7000), con el aviso o <kbd>Ctrl</kbd>+<kbd>Z</kbd>: el ítem vuelve a su lugar (<code>nx-inbox-undo</code>).</td></tr>
+            <tr><td><code>nx-inbox-commit</code></td><td>Cuando el tiempo termina (o la página se cierra): ahí la app llama al backend.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-inbox id="bandeja" heading="Órdenes por aprobar" require-reason&gt;&lt;/nx-inbox&gt;
+
+bandeja.items = await (await fetch("/compras/por-aprobar")).json();
+bandeja.addEventListener("nx-inbox-commit", (e) =&gt;
+  fetch(`/compras/${e.detail.decision}`, { method: "POST", keepalive: true,
+    body: JSON.stringify({ ids: e.detail.ids, motivo: e.detail.reason }) }));</code></pre>
+        <pre role="tabpanel" hidden><code>import { Inbox } from "nx-ui/solid";
+
+&lt;Inbox items={pendientes()} heading="Órdenes por aprobar"
+  onCommit={(e) =&gt; registrar(e.detail)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>items</code></td><td><code>{id, title, subtitle?, requester?, amount?, currency?, date?, tags?, facts?, impact?, href?, data?}</code>.</td></tr>
+            <tr><td><code>undo</code>, <code>require-reason</code>, <code>heading</code>, <code>locale</code>, <code>labels</code></td><td>Tiempo para deshacer (0 = sin aviso), motivo obligatorio al rechazar, título, formato y textos.</td></tr>
+            <tr><td><code>decide(decisión, ids?, motivo?)</code></td><td>Aprueba o rechaza desde código → <code>"commit"</code>, <code>"undo"</code> o <code>"cancel"</code>.</td></tr>
+            <tr><td><code>active</code>, <code>selected</code>, <code>pending</code></td><td>El ítem activo, los seleccionados y lo que queda por decidir.</td></tr>
+            <tr><td>Teclado</td><td><kbd>J</kbd>/<kbd>K</kbd> o flechas, <kbd>X</kbd>/<kbd>Espacio</kbd> seleccionar, <kbd>Mayús</kbd>+mover extiende, <kbd>Ctrl</kbd>+<kbd>A</kbd> todos, <kbd>A</kbd> aprobar, <kbd>R</kbd> rechazar, <kbd>↵</kbd> abrir el documento, <kbd>Esc</kbd> limpiar.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-inbox-decide</code> (cancelable), <code>nx-inbox-commit</code>, <code>nx-inbox-undo</code>, <code>nx-inbox-active</code>, <code>nx-inbox-open</code> (cancelable).</td></tr>
           </tbody>
         </table>
       </div>

@@ -1,0 +1,399 @@
+/*
+ * <nx-explain> y su tarjeta. Variable propia: --nx-explain-width (380px).
+ */
+
+nx-explain {
+  display: inline-flex;
+  white-space: nowrap;
+  align-items: baseline;
+  gap: 3px;
+  border-radius: var(--nx-radius-sm);
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline dotted var(--nx-text-quaternary);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  cursor: help;
+  transition:
+    background-color var(--nx-motion-fast),
+    text-decoration-color var(--nx-motion-fast);
+  &:hover,
+  &[aria-expanded="true"] {
+    background: var(--nx-primary-soft);
+    text-decoration-color: var(--nx-primary);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.nx-explain__mark {
+  /* Siempre al final, aunque el parser la agregue antes que la cifra (el elemento se conecta
+     antes de que lleguen sus hijos). */
+  order: 1;
+  display: inline-flex;
+  inline-size: 0.8em;
+  block-size: 0.8em;
+  align-self: center;
+  color: var(--nx-text-quaternary);
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+nx-explain:hover .nx-explain__mark,
+nx-explain[aria-expanded="true"] .nx-explain__mark {
+  color: var(--nx-primary);
+}
+
+/* ---------------------------------------------------------------- la tarjeta */
+
+.nx-explain-card {
+  position: fixed;
+  inset: auto;
+  inline-size: min(var(--nx-explain-width, 380px), 100vw - 16px);
+  max-block-size: min(560px, 100dvh - 16px);
+  margin: 0;
+  padding: 0 14px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  outline: none;
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  scrollbar-width: thin;
+
+  & *,
+  & *::before {
+    box-sizing: border-box;
+  }
+  & .nx-glyph {
+    display: inline-flex;
+    flex: none;
+    inline-size: 14px;
+    block-size: 14px;
+    & svg {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+    }
+  }
+  & button {
+    font: inherit;
+  }
+}
+.nx-explain-card:popover-open {
+  animation: nx-explain-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+.nx-explain__nav {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline: -14px;
+  padding: 10px 8px 4px 14px;
+  background: var(--nx-popover);
+}
+.nx-explain__nav > .nx-explain__label {
+  flex: 1;
+}
+.nx-explain__label {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 550;
+}
+.nx-explain__back,
+.nx-explain__close {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px 3px 2px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-primary);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+}
+.nx-explain__back {
+  flex: 1;
+  justify-content: flex-start;
+  min-inline-size: 0;
+  text-align: start;
+}
+.nx-explain__close {
+  margin-inline-start: auto;
+  padding: 4px;
+  color: var(--nx-text-tertiary);
+}
+.nx-explain__head {
+  padding-block-end: 8px;
+  & p {
+    margin: 0;
+  }
+}
+.nx-explain__value {
+  font-size: 22px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.nx-explain__detail {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+.nx-explain__deltas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-block-start: 4px !important;
+}
+.nx-explain__delta {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 11.5px;
+  font-weight: 550;
+  &[data-tone="success"] {
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+  }
+  &[data-tone="danger"] {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+}
+
+/* ---------------------------------------------------------------- la fórmula */
+
+.nx-explain__terms {
+  margin: 0 -6px;
+  padding: 6px 0;
+  border-block: 1px solid var(--nx-border-subtle);
+  list-style: none;
+}
+.nx-explain__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  inline-size: 100%;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+button.nx-explain__row,
+a.nx-explain__row {
+  cursor: pointer;
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--nx-ring);
+  }
+}
+.nx-explain__op {
+  flex: none;
+  inline-size: 12px;
+  color: var(--nx-text-tertiary);
+  font-weight: 600;
+  text-align: center;
+}
+.nx-explain__term-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+  & small {
+    color: var(--nx-text-tertiary);
+    font-size: 11.5px;
+  }
+}
+.nx-explain__num {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.nx-explain__more {
+  align-self: center;
+  inline-size: 13px !important;
+  block-size: 13px !important;
+  color: var(--nx-text-quaternary);
+}
+.nx-explain__term--total {
+  margin-block-start: 4px;
+  border-block-start: 1px dashed var(--nx-border);
+  & .nx-explain__num {
+    font-weight: 650;
+  }
+}
+.nx-explain__ok,
+.nx-explain__bad {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 550;
+}
+.nx-explain__ok {
+  color: var(--nx-success);
+}
+.nx-explain__bad {
+  color: var(--nx-danger);
+}
+.nx-explain__term--total[data-ok="false"] .nx-explain__num {
+  color: var(--nx-danger);
+}
+.nx-explain__cite {
+  margin-inline-start: 2px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  font-size: 9.5px;
+  font-weight: 650;
+}
+
+/* ---------------------------------------------------------------- explicación y fuentes */
+
+.nx-explain__text {
+  padding-block-start: 8px;
+  color: var(--nx-muted-foreground);
+  & p,
+  & ul {
+    margin: 0 0 6px;
+  }
+  & ul {
+    padding-inline-start: 18px;
+  }
+  & strong {
+    color: var(--nx-foreground);
+    font-weight: 600;
+  }
+  & code {
+    font-family: var(--nx-font-mono);
+    font-size: 0.92em;
+  }
+}
+.nx-explain__sources {
+  padding-block-start: 6px;
+  & h3 {
+    margin: 0 0 4px;
+    color: var(--nx-text-tertiary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  & ol {
+    margin: 0;
+    padding-inline-start: 18px;
+    font-size: 12px;
+  }
+  & small {
+    display: block;
+    color: var(--nx-text-tertiary);
+    font-size: 11.5px;
+  }
+  & a {
+    color: inherit;
+    text-decoration: underline var(--nx-border-strong);
+    text-underline-offset: 2px;
+  }
+}
+.nx-explain__source {
+  padding: 2px 4px;
+  border-radius: var(--nx-radius-sm);
+  transition: background-color var(--nx-motion-fast);
+  &.is-lit {
+    background: var(--nx-primary-soft);
+  }
+}
+.nx-explain__notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0 0;
+}
+.nx-explain__note {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 11px;
+  &[data-tone="success"] {
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+  }
+  &[data-tone="warning"],
+  &[data-tone="danger"] {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+}
+.nx-explain__status,
+.nx-explain__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+.nx-explain__error {
+  color: var(--nx-danger);
+}
+.nx-explain__spin {
+  inline-size: 12px;
+  block-size: 12px;
+  border: 2px solid color-mix(in oklch, var(--nx-foreground) 20%, transparent);
+  border-block-start-color: var(--nx-primary);
+  border-radius: 50%;
+  animation: nx-explain-spin 0.7s linear infinite;
+}
+
+@keyframes nx-explain-in {
+  from {
+    opacity: 0;
+    translate: 0 -3px;
+  }
+}
+@keyframes nx-explain-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-explain,
+  .nx-explain-card,
+  .nx-explain-card * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+  .nx-explain__spin {
+    animation-duration: 1.4s !important;
+  }
+}
+@media (forced-colors: active) {
+  nx-explain {
+    text-decoration-color: LinkText;
+  }
+}

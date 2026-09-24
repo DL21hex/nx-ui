@@ -100,6 +100,30 @@ pre {
   color: var(--nx-foreground);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
+/* Buscar (abre la paleta de comandos). */
+.search-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: calc(100% - 16px);
+  margin: 0 8px 8px;
+  padding: 6px 8px 6px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-text-tertiary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  &:hover {
+    border-color: var(--nx-border-strong);
+    color: var(--nx-foreground);
+  }
+  & kbd {
+    margin-inline-start: auto;
+    font-size: 10.5px;
+  }
+}
 /* En compacto la marca y el selector de tema no caben: se quedan el monograma y nada más. */
 nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
   & .brand {
@@ -107,7 +131,8 @@ nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
     padding-inline: 0;
   }
   & .brand__text,
-  & .theme {
+  & .theme,
+  & .search-btn {
     display: none;
   }
 }
@@ -123,6 +148,7 @@ nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
   background: var(--nx-sidebar);
 }
 .topbar__title {
+  flex: 1;
   font-weight: 650;
 }
 .icon-btn {
@@ -1039,4 +1065,63 @@ td:first-child {
 }
 #grid-demo {
   max-inline-size: none;
+}
+
+/* ---------------------------------------------------------------- demo de la paleta de comandos */
+
+.cmd-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  inline-size: min(100%, 460px);
+  padding: 10px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-text-tertiary);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  & span {
+    flex: 1;
+  }
+  &:hover {
+    border-color: var(--nx-primary-border);
+    color: var(--nx-foreground);
+  }
+}
+
+/* ---------------------------------------------------------------- demo de «¿de dónde sale este número?» */
+
+.xp-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-block-end: 20px;
+}
+.xp-card {
+  padding: 14px 16px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  & p {
+    margin: 0;
+  }
+}
+.xp-card__label {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 550;
+}
+.xp-card__value {
+  margin-block: 4px !important;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.xp-card__hint {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
 }

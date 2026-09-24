@@ -16,6 +16,9 @@ const entries = {
   confirm: "src/components/confirm/confirm.css",
   toast: "src/components/toast/toast.css",
   agent: "src/components/agent/agent.css",
+  command: "src/components/command/command.css",
+  explain: "src/components/explain/explain.css",
+  inbox: "src/components/inbox/inbox.css",
 };
 
 await build({

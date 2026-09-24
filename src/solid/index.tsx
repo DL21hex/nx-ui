@@ -1,6 +1,7 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
- * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`), y `nxToast` / `nxConfirm`.
+ * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
+ * `<Inbox>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -35,6 +36,15 @@ export { nxToast } from "../components/toast/index";
 import "../components/agent/index";
 import type { NxAgent } from "../components/agent/agent";
 import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool } from "../components/agent/types";
+import "../components/command/index";
+import type { NxCommand } from "../components/command/command";
+import type { CommandItem, CommandLabels, CommandSelectDetail } from "../components/command/types";
+import "../components/explain/index";
+import type { NxExplain } from "../components/explain/explain";
+import type { ExplainEvent, ExplainLabels } from "../components/explain/types";
+import "../components/inbox/index";
+import type { NxInbox } from "../components/inbox/inbox";
+import type { InboxDecisionDetail, InboxItem, InboxLabels } from "../components/inbox/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -46,14 +56,17 @@ export type { NxDocCapture, CaptureEvent, CaptureLabels, CaptureSchemaItem, Capt
 export type { NxAgent, AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool };
 export type { NxDialog, CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize };
 export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort };
+export type { NxCommand, CommandItem, CommandLabels, CommandSelectDetail };
+export type { NxExplain, ExplainEvent, ExplainLabels };
+export type { NxInbox, InboxDecisionDetail, InboxItem, InboxLabels };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
 
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
-      items: MenuItem[];
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | undefined;
+      items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -68,6 +81,7 @@ declare module "solid-js" {
       sort: GridSort | null | undefined;
       selected: string[] | undefined;
       tools: AguiTool[] | undefined;
+      explanation: ExplainEvent[] | null | undefined;
     }
     interface ExplicitAttributes {
       active: string | undefined;
@@ -99,6 +113,11 @@ declare module "solid-js" {
       url: string | undefined;
       hold: string | undefined;
       for: string | undefined;
+      menu: string | undefined;
+      agent: string | undefined;
+      hotkey: string | undefined;
+      storage: string | undefined;
+      undo: string | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -114,6 +133,7 @@ declare module "solid-js" {
       "facets-open": boolean;
       persistent: boolean;
       selectable: boolean;
+      "require-reason": boolean;
     }
     interface CustomEvents {
       "nx-select": CustomEvent<SelectDetail>;
@@ -135,6 +155,12 @@ declare module "solid-js" {
       "nx-agent-state": CustomEvent<{ state: unknown }>;
       "nx-agent-event": CustomEvent<AguiEvent>;
       "nx-grid-open": CustomEvent<{ id: string; row: GridRow; key: string; origin: HTMLElement | null }>;
+      "nx-command-select": CustomEvent<CommandSelectDetail>;
+      "nx-command-ask": CustomEvent<{ query: string }>;
+      "nx-inbox-decide": CustomEvent<InboxDecisionDetail>;
+      "nx-inbox-commit": CustomEvent<InboxDecisionDetail>;
+      "nx-inbox-undo": CustomEvent<InboxDecisionDetail>;
+      "nx-inbox-active": CustomEvent<{ id: string; item: InboxItem }>;
     }
     interface IntrinsicElements {
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
@@ -145,6 +171,9 @@ declare module "solid-js" {
       "nx-grid": HTMLAttributes<NxGrid> & { source?: string };
       "nx-dialog": HTMLAttributes<NxDialog> & { heading?: string };
       "nx-agent": HTMLAttributes<NxAgent> & { endpoint?: string };
+      "nx-command": HTMLAttributes<NxCommand>;
+      "nx-explain": HTMLAttributes<NxExplain> & { endpoint?: string };
+      "nx-inbox": HTMLAttributes<NxInbox> & { heading?: string };
     }
   }
 }
@@ -548,6 +577,109 @@ export function Agent(props: AgentProps): JSX.Element {
       }}
       on:nx-agent-state={(e) => local.onState?.(e)}
       on:nx-agent-event={(e) => local.onEvent?.(e)}
+    />
+  );
+}
+
+export interface CommandProps extends Omit<JSX.HTMLAttributes<NxCommand>, "onSelect"> {
+  /** Entradas propias: acciones, enlaces y submenús. */
+  items?: CommandItem[];
+  /** Id de un `<nx-sidemenu>`: sus pantallas entran en la paleta. */
+  menu?: string;
+  /** Búsqueda en el servidor: `GET source?q=…` → entradas. */
+  source?: string;
+  /** Id de un `<nx-agent>` al que se le pregunta lo que no se encuentra. */
+  agent?: string;
+  /** Atajo global (`"mod+k"`); `"none"` lo quita. */
+  hotkey?: string;
+  placeholder?: string;
+  storage?: string;
+  labels?: Partial<CommandLabels>;
+  /** Cancelable: la paleta se queda abierta y no navega. */
+  onSelect?: (e: CustomEvent<CommandSelectDetail>) => void;
+  onAsk?: (e: CustomEvent<{ query: string }>) => void;
+}
+
+export function Command(props: CommandProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["items", "menu", "source", "agent", "hotkey", "placeholder", "storage", "labels", "onSelect", "onAsk"]);
+  return (
+    <nx-command
+      {...rest}
+      prop:items={local.items}
+      prop:labels={local.labels}
+      attr:menu={local.menu}
+      attr:source={local.source}
+      attr:agent={local.agent}
+      attr:hotkey={local.hotkey}
+      attr:placeholder={local.placeholder}
+      attr:storage={local.storage}
+      on:nx-command-select={(e) => local.onSelect?.(e)}
+      on:nx-command-ask={(e) => local.onAsk?.(e)}
+    />
+  );
+}
+
+export interface ExplainProps extends JSX.HTMLAttributes<NxExplain> {
+  /** URL del desglose (eventos en streaming). */
+  endpoint?: string;
+  method?: "GET" | "POST";
+  /** El desglose ya armado, sin servidor. */
+  explanation?: ExplainEvent[];
+  context?: unknown;
+  locale?: string;
+  labels?: Partial<ExplainLabels>;
+  /** La cifra. */
+  children?: JSX.Element;
+}
+
+export function Explain(props: ExplainProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["endpoint", "method", "explanation", "context", "locale", "labels", "children"]);
+  return (
+    <nx-explain
+      {...rest}
+      attr:endpoint={local.endpoint}
+      attr:method={local.method}
+      attr:locale={local.locale}
+      prop:explanation={local.explanation}
+      prop:context={local.context}
+      prop:labels={local.labels}
+    >
+      {local.children}
+    </nx-explain>
+  );
+}
+
+export interface InboxProps extends JSX.HTMLAttributes<NxInbox> {
+  items: InboxItem[];
+  heading?: string;
+  /** Milisegundos para deshacer (7000); 0 registra al instante. */
+  undo?: number;
+  requireReason?: boolean;
+  locale?: string;
+  labels?: Partial<InboxLabels>;
+  /** Cancelable: la decisión no se aplica. */
+  onDecide?: (e: CustomEvent<InboxDecisionDetail>) => void;
+  /** Pasó el tiempo de deshacer: aquí se registra en el backend. */
+  onCommit?: (e: CustomEvent<InboxDecisionDetail>) => void;
+  onUndo?: (e: CustomEvent<InboxDecisionDetail>) => void;
+  onActive?: (e: CustomEvent<{ id: string; item: InboxItem }>) => void;
+}
+
+export function Inbox(props: InboxProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["items", "heading", "undo", "requireReason", "locale", "labels", "onDecide", "onCommit", "onUndo", "onActive"]);
+  return (
+    <nx-inbox
+      {...rest}
+      prop:items={local.items}
+      prop:labels={local.labels}
+      attr:heading={local.heading}
+      attr:undo={local.undo === undefined ? undefined : String(local.undo)}
+      attr:locale={local.locale}
+      bool:require-reason={!!local.requireReason}
+      on:nx-inbox-decide={(e) => local.onDecide?.(e)}
+      on:nx-inbox-commit={(e) => local.onCommit?.(e)}
+      on:nx-inbox-undo={(e) => local.onUndo?.(e)}
+      on:nx-inbox-active={(e) => local.onActive?.(e)}
     />
   );
 }

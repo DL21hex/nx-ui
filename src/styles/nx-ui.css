@@ -10,3 +10,6 @@
 @import "../components/confirm/confirm.css";
 @import "../components/toast/toast.css";
 @import "../components/agent/agent.css";
+@import "../components/command/command.css";
+@import "../components/explain/explain.css";
+@import "../components/inbox/inbox.css";

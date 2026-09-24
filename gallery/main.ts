@@ -3,10 +3,11 @@ import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
-import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDialog, type NxDocCapture, type GridRow, type NxAgent, type NxGrid, type NxSelect, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
+import { registerIcons, type CaptureSchemaItem, type CommandItem, type MenuItem, type NxAiAnswer, type NxButton, type NxCommand, type NxDialog, type NxDocCapture, type GridRow, type NxAgent, type NxExplain, type NxGrid, type NxInbox, type NxSelect, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
+import { EXPLAIN, INBOX } from "./demo-next";
 
 registerIcons(lucide);
 
@@ -79,6 +80,9 @@ const NAV: MenuItem[] = [
   { id: "capture", label: "Captura", href: "#/capture", icon: "receipt", section: "Componentes" },
   { id: "grid", label: "Tabla", href: "#/grid", icon: "chart-column", section: "Componentes" },
   { id: "dialog", label: "Diálogos", href: "#/dialog", icon: "layout-dashboard", section: "Componentes" },
+  { id: "command", label: "Paleta de comandos", href: "#/command", icon: "circle-help", section: "Componentes", badge: "Nuevo" },
+  { id: "explain", label: "Explicar cifras", href: "#/explain", icon: "trending-up", section: "Componentes", badge: "Nuevo" },
+  { id: "inbox", label: "Bandeja", href: "#/inbox", icon: "inbox", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
 nav.items = NAV;
@@ -93,10 +97,14 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/capture": { template: "page-capture", mount: mountCaptureDemo },
   "#/grid": { template: "page-grid", mount: mountGridDemo },
   "#/dialog": { template: "page-dialog", mount: mountDialogDemo },
+  "#/command": { template: "page-command", mount: mountCommandDemo },
+  "#/explain": { template: "page-explain", mount: mountExplainDemo },
+  "#/inbox": { template: "page-inbox", mount: mountInboxDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 
 const page = document.querySelector<HTMLElement>("#page")!;
+const cmd = document.querySelector<NxCommand>("#cmd")!;
 function route() {
   const hash = PAGES[location.hash] ? location.hash : "#/";
   const def = PAGES[hash];
@@ -105,9 +113,61 @@ function route() {
   nav.active = hash;
   wireTabs(page);
   def.mount?.(page);
+  // La paleta le pregunta al asistente de la página, si hay uno.
+  cmd.agent = page.querySelector("nx-agent")?.id ?? null;
   page.scrollTop = 0;
   document.title = `nx-ui · ${NAV.find((n) => n.href === hash)?.label ?? "Galería"}`;
 }
+// ---------------------------------------------------------------- paleta de comandos (dogfooding)
+
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const markMod = (root: ParentNode) => root.querySelectorAll("kbd[data-mod]").forEach((k) => (k.textContent = isMac ? "⌘K" : "Ctrl K"));
+markMod(document);
+const GALLERY_COMMANDS: CommandItem[] = [
+  { id: "nuevo-pedido", label: "Nuevo pedido", href: "#/dialog", group: "Acciones", hint: "Diálogos", keywords: ["crear", "orden de compra"], icon: "receipt" },
+  { id: "aprobar", label: "Aprobar órdenes pendientes", href: "#/inbox", group: "Acciones", hint: "Bandeja", keywords: ["autorizar"], icon: "inbox" },
+  {
+    id: "tema",
+    label: "Cambiar tema",
+    group: "Preferencias",
+    keywords: ["oscuro", "claro", "modo"],
+    icon: "settings",
+    children: [
+      { id: "tema-auto", label: "Del sistema", data: { theme: "auto" } },
+      { id: "tema-claro", label: "Claro", data: { theme: "light" } },
+      { id: "tema-oscuro", label: "Oscuro", data: { theme: "dark" } },
+    ],
+  },
+  { id: "paleta", label: "Cambiar paleta", group: "Preferencias", keywords: ["color", "marca"], icon: "layout-dashboard", children: PALETTES.map((p) => ({ id: `paleta-${p.id}`, label: p.name, hint: p.desc, data: { palette: p.id } })) },
+  { id: "copiar", label: "Copiar el enlace de esta página", group: "Acciones", keywords: ["compartir", "url"], shortcut: "C" },
+  { id: "olvidar", label: "Olvidar lo reciente de la paleta", group: "Preferencias", keywords: ["historial", "borrar"] },
+];
+cmd.items = GALLERY_COMMANDS;
+cmd.addEventListener("nx-command-select", (e) => {
+  const { item } = e.detail;
+  const data = item.data as { theme?: string; palette?: string } | undefined;
+  if (data?.theme) {
+    applyTheme(data.theme);
+    try {
+      localStorage.setItem(THEME_KEY, data.theme);
+    } catch {
+      /* sin almacenamiento */
+    }
+  } else if (data?.palette) {
+    applyPalette(data.palette);
+    try {
+      localStorage.setItem(PALETTE_KEY, data.palette);
+    } catch {
+      /* sin almacenamiento */
+    }
+  } else if (item.id === "copiar") {
+    void navigator.clipboard?.writeText(location.href).then(() => nxToast({ message: "Enlace copiado", tone: "success" }));
+  } else if (item.id === "olvidar") {
+    cmd.clearHistory();
+    void nxToast("La paleta olvidó lo reciente");
+  }
+});
+
 addEventListener("hashchange", () => {
   route();
   page.focus({ preventScroll: true });
@@ -808,4 +868,61 @@ function mountHrDemo(root: HTMLElement) {
     const st = e.detail.state as { scenario?: string; count?: number };
     add(`Estado compartido del agente → ${st.scenario ?? "—"} · ${st.count ?? 0} personas`);
   });
+}
+
+// ---------------------------------------------------------------- demo de la paleta de comandos
+
+function mountCommandDemo(root: HTMLElement) {
+  markMod(root);
+  const log = root.querySelector<HTMLOListElement>("#cmd-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 5) log.lastElementChild!.remove();
+  };
+  // La paleta vive fuera de la página: se escucha mientras esta página esté montada.
+  const onSelect = (e: CustomEvent<{ item: CommandItem; query: string; newTab: boolean }>) => add(`nx-command-select → ${e.detail.item.id ?? e.detail.item.label} · «${e.detail.query}»${e.detail.newTab ? " · otra pestaña" : ""}`);
+  const onAsk = (e: CustomEvent<{ query: string }>) => add(`nx-command-ask → «${e.detail.query}»`);
+  cmd.addEventListener("nx-command-select", onSelect);
+  cmd.addEventListener("nx-command-ask", onAsk);
+  addEventListener("hashchange", () => (cmd.removeEventListener("nx-command-select", onSelect), cmd.removeEventListener("nx-command-ask", onAsk)), { once: true });
+}
+
+// ---------------------------------------------------------------- demo de «¿de dónde sale este número?»
+
+function mountExplainDemo(root: HTMLElement) {
+  const inline = root.querySelector<NxExplain>("#xp-inline")!;
+  inline.explanation = EXPLAIN.iva;
+  const log = root.querySelector<HTMLOListElement>("#xp-log")!;
+  root.addEventListener("nx-open-change", (e) => {
+    const t = e.target as NxExplain;
+    if (t.tagName !== "NX-EXPLAIN") return;
+    const li = document.createElement("li");
+    li.textContent = `nx-open-change → ${(e as CustomEvent<{ open: boolean }>).detail.open ? "abre" : "cierra"} ${t.endpoint ?? "(explanation en línea)"}`;
+    log.prepend(li);
+    while (log.children.length > 5) log.lastElementChild!.remove();
+  });
+}
+
+// ---------------------------------------------------------------- demo de la bandeja
+
+function mountInboxDemo(root: HTMLElement) {
+  const inbox = root.querySelector<NxInbox>("#inbox-demo")!;
+  const fill = () => (inbox.items = INBOX.map((i) => ({ ...i })));
+  fill();
+  root.querySelector("#inbox-reset")!.addEventListener("click", fill);
+  const log = root.querySelector<HTMLOListElement>("#inbox-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 6) log.lastElementChild!.remove();
+  };
+  inbox.addEventListener("nx-inbox-decide", (e) => add(`nx-inbox-decide → ${e.detail.decision} ${e.detail.ids.join(", ")}${e.detail.reason ? ` · «${e.detail.reason}»` : ""}`));
+  inbox.addEventListener("nx-inbox-undo", (e) => add(`nx-inbox-undo → ${e.detail.ids.join(", ")}: no se envía nada`));
+  inbox.addEventListener("nx-inbox-commit", (e) => add(`nx-inbox-commit → POST /compras/${e.detail.decision === "approve" ? "aprobar" : "rechazar"} · ${e.detail.ids.join(", ")}`));
+  inbox.addEventListener("nx-inbox-open", (e) => add(`nx-inbox-open → ${e.detail.id}`));
+  // En la demo se trabaja con el teclado desde el primer momento.
+  requestAnimationFrame(() => inbox.querySelector<HTMLElement>(".nx-inbox__list")?.focus({ preventScroll: true }));
 }

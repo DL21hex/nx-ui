@@ -15,8 +15,11 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `nxToast()` + núcleo (ESM) | ≈ 2,2 KB |
 | `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 8,6 KB |
 | `<nx-agent>` + IA + botón + BDUI + núcleo (ESM) | ≈ 14 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 12,6 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 54 KB |
+| `<nx-command>` + núcleo (ESM) | ≈ 6,6 KB |
+| `<nx-explain>` + núcleo (ESM) | ≈ 6,7 KB |
+| `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 8,6 KB |
+| `nx-ui.css` (tokens + todos los componentes) | ≈ 15,4 KB |
+| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 66 KB |
 
 Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
 
@@ -423,6 +426,108 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 
 Nada que cambie datos ocurre en el navegador: las herramientas de la cabina solo muestran,
 preguntan y mueven la pantalla. Escribir datos lo hace el backend, después de la aprobación.
+
+## `<nx-command>`
+
+La paleta de comandos (⌘K / Ctrl+K). Una sola caja para ir a cualquier pantalla, encontrar un
+registro, ejecutar una acción y, si nada de eso responde, preguntarle al asistente. Junta varias
+fuentes, todas JSON:
+
+- `items`: entradas propias `{label, href?, group?, hint?, keywords?, icon?, shortcut?, children?, data?}`.
+  Con `href` es un `<a>` de verdad (el router de la app lo intercepta; ⌘/Ctrl + Enter abre otra
+  pestaña); con `children` abre un submenú; sin ninguno de los dos, avisa con `nx-command-select`.
+- `menu="id"`: las pantallas de un `<nx-sidemenu>`, con su ruta como pista («Ventas › Pedidos»).
+- `source="/url"`: registros del servidor mientras se escribe (`GET /url?q=…` → entradas, o `{items}`).
+- `agent="id"`: lo que se escribe se le puede preguntar a ese `<nx-agent>`.
+
+Busca sin tildes ni mayúsculas, en el nombre, la pista y las palabras clave, y también por
+iniciales («np» → «Nuevo pedido»). Aprende: lo que se elige seguido sube (cada semana pesa la
+mitad) y sin escribir nada aparece en «Recientes». Eso se recuerda en `localStorage`, solo en ese
+navegador (`storage="none"` lo desactiva). El elemento es la capa superior (Popover API):
+`<button popovertarget="cmd">` la abre sin JS.
+
+```html
+<button popovertarget="cmd">Buscar… ⌘K</button>
+<nx-command id="cmd" menu="nav" source="/buscar" agent="asistente"></nx-command>
+<script>
+  cmd.items = [
+    { id: "nuevo", label: "Nuevo pedido", group: "Acciones", keywords: ["crear"], shortcut: "N" },
+    { id: "tema", label: "Cambiar tema", children: [{ id: "claro", label: "Claro" }, { id: "oscuro", label: "Oscuro" }] },
+  ];
+  cmd.addEventListener("nx-command-select", (e) => ejecutar(e.detail.item.id));
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `items`, `menu`, `source`, `agent`, `hotkey` (`"mod+k"`; `"none"` lo quita), `placeholder`, `limit`, `storage`, `labels` |
+| Métodos | `show(q?)`, `hide()`, `clearHistory()`, `open`, `query` |
+| Eventos | `nx-command-select` `{item, query, newTab}` (cancelable: no navega y la paleta sigue abierta), `nx-command-ask` `{query}` (cancelable), `nx-open-change` |
+
+## `<nx-explain>`
+
+«¿De dónde sale este número?». Envuelve una cifra; al pulsarla se abre su desglose, que el backend
+transmite: la fórmula término a término, la comparación con otro período, las fuentes y una
+explicación breve. Un término con `explain` se abre en su propio desglose, y así hasta el documento
+de origen (con migas para volver; `Esc` vuelve un nivel).
+
+Comprueba lo que muestra: si los términos (sumas y restas) no dan la cifra, lo dice con los dos
+valores. Una cifra que se puede auditar con un clic es una cifra en la que se confía.
+
+```
+{"type":"value","label":"Total factura FE-10482","value":10601500,"format":"money","currency":"COP"}
+{"type":"term","label":"Subtotal","value":9100000,"source":"fe","explain":"/explicar/subtotal?f=10482"}
+{"type":"term","label":"IVA 19 %","value":1729000,"detail":"19 % de $ 9.100.000"}
+{"type":"term","label":"Retención en la fuente","value":227500,"op":"-","href":"/retenciones/88"}
+{"type":"compare","label":"agosto","value":9280000,"better":"down"}     → «▲ 14,2 % vs. agosto», en rojo
+{"type":"source","id":"fe","title":"Factura electrónica FE-10482","href":"/…"}
+{"type":"text","delta":"Sube por el precio de la lámina[^fe]."}
+{"type":"note","label":"cruzada con la OC-2291","tone":"success"}
+{"type":"done"}
+```
+
+`op` es `+` (por defecto), `-`, `×`, `÷` o `=` (subtotal, no suma); `format` es `money`, `number` o
+`percent` (0,19 = 19 %); `total` fija contra qué se comprueba (por defecto, la cifra). Sin servidor,
+`explanation` recibe los mismos eventos.
+
+```html
+Total: <nx-explain endpoint="/explicar/factura/10482">$ 10.601.500</nx-explain>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `endpoint`, `method` (`GET`; `POST` manda `{context}`), `context`, `explanation`, `locale`, `labels` |
+| Métodos | `show()`, `hide()`, `refresh()` (se guarda lo traído por URL), `open`, `state` |
+| Eventos | `nx-open-change` `{open}` |
+
+## `<nx-inbox>`
+
+La bandeja de aprobaciones que se trabaja con el teclado: `J`/`K` (o las flechas) para moverse,
+`A` para aprobar, `R` para rechazar con un motivo, `X` para seleccionar varios (`Mayús` + mover
+extiende, `Ctrl`+`A` todos). Al decidir, el ítem sale y el siguiente queda listo: cuarenta
+aprobaciones son cuarenta teclas, no cuarenta diálogos.
+
+Cada ítem muestra qué pasa si se aprueba (`impact`: una lista, o una URL con el protocolo de
+`nxConfirm`, `POST {id, data}`), y el backend puede bloquearlo con un motivo: queda con un candado
+y aprobar en lote lo omite y lo dice. Nada pregunta «¿está seguro?»: la decisión se aplica al
+instante y se deshace mientras corre el tiempo (el aviso o `Ctrl`+`Z`). La app registra en el
+backend cuando llega `nx-inbox-commit`. Al vaciarla, dice cuántas se decidieron y en cuánto tiempo.
+
+```html
+<nx-inbox id="bandeja" heading="Órdenes por aprobar" require-reason></nx-inbox>
+<script>
+  bandeja.items = [{ id: "2291", title: "OC-2291 · Aceros del Caribe", requester: "Ana María Rincón",
+    amount: 10829000, currency: "COP", impact: "/compras/oc/2291/impacto", href: "/compras/oc/2291" }];
+  bandeja.addEventListener("nx-inbox-commit", (e) =>
+    fetch(`/compras/${e.detail.decision}`, { method: "POST", keepalive: true, body: JSON.stringify(e.detail) }));
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `items` (`{id, title, subtitle?, requester?, amount?, currency?, date?, tags?, facts?, impact?, href?, data?}`), `undo` (ms, 7000; 0 = sin aviso), `require-reason`, `heading`, `locale`, `labels` · `active`, `selected`, `pending` |
+| Métodos | `decide(decisión, ids?, motivo?)` → `"commit"`, `"undo"` o `"cancel"` |
+| Eventos | `nx-inbox-decide` `{decision, ids, items, reason?}` (cancelable), `nx-inbox-commit`, `nx-inbox-undo`, `nx-inbox-active`, `nx-inbox-open` (cancelable) |
 
 ## Desarrollo
 

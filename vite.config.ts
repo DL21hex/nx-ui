@@ -5,6 +5,7 @@ import { agentRun } from "./gallery/demo-agent";
 import { hrEmployees, hrExitImpact } from "./gallery/demo-hr";
 import { invoiceEvents, invoiceSvg } from "./gallery/demo-invoice";
 import { searchOptions } from "./src/components/select/logic";
+import { EXPLAIN, INBOX_IMPACT, commandSearch } from "./gallery/demo-next";
 
 /**
  * Solo en la galería: un "modelo" de mentira que habla el protocolo de IA de nx-ui, con pausas
@@ -287,11 +288,65 @@ function demoStream(): Plugin {
   };
 }
 
+/**
+ * Solo en la galería: el buscador de la paleta de comandos, los desgloses de «¿de dónde sale este
+ * número?» y el impacto de las órdenes de la bandeja, con pausas reales.
+ */
+function demoNext(): Plugin {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  return {
+    name: "nx-demo-next",
+    configureServer(server) {
+      server.middlewares.use("/demo/command", async (req, res) => {
+        const q = new URL(req.url ?? "", "http://x").searchParams.get("q") ?? "";
+        await sleep(180 + Math.random() * 220);
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ items: commandSearch(q) }));
+      });
+      server.middlewares.use("/demo/explain", async (req, res) => {
+        const id = new URL(req.url ?? "", "http://x").searchParams.get("id") ?? "";
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-store");
+        let closed = false;
+        req.on("close", () => (closed = true));
+        await sleep(250);
+        for (const ev of EXPLAIN[id] ?? [{ type: "error", message: `No hay desglose para «${id}»` }]) {
+          if (closed) return;
+          if (ev.type === "text") {
+            // La explicación sale en trozos, como la de un modelo.
+            const words = ev.delta.split(/(?<=\s)/);
+            for (let i = 0; i < words.length && !closed; i += 3) {
+              res.write(`${JSON.stringify({ type: "text", delta: words.slice(i, i + 3).join("") })}\n`);
+              await sleep(30 + Math.random() * 40);
+            }
+            continue;
+          }
+          res.write(`${JSON.stringify(ev)}\n`);
+          await sleep(ev.type === "term" ? 140 + Math.random() * 120 : 60);
+        }
+        res.end(`${JSON.stringify({ type: "done" })}\n`);
+      });
+      server.middlewares.use("/demo/inbox/impacto", async (req, res) => {
+        for await (const _ of req) void _;
+        const id = new URL(req.url ?? "", "http://x").searchParams.get("id") ?? "";
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-store");
+        await sleep(300);
+        for (const ev of INBOX_IMPACT[id] ?? []) {
+          res.write(`${JSON.stringify(ev)}\n`);
+          await sleep(200 + Math.random() * 200);
+        }
+        res.end(`${JSON.stringify({ type: "done" })}\n`);
+      });
+    },
+  };
+}
+
 // `vite`            → galería (gallery/)
 // `vite build`      → librería ESM, una entrada por subruta del package
 // `vite build --mode iife` → dist/nx-ui.iife.js, todo-en-uno para <script>
 export default defineConfig(({ command, mode }) => {
-  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi(), demoCapture(), demoGrid(), demoImpact()] };
+  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi(), demoCapture(), demoGrid(), demoImpact(), demoNext()] };
 
   if (mode === "iife") {
     return {
@@ -320,6 +375,9 @@ export default defineConfig(({ command, mode }) => {
           confirm: "src/components/confirm/index.ts",
           toast: "src/components/toast/index.ts",
           agent: "src/components/agent/index.ts",
+          command: "src/components/command/index.ts",
+          explain: "src/components/explain/index.ts",
+          inbox: "src/components/inbox/index.ts",
           icons: "src/icons/index.ts",
           bdui: "src/bdui.ts",
         },

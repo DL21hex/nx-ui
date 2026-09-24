@@ -10,12 +10,15 @@
  */
 import { h, safeHref } from "../../core/dom";
 import { hasIcon, icon } from "../../core/icons";
+import { parseImpactEvent } from "../../core/impact";
 import { lineData, readLines } from "../../core/stream";
 import type { NxButton } from "../button/button";
 import "../button/index";
 import type { NxDialog } from "../dialog/dialog";
 import "../dialog/index";
-import type { ConfirmLabels, ConfirmOptions, ImpactEvent, ImpactItem, ImpactTone } from "../dialog/types";
+import type { ConfirmLabels, ConfirmOptions, ImpactItem } from "../dialog/types";
+
+export { parseImpactEvent };
 
 export const CONFIRM_LABELS: ConfirmLabels = {
   confirm: "Confirmar",
@@ -24,38 +27,6 @@ export const CONFIRM_LABELS: ConfirmLabels = {
   loading: "Calculando el impacto…",
   error: "No se pudo calcular el impacto",
 };
-
-const TONES = new Set<ImpactTone>(["neutral", "success", "warning", "danger"]);
-
-/** Una línea del stream de impacto, validada (lo que no se entiende se ignora). */
-export function parseImpactEvent(raw: string | null): ImpactEvent | null {
-  if (!raw || raw === "[DONE]") return raw === "[DONE]" ? { type: "done" } : null;
-  let o: Record<string, unknown>;
-  try {
-    o = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (!o || typeof o !== "object") return null;
-  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v : undefined);
-  switch (o.type) {
-    case "impact": {
-      const label = str(o.label);
-      if (!label) return null;
-      return { type: "impact", label, detail: str(o.detail), icon: str(o.icon), tone: TONES.has(o.tone as ImpactTone) ? (o.tone as ImpactTone) : undefined };
-    }
-    case "block":
-    case "note":
-    case "error": {
-      const message = str(o.message);
-      return message ? { type: o.type, message } : null;
-    }
-    case "done":
-      return { type: "done" };
-    default:
-      return null;
-  }
-}
 
 export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
   const L = { ...CONFIRM_LABELS, ...opts.labels };

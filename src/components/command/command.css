@@ -1,0 +1,285 @@
+/*
+ * <nx-command>. Variables propias:
+ *   --nx-command-width (640px) · --nx-command-list-height (min(420px, 60dvh))
+ */
+
+nx-command {
+  display: none;
+  font-family: var(--nx-font-sans);
+  font-size: 14px;
+  line-height: 1.35;
+}
+nx-command[popover] {
+  position: fixed;
+  inset: 12dvh 0 auto;
+  inline-size: min(var(--nx-command-width, 640px), 100vw - 24px);
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: calc(var(--nx-radius-lg) + 2px);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+}
+nx-command:popover-open {
+  display: flex;
+  flex-direction: column;
+  animation: nx-command-in var(--nx-motion-base) var(--nx-ease-out);
+}
+nx-command::backdrop {
+  background: var(--nx-backdrop);
+  animation: nx-command-fade var(--nx-motion-base);
+}
+nx-command *,
+nx-command *::before {
+  box-sizing: border-box;
+}
+nx-command [hidden] {
+  display: none !important;
+}
+nx-command .nx-glyph,
+nx-command .nx-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 16px;
+  block-size: 16px;
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- la barra */
+
+.nx-command__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-command__search {
+  color: var(--nx-text-tertiary);
+}
+.nx-command__crumbs {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  cursor: pointer;
+}
+.nx-command__crumb {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.nx-command__input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 44px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  &::placeholder {
+    color: var(--nx-text-quaternary);
+  }
+}
+.nx-command__spin {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+  border: 2px solid color-mix(in oklch, var(--nx-foreground) 20%, transparent);
+  border-block-start-color: var(--nx-primary);
+  border-radius: 50%;
+  animation: nx-command-spin 0.7s linear infinite;
+}
+
+/* ---------------------------------------------------------------- la lista */
+
+.nx-command__list {
+  max-block-size: var(--nx-command-list-height, min(420px, 60dvh));
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scroll-padding-block: 30px 6px;
+  transition: opacity var(--nx-motion-fast);
+}
+.nx-command__list--stale {
+  opacity: 0.6;
+}
+.nx-command__group + .nx-command__group {
+  margin-block-start: 4px;
+}
+.nx-command__group-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 4px;
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  & .nx-glyph {
+    inline-size: 12px;
+    block-size: 12px;
+  }
+}
+.nx-command__opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-block-size: 38px;
+  padding: 6px 10px;
+  border-radius: var(--nx-radius-md);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  & > .nx-icon,
+  & > .nx-glyph {
+    color: var(--nx-text-tertiary);
+  }
+  & .nx-icon--initials {
+    font-size: 9.5px;
+    font-weight: 650;
+  }
+}
+.nx-command__opt[aria-selected="true"] {
+  background: var(--nx-hover);
+  & > .nx-icon,
+  & > .nx-glyph {
+    color: var(--nx-primary);
+  }
+}
+.nx-command__opt[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.nx-command__text {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 8px;
+  min-inline-size: 0;
+}
+.nx-command__label,
+.nx-command__hint {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-command__label {
+  flex: none;
+  max-inline-size: 100%;
+  font-weight: 500;
+}
+.nx-command__hint {
+  flex: 1;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+}
+.nx-command__opt--ask .nx-command__label {
+  flex: 1;
+  color: var(--nx-primary);
+  & q {
+    color: var(--nx-foreground);
+    quotes: "«" "»";
+  }
+}
+nx-command kbd {
+  display: inline-block;
+  min-inline-size: 20px;
+  padding: 1px 5px;
+  border: 1px solid var(--nx-border);
+  border-block-end-width: 2px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-card);
+  color: var(--nx-text-tertiary);
+  font: 500 11px/1.4 var(--nx-font-sans);
+  text-align: center;
+}
+.nx-command__kbd {
+  flex: none;
+}
+.nx-command__more {
+  color: var(--nx-text-quaternary);
+}
+nx-command mark {
+  border-radius: 2px;
+  background: none;
+  color: var(--nx-primary);
+  font-weight: 650;
+}
+.nx-command__empty {
+  margin: 0;
+  padding: 18px 10px;
+  color: var(--nx-text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- el pie */
+
+.nx-command__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 8px 14px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+}
+
+@keyframes nx-command-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+    translate: 0 -6px;
+  }
+}
+@keyframes nx-command-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nx-command-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+@media (max-width: 767px) {
+  nx-command[popover] {
+    inset-block-start: 8px;
+  }
+  .nx-command__foot {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-command,
+  nx-command::backdrop,
+  nx-command * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+  .nx-command__spin {
+    animation-duration: 1.4s !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-command__opt[aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

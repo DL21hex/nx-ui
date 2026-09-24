@@ -66,8 +66,8 @@ function wire(): void {
   document.addEventListener("focusin", (e) => {
     const top = stack[stack.length - 1];
     const t = e.target as Element;
-    // El foco no se escapa del diálogo de arriba (los avisos sí pueden recibirlo).
-    if (top && !top.contains(t) && !t.closest?.("nx-toaster")) top.focusFirst();
+    // El foco no se escapa del diálogo de arriba (los avisos y la paleta de comandos sí pueden recibirlo).
+    if (top && !top.contains(t) && !t.closest?.("nx-toaster, nx-command")) top.focusFirst();
   });
   addEventListener("popstate", () => {
     if (ownBacks > 0) return void ownBacks--;

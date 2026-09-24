@@ -58,6 +58,18 @@
       "types": "./dist/types/components/agent/index.d.ts",
       "import": "./dist/agent.js"
     },
+    "./command": {
+      "types": "./dist/types/components/command/index.d.ts",
+      "import": "./dist/command.js"
+    },
+    "./explain": {
+      "types": "./dist/types/components/explain/index.d.ts",
+      "import": "./dist/explain.js"
+    },
+    "./inbox": {
+      "types": "./dist/types/components/inbox/index.d.ts",
+      "import": "./dist/inbox.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -83,7 +95,10 @@
     "./dialog.css": "./dist/dialog.css",
     "./confirm.css": "./dist/confirm.css",
     "./toast.css": "./dist/toast.css",
-    "./agent.css": "./dist/agent.css"
+    "./agent.css": "./dist/agent.css",
+    "./command.css": "./dist/command.css",
+    "./explain.css": "./dist/explain.css",
+    "./inbox.css": "./dist/inbox.css"
   },
   "sideEffects": [
     "*.css",

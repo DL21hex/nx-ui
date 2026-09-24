@@ -20,6 +20,9 @@ const registry = new Map<string, Entry>([
   ["Grid", { tag: "nx-grid", props: ["columns", "rows", "filters", "sort", "source", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale", "selectable", "selected", "labels"] }],
   ["Agent", { tag: "nx-agent", props: ["endpoint", "tools", "context", "suggestions", "labels"] }],
   ["AIAnswer", { tag: "nx-ai-answer", props: ["endpoint", "method", "question", "placeholder", "suggestions", "context", "labels", "feedback"] }],
+  ["Command", { tag: "nx-command", props: ["items", "menu", "source", "agent", "hotkey", "placeholder", "storage", "limit", "labels"] }],
+  ["Explain", { tag: "nx-explain", props: ["endpoint", "method", "explanation", "context", "labels"] }],
+  ["Inbox", { tag: "nx-inbox", props: ["items", "labels", "undo", "requireReason", "heading"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 
