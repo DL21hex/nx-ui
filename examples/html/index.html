@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>nx-ui en HTML plano</title>
+    <!-- Todo lo que hace falta: una hoja de estilos y un script. Sin build. -->
+    <link rel="stylesheet" href="../../dist/nx-ui.css" />
+    <script src="../../dist/nx-ui.iife.js"></script>
+    <style>
+      body {
+        margin: 0;
+        background: var(--nx-canvas);
+        color: var(--nx-foreground);
+        font-family: var(--nx-font-sans);
+      }
+      .shell {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        block-size: 100dvh;
+      }
+      .brand {
+        display: block;
+        padding: 16px 14px 8px;
+        color: inherit;
+        font-weight: 650;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      main {
+        padding: 24px 32px;
+        overflow: auto;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--nx-text-tertiary);
+        font-size: 13px;
+      }
+      .bar button {
+        display: none;
+        inline-size: 34px;
+        block-size: 34px;
+        border: 1px solid var(--nx-border);
+        border-radius: var(--nx-radius-md);
+        background: var(--nx-card);
+        color: inherit;
+        font-size: 16px;
+      }
+      @media (max-width: 767.98px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        .bar button {
+          display: inline-block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <!-- Los ítems viajan como JSON en el atributo: el mismo dato que mandaría un backend. -->
+      <nx-sidemenu
+        id="menu"
+        collapsible
+        items='[
+          {"id":"inicio","label":"Inicio","href":"#/","icon":"house"},
+          {"id":"ventas","label":"Ventas","icon":"shopping-cart","section":"Operación","description":"Pedidos y clientes","children":[
+            {"id":"pedidos","label":"Pedidos","href":"#/ventas/pedidos","icon":"receipt"},
+            {"id":"clientes","label":"Clientes","href":"#/ventas/clientes","icon":"users"},
+            {"id":"ventas-rep","label":"Reportes","href":"#/ventas/reportes","icon":"chart-column","utility":true}
+          ]},
+          {"id":"bodegas","label":"Bodegas","href":"#/bodegas","icon":"warehouse","section":"Operación"},
+          {"id":"ayuda","label":"Mesa de ayuda","href":"#/ayuda","section":"Soporte"}
+        ]'
+      >
+        <a slot="header" class="brand" href="#/">Mi empresa</a>
+      </nx-sidemenu>
+
+      <main>
+        <div class="bar">
+          <button type="button" popovertarget="menu" aria-label="Abrir menú">☰</button>
+          <span>Ruta:</span> <code id="where"></code>
+        </div>
+        <h1 id="title"></h1>
+        <p>Una página HTML sin build: <code>&lt;link&gt;</code>, <code>&lt;script&gt;</code> y la etiqueta.</p>
+      </main>
+    </div>
+
+    <script>
+      const menu = document.getElementById("menu");
+      const sync = () => {
+        const hash = location.hash || "#/";
+        menu.active = hash;
+        document.getElementById("where").textContent = hash;
+        const leaf = (items) => items.flatMap((i) => (i.children ? leaf(i.children) : [i]));
+        document.getElementById("title").textContent = leaf(menu.items).find((i) => i.href === hash)?.label ?? "—";
+      };
+      addEventListener("hashchange", sync);
+      sync();
+    </script>
+  </body>
+</html>

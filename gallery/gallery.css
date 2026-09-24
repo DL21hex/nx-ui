@@ -1,0 +1,583 @@
+/* Galería: layout de la página. Los colores salen de los mismos tokens de la librería. */
+
+html,
+body {
+  margin: 0;
+  block-size: 100%;
+}
+body {
+  background: var(--nx-canvas);
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+code,
+kbd,
+pre {
+  font-family: var(--nx-font-mono);
+  font-size: 0.88em;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  block-size: 100dvh;
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  overflow: hidden;
+}
+.page {
+  flex: 1;
+  overflow: auto;
+  padding: 40px clamp(16px, 5vw, 56px) 80px;
+  outline: none;
+}
+.page > * {
+  max-inline-size: 880px;
+}
+
+/* ---------------------------------------------------------------- cabecera y pie del menú */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px 10px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.brand__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 8px;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font: 700 12px/1 var(--nx-font-mono);
+  letter-spacing: -0.02em;
+}
+.brand__text {
+  font-weight: 650;
+  font-size: 14px;
+}
+.brand__text small {
+  margin-inline-start: 4px;
+  color: var(--nx-text-tertiary);
+  font-weight: 500;
+  font-size: 11px;
+}
+.theme {
+  display: flex;
+  gap: 2px;
+  margin: 0 8px 4px;
+  padding: 3px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-hover);
+}
+.theme button,
+.seg button {
+  flex: 1;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.theme button[aria-pressed="true"],
+.seg button[aria-pressed="true"] {
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+/* En compacto la marca y el selector de tema no caben: se quedan el monograma y nada más. */
+nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
+  & .brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  & .brand__text,
+  & .theme {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- barra superior (móvil) */
+
+.topbar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  background: var(--nx-sidebar);
+}
+.topbar__title {
+  font-weight: 650;
+}
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 34px;
+  block-size: 34px;
+  padding: 0;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font-size: 16px;
+  cursor: pointer;
+}
+@media (max-width: 767.98px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .topbar {
+    display: flex;
+  }
+  .page {
+    padding-block-start: 24px;
+  }
+}
+
+/* ---------------------------------------------------------------- tipografía */
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--nx-primary);
+  font: 600 11px/1 var(--nx-font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+h2 {
+  margin: 44px 0 12px;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+h3 {
+  margin: 28px 0 10px;
+  font-size: 14px;
+}
+.lead {
+  margin: 0 0 24px;
+  color: var(--nx-muted-foreground);
+  font-size: 16px;
+}
+p code,
+td code,
+li code,
+h1 code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--nx-hover);
+}
+h1 .tag {
+  font-size: 0.55em;
+  vertical-align: middle;
+  color: var(--nx-muted-foreground);
+}
+kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--nx-border);
+  border-block-end-width: 2px;
+  border-radius: 4px;
+  background: var(--nx-card);
+  font-size: 0.8em;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.facts li {
+  padding: 14px 16px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.facts strong {
+  display: block;
+  color: var(--nx-foreground);
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.principles {
+  padding-inline-start: 20px;
+}
+.principles li {
+  margin-block-end: 8px;
+}
+
+/* ---------------------------------------------------------------- código y tablas */
+
+pre {
+  margin: 0;
+  padding: 14px 16px;
+  overflow: auto;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  line-height: 1.6;
+}
+.tabs [role="tablist"] {
+  display: flex;
+  gap: 2px;
+  margin-block-end: -1px;
+}
+.tabs [role="tab"] {
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-block-end: 0;
+  border-radius: var(--nx-radius-md) var(--nx-radius-md) 0 0;
+  background: none;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.tabs [role="tab"][aria-selected="true"] {
+  border-color: var(--nx-border-subtle);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font-weight: 550;
+}
+.tabs pre {
+  border-start-start-radius: 0;
+}
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th,
+td {
+  padding: 9px 12px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  text-align: start;
+  vertical-align: top;
+}
+tr:last-child td {
+  border-block-end: 0;
+}
+th {
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+td:first-child {
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- demo del SideMenu */
+
+.demo {
+  max-inline-size: none !important;
+  overflow: hidden;
+  border: 1px solid var(--nx-border);
+  border-radius: 12px;
+}
+.demo__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  background: var(--nx-card);
+  font-size: 13px;
+}
+.demo__controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.demo__controls input {
+  accent-color: var(--nx-primary);
+}
+.demo__sep {
+  flex: 1;
+}
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-hover);
+}
+.stage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  block-size: 540px;
+  background: var(--nx-canvas);
+  color: var(--nx-foreground);
+}
+.stage__menu {
+  display: contents;
+}
+.stage__main {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.stage__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  background: var(--nx-background);
+  font-size: 13px;
+}
+.stage__burger {
+  display: none;
+}
+.stage__crumb {
+  color: var(--nx-text-tertiary);
+}
+.stage__body {
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+}
+.stage__tip {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px dashed var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.stage__loglabel {
+  margin: 0 0 6px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stage__log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--nx-font-mono);
+  font-size: 12px;
+}
+.stage__log li {
+  padding: 5px 0;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.stage__log li:first-child {
+  color: var(--nx-primary);
+}
+.stage__log:empty::before {
+  content: "Aún no hay eventos";
+  color: var(--nx-text-quaternary);
+  font-family: var(--nx-font-sans);
+}
+@media (max-width: 767.98px) {
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+    block-size: 440px;
+  }
+  .stage__burger {
+    display: inline-grid;
+  }
+}
+
+.payload textarea {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 260px;
+  padding: 14px 16px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: 12.5px/1.55 var(--nx-font-mono);
+  resize: vertical;
+}
+.payload textarea:focus {
+  border-color: var(--nx-primary-border);
+  outline: 3px solid var(--nx-primary-soft);
+}
+.payload__error {
+  margin: 6px 0 0;
+  color: light-dark(#b42318, #fda29b);
+  font-size: 12.5px;
+}
+
+/* ---------------------------------------------------------------- tokens */
+
+.brand-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-block-end: 18px;
+}
+.brand-picker label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 550;
+}
+.brand-picker input {
+  inline-size: 40px;
+  block-size: 28px;
+  padding: 0;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-sm);
+  background: none;
+}
+.hint {
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+}
+.btn {
+  padding: 6px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.swatch__color {
+  flex: none;
+  inline-size: 32px;
+  block-size: 32px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+}
+.swatch code {
+  overflow: hidden;
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------- demo del Button */
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.fail-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-end: 12px;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.btn-demos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  max-inline-size: none !important;
+}
+.btn-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-block-size: 170px;
+  padding: 14px 16px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.btn-demo nx-button {
+  margin-block-start: 8px;
+}
+.btn-demo__title {
+  margin: 0;
+  font-weight: 600;
+}
+.btn-demo__title span {
+  margin-inline-start: 6px;
+  color: var(--nx-text-tertiary);
+  font: 11.5px var(--nx-font-mono);
+}
+.btn-demo__desc {
+  margin: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.btn-events {
+  margin-block-start: 14px !important;
+}
+
+/* ---------------------------------------------------------------- demo del Select */
+
+.sel-tip {
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.sel-demos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  max-inline-size: none !important;
+}
+.sel-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.sel-demo nx-select {
+  --nx-select-width: 100%;
+}
+.sel-form-out {
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+}

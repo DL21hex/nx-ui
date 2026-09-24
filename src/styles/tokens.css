@@ -1,0 +1,69 @@
+/*
+ * Tokens de nx-ui. Mismo vocabulario que el design system de nx32 (`--nx-*`), con valores
+ * neutros: grises fríos y un acento azul. Para aplicar una marca basta con redefinirlos.
+ *
+ * El tema sale de `color-scheme` y `light-dark()`: sigue al sistema, y se fuerza con
+ * `.dark` / `[data-theme="dark"]` o `.light` / `[data-theme="light"]` en cualquier ancestro.
+ */
+:root {
+  color-scheme: light dark;
+
+  --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+  /* Superficies */
+  --nx-canvas: light-dark(oklch(0.985 0.002 260), oklch(0.165 0.004 260));
+  --nx-background: light-dark(oklch(1 0 0), oklch(0.185 0.004 260));
+  --nx-sidebar: light-dark(oklch(0.975 0.003 260), oklch(0.19 0.005 260));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 0.005 260));
+  --nx-popover: light-dark(oklch(1 0 0), oklch(0.235 0.006 260));
+
+  /* Bordes */
+  --nx-border-subtle: light-dark(oklch(0.925 0.004 260), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 0.005 260), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 0.006 260), oklch(1 0 0 / 0.17));
+
+  /* Texto */
+  --nx-foreground: light-dark(oklch(0.2 0.008 260), oklch(0.955 0.003 260));
+  --nx-muted-foreground: light-dark(oklch(0.44 0.01 260), oklch(0.76 0.006 260));
+  --nx-text-tertiary: light-dark(oklch(0.55 0.01 260), oklch(0.64 0.007 260));
+  --nx-text-quaternary: light-dark(oklch(0.66 0.008 260), oklch(0.53 0.007 260));
+
+  /* Acento */
+  --nx-primary: light-dark(oklch(0.54 0.19 262), oklch(0.72 0.14 262));
+  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 0.02 262));
+  --nx-primary-soft: light-dark(oklch(0.54 0.19 262 / 0.1), oklch(0.72 0.14 262 / 0.15));
+  --nx-primary-border: light-dark(oklch(0.54 0.19 262 / 0.35), oklch(0.72 0.14 262 / 0.4));
+
+  /* Resultado */
+  --nx-success: light-dark(oklch(0.55 0.14 150), oklch(0.74 0.14 150));
+  --nx-success-soft: light-dark(oklch(0.55 0.14 150 / 0.1), oklch(0.74 0.14 150 / 0.14));
+  --nx-danger: light-dark(oklch(0.55 0.2 27), oklch(0.7 0.17 27));
+  --nx-danger-foreground: light-dark(oklch(0.99 0 0), oklch(0.18 0.03 27));
+  --nx-danger-soft: light-dark(oklch(0.55 0.2 27 / 0.1), oklch(0.7 0.17 27 / 0.15));
+
+  /* Estados */
+  --nx-hover: light-dark(oklch(0.2 0.01 260 / 0.05), oklch(1 0 0 / 0.06));
+  --nx-nav-active-bg: light-dark(oklch(0.54 0.19 262 / 0.09), oklch(0.72 0.14 262 / 0.13));
+  --nx-ring: light-dark(oklch(0.54 0.19 262 / 0.6), oklch(0.72 0.14 262 / 0.7));
+  --nx-backdrop: light-dark(oklch(0.2 0.01 260 / 0.4), oklch(0 0 0 / 0.6));
+  --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
+    0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
+
+  /* Forma y movimiento */
+  --nx-radius-sm: 5px;
+  --nx-radius-md: 7px;
+  --nx-radius-lg: 10px;
+  --nx-motion-fast: 140ms;
+  --nx-motion-base: 220ms;
+  --nx-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+.light,
+[data-theme="light"] {
+  color-scheme: light;
+}

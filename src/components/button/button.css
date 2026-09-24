@@ -1,0 +1,322 @@
+/*
+ * <nx-button>. Variables propias:
+ *   --nx-button-height (36px) · --nx-button-log-height (180px)
+ *   --nx-button-busy-max (22rem): ancho máximo mientras corre (el mensaje se corta con …)
+ */
+
+nx-button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  vertical-align: middle;
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+nx-button *,
+nx-button *::before {
+  box-sizing: border-box;
+}
+nx-button [hidden] {
+  display: none !important;
+}
+.nx-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- el botón */
+
+.nx-button__btn {
+  --_bg: var(--nx-card);
+  --_fg: var(--nx-foreground);
+  --_bd: var(--nx-border);
+  --_accent: var(--nx-primary);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-block-size: var(--nx-button-height, 36px);
+  max-inline-size: 100%;
+  padding: 0 14px;
+  overflow: hidden;
+  border: 1px solid var(--_bd);
+  border-radius: var(--nx-radius-md);
+  background: var(--_bg);
+  color: var(--_fg);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background-color var(--nx-motion-fast),
+    border-color var(--nx-motion-fast),
+    color var(--nx-motion-fast),
+    scale var(--nx-motion-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.nx-button__btn:hover {
+  background: color-mix(in oklch, var(--_bg), var(--_fg) 6%);
+}
+.nx-button__btn:active:not([aria-disabled="true"]) {
+  scale: 0.98;
+}
+.nx-button__btn:focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+.nx-button--primary {
+  --_bg: var(--nx-primary);
+  --_fg: var(--nx-primary-foreground);
+  --_bd: transparent;
+  --_accent: var(--nx-primary-foreground);
+}
+.nx-button--danger {
+  --_bg: var(--nx-danger);
+  --_fg: var(--nx-danger-foreground);
+  --_bd: transparent;
+  --_accent: var(--nx-danger-foreground);
+}
+.nx-button--ghost {
+  --_bg: transparent;
+  --_bd: transparent;
+}
+.nx-button--ghost:hover {
+  background: var(--nx-hover);
+}
+.nx-button__btn[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+nx-button[disabled] .nx-button__btn {
+  opacity: 0.5;
+}
+
+/* Ocupado: el fondo se apaga un punto y el contenido pasa a ser el avance. */
+.nx-button__btn[data-busy],
+.nx-button__btn[data-result="ok"],
+.nx-button__btn[data-result="error"] {
+  max-inline-size: min(100%, var(--nx-button-busy-max, 22rem));
+}
+.nx-button__btn[data-busy] {
+  cursor: progress;
+  background: color-mix(in oklch, var(--_bg), var(--nx-sidebar) 30%);
+}
+.nx-button__btn[data-result="ok"] {
+  --_bg: var(--nx-success-soft);
+  --_fg: var(--nx-success);
+  --_bd: color-mix(in oklch, var(--nx-success) 40%, transparent);
+}
+.nx-button__btn[data-result="error"] {
+  --_bg: var(--nx-danger-soft);
+  --_fg: var(--nx-danger);
+  --_bd: color-mix(in oklch, var(--nx-danger) 40%, transparent);
+  animation: nx-button-shake 0.35s;
+}
+
+.nx-button__lead {
+  display: inline-flex;
+  flex: none;
+}
+.nx-button__lead:empty {
+  display: none;
+}
+.nx-button__lead .nx-icon,
+.nx-button__lead .nx-glyph {
+  inline-size: 16px;
+  block-size: 16px;
+}
+.nx-spinner {
+  display: block;
+  inline-size: 14px;
+  block-size: 14px;
+  border: 2px solid color-mix(in oklch, var(--_fg) 25%, transparent);
+  border-block-start-color: var(--_accent);
+  border-radius: 50%;
+  animation: nx-spin 0.7s linear infinite;
+}
+
+/* El ticker: cada mensaje nuevo entra desde abajo. */
+.nx-button__text {
+  display: block;
+  min-inline-size: 0;
+  overflow: hidden;
+}
+.nx-button__msg {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-button__msg--in {
+  animation: nx-ticker-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-button__btn[data-busy] .nx-button__text {
+  flex: 1;
+  text-align: start;
+  font-weight: 500;
+}
+.nx-button__time {
+  flex: none;
+  font-family: var(--nx-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* La barra corre por el borde inferior; sin porcentaje, un tramo que barre de lado a lado. */
+.nx-button__bar {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  block-size: 2px;
+  background: var(--_accent);
+  transition: inline-size var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-button__bar--indeterminate {
+  inline-size: 35%;
+  animation: nx-sweep 1.2s var(--nx-ease-out) infinite;
+}
+
+/* ---------------------------------------------------------------- registro tipo terminal */
+
+.nx-button__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--nx-text-tertiary);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.nx-button__toggle:hover,
+.nx-button__toggle[aria-expanded="true"] {
+  color: var(--nx-foreground);
+}
+.nx-button__toggle .nx-glyph {
+  inline-size: 13px;
+  block-size: 13px;
+}
+.nx-button__log {
+  inline-size: max(100%, min(420px, 90vw));
+  max-block-size: var(--nx-button-log-height, 180px);
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-sidebar);
+  font-family: var(--nx-font-mono);
+  font-size: 11.5px;
+  line-height: 1.65;
+  scrollbar-width: thin;
+  animation: nx-ticker-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+.nx-button__line {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+.nx-button__line:last-child {
+  animation: nx-ticker-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+.nx-button__t {
+  flex: none;
+  min-inline-size: 5.5ch;
+  color: var(--nx-text-quaternary);
+  font-variant-numeric: tabular-nums;
+}
+.nx-button__mark {
+  flex: none;
+  inline-size: 1ch;
+}
+.nx-button__m {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--nx-muted-foreground);
+}
+.nx-button__line--run .nx-button__mark,
+.nx-button__line--run .nx-button__m {
+  color: var(--nx-primary);
+}
+.nx-button__line--ok .nx-button__mark {
+  color: var(--nx-success);
+}
+.nx-button__line--warn .nx-button__mark {
+  color: light-dark(oklch(0.6 0.13 75), oklch(0.8 0.13 80));
+}
+.nx-button__line--error :is(.nx-button__mark, .nx-button__m) {
+  color: var(--nx-danger);
+}
+.nx-button__cursor {
+  flex: none;
+  inline-size: 7px;
+  block-size: 1.1em;
+  align-self: center;
+  background: var(--nx-primary);
+  animation: nx-blink 1s steps(1) infinite;
+}
+
+@keyframes nx-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes nx-ticker-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@keyframes nx-sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 290% 0;
+  }
+}
+@keyframes nx-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes nx-button-shake {
+  25% {
+    translate: -3px 0;
+  }
+  75% {
+    translate: 3px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-button *,
+  nx-button *::before {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+  /* El spinner y la barra indeterminada sí giran/barren: son la única señal de que algo corre. */
+  nx-button .nx-spinner {
+    animation-duration: 1.4s !important;
+  }
+  nx-button .nx-button__bar--indeterminate {
+    animation-duration: 2.4s !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-button__btn {
+    border-color: ButtonText;
+  }
+  .nx-button__bar,
+  .nx-button__cursor {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+}

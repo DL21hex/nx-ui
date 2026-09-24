@@ -1,0 +1,306 @@
+/*
+ * <nx-select>. Variables propias:
+ *   --nx-select-height (36px) · --nx-select-list-height (320px)
+ */
+
+nx-select {
+  display: inline-block;
+  inline-size: var(--nx-select-width, 280px);
+  max-inline-size: 100%;
+  vertical-align: middle;
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+nx-select *,
+nx-select *::before {
+  box-sizing: border-box;
+}
+nx-select [hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- el campo cerrado */
+
+.nx-select__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: var(--nx-select-height, 36px);
+  padding: 4px 8px 4px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  cursor: pointer;
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast);
+}
+.nx-select__field:hover {
+  border-color: var(--nx-border-strong);
+}
+.nx-select__field:focus-visible,
+.nx-select__field[aria-expanded="true"] {
+  border-color: var(--nx-primary-border);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--nx-primary-soft);
+}
+.nx-select__field[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.nx-select__placeholder {
+  flex: 1;
+  overflow: hidden;
+  color: var(--nx-text-quaternary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-select__chev,
+.nx-select__clear {
+  flex: none;
+  inline-size: 15px;
+  block-size: 15px;
+  color: var(--nx-text-tertiary);
+  transition: rotate var(--nx-motion-fast);
+}
+.nx-select__field[aria-expanded="true"] .nx-select__chev {
+  rotate: 180deg;
+}
+.nx-select__clear {
+  display: inline-flex;
+  inline-size: 20px;
+  block-size: 20px;
+  padding: 3px;
+  border-radius: var(--nx-radius-sm);
+}
+.nx-select__clear:hover {
+  background: var(--nx-hover);
+  color: var(--nx-foreground);
+}
+.nx-select__chips {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-inline-size: 0;
+}
+.nx-select__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-inline-size: 100%;
+  padding: 2px 3px 2px 8px;
+  border-radius: 999px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.nx-select__chip-x {
+  display: inline-flex;
+  inline-size: 16px;
+  block-size: 16px;
+  padding: 3px;
+  border-radius: 50%;
+}
+.nx-select__chip-x:hover {
+  background: var(--nx-primary-soft);
+}
+
+/* ---------------------------------------------------------------- un registro (campo y lista) */
+
+.nx-select__avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.nx-select__field .nx-select__avatar {
+  inline-size: 24px;
+  block-size: 24px;
+  font-size: 9.5px;
+}
+.nx-select__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.nx-select__primary,
+.nx-select__secondary {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-select__primary {
+  font-weight: 550;
+}
+.nx-select__secondary {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-select__field .nx-select__text {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+.nx-select__field .nx-select__secondary {
+  flex: 1;
+}
+nx-select mark {
+  border-radius: 2px;
+  background: light-dark(oklch(0.92 0.12 95), oklch(0.5 0.1 90 / 0.55));
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------- el panel */
+
+.nx-select__pop {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 6px;
+  max-block-size: calc(100dvh - 16px);
+  overflow: hidden;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+.nx-select__pop:popover-open {
+  display: flex;
+  flex-direction: column;
+  animation: nx-select-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+.nx-select__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.nx-select__search-icon {
+  position: absolute;
+  inset-inline-start: 10px;
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--nx-text-quaternary);
+  pointer-events: none;
+}
+.nx-select__input {
+  inline-size: 100%;
+  block-size: 34px;
+  padding-block: 0;
+  padding-inline: 32px 32px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  outline: none;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+
+  &::placeholder {
+    color: var(--nx-text-quaternary);
+  }
+  &:focus {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+}
+.nx-select__spin {
+  position: absolute;
+  inset-inline-end: 10px;
+  --_fg: var(--nx-foreground);
+  --_accent: var(--nx-primary);
+}
+.nx-select__hint {
+  margin: 6px 4px 0;
+  color: var(--nx-primary);
+  font-size: 11.5px;
+}
+.nx-select__list {
+  max-block-size: var(--nx-select-list-height, 320px);
+  margin-block-start: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  transition: opacity var(--nx-motion-fast);
+}
+.nx-select__list--stale {
+  opacity: 0.55;
+}
+.nx-select__opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--nx-radius-md);
+  cursor: pointer;
+}
+.nx-select__opt[data-hl="true"] {
+  background: var(--nx-hover);
+}
+.nx-select__opt[aria-selected="true"] .nx-select__primary {
+  color: var(--nx-primary);
+}
+.nx-select__opt[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.nx-select__why {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: 999px;
+  color: var(--nx-text-tertiary);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.nx-select__check {
+  inline-size: 15px;
+  block-size: 15px;
+  color: var(--nx-primary);
+  visibility: hidden;
+}
+.nx-select__opt[aria-selected="true"] .nx-select__check {
+  visibility: visible;
+}
+.nx-select__empty {
+  margin: 0;
+  padding: 14px 8px;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  text-align: center;
+}
+@keyframes nx-select-in {
+  from {
+    opacity: 0;
+    translate: 0 -3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-select *,
+  .nx-select__pop {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-select__opt[data-hl="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

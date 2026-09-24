@@ -1,0 +1,85 @@
+{
+  "name": "nx-ui",
+  "version": "0.1.0",
+  "description": "Componentes web ultraligeros, sin dependencias, compatibles con BDUI. Funcionan en HTML plano y en SolidJS.",
+  "type": "module",
+  "private": true,
+  "license": "UNLICENSED",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./sidemenu": {
+      "types": "./dist/types/components/sidemenu/index.d.ts",
+      "import": "./dist/sidemenu.js"
+    },
+    "./button": {
+      "types": "./dist/types/components/button/index.d.ts",
+      "import": "./dist/button.js"
+    },
+    "./select": {
+      "types": "./dist/types/components/select/index.d.ts",
+      "import": "./dist/select.js"
+    },
+    "./icons": {
+      "types": "./dist/types/icons/index.d.ts",
+      "import": "./dist/icons.js"
+    },
+    "./bdui": {
+      "types": "./dist/types/bdui.d.ts",
+      "import": "./dist/bdui.js"
+    },
+    "./solid": {
+      "types": "./dist/types/solid/index.d.ts",
+      "solid": "./dist/solid/index.jsx",
+      "import": "./dist/solid/index.jsx"
+    },
+    "./nx-ui.css": "./dist/nx-ui.css",
+    "./tokens.css": "./dist/tokens.css",
+    "./sidemenu.css": "./dist/sidemenu.css",
+    "./button.css": "./dist/button.css",
+    "./select.css": "./dist/select.css"
+  },
+  "sideEffects": [
+    "*.css",
+    "./dist/*.js",
+    "./dist/solid/*.jsx",
+    "./src/index.ts",
+    "./src/iife.ts",
+    "./src/components/*/index.ts"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "rm -rf dist && vite build && vite build --mode iife && node scripts/build-css.mjs && node scripts/build-solid.mjs && tsc -p tsconfig.build.json && node scripts/size.mjs",
+    "size": "node scripts/size.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "example:solid": "vite --config examples/solid/vite.config.ts"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  },
+  "peerDependenciesMeta": {
+    "solid-js": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "^1.2.136",
+    "@solidjs/router": "^1.0.0",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^20.14.5",
+    "solid-js": "^1.9.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-solid": "^2.11.14",
+    "vitest": "^5.0.1"
+  }
+}

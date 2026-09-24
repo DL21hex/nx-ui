@@ -1,0 +1,575 @@
+/*
+ * <nx-sidemenu>. Variables propias:
+ *   --nx-sidemenu-width (240px) · --nx-sidemenu-width-collapsed (56px)
+ *   --nx-sidemenu-drawer-width (280px) · --nx-flyout-width (320px)
+ * Punto de corte del drawer: 768px (el mismo que `MOBILE` en sidemenu.ts).
+ */
+
+/* ---------------------------------------------------------------- host */
+
+nx-sidemenu {
+  --_w: var(--nx-sidemenu-width, 240px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "header" "body" "footer" "tools";
+  box-sizing: border-box;
+  inline-size: var(--_w);
+  block-size: 100%;
+  overflow: hidden;
+  background: var(--nx-sidebar);
+  color: var(--nx-foreground);
+  border-inline-end: 1px solid var(--nx-border-subtle);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.35;
+  transition: inline-size var(--nx-motion-base) var(--nx-ease-out);
+}
+nx-sidemenu *,
+nx-sidemenu *::before,
+nx-sidemenu *::after {
+  box-sizing: border-box;
+}
+nx-sidemenu [hidden] {
+  display: none !important;
+}
+nx-sidemenu > [slot="header"] {
+  grid-area: header;
+  min-inline-size: 0;
+}
+nx-sidemenu > [slot="footer"] {
+  grid-area: footer;
+  min-inline-size: 0;
+}
+.nx-sidemenu__body {
+  grid-area: body;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 8px;
+}
+.nx-sidemenu__tools {
+  grid-area: tools;
+  padding: 6px 8px 8px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+
+/* ---------------------------------------------------------------- riel */
+
+.nx-sidemenu__list {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-sidemenu__section {
+  padding: 14px 10px 6px;
+  overflow: hidden;
+  color: var(--nx-text-quaternary);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-sidemenu__section:first-child {
+  padding-block-start: 4px;
+}
+.nx-sidemenu__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  min-block-size: 34px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--nx-motion-fast),
+    color var(--nx-motion-fast);
+}
+.nx-sidemenu__item:hover,
+.nx-sidemenu__item[aria-expanded="true"] {
+  background: var(--nx-hover);
+  color: var(--nx-foreground);
+}
+.nx-sidemenu__item[aria-current="page"],
+.nx-sidemenu__item[data-active] {
+  background: var(--nx-nav-active-bg);
+  color: var(--nx-primary);
+  font-weight: 550;
+}
+.nx-sidemenu__item[aria-current="page"]::before,
+.nx-sidemenu__item[data-active]::before,
+.nx-panel__option[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 25%;
+  inset-inline-start: 0;
+  inline-size: 3px;
+  border-start-end-radius: 3px;
+  border-end-end-radius: 3px;
+  background: var(--nx-primary);
+}
+nx-sidemenu :is(a, button):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: -2px;
+}
+.nx-sidemenu__label {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-sidemenu__chev {
+  inline-size: 14px;
+  block-size: 14px;
+  margin-inline-start: auto;
+  color: var(--nx-text-quaternary);
+}
+nx-sidemenu:dir(rtl) :is(.nx-sidemenu__chev, .nx-sidemenu__back) svg {
+  scale: -1 1;
+}
+
+/* ---------------------------------------------------------------- badges */
+
+.nx-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 18px;
+  block-size: 18px;
+  padding-inline: 6px;
+  border-radius: 9px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.nx-sidemenu__item .nx-badge + .nx-sidemenu__chev {
+  margin-inline-start: 0;
+}
+
+/* ---------------------------------------------------------------- íconos */
+
+.nx-icon,
+.nx-glyph {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 18px;
+  block-size: 18px;
+}
+.nx-glyph {
+  inline-size: 16px;
+  block-size: 16px;
+}
+:is(.nx-icon, .nx-glyph) svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+.nx-icon--initials {
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-hover);
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------- compacto */
+
+nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
+  --_w: var(--nx-sidemenu-width-collapsed, 56px);
+
+  & :is(.nx-sidemenu__label, .nx-sidemenu__chev, .nx-sidemenu__section > span) {
+    display: none;
+  }
+  & .nx-sidemenu__item {
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0;
+  }
+  /* El badge queda como un punto sobre la esquina del ícono. */
+  & .nx-sidemenu__item .nx-badge {
+    position: absolute;
+    inset-block-start: 5px;
+    inset-inline-end: 11px;
+    min-inline-size: 0;
+    inline-size: 8px;
+    block-size: 8px;
+    padding: 0;
+    border: 2px solid var(--nx-sidebar);
+    box-sizing: content-box;
+    background: var(--nx-primary);
+    font-size: 0;
+  }
+  & .nx-sidemenu__section {
+    block-size: 1px;
+    margin: 8px 6px;
+    padding: 0;
+    background: var(--nx-border-subtle);
+  }
+}
+
+/* Antes del upgrade, `auto-collapse` en tablet ya reserva el ancho compacto: sin salto al cargar. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  nx-sidemenu[auto-collapse]:not(:defined, [collapsed="false"]) {
+    --_w: var(--nx-sidemenu-width-collapsed, 56px);
+  }
+}
+
+/* ---------------------------------------------------------------- panel flotante */
+
+.nx-flyout {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 6px;
+  inline-size: var(--nx-flyout-width, 320px);
+  max-inline-size: calc(100vw - 16px);
+  max-block-size: calc(100dvh - 16px);
+  overflow: hidden;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.nx-flyout:popover-open {
+  display: flex;
+  flex-direction: column;
+  animation: nx-flyout-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+@keyframes nx-flyout-in {
+  from {
+    opacity: 0;
+    translate: 0 3px;
+  }
+}
+
+/* ---------------------------------------------------------------- panel de hijos (flotante y drill-down) */
+
+.nx-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-block-size: 0;
+}
+.nx-panel p {
+  margin: 0;
+}
+.nx-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 8px;
+}
+.nx-panel__head--rule {
+  margin-block-end: 6px;
+  padding-block-end: 10px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-panel__glyph {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+
+  & .nx-icon {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+  & .nx-icon--initials {
+    background: none;
+  }
+}
+.nx-panel__titles {
+  min-inline-size: 0;
+}
+:is(.nx-panel__title, .nx-panel__label, .nx-panel__desc) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-panel__title {
+  font-weight: 600;
+}
+.nx-panel__desc {
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+}
+.nx-panel__search {
+  position: relative;
+  padding: 0 4px 6px;
+}
+.nx-panel__search-icon {
+  position: absolute;
+  inset-block-start: 9px;
+  inset-inline-start: 13px;
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--nx-text-quaternary);
+  pointer-events: none;
+}
+.nx-panel__input {
+  inline-size: 100%;
+  block-size: 32px;
+  padding-block: 0;
+  padding-inline: 30px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  outline: none;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 12.5px;
+
+  &::placeholder {
+    color: var(--nx-text-quaternary);
+  }
+  &:focus {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+}
+.nx-panel__list:focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+  border-radius: var(--nx-radius-md);
+}
+.nx-panel__list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-block-size: 0;
+}
+.nx-panel__scroll {
+  max-block-size: min(60vh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.nx-panel__section {
+  padding: 8px 10px 4px;
+  color: var(--nx-text-quaternary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nx-panel__option,
+.nx-panel__chip {
+  display: flex;
+  align-items: center;
+  color: var(--nx-muted-foreground);
+  text-decoration: none;
+  cursor: pointer;
+}
+.nx-panel__option {
+  position: relative;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--nx-radius-md);
+
+  & .nx-icon {
+    inline-size: 16px;
+    block-size: 16px;
+    color: var(--nx-text-tertiary);
+  }
+  & .nx-panel__desc {
+    font-size: 11px;
+  }
+}
+.nx-panel__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+:is(.nx-panel__option, .nx-panel__chip)[aria-selected="true"] {
+  background: var(--nx-primary-soft);
+  color: var(--nx-foreground);
+
+  & .nx-icon {
+    color: var(--nx-primary);
+  }
+}
+:is(.nx-panel__option, .nx-panel__chip) .nx-badge {
+  margin-inline-start: auto;
+}
+:is(.nx-panel__option, .nx-panel__chip)[aria-current="page"] {
+  color: var(--nx-primary);
+  font-weight: 550;
+
+  & .nx-icon {
+    color: var(--nx-primary);
+  }
+}
+.nx-panel__utils {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-block-start: 6px;
+  padding: 8px 4px 2px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+.nx-panel__chip {
+  gap: 6px;
+  max-inline-size: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  font-size: 12px;
+
+  & .nx-icon {
+    inline-size: 13px;
+    block-size: 13px;
+  }
+  &[aria-current="page"] {
+    border-color: var(--nx-primary-border);
+  }
+}
+.nx-panel__empty {
+  padding: 12px 10px;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- drawer móvil */
+
+@media (max-width: 767.98px) {
+  nx-sidemenu:not(:popover-open) {
+    display: none;
+  }
+}
+nx-sidemenu[popover] {
+  --_w: min(var(--nx-sidemenu-drawer-width, 280px), 86vw);
+  position: fixed;
+  inset-block: 0;
+  inset-inline: 0 auto;
+  max-inline-size: none;
+  max-block-size: none;
+  block-size: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-inline-end: 1px solid var(--nx-border-subtle);
+  box-shadow: var(--nx-shadow-popover);
+  translate: -100% 0;
+  transition:
+    translate var(--nx-motion-base) var(--nx-ease-out),
+    overlay var(--nx-motion-base) allow-discrete,
+    display var(--nx-motion-base) allow-discrete;
+
+  &:dir(rtl) {
+    translate: 100% 0;
+  }
+  &:popover-open {
+    translate: 0 0;
+  }
+  &::backdrop {
+    background: var(--nx-backdrop, rgb(20 24 32 / 0.45));
+    opacity: 0;
+    transition:
+      opacity var(--nx-motion-base),
+      overlay var(--nx-motion-base) allow-discrete,
+      display var(--nx-motion-base) allow-discrete;
+  }
+  &:popover-open::backdrop {
+    opacity: 1;
+  }
+}
+@starting-style {
+  nx-sidemenu[popover]:popover-open {
+    translate: -100% 0;
+  }
+  nx-sidemenu[popover]:popover-open:dir(rtl) {
+    translate: 100% 0;
+  }
+  nx-sidemenu[popover]:popover-open::backdrop {
+    opacity: 0;
+  }
+}
+html:has(nx-sidemenu:popover-open) {
+  overflow: hidden;
+}
+.nx-sidemenu__drill {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+
+  & .nx-panel__scroll {
+    max-block-size: none;
+  }
+}
+.nx-sidemenu__back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+}
+
+/* ---------------------------------------------------------------- preferencias del sistema */
+
+@media (prefers-reduced-motion: reduce) {
+  nx-sidemenu,
+  nx-sidemenu *,
+  nx-sidemenu::backdrop {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
+@media (forced-colors: active) {
+  :is(.nx-sidemenu__item, .nx-panel__option)::before {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+  :is(.nx-panel__option, .nx-panel__chip)[aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

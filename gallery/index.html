@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>nx-ui · Galería</title>
+    <script type="module" src="./main.ts"></script>
+  </head>
+  <body>
+    <div class="app">
+      <nx-sidemenu id="nav" collapsible auto-collapse>
+        <a slot="header" class="brand" href="#/">
+          <span class="brand__mark" aria-hidden="true">nx</span>
+          <span class="brand__text">nx-ui <small>v0.1</small></span>
+        </a>
+        <div slot="footer" class="theme" role="group" aria-label="Tema">
+          <button type="button" data-theme-set="auto" title="Tema del sistema">Auto</button>
+          <button type="button" data-theme-set="light" title="Tema claro">Claro</button>
+          <button type="button" data-theme-set="dark" title="Tema oscuro">Oscuro</button>
+        </div>
+      </nx-sidemenu>
+
+      <div class="main">
+        <header class="topbar">
+          <button type="button" class="icon-btn" popovertarget="nav" aria-label="Abrir menú">☰</button>
+          <span class="topbar__title">nx-ui</span>
+        </header>
+        <main id="page" class="page" tabindex="-1"></main>
+      </div>
+    </div>
+
+    <!-- ================================================================ Introducción -->
+    <template id="page-intro">
+      <p class="eyebrow">Empezar</p>
+      <h1>Componentes web ligeros, listos para BDUI</h1>
+      <p class="lead">
+        nx-ui es una librería de Custom Elements <strong>sin dependencias</strong>. Se usa igual en una página HTML
+        plana, en SolidJS o pintada desde un JSON que manda el backend.
+      </p>
+      <ul class="facts">
+        <li><strong>0</strong> dependencias en tiempo de ejecución</li>
+        <li><strong data-size="sidemenu">≈5 KB</strong> el sidemenu (min + gzip)</li>
+        <li><strong>100%</strong> props serializables en JSON</li>
+      </ul>
+
+      <h2>Principios</h2>
+      <ol class="principles">
+        <li><strong>Primero una librería normal.</strong> Atributos para lo simple, propiedades para los datos, eventos para las acciones, slots para tu contenido.</li>
+        <li><strong>BDUI sin costo.</strong> Ninguna prop es una función: todo lo que acepta un componente puede venir del backend. <code>nx-ui/bdui</code> es un adaptador opcional de ~25 líneas.</li>
+        <li><strong>El navegador hace el trabajo pesado.</strong> Popover API para flotantes y drawer: capa superior, clic fuera, Escape y foco, gratis.</li>
+        <li><strong>Neutro y tematizable.</strong> Todo el color sale de variables <code>--nx-*</code>; claro y oscuro con <code>light-dark()</code>.</li>
+      </ol>
+
+      <h2>Instalación</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">Módulos (ESM)</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;link rel="stylesheet" href="nx-ui.css"&gt;
+&lt;script src="nx-ui.iife.js"&gt;&lt;/script&gt;   &lt;!-- trae los íconos Lucide ya registrados --&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import "nx-ui/nx-ui.css";
+import { registerIcons } from "nx-ui";   // registra &lt;nx-sidemenu&gt;
+import { lucide } from "nx-ui/icons";     // opcional
+registerIcons(lucide);</code></pre>
+        <pre role="tabpanel" hidden><code>import "nx-ui/nx-ui.css";
+import { SideMenu } from "nx-ui/solid";   // tipos JSX + envoltorio</code></pre>
+      </div>
+
+      <h2>Compatibilidad</h2>
+      <p>
+        Navegadores de 2024 en adelante: Chrome/Edge 123+, Safari 17.5+, Firefox 125+ (Popover API y
+        <code>light-dark()</code>). Importar la librería en el servidor (SSR) no lanza: los elementos se registran
+        solo en el navegador.
+      </p>
+    </template>
+
+    <!-- ================================================================ Temas -->
+    <template id="page-temas">
+      <p class="eyebrow">Empezar</p>
+      <h1>Temas y tokens</h1>
+      <p class="lead">
+        Toda la paleta es neutra y sale de variables CSS. Redefine las que quieras para aplicar tu marca; el modo
+        oscuro las acompaña solo.
+      </p>
+      <div class="brand-picker">
+        <label>Acento <input type="color" id="primary-picker" value="#3b6ff5" /></label>
+        <button type="button" class="btn" id="primary-reset">Restablecer</button>
+        <span class="hint">Cambia <code>--nx-primary</code> en vivo, en toda la galería.</span>
+      </div>
+      <div class="swatches" id="swatches"></div>
+      <h2>Aplicar tu marca</h2>
+      <pre><code>:root {
+  --nx-primary: light-dark(#0e7490, #22d3ee);
+  --nx-primary-soft: color-mix(in oklch, var(--nx-primary) 12%, transparent);
+  --nx-nav-active-bg: color-mix(in oklch, var(--nx-primary) 10%, transparent);
+  --nx-font-sans: "Geist Sans", system-ui, sans-serif;
+}
+/* Forzar tema: .dark / .light o data-theme="dark|light" en cualquier ancestro */</code></pre>
+    </template>
+
+    <!-- ================================================================ Select -->
+    <template id="page-select">
+      <p class="eyebrow">Componentes</p>
+      <h1>Select <code class="tag">&lt;nx-select&gt;</code></h1>
+      <p class="lead">
+        Un select con buscador que busca en varias columnas a la vez. Cerrado es un campo compacto; se abre con un clic
+        o al empezar a escribir sobre él, y al elegir se cierra.
+      </p>
+      <p class="sel-tip">
+        Prueba <kbd>ana soldad</kbd> (cada palabra en una columna distinta), una cédula con o sin puntos, o escribe
+        directamente sobre el campo cerrado.
+      </p>
+
+      <div class="sel-demos">
+        <div class="sel-demo">
+          <p class="btn-demo__title">Simple <span>avatar clearable</span></p>
+          <nx-select id="sel-single" avatar clearable label="Empleado" placeholder="Selecciona un empleado"></nx-select>
+        </div>
+        <div class="sel-demo">
+          <p class="btn-demo__title">Múltiple <span>multiple</span></p>
+          <nx-select id="sel-multi" multiple avatar label="Participantes" placeholder="Agrega participantes"></nx-select>
+        </div>
+        <div class="sel-demo">
+          <p class="btn-demo__title">En el servidor <span>source="/demo/empleados"</span></p>
+          <nx-select id="sel-remote" avatar clearable label="Empleado (servidor)" source="/demo/empleados" placeholder="180 empleados, busca en el servidor"></nx-select>
+        </div>
+        <form class="sel-demo" id="sel-form">
+          <p class="btn-demo__title">En un &lt;form&gt; <span>name required</span></p>
+          <nx-select id="sel-form-field" name="responsable" required avatar label="Responsable" placeholder="Responsable"></nx-select>
+          <nx-button type="submit" label="Enviar" variant="primary" log-mode="none"></nx-button>
+          <code class="sel-form-out" id="sel-form-out">FormData: —</code>
+        </form>
+      </div>
+      <ol class="stage__log btn-events" id="sel-log"></ol>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+          <button role="tab" aria-selected="false">BDUI</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-select id="emp" avatar clearable name="empleado" placeholder="Selecciona un empleado"&gt;&lt;/nx-select&gt;
+
+emp.fields = [
+  { key: "nombre", label: "Nombre" },                  // la primera es la principal
+  { key: "cedula", label: "Cédula", kind: "digits" },  // se busca con o sin puntos
+  { key: "cargo",  label: "Cargo" },
+];
+emp.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", cargo: "Soldadora" }, …];
+emp.addEventListener("nx-change", (e) =&gt; console.log(e.detail.value, e.detail.options));</code></pre>
+        <pre role="tabpanel" hidden><code>import { Select } from "nx-ui/solid";
+
+&lt;Select fields={FIELDS} source="/hcm/empleados/buscar" avatar clearable
+  value={empleado()} onChange={(e) =&gt; setEmpleado(e.detail.value as string)} /&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>{ "component": "Select", "props": {
+    "fields": [{ "key": "nombre", "label": "Nombre" }, { "key": "cedula", "label": "Cédula", "kind": "digits" }],
+    "source": "/hcm/empleados/buscar",          // responde [{value, nombre, cedula, …}] o {options}
+    "selection": [{ "value": "17", "nombre": "Ana María Rincón", "cedula": "52341987" }],
+    "name": "empleado_id", "avatar": true } }</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>fields</code></td><td>Columnas buscables <code>{key, label, kind?}</code>. La primera es la principal; las demás van en la línea secundaria. <code>kind: "digits"</code> compara solo dígitos, formatea con puntos y, si la consulta son solo números, se busca únicamente ahí.</td></tr>
+            <tr><td><code>options</code></td><td>Registros locales <code>{value, …}</code> (el atributo acepta JSON).</td></tr>
+            <tr><td><code>source</code></td><td>Búsqueda en el servidor: <code>GET source?q=…</code> con espera entre teclas; responde un arreglo o <code>{options}</code>. Se respeta su orden.</td></tr>
+            <tr><td><code>value</code>, <code>selection</code></td><td>Valor (<code>string</code>, o <code>string[]</code> con <code>multiple</code>) o los registros elegidos (con <code>source</code>, para pintar la selección inicial).</td></tr>
+            <tr><td><code>multiple</code></td><td>Chips en el campo; elegir no cierra; <kbd>Backspace</kbd> con el buscador vacío quita el último.</td></tr>
+            <tr><td><code>avatar</code>, <code>clearable</code>, <code>placeholder</code>, <code>label</code></td><td>Iniciales delante de cada registro, botón de limpiar, texto vacío y nombre accesible.</td></tr>
+            <tr><td><code>name</code>, <code>required</code>, <code>disabled</code></td><td>Participa en un <code>&lt;form&gt;</code> nativo (también con <code>reset</code>).</td></tr>
+            <tr><td><code>nx-change</code></td><td><code>{ value, options }</code> al elegir, quitar o limpiar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- ================================================================ Button -->
+    <template id="page-button">
+      <p class="eyebrow">Componentes</p>
+      <h1>Button <code class="tag">&lt;nx-button&gt;</code></h1>
+      <p class="lead">
+        Un botón que sabe esperar: se bloquea con un spinner mientras corre una tarea, muestra el avance dentro del
+        propio botón y guarda un registro tipo terminal de lo que pasó.
+      </p>
+
+      <h2>Variantes</h2>
+      <div class="btn-row">
+        <nx-button label="Guardar" variant="primary" icon="file-text"></nx-button>
+        <nx-button label="Exportar" icon="package"></nx-button>
+        <nx-button label="Cancelar" variant="ghost"></nx-button>
+        <nx-button label="Eliminar" variant="danger"></nx-button>
+        <nx-button label="Deshabilitado" disabled></nx-button>
+      </div>
+
+      <h2>Tareas en segundo plano</h2>
+      <label class="fail-toggle"><input type="checkbox" id="btn-fail" /> Simular un error en el paso 4</label>
+      <div class="btn-demos">
+        <div class="btn-demo">
+          <p class="btn-demo__title">Ticker <span>log-mode="ticker" · por defecto</span></p>
+          <p class="btn-demo__desc">El mensaje corre dentro del botón; el registro se abre a pedido.</p>
+          <nx-button id="demo-ticker" label="Publicar documento" variant="primary" icon="file-text"></nx-button>
+        </div>
+        <div class="btn-demo">
+          <p class="btn-demo__title">Consola adjunta <span>log-mode="inline"</span></p>
+          <p class="btn-demo__desc">El registro se despliega debajo mientras corre.</p>
+          <nx-button id="demo-inline" label="Sincronizar inventario" icon="warehouse" log-mode="inline"></nx-button>
+        </div>
+        <div class="btn-demo">
+          <p class="btn-demo__title">Stream del backend <span>stream="/demo/stream"</span></p>
+          <p class="btn-demo__desc">Sin JS: el servidor manda NDJSON y el botón lo pinta.</p>
+          <nx-button id="demo-stream" label="Generar reporte" icon="chart-column" stream="/demo/stream" log-mode="inline"></nx-button>
+        </div>
+        <div class="btn-demo">
+          <p class="btn-demo__title">Solo spinner <span>log-mode="none"</span></p>
+          <p class="btn-demo__desc">Para acciones cortas sin nada que contar.</p>
+          <nx-button id="demo-none" label="Aprobar" variant="primary" log-mode="none"></nx-button>
+        </div>
+      </div>
+      <ol class="stage__log btn-events" id="btn-log"></ol>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">JS</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+          <button role="tab" aria-selected="false">BDUI (stream)</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-button id="pub" label="Publicar" variant="primary" log-mode="inline"&gt;&lt;/nx-button&gt;
+
+pub.addEventListener("click", () =&gt;
+  pub.run(async ({ log, progress }) =&gt; {
+    log("Generando PDF");      progress(0.3);
+    await generarPdf();
+    log("Subiendo a R2");      progress(0.7);
+    await subir();             // si algo lanza, el botón queda en error con el mensaje
+  })
+);
+
+// A mano: pub.busy = true; pub.log("…"); pub.progress = 0.5; pub.done(ok, "mensaje final");</code></pre>
+        <pre role="tabpanel" hidden><code>import { Button, type NxButton } from "nx-ui/solid";
+
+let ref!: NxButton;
+&lt;Button ref={ref} label="Publicar" variant="primary" logMode="inline"
+  onClick={() =&gt; ref.run(async ({ log }) =&gt; { log("Generando PDF"); await generarPdf(); })}
+  onDone={(e) =&gt; e.detail.ok &amp;&amp; navigate("/docs")} /&gt;
+
+// Solo spinner, controlado por una señal:
+&lt;Button label="Aprobar" busy={saving()} onClick={aprobar} /&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>// El backend declara el botón…
+{ "component": "Button", "props": { "label": "Generar reporte", "stream": "/reportes/generar", "logMode": "inline" } }
+
+// …y el endpoint responde línea por línea (NDJSON, o "data: …" de SSE):
+{"msg":"Consultando 12.480 registros","progress":0.1}
+{"msg":"Agrupando por bodega","progress":0.5}
+{"msg":"Sin precio: 3 productos","level":"warn"}
+{"ok":true,"msg":"Reporte listo"}           // o {"ok":false,"msg":"…"} para fallar</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>label</code>, <code>icon</code></td><td>Texto e ícono (nombre registrado). En HTML plano también vale <code>&lt;nx-button&gt;Guardar&lt;/nx-button&gt;</code>.</td></tr>
+            <tr><td><code>variant</code></td><td><code>secondary</code> (por defecto), <code>primary</code>, <code>ghost</code>, <code>danger</code>.</td></tr>
+            <tr><td><code>type</code>, <code>disabled</code></td><td>Como en un botón nativo; <code>type="submit"</code> envía su formulario.</td></tr>
+            <tr><td><code>busy</code></td><td>Ocupado: spinner, reloj y bloqueo (<code>aria-busy</code>, <code>aria-disabled</code>; no suelta el foco). El clic no llega a la app.</td></tr>
+            <tr><td><code>progress</code></td><td>0–1 (o 0–100). Sin él, la barra es indeterminada.</td></tr>
+            <tr><td><code>log-mode</code></td><td><code>ticker</code> (por defecto), <code>inline</code> o <code>none</code>.</td></tr>
+            <tr><td><code>stream</code>, <code>method</code></td><td>URL que transmite el avance (NDJSON o SSE; <code>POST</code> por defecto). El clic corre la tarea solo.</td></tr>
+            <tr><td><code>labels</code></td><td><code>busy</code>, <code>done</code>, <code>failed</code>, <code>log</code>. En español por defecto.</td></tr>
+            <tr><td><code>run(task)</code></td><td>Corre <code>task({ log, progress })</code> con el botón ocupado; lo que lance es un fallo.</td></tr>
+            <tr><td><code>log(msg, level?)</code>, <code>done(ok, msg?)</code></td><td>Control manual. <code>level</code>: <code>info</code>, <code>ok</code>, <code>warn</code>, <code>error</code>.</td></tr>
+            <tr><td><code>nx-done</code></td><td>Evento al terminar: <code>{ ok, ms, lines }</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- ================================================================ SideMenu -->
+    <template id="page-sidemenu">
+      <p class="eyebrow">Componentes</p>
+      <h1>SideMenu <code class="tag">&lt;nx-sidemenu&gt;</code></h1>
+      <p class="lead">
+        Menú lateral con secciones, panel flotante con buscador para los hijos de un padre, modo compacto de solo
+        íconos y drawer en pantallas pequeñas.
+      </p>
+
+      <div class="demo">
+        <div class="demo__controls">
+          <label><input type="checkbox" data-ctl="collapsed" /> Compacto</label>
+          <label><input type="checkbox" data-ctl="collapsible" checked /> Botón de contraer</label>
+          <label title="Compacto automático entre 768 y 1023 px"><input type="checkbox" data-ctl="autoCollapse" checked /> Compacto en tablet</label>
+          <label><input type="checkbox" data-ctl="rtl" /> RTL</label>
+          <span class="demo__sep"></span>
+          <div class="seg" role="group" aria-label="Tema de la demo">
+            <button type="button" data-stage-theme="" aria-pressed="true">Heredado</button>
+            <button type="button" data-stage-theme="light" aria-pressed="false">Claro</button>
+            <button type="button" data-stage-theme="dark" aria-pressed="false">Oscuro</button>
+          </div>
+        </div>
+        <div class="stage" id="stage">
+          <div class="stage__menu" id="stage-menu"></div>
+          <div class="stage__main">
+            <div class="stage__bar">
+              <button type="button" class="icon-btn stage__burger" id="stage-burger" aria-label="Abrir menú">☰</button>
+              <span class="stage__crumb">Pantalla actual</span>
+              <code id="stage-path">/ventas/pedidos</code>
+            </div>
+            <div class="stage__body">
+              <p class="stage__tip">
+                Abre <strong>Seguridad Física</strong> y escribe <kbd>porteria</kbd>. Usa <kbd>↑</kbd> <kbd>↓</kbd>
+                <kbd>Enter</kbd> y <kbd>Esc</kbd>. Achica la ventana para ver el drawer.
+              </p>
+              <p class="stage__loglabel">Eventos</p>
+              <ol class="stage__log" id="stage-log"></ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Payload BDUI</h2>
+      <p>
+        La demo se pinta con <code>render(payload, contenedor)</code>. Edita el JSON (o usa los controles de arriba) y se
+        vuelve a pintar.
+      </p>
+      <div class="payload">
+        <textarea id="payload" spellcheck="false" aria-label="Payload BDUI"></textarea>
+        <p class="payload__error" id="payload-error" hidden></p>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+          <button role="tab" aria-selected="false">BDUI</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;button popovertarget="menu" aria-label="Abrir menú"&gt;☰&lt;/button&gt;   &lt;!-- solo se ve en móvil --&gt;
+
+&lt;nx-sidemenu id="menu" active="/ventas/pedidos" collapsible&gt;
+  &lt;a slot="header" href="/"&gt;Mi app&lt;/a&gt;
+  &lt;div slot="footer"&gt;…&lt;/div&gt;
+&lt;/nx-sidemenu&gt;
+
+&lt;script&gt;
+  menu.items = [
+    { id: "inicio", label: "Inicio", href: "/", icon: "house" },
+    { id: "ventas", label: "Ventas", icon: "shopping-cart", section: "Operación",
+      children: [{ id: "pedidos", label: "Pedidos", href: "/ventas/pedidos" }] },
+  ];
+&lt;/script&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import { SideMenu } from "nx-ui/solid";
+import { useLocation } from "@solidjs/router";
+
+const loc = useLocation();
+const [compact, setCompact] = createSignal(false);
+
+&lt;SideMenu
+  items={menu()}
+  active={loc.pathname}              // los &lt;a href&gt; los intercepta el router solo
+  collapsible
+  collapsed={compact()}
+  onToggle={(e) =&gt; { e.preventDefault(); setCompact(e.detail.collapsed); }}
+&gt;
+  &lt;a slot="header" href="/"&gt;Mi app&lt;/a&gt;
+&lt;/SideMenu&gt;
+
+// Sin envoltorio: &lt;nx-sidemenu prop:items={…} attr:active={…} bool:collapsed={…} /&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import { render } from "nx-ui/bdui";
+
+// Lo que responde el backend:
+const node = {
+  component: "SideMenu",
+  props: { items: [...], active: "/ventas/pedidos", collapsible: true },
+};
+render(node, document.querySelector("#menu-slot"));</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <h3>Propiedades y atributos</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Tipo</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>items</code></td><td><code>MenuItem[]</code></td><td>Los ítems. El atributo acepta el mismo arreglo como JSON.</td></tr>
+            <tr><td><code>active</code></td><td><code>string</code></td><td>Href (o id) de la pantalla actual. Coincidencia exacta; si no, el prefijo más largo por segmentos (un último segmento <code>index…</code> cuenta como su carpeta); si no, el <code>id</code> de un padre, que se enciende sin hoja activa (útil para una ficha de detalle).</td></tr>
+            <tr><td><code>collapsed</code></td><td><code>boolean</code></td><td>Modo compacto de solo íconos (56 px). <code>"false"</code> cuenta como falso.</td></tr>
+            <tr><td><code>collapsible</code></td><td><code>boolean</code></td><td>Pinta el botón de contraer al pie.</td></tr>
+            <tr><td><code>auto-collapse</code> / <code>autoCollapse</code></td><td><code>boolean</code></td><td>En tablet (768–1023 px) arranca compacto; al volver a escritorio se expande si lo había contraído él. El usuario puede expandirlo a mano.</td></tr>
+            <tr><td><code>labels</code></td><td><code>Partial&lt;SidemenuLabels&gt;</code></td><td>Textos: <code>nav</code>, <code>filter</code>, <code>empty</code>, <code>back</code>, <code>collapse</code>, <code>expand</code>. En español por defecto.</td></tr>
+            <tr><td><code>open</code>, <code>show()</code>, <code>hide()</code>, <code>toggle()</code></td><td></td><td>El drawer móvil (&lt; 768 px). También sirve <code>&lt;button popovertarget="id"&gt;</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3><code>MenuItem</code></h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Campo</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code>, <code>label</code></td><td>Obligatorios. La etiqueta siempre se pinta como texto.</td></tr>
+            <tr><td><code>href</code></td><td>Destino. Solo rutas relativas, <code>http(s)</code>, <code>mailto</code> y <code>tel</code>; lo demás se descarta.</td></tr>
+            <tr><td><code>icon</code></td><td>Nombre registrado con <code>registerIcons</code>. Sin ícono: iniciales.</td></tr>
+            <tr><td><code>section</code></td><td>Título del grupo (en el riel y en el panel de hijos).</td></tr>
+            <tr><td><code>description</code></td><td>Segunda línea en el panel de hijos; también se busca en ella.</td></tr>
+            <tr><td><code>children</code></td><td>Lo convierte en padre: abre su panel flotante (o un drill-down en el drawer) y nunca navega. El buscador solo aparece con más de 3 hijos.</td></tr>
+            <tr><td><code>utility</code></td><td>En el panel del padre va como chip al pie (configuración, reportes).</td></tr>
+            <tr><td><code>badge</code></td><td>Contador o marca (<code>12</code>, <code>"Nuevo"</code>). <code>0</code> no se pinta y más de 99 es «99+». En compacto se reduce a un punto y entra en el nombre accesible.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Eventos</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Evento</th><th><code>detail</code></th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>nx-select</code></td><td><code>{ item, href }</code></td><td>Al elegir una hoja. Cancelable: <code>preventDefault()</code> cancela la navegación del enlace.</td></tr>
+            <tr><td><code>nx-toggle</code></td><td><code>{ collapsed, auto }</code></td><td>Botón de contraer (<code>auto: false</code>) o <code>auto-collapse</code> (<code>auto: true</code>). Cancelable: la app controla el estado.</td></tr>
+            <tr><td><code>nx-open-change</code></td><td><code>{ open }</code></td><td>El drawer móvil se abrió o cerró.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Slots y variables CSS</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>slot="header"</code>, <code>slot="footer"</code></td><td>Tu contenido arriba y abajo del menú. No se mueve del DOM (seguro para hidratación).</td></tr>
+            <tr><td><code>--nx-sidemenu-width</code></td><td>240px</td></tr>
+            <tr><td><code>--nx-sidemenu-width-collapsed</code></td><td>56px</td></tr>
+            <tr><td><code>--nx-sidemenu-drawer-width</code></td><td>280px (máx. 86vw)</td></tr>
+            <tr><td><code>--nx-flyout-width</code></td><td>320px</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+  </body>
+</html>
