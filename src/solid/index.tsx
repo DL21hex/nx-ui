@@ -1,6 +1,6 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
- * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`).
+ * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -10,7 +10,7 @@
  *   `items="[object Object]"`, y al hidratar no se asigna la propiedad. `prop:items` evita las dos cosas.
  * - `collapsed={false}` escribe `collapsed="false"`; `bool:collapsed` quita el atributo.
  */
-import { splitProps, type JSX } from "solid-js";
+import { createEffect, splitProps, type JSX } from "solid-js";
 import "../components/sidemenu/index";
 import "../components/button/index";
 import type { NxButton } from "../components/button/button";
@@ -27,6 +27,11 @@ import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetai
 import "../components/grid/index";
 import type { NxGrid } from "../components/grid/grid";
 import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort } from "../components/grid/types";
+import "../components/dialog/index";
+import type { NxDialog } from "../components/dialog/dialog";
+import type { CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize } from "../components/dialog/types";
+export { nxConfirm } from "../components/confirm/index";
+export { nxToast } from "../components/toast/index";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -35,6 +40,7 @@ export type { NxButton, ButtonLabels, ButtonVariant, DoneDetail, LogMode };
 export type { NxSelect, SelectChangeDetail, SelectField, SelectLabels, SelectOption };
 export type { NxAiAnswer, AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels };
 export type { NxDocCapture, CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues };
+export type { NxDialog, CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize };
 export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -43,7 +49,7 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[];
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -80,6 +86,12 @@ declare module "solid-js" {
       filename: string | undefined;
       height: string | undefined;
       locale: string | undefined;
+      heading: string | undefined;
+      description: string | undefined;
+      mode: DialogMode | undefined;
+      size: DialogSize | undefined;
+      url: string | undefined;
+      hold: string | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -93,6 +105,7 @@ declare module "solid-js" {
       avatar: boolean;
       feedback: boolean;
       "facets-open": boolean;
+      persistent: boolean;
     }
     interface CustomEvents {
       "nx-select": CustomEvent<SelectDetail>;
@@ -108,6 +121,7 @@ declare module "solid-js" {
       "nx-grid-filter": CustomEvent<GridFilterDetail>;
       "nx-grid-change": CustomEvent<{ changes: GridChange[] }>;
       "nx-grid-columns": CustomEvent<{ columns: GridColumn[] }>;
+      "nx-dialog-close": CustomEvent<DialogCloseDetail>;
     }
     interface IntrinsicElements {
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
@@ -116,6 +130,7 @@ declare module "solid-js" {
       "nx-ai-answer": HTMLAttributes<NxAiAnswer> & { endpoint?: string; placeholder?: string };
       "nx-doc-capture": HTMLAttributes<NxDocCapture> & { endpoint?: string };
       "nx-grid": HTMLAttributes<NxGrid> & { source?: string };
+      "nx-dialog": HTMLAttributes<NxDialog> & { heading?: string };
     }
   }
 }
@@ -181,6 +196,8 @@ export interface ButtonProps extends Omit<JSX.HTMLAttributes<NxButton>, "onClick
   stream?: string;
   method?: string;
   labels?: Partial<ButtonLabels>;
+  /** Mantener pulsado (ms) para activarlo: para lo destructivo. */
+  hold?: number;
   /** No se dispara mientras está ocupado. */
   onClick?: (e: MouseEvent) => void;
   onDone?: (e: CustomEvent<DoneDetail>) => void;
@@ -199,6 +216,7 @@ export function Button(props: ButtonProps): JSX.Element {
     "stream",
     "method",
     "labels",
+    "hold",
     "onClick",
     "onDone",
   ]);
@@ -212,6 +230,7 @@ export function Button(props: ButtonProps): JSX.Element {
       attr:log-mode={local.logMode}
       attr:stream={local.stream}
       attr:method={local.method}
+      attr:hold={local.hold ? String(local.hold) : undefined}
       bool:disabled={!!local.disabled}
       bool:busy={!!local.busy}
       prop:progress={local.progress ?? null}
@@ -414,5 +433,51 @@ export function Grid(props: GridProps): JSX.Element {
       on:nx-grid-change={(e) => local.onChange?.(e)}
       on:nx-grid-columns={(e) => local.onColumns?.(e)}
     />
+  );
+}
+
+export interface DialogProps extends Omit<JSX.HTMLAttributes<NxDialog>, "onClose"> {
+  /** Controlado: abre y cierra con la señal (y avisa en `onOpenChange`). */
+  open?: boolean;
+  heading?: string;
+  description?: string;
+  mode?: DialogMode;
+  size?: DialogSize;
+  persistent?: boolean;
+  /** Entrada de historial al abrir («atrás» cierra). `""` = la URL actual. */
+  url?: string;
+  labels?: Partial<DialogLabels>;
+  onOpenChange?: (e: CustomEvent<{ open: boolean; value?: string; reason?: CloseReason }>) => void;
+  /** Cancelable: `e.preventDefault()` lo deja abierto. */
+  onClose?: (e: CustomEvent<DialogCloseDetail>) => void;
+  children?: JSX.Element;
+}
+
+export function Dialog(props: DialogProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["open", "heading", "description", "mode", "size", "persistent", "url", "labels", "onOpenChange", "onClose", "children"]);
+  let el: NxDialog | undefined;
+  createEffect(() => {
+    const want = !!local.open;
+    if (el && want !== el.open) {
+      if (want) void el.show();
+      else el.close(undefined, "api");
+    }
+  });
+  return (
+    <nx-dialog
+      {...rest}
+      ref={(e: NxDialog) => (el = e)}
+      attr:heading={local.heading}
+      attr:description={local.description}
+      attr:mode={local.mode}
+      attr:size={local.size}
+      attr:url={local.url}
+      bool:persistent={!!local.persistent}
+      prop:labels={local.labels}
+      on:nx-open-change={(e) => local.onOpenChange?.(e)}
+      on:nx-dialog-close={(e) => local.onClose?.(e)}
+    >
+      {local.children}
+    </nx-dialog>
   );
 }

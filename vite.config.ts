@@ -172,6 +172,44 @@ function demoGrid(): Plugin {
   };
 }
 
+/** Solo en la galería: las consecuencias de anular un pedido, para nxConfirm({ impact }). */
+function demoImpact(): Plugin {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const SCRIPTS: Record<string, object[]> = {
+    "2291": [
+      { type: "impact", icon: "truck", label: "2 recepciones en bodega", detail: "se revierten" },
+      { type: "impact", icon: "file-text", label: "Factura FE-10482", detail: "queda sin pedido", tone: "warning" },
+      { type: "impact", icon: "wallet", label: "Presupuesto de Producción", detail: "+ $ 10.829.000", tone: "success" },
+      { type: "note", message: "Se notificará a los 2 aprobadores del pedido." },
+    ],
+    "2310": [
+      { type: "impact", icon: "truck", label: "1 recepción en bodega", detail: "se revierte" },
+      { type: "impact", icon: "wallet", label: "Pago EG-3321", detail: "$ 1.450.000", tone: "danger" },
+      { type: "block", message: "No se puede anular: el pedido ya tiene un pago (EG-3321). Primero hay que reversar el pago." },
+    ],
+  };
+  return {
+    name: "nx-demo-impact",
+    configureServer(server) {
+      server.middlewares.use("/demo/impact", async (req, res) => {
+        for await (const _ of req) void _;
+        const oc = new URL(req.url ?? "", "http://x").searchParams.get("oc") ?? "2291";
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Cache-Control", "no-store");
+        let closed = false;
+        req.on("close", () => (closed = true));
+        await sleep(350);
+        for (const ev of SCRIPTS[oc] ?? SCRIPTS["2291"]) {
+          if (closed) return;
+          res.write(`${JSON.stringify(ev)}\n`);
+          await sleep(260 + Math.random() * 200);
+        }
+        res.end(`${JSON.stringify({ type: "done" })}\n`);
+      });
+    },
+  };
+}
+
 /** Solo en la galería: un endpoint que transmite NDJSON con pausas reales, para probar
  *  `<nx-button stream>` contra un servidor de verdad. `?fail=1` falla en el paso 4. */
 function demoStream(): Plugin {
@@ -212,7 +250,7 @@ function demoStream(): Plugin {
 // `vite build`      → librería ESM, una entrada por subruta del package
 // `vite build --mode iife` → dist/nx-ui.iife.js, todo-en-uno para <script>
 export default defineConfig(({ command, mode }) => {
-  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi(), demoCapture(), demoGrid()] };
+  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi(), demoCapture(), demoGrid(), demoImpact()] };
 
   if (mode === "iife") {
     return {
@@ -237,6 +275,9 @@ export default defineConfig(({ command, mode }) => {
           ai: "src/components/ai/index.ts",
           capture: "src/components/capture/index.ts",
           grid: "src/components/grid/index.ts",
+          dialog: "src/components/dialog/index.ts",
+          confirm: "src/components/confirm/index.ts",
+          toast: "src/components/toast/index.ts",
           icons: "src/icons/index.ts",
           bdui: "src/bdui.ts",
         },

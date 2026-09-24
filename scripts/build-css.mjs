@@ -12,6 +12,9 @@ const entries = {
   ai: "src/components/ai/ai-answer.css",
   capture: "src/components/capture/doc-capture.css",
   grid: "src/components/grid/grid.css",
+  dialog: "src/components/dialog/dialog.css",
+  confirm: "src/components/confirm/confirm.css",
+  toast: "src/components/toast/toast.css",
 };
 
 await build({

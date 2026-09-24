@@ -177,6 +177,23 @@ nx-button[disabled] .nx-button__btn {
   background: var(--_accent);
   transition: inline-size var(--nx-motion-base) var(--nx-ease-out);
 }
+/* Mantener pulsado: se llena de izquierda a derecha durante `hold`; al soltar antes, se vacía. */
+.nx-button__hold {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 0;
+  background: color-mix(in oklch, var(--_fg) 22%, transparent);
+  pointer-events: none;
+  transition: inline-size 0.2s ease-out;
+}
+.nx-button__btn[data-holding] .nx-button__hold {
+  inline-size: 100%;
+  transition: inline-size var(--_hold, 1s) linear;
+}
+.nx-button__btn > :is(.nx-button__lead, .nx-button__text, .nx-button__time) {
+  position: relative;
+}
 .nx-button__bar--indeterminate {
   inline-size: 35%;
   animation: nx-sweep 1.2s var(--nx-ease-out) infinite;

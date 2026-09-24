@@ -27,6 +27,7 @@ export const BUTTON_LABELS: ButtonLabels = {
   done: "Listo",
   failed: "Falló",
   log: "Registro",
+  hold: "Mantén pulsado para confirmar",
 };
 
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
@@ -35,10 +36,10 @@ const TERMINAL = '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>';
 /** Cuánto se queda a la vista el resultado antes de volver a la etiqueta. */
 const RESULT_MS = { ok: 2200, error: 4000 };
 const MAX_LINES = 200;
-const PROPS = ["label", "icon", "variant", "type", "disabled", "busy", "logMode", "progress", "stream", "method", "labels"] as const;
+const PROPS = ["label", "icon", "variant", "type", "disabled", "busy", "logMode", "progress", "stream", "method", "labels", "hold"] as const;
 
 export class NxButton extends Base {
-  static observedAttributes = ["label", "icon", "variant", "type", "disabled", "busy", "log-mode", "progress", "stream", "method", "labels"];
+  static observedAttributes = ["label", "icon", "variant", "type", "disabled", "busy", "log-mode", "progress", "stream", "method", "labels", "hold"];
 
   #labels: ButtonLabels = BUTTON_LABELS;
   #lines: LogLine[] = [];
@@ -56,6 +57,9 @@ export class NxButton extends Base {
   #toggle?: HTMLButtonElement;
   #panel?: HTMLDivElement;
   #status?: HTMLSpanElement;
+  #fill?: HTMLSpanElement;
+  #holdTimer = 0;
+  #held = false;
 
   // ---------------------------------------------------------------- propiedades
 
@@ -130,6 +134,17 @@ export class NxButton extends Base {
   set labels(v: Partial<ButtonLabels> | null | undefined) {
     this.#labels = { ...BUTTON_LABELS, ...(v && typeof v === "object" ? v : {}) };
     this.#paint();
+  }
+  /** Mantener pulsado (ms) para activarlo: para lo destructivo, en vez de «¿Está seguro?».
+   *  `hold` sin valor = 1000 ms. Con teclado, mantener Enter o Espacio. */
+  get hold(): number {
+    const v = this.getAttribute("hold");
+    if (v === null) return 0;
+    const n = Number(v);
+    return v === "" || !Number.isFinite(n) ? 1000 : Math.max(0, n);
+  }
+  set hold(v: number) {
+    this.#attr("hold", v ? String(v) : null);
   }
   /** Copia del registro de la última tarea. */
   get lines(): LogLine[] {
@@ -255,7 +270,8 @@ export class NxButton extends Base {
     this.#text = h("span", { class: "nx-button__text" });
     this.#time = h("span", { class: "nx-button__time" });
     this.#bar = h("span", { class: "nx-button__bar", "aria-hidden": "true" });
-    this.#btn = h("button", { class: "nx-button__btn" }, this.#lead, this.#text, this.#time, this.#bar);
+    this.#fill = h("span", { class: "nx-button__hold", "aria-hidden": "true" });
+    this.#btn = h("button", { class: "nx-button__btn" }, this.#fill, this.#lead, this.#text, this.#time, this.#bar);
     this.#toggle = h("button", { type: "button", class: "nx-button__toggle", hidden: true });
     this.#panel = h("div", { class: "nx-button__log", role: "log", hidden: true });
     this.#status = h("span", { class: "nx-sr-only", role: "status" });
@@ -263,7 +279,8 @@ export class NxButton extends Base {
 
     this.#btn.addEventListener("click", (e) => {
       // Ocupado: el clic no existe (el botón no se deshabilita para no perder el foco).
-      if (this.busy || this.disabled) {
+      // Con `hold`, solo cuenta el clic que llega al completar la pulsación larga.
+      if (this.busy || this.disabled || (this.hold && !this.#held)) {
         e.preventDefault();
         e.stopImmediatePropagation();
         return;
@@ -274,6 +291,30 @@ export class NxButton extends Base {
         void this.#runStream();
       }
     });
+    const cancel = () => {
+      clearTimeout(this.#holdTimer);
+      delete this.#btn!.dataset.holding;
+    };
+    const start = () => {
+      if (!this.hold || this.busy || this.disabled || this.#btn!.dataset.holding !== undefined) return;
+      this.#btn!.style.setProperty("--_hold", `${this.hold}ms`);
+      this.#btn!.dataset.holding = "";
+      this.#holdTimer = window.setTimeout(() => {
+        cancel();
+        this.#held = true;
+        this.#btn!.click();
+        this.#held = false;
+      }, this.hold);
+    };
+    this.#btn.addEventListener("pointerdown", (e) => e.button === 0 && start());
+    for (const t of ["pointerup", "pointerleave", "pointercancel", "blur"]) this.#btn.addEventListener(t, cancel);
+    this.#btn.addEventListener("keydown", (e) => {
+      if (this.hold && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        if (!e.repeat) start();
+      }
+    });
+    this.#btn.addEventListener("keyup", (e) => (e.key === "Enter" || e.key === " ") && cancel());
     this.#toggle.addEventListener("click", () => {
       this.#logOpen = !this.#isLogOpen();
       this.#paint();
@@ -333,6 +374,8 @@ export class NxButton extends Base {
     btn.setAttribute("aria-busy", String(busy));
     // `aria-disabled` y no `disabled`: un botón deshabilitado suelta el foco en pleno clic.
     btn.setAttribute("aria-disabled", String(busy || this.disabled));
+    if (this.hold) btn.setAttribute("aria-description", this.#labels.hold);
+    else btn.removeAttribute("aria-description");
 
     // Lo que va delante: spinner, resultado o ícono.
     const lead = busy ? "busy" : result ? (result.ok ? "ok" : "error") : `icon:${this.icon ?? ""}`;

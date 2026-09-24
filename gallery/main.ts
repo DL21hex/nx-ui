@@ -3,7 +3,7 @@ import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
-import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDocCapture, type NxGrid, type NxSelect, type NxSidemenu, type RunContext } from "../src/index";
+import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDialog, type NxDocCapture, type NxGrid, type NxSelect, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 
@@ -76,7 +76,8 @@ const NAV: MenuItem[] = [
   { id: "select", label: "Select", href: "#/select", icon: "users", section: "Componentes" },
   { id: "ai", label: "IA", href: "#/ai", icon: "circle-help", section: "Componentes" },
   { id: "capture", label: "Captura", href: "#/capture", icon: "receipt", section: "Componentes" },
-  { id: "grid", label: "Tabla", href: "#/grid", icon: "chart-column", section: "Componentes", badge: "Nuevo" },
+  { id: "grid", label: "Tabla", href: "#/grid", icon: "chart-column", section: "Componentes" },
+  { id: "dialog", label: "Diálogos", href: "#/dialog", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
 ];
 nav.items = NAV;
 
@@ -89,6 +90,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/ai": { template: "page-ai", mount: mountAiDemo },
   "#/capture": { template: "page-capture", mount: mountCaptureDemo },
   "#/grid": { template: "page-grid", mount: mountGridDemo },
+  "#/dialog": { template: "page-dialog", mount: mountDialogDemo },
 };
 
 const page = document.querySelector<HTMLElement>("#page")!;
@@ -496,4 +498,110 @@ function mountGridDemo(root: HTMLElement) {
   grid.addEventListener("nx-grid-filter", (e) => add(`nx-grid-filter → ${e.detail.count} filas · ${JSON.stringify(e.detail.filters)}${e.detail.sort ? ` · orden ${e.detail.sort.key} ${e.detail.sort.dir}` : ""}${e.detail.groupBy ? ` · grupo ${e.detail.groupBy}` : ""}`));
   grid.addEventListener("nx-grid-change", (e) => add(`nx-grid-change → ${e.detail.changes.map((c) => `${c.id}.${c.key} = ${JSON.stringify(c.value)}`).join(", ")}`));
   grid.addEventListener("nx-grid-columns", (e) => add(`nx-grid-columns → ${e.detail.columns.map((c) => c.key).join(", ")}`));
+}
+
+// ---------------------------------------------------------------- demo de diálogos
+
+function mountDialogDemo(root: HTMLElement) {
+  const log = root.querySelector<HTMLOListElement>("#dlg-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 6) log.lastElementChild!.remove();
+  };
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, ...kids: (Node | string)[]) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    n.append(...kids);
+    return n;
+  };
+
+  // A · el modal que nace del botón.
+  const nuevo = root.querySelector<NxDialog>("#dlg-new")!;
+  root.querySelector("#dlg-new-btn")!.addEventListener("click", async (e) => {
+    const v = await nuevo.show(e.currentTarget as Element);
+    add(`nuevo.show() → ${v ?? "(sin valor)"}`);
+  });
+  const save = root.querySelector<NxButton>("#dlg-new-save")!;
+  save.addEventListener("click", () =>
+    void save.run(async ({ log: l }) => {
+      l("Validando el pedido");
+      await new Promise((r) => setTimeout(r, 700));
+      l("Enviando a aprobación");
+      await new Promise((r) => setTimeout(r, 600));
+      nuevo.dirty = false;
+      nuevo.close("guardado");
+      (root.querySelector("#dlg-new-form") as HTMLFormElement).reset();
+      void nxToast({ message: "Pedido OC-2402 creado y enviado a aprobación", tone: "success" });
+    }),
+  );
+  nuevo.addEventListener("nx-dialog-close", (e) => add(`nx-dialog-close → ${e.detail.reason}`));
+
+  // B · paneles apilados.
+  const ORDERS = [
+    { oc: "OC-2291", prov: "Aceros del Caribe", monto: "$ 10.829.000", estado: "Recibido" },
+    { oc: "OC-2310", prov: "Empaques Andinos", monto: "$ 1.450.000", estado: "Pendiente" },
+    { oc: "OC-2318", prov: "Químicos del Norte", monto: "$ 3.912.000", estado: "Aprobado" },
+  ];
+  const order = root.querySelector<NxDialog>("#dlg-order")!;
+  const prov = root.querySelector<NxDialog>("#dlg-prov")!;
+  const inv = root.querySelector<NxDialog>("#dlg-inv")!;
+  // Cada panel tiene su propio contenedor: el contenido del autor se reemplaza ahí dentro.
+  const body = (d: NxDialog) => d.querySelector(".dlg-body") ?? d.appendChild(el("div", { class: "dlg-body" }));
+  const facts = (rows: [string, string][]) => el("dl", { class: "dlg-facts" }, ...rows.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
+  const list = root.querySelector("#dlg-orders")!;
+  for (const o of ORDERS) {
+    const b = el("button", { type: "button", class: "dlg-item" }, el("strong", {}, o.oc), el("span", {}, o.prov), el("span", { class: "dlg-num" }, o.monto));
+    b.addEventListener("click", () => {
+      order.heading = `Pedido ${o.oc}`;
+      order.description = `${o.estado} · ${o.monto}`;
+      const toProv = el("button", { type: "button", class: "dlg-link" }, `Ver proveedor · ${o.prov} →`);
+      toProv.addEventListener("click", () => {
+        prov.heading = o.prov;
+        prov.description = "Proveedor desde 2019 · Barranquilla";
+        const toInv = el("button", { type: "button", class: "dlg-link" }, "Ver última factura · FE-10482 →");
+        toInv.addEventListener("click", () => {
+          inv.heading = "Factura FE-10482";
+          inv.description = `${o.prov} · 12 sep 2026`;
+          body(inv).replaceChildren(facts([["Subtotal", "$ 9.100.000"], ["IVA 19 %", "$ 1.729.000"], ["Total", "$ 10.829.000"], ["Vence", "12 oct 2026"]]));
+          void inv.show();
+        });
+        body(prov).replaceChildren(facts([["NIT", "900.123.456-7"], ["Pedidos este año", "38"], ["Entregas a tiempo", "84 %"], ["Contacto", "compras@aceros.co"]]), toInv);
+        void prov.show();
+      });
+      body(order).replaceChildren(facts([["Proveedor", o.prov], ["Monto", o.monto], ["Estado", o.estado], ["Solicitó", "Producción · línea 2"]]), toProv);
+      void order.show(b);
+    });
+    list.append(el("li", {}, b));
+  }
+
+  // C · deshacer en vez de confirmar.
+  const undoList = root.querySelector("#dlg-undo")!;
+  for (const o of [...ORDERS, { oc: "OC-2322", prov: "Transportes Rivera", monto: "$ 820.000", estado: "Pendiente" }]) {
+    const btn = el("button", { type: "button", class: "dlg-plain" }, "Anular");
+    const li = el("li", { class: "dlg-undo-row" }, el("strong", {}, o.oc), el("span", {}, o.prov), el("span", { class: "dlg-num" }, o.monto), btn);
+    btn.addEventListener("click", async () => {
+      li.classList.add("is-gone");
+      const r = await nxToast({ message: `${o.oc} anulada`, undo: true });
+      if (r === "undo") {
+        li.classList.remove("is-gone");
+        add(`${o.oc}: deshecho, no se envía nada`);
+      } else {
+        li.remove();
+        add(`${o.oc}: ${r} → POST /compras/oc/${o.oc.slice(3)}/anular`);
+      }
+    });
+    undoList.append(li);
+  }
+
+  // D · confirmación con impacto.
+  const ask = (id: string, oc: string) =>
+    root.querySelector(id)!.addEventListener("click", async (e) => {
+      const yes = await nxConfirm({ heading: `Anular ${oc}`, message: "El pedido deja de estar vigente para compras y bodega.", confirmLabel: "Anular pedido", impact: `/demo/impact?oc=${oc.slice(3)}`, origin: e.currentTarget as Element });
+      add(`nxConfirm(${oc}) → ${yes}`);
+      if (yes) void nxToast({ message: `${oc} anulada`, tone: "success" });
+    });
+  ask("#dlg-c1", "OC-2291");
+  ask("#dlg-c2", "OC-2310");
 }

@@ -720,6 +720,119 @@ td:first-child {
   max-inline-size: none;
 }
 
+/* ---------------------------------------------------------------- demo de diálogos */
+
+.dlg-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-block: 12px 8px;
+}
+.dlg-plain,
+.dlg-link {
+  padding: 6px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+}
+.dlg-link {
+  margin-block-start: 16px;
+  border-color: var(--nx-primary-border);
+  color: var(--nx-primary);
+}
+.dlg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  & label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--nx-muted-foreground);
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  & :is(input, textarea) {
+    padding: 8px 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-background);
+    color: var(--nx-foreground);
+    font: inherit;
+    font-size: 14px;
+  }
+}
+.dlg-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.dlg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-inline-size: 560px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+.dlg-item,
+.dlg-undo-row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: start;
+}
+.dlg-item {
+  cursor: pointer;
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+}
+.dlg-undo-row {
+  grid-template-columns: 80px 1fr auto auto;
+  transition:
+    opacity 0.2s,
+    translate 0.2s;
+  &.is-gone {
+    display: none;
+  }
+}
+.dlg-num {
+  font-variant-numeric: tabular-nums;
+}
+.dlg-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 20px;
+  margin: 4px 0 0;
+  font-size: 14px;
+  & dt {
+    color: var(--nx-muted-foreground);
+  }
+  & dd {
+    margin: 0;
+    font-weight: 500;
+  }
+}
+
 /* ---------------------------------------------------------------- demo de la tabla */
 
 .grid-try {

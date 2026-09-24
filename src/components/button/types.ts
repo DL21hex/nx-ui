@@ -27,6 +27,8 @@ export interface ButtonLabels {
   done: string;
   failed: string;
   log: string;
+  /** Descripción accesible de un botón con `hold`. */
+  hold: string;
 }
 
 export interface DoneDetail {

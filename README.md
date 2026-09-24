@@ -11,8 +11,11 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-ai-answer>` + núcleo (ESM) | ≈ 5,6 KB |
 | `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 9,4 KB |
 | `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,3 KB, se carga al exportar | ≈ 17 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 9,5 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 41 KB |
+| `<nx-dialog>` + núcleo (ESM) | ≈ 4,2 KB |
+| `nxToast()` + núcleo (ESM) | ≈ 2,2 KB |
+| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 8,6 KB |
+| `nx-ui.css` (tokens + todos los componentes) | ≈ 11,5 KB |
+| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 47 KB |
 
 Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
 
@@ -324,6 +327,53 @@ filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?} · 
 | Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `labels` |
 | Métodos | `ask(frase)`, `clearFilters()`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()` |
 | Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns` |
+
+## `<nx-dialog>`, `nxToast()` y `nxConfirm()`
+
+Cuatro formas de hacer lo que hoy se hace con un modal, cada una para su caso:
+
+- **A · El modal que nace del botón.** `<nx-dialog>` se expande desde el botón que lo abrió y
+  vuelve a él (View Transitions; sin ellas, un fundido). En móvil es una hoja desde abajo que se
+  arrastra para cerrar. Si hay cambios sin guardar, avisa dentro del propio diálogo en vez de
+  perderlos: lo que cierra la persona pasa por el aviso; lo que cierra la app con `close()`, no.
+- **B · Paneles apilados.** `mode="panel"`: cada nivel se apila sobre el anterior (pedido →
+  proveedor → factura), con migas para volver, y la página sigue a la vista. Con `url`, «atrás»
+  del navegador cierra el nivel de arriba.
+- **C · Deshacer en vez de confirmar.** `nxToast({ message, undo: true })`: la acción ocurre al
+  instante y se puede deshacer mientras corre el tiempo (con el botón o Ctrl+Z). La promesa dice
+  si se deshizo; si no, la app confirma en el backend.
+- **D · Confirmación con impacto.** `nxConfirm({ heading, impact })`: el backend describe las
+  consecuencias antes de actuar (una lista, o en streaming como la IA) y puede bloquear la acción
+  con un motivo. Lo destructivo se confirma manteniendo pulsado el botón (`<nx-button hold>`).
+
+El diálogo es el propio elemento en la capa superior (Popover API): el contenido del autor no se
+mueve, así que la hidratación de Solid no se rompe. Se comporta como modal: `aria-modal`, foco
+atrapado y devuelto a quien lo abrió, Escape, fondo que bloquea y scroll de la página bloqueado.
+
+```html
+<button popovertarget="nuevo">Nuevo pedido</button>  <!-- o: const valor = await nuevo.show() -->
+<nx-dialog id="nuevo" heading="Nuevo pedido">
+  <form method="dialog">…<button value="guardar">Guardar</button></form>
+  <div slot="footer"><button data-nx-close>Cancelar</button></div>
+</nx-dialog>
+```
+
+```js
+ocultar(fila);
+if ((await nxToast({ message: "OC-2291 anulada", undo: true })) === "undo") mostrar(fila);
+else anular(fila);
+
+if (await nxConfirm({ heading: "Anular OC-2291", impact: "/compras/oc/2291/impacto" })) anular();
+// {"type":"impact","label":"2 recepciones","detail":"se revierten","tone":"warning"}
+// {"type":"block","message":"Ya tiene un pago"} · {"type":"note","message":"…"} · {"type":"done"}
+```
+
+| | |
+|---|---|
+| `<nx-dialog>` | `heading`, `description`, `mode` (`modal` / `panel`), `size` (`sm` / `md` / `lg` / `full`), `persistent`, `url`, `open`, `dirty`, `labels` · `show(origen?)` → promesa con el valor, `close(valor?)` · `nx-dialog-close` (cancelable), `nx-open-change` |
+| `nxToast()` | `{message, tone?, undo?, action?, duration?}` → `"undo"`, `"action"`, `"timeout"` o `"dismiss"`. Se pausa con el mouse o el foco encima; al cerrar la página, los pendientes terminan como `"timeout"` |
+| `nxConfirm()` | `{heading, message?, impact?, body?, confirmLabel?, tone?, hold?}` → `true` / `false` |
+| `<nx-button hold>` | Mantener pulsado (ms, 1000 por defecto) para activarlo; con teclado, mantener Enter o Espacio |
 
 ## Desarrollo
 

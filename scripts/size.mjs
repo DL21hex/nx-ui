@@ -19,12 +19,15 @@ const dynamicExternal = {
 const BUDGET = [
   // [archivo, límite gzip en bytes (null = solo se informa), descripción]
   ["dist/sidemenu.js", 6 * 1024, "sidemenu + núcleo (ESM)"],
-  ["dist/button.js", 4.5 * 1024, "button + núcleo (ESM)"],
+  ["dist/button.js", 5 * 1024, "button + núcleo (ESM)"],
   ["dist/select.js", 6 * 1024, "select + núcleo (ESM)"],
   ["dist/ai.js", 6 * 1024, "ai-answer + núcleo (ESM)"],
   ["dist/capture.js", 10 * 1024, "doc-capture + button + núcleo (ESM)"],
   ["dist/grid.js", 18 * 1024, "grid + núcleo (ESM)"],
   [lazy("xlsx"), 3 * 1024, "generador de XLSX (se carga al exportar)"],
+  ["dist/dialog.js", 5.5 * 1024, "dialog + núcleo (ESM)"],
+  ["dist/confirm.js", 10 * 1024, "confirm + dialog + button + núcleo (ESM)"],
+  ["dist/toast.js", 2.5 * 1024, "toast + núcleo (ESM)"],
   ["dist/bdui.js", 1024, "adaptador BDUI"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -34,6 +37,9 @@ const BUDGET = [
   ["dist/ai.css", 2.5 * 1024, "ai-answer (CSS)"],
   ["dist/capture.css", 3 * 1024, "doc-capture (CSS)"],
   ["dist/grid.css", 3.5 * 1024, "grid (CSS)"],
+  ["dist/dialog.css", 2.5 * 1024, "dialog (CSS)"],
+  ["dist/confirm.css", 1 * 1024, "confirm (CSS, además de dialog y button)"],
+  ["dist/toast.css", 1.5 * 1024, "toast (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

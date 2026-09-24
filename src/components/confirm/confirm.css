@@ -1,0 +1,113 @@
+/* nxConfirm(): la confirmación con impacto (un <nx-dialog class="nx-confirm">). */
+
+.nx-confirm__msg {
+  margin-block: 0 12px;
+  color: var(--nx-muted-foreground);
+}
+.nx-confirm__impact {
+  padding: 12px 14px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-canvas);
+}
+.nx-confirm__impact-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.nx-confirm__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-confirm__item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  animation: nx-dialog-in var(--nx-motion-base) var(--nx-ease-out);
+
+  & .nx-icon {
+    align-self: center;
+    inline-size: 16px;
+    block-size: 16px;
+    color: var(--nx-text-tertiary);
+  }
+}
+.nx-confirm__dot {
+  flex: none;
+  align-self: center;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--nx-text-quaternary);
+  [data-tone="success"] > & {
+    background: var(--nx-success);
+  }
+  [data-tone="warning"] > & {
+    background: light-dark(oklch(0.68 0.15 70), oklch(0.8 0.14 75));
+  }
+  [data-tone="danger"] > & {
+    background: var(--nx-danger);
+  }
+}
+.nx-confirm__label {
+  flex: 1;
+}
+.nx-confirm__detail {
+  color: var(--nx-muted-foreground);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  [data-tone="danger"] > & {
+    color: var(--nx-danger);
+  }
+  [data-tone="warning"] > & {
+    color: light-dark(oklch(0.5 0.12 65), oklch(0.82 0.13 75));
+  }
+  [data-tone="success"] > & {
+    color: var(--nx-success);
+  }
+}
+.nx-confirm__status {
+  margin: 8px 0 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+
+  &:empty {
+    display: none;
+  }
+  &.is-loading::before {
+    content: "";
+    display: inline-block;
+    inline-size: 10px;
+    block-size: 10px;
+    margin-inline-end: 6px;
+    border: 1.5px solid var(--nx-border-strong);
+    border-block-start-color: var(--nx-primary);
+    border-radius: 50%;
+    vertical-align: -1px;
+    animation: nx-confirm-spin 0.8s linear infinite;
+  }
+}
+.nx-confirm__block {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+  font-size: 13px;
+  font-weight: 500;
+}
+.nx-confirm__notes p {
+  margin: 8px 0 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+}
+@keyframes nx-confirm-spin {
+  to {
+    rotate: 1turn;
+  }
+}

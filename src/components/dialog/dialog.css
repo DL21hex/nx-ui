@@ -1,0 +1,384 @@
+/*
+ * <nx-dialog>. Variables propias:
+ *   --nx-dialog-width-sm/md/lg (400/560/800px) · --nx-dialog-panel-width (560px)
+ */
+
+nx-dialog {
+  --_w: var(--nx-dialog-width-md, 560px);
+  display: none;
+  font-family: var(--nx-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--nx-foreground);
+}
+nx-dialog[size="sm"] {
+  --_w: var(--nx-dialog-width-sm, 400px);
+}
+nx-dialog[size="lg"] {
+  --_w: var(--nx-dialog-width-lg, 800px);
+}
+nx-dialog *,
+nx-dialog *::before {
+  box-sizing: border-box;
+}
+nx-dialog [hidden] {
+  display: none !important;
+}
+html:has(nx-dialog:popover-open) {
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- la caja */
+
+nx-dialog[popover] {
+  position: fixed;
+  inset: 0;
+  flex-direction: column;
+  inline-size: min(var(--_w), 100vw - 32px);
+  block-size: fit-content;
+  max-block-size: min(88dvh, 820px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--nx-border);
+  border-radius: calc(var(--nx-radius-lg) + 4px);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  outline: 0;
+  opacity: 1;
+  transition:
+    opacity var(--nx-motion-base) var(--nx-ease-out),
+    scale var(--nx-motion-base) var(--nx-ease-out),
+    translate var(--nx-motion-base) var(--nx-ease-out),
+    filter var(--nx-motion-base),
+    overlay var(--nx-motion-base) allow-discrete,
+    display var(--nx-motion-base) allow-discrete;
+}
+nx-dialog:popover-open {
+  display: flex;
+}
+nx-dialog[size="full"] {
+  inline-size: calc(100vw - 32px);
+  block-size: calc(100dvh - 32px);
+  max-block-size: none;
+}
+nx-dialog:not(:has(> [slot="footer"])) {
+  padding-block-end: 20px;
+}
+/* Entrada y salida (sin View Transitions, o en paneles y hojas). */
+@starting-style {
+  nx-dialog:popover-open {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+nx-dialog[popover]:not(:popover-open) {
+  opacity: 0;
+  scale: 0.96;
+}
+nx-dialog[data-morph] {
+  transition: none;
+}
+nx-dialog::backdrop {
+  background: var(--nx-backdrop);
+  opacity: 1;
+  transition:
+    opacity var(--nx-motion-base),
+    overlay var(--nx-motion-base) allow-discrete,
+    display var(--nx-motion-base) allow-discrete;
+}
+@starting-style {
+  nx-dialog:popover-open::backdrop {
+    opacity: 0;
+  }
+}
+nx-dialog:not(:popover-open)::backdrop {
+  opacity: 0;
+}
+/* Apilados: solo el de abajo oscurece la página; los de encima dejan ver el nivel anterior. */
+nx-dialog[data-stacked]::backdrop {
+  background: transparent;
+}
+nx-dialog[data-depth]:not([data-depth="0"]) {
+  scale: 0.96;
+  filter: brightness(0.94);
+}
+
+/* El «morph» desde el botón (View Transitions). */
+::view-transition-group(nx-dialog-morph) {
+  animation-duration: 0.34s;
+  animation-timing-function: cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+::view-transition-old(nx-dialog-morph),
+::view-transition-new(nx-dialog-morph) {
+  block-size: 100%;
+  object-fit: none;
+  object-position: top left;
+  overflow: clip;
+}
+
+/* ---------------------------------------------------------------- paneles apilados */
+
+nx-dialog[mode="panel"] {
+  inset: 0 0 0 auto;
+  inline-size: min(var(--nx-dialog-panel-width, 560px), 100vw);
+  block-size: 100dvh;
+  max-block-size: none;
+  margin: 0;
+  border-width: 0 0 0 1px;
+  border-radius: calc(var(--nx-radius-lg) + 4px) 0 0 calc(var(--nx-radius-lg) + 4px);
+}
+@starting-style {
+  nx-dialog[mode="panel"]:popover-open {
+    opacity: 0;
+    scale: 1;
+    translate: 48px 0;
+  }
+}
+nx-dialog[mode="panel"]:not(:popover-open) {
+  scale: 1;
+  translate: 48px 0;
+}
+nx-dialog[mode="panel"][data-depth]:not([data-depth="0"]) {
+  scale: 1;
+  translate: calc(var(--_d, 1) * -40px) 0;
+}
+nx-dialog[mode="panel"][data-depth="2"] {
+  --_d: 2;
+}
+nx-dialog[mode="panel"][data-depth="3"] {
+  --_d: 3;
+}
+nx-dialog[mode="panel"]:dir(rtl) {
+  inset: 0 auto 0 0;
+  border-width: 0 1px 0 0;
+}
+
+/* ---------------------------------------------------------------- cabecera */
+
+.nx-dialog__head {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  order: -1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  column-gap: 12px;
+  padding: 16px 16px 12px 20px;
+  background: var(--nx-popover);
+}
+.nx-dialog__handle {
+  display: none;
+  grid-column: 1 / -1;
+  justify-self: center;
+  inline-size: 40px;
+  block-size: 4px;
+  margin-block: -6px 10px;
+  border-radius: 2px;
+  background: var(--nx-border-strong);
+}
+.nx-dialog__crumbs {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-block-end: 6px;
+}
+.nx-dialog__crumb {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &::after {
+    content: "›";
+    margin-inline-start: 8px;
+    color: var(--nx-text-quaternary);
+  }
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+}
+.nx-dialog__titles {
+  min-inline-size: 0;
+}
+.nx-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.nx-dialog__desc {
+  margin: 2px 0 0;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.nx-dialog__x {
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  margin: -4px -4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-text-tertiary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  & .nx-glyph,
+  & svg {
+    display: block;
+    inline-size: 18px;
+    block-size: 18px;
+  }
+}
+nx-dialog :is(button, a, input, select, textarea):focus-visible,
+nx-dialog:focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------- contenido y pie */
+
+nx-dialog > :not(.nx-dialog__head, .nx-dialog__guard, [slot="footer"]) {
+  margin-inline: 20px;
+}
+nx-dialog > [slot="footer"] {
+  position: sticky;
+  inset-block-end: 0;
+  order: 99;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-block-start: auto;
+  padding: 12px 20px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  background: var(--nx-popover);
+}
+nx-dialog:has(> [slot="footer"]) > :not(.nx-dialog__head, .nx-dialog__guard, [slot="footer"]):nth-last-child(1 of :not(.nx-dialog__head, .nx-dialog__guard, [slot="footer"])) {
+  margin-block-end: 16px;
+}
+
+/* El aviso de cambios sin guardar: dentro del diálogo, nunca otro modal encima. */
+.nx-dialog__guard {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  order: 98;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-block-start: 1px solid color-mix(in oklch, var(--nx-danger) 30%, transparent);
+  background: color-mix(in oklch, var(--nx-danger) 8%, var(--nx-popover));
+  font-size: 13px;
+  animation: nx-dialog-in var(--nx-motion-base) var(--nx-ease-out);
+
+  & > span {
+    flex: 1;
+    min-inline-size: 12em;
+    font-weight: 500;
+  }
+  & button {
+    padding: 5px 12px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-card);
+    color: var(--nx-foreground);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  & .nx-dialog__discard {
+    border-color: transparent;
+    background: var(--nx-danger);
+    color: var(--nx-danger-foreground);
+  }
+}
+nx-dialog.is-nudge {
+  animation: nx-dialog-nudge 0.32s ease;
+}
+
+/* ---------------------------------------------------------------- móvil: hoja desde abajo */
+
+@media (max-width: 767px) {
+  nx-dialog[popover],
+  nx-dialog[mode="panel"] {
+    inset: auto 0 0;
+    inline-size: 100%;
+    block-size: auto;
+    max-block-size: 92dvh;
+    margin: 0;
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+  nx-dialog[mode="panel"] {
+    block-size: 92dvh;
+  }
+  @starting-style {
+    nx-dialog:popover-open,
+    nx-dialog[mode="panel"]:popover-open {
+      opacity: 1;
+      scale: 1;
+      translate: 0 100%;
+    }
+  }
+  nx-dialog[popover]:not(:popover-open),
+  nx-dialog[mode="panel"]:not(:popover-open) {
+    opacity: 1;
+    scale: 1;
+    translate: 0 100%;
+  }
+  nx-dialog[mode="panel"][data-depth]:not([data-depth="0"]) {
+    translate: 0 calc(var(--_d, 1) * -12px);
+    scale: 0.96;
+  }
+  nx-dialog[data-dragging] {
+    transition: none;
+  }
+  .nx-dialog__handle {
+    display: block;
+  }
+  .nx-dialog__head {
+    touch-action: none;
+  }
+}
+
+@keyframes nx-dialog-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@keyframes nx-dialog-nudge {
+  30% {
+    scale: 1.015;
+  }
+  60% {
+    scale: 0.995;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-dialog,
+  nx-dialog::backdrop,
+  nx-dialog * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

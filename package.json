@@ -42,6 +42,18 @@
       "types": "./dist/types/components/grid/index.d.ts",
       "import": "./dist/grid.js"
     },
+    "./dialog": {
+      "types": "./dist/types/components/dialog/index.d.ts",
+      "import": "./dist/dialog.js"
+    },
+    "./confirm": {
+      "types": "./dist/types/components/confirm/index.d.ts",
+      "import": "./dist/confirm.js"
+    },
+    "./toast": {
+      "types": "./dist/types/components/toast/index.d.ts",
+      "import": "./dist/toast.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -63,7 +75,10 @@
     "./select.css": "./dist/select.css",
     "./ai.css": "./dist/ai.css",
     "./capture.css": "./dist/capture.css",
-    "./grid.css": "./dist/grid.css"
+    "./grid.css": "./dist/grid.css",
+    "./dialog.css": "./dist/dialog.css",
+    "./confirm.css": "./dist/confirm.css",
+    "./toast.css": "./dist/toast.css"
   },
   "sideEffects": [
     "*.css",

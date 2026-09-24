@@ -6,3 +6,6 @@
 @import "../components/ai/ai-answer.css";
 @import "../components/capture/doc-capture.css";
 @import "../components/grid/grid.css";
+@import "../components/dialog/dialog.css";
+@import "../components/confirm/confirm.css";
+@import "../components/toast/toast.css";

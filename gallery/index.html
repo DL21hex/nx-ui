@@ -300,6 +300,132 @@ grid.addEventListener("nx-grid-change", (e) =&gt; guardar(e.detail.changes));</c
       </div>
     </template>
 
+    <!-- ================================================================ Diálogos -->
+    <template id="page-dialog">
+      <p class="eyebrow">Componentes</p>
+      <h1>Diálogos <code class="tag">&lt;nx-dialog&gt;</code></h1>
+      <p class="lead">
+        Cuatro formas de hacer lo que hoy se hace con un modal, cada una para su caso. Un modal que nace del botón, paneles
+        que se apilan para profundizar sin perder contexto, deshacer en vez de preguntar, y cuando sí hay que preguntar,
+        mostrar antes qué va a pasar.
+      </p>
+
+      <h2>A · El modal que nace del botón</h2>
+      <p>
+        Se expande desde el botón que lo abrió y vuelve a él. En móvil es una hoja que se arrastra hacia abajo para cerrar.
+        Escribe algo y trata de cerrarlo: el aviso de cambios sin guardar aparece dentro del diálogo, no en otro modal.
+      </p>
+      <div class="dlg-row">
+        <nx-button id="dlg-new-btn" label="Nuevo pedido" icon="receipt" variant="primary" log-mode="none"></nx-button>
+        <button type="button" class="dlg-plain" popovertarget="dlg-new">Abrir sin JS (popovertarget)</button>
+      </div>
+      <nx-dialog id="dlg-new" heading="Nuevo pedido" description="Se envía a aprobación al guardar.">
+        <form id="dlg-new-form" class="dlg-form">
+          <label>Proveedor <input name="prov" placeholder="Aceros del Caribe" autocomplete="off" /></label>
+          <div class="dlg-2">
+            <label>Monto <input name="monto" inputmode="decimal" placeholder="$ 0" /></label>
+            <label>Entrega <input name="fecha" type="date" /></label>
+          </div>
+          <label>Descripción <textarea name="nota" rows="3" placeholder="Lámina HR 3 mm ×40"></textarea></label>
+        </form>
+        <div slot="footer">
+          <nx-button label="Cancelar" variant="ghost" log-mode="none" data-nx-close="cancel"></nx-button>
+          <nx-button id="dlg-new-save" label="Guardar pedido" variant="primary"></nx-button>
+        </div>
+      </nx-dialog>
+
+      <h2>B · Paneles apilados</h2>
+      <p>
+        Pedido → proveedor → factura: cada nivel se apila sobre el anterior, con migas para volver, y la lista sigue a la vista.
+        El botón «atrás» del navegador cierra el nivel de arriba.
+      </p>
+      <ul class="dlg-list" id="dlg-orders"></ul>
+      <nx-dialog id="dlg-order" mode="panel" url=""></nx-dialog>
+      <nx-dialog id="dlg-prov" mode="panel" url=""></nx-dialog>
+      <nx-dialog id="dlg-inv" mode="panel" url=""></nx-dialog>
+
+      <h2>C · Deshacer en vez de confirmar</h2>
+      <p>
+        Anular no pregunta: ocurre al instante y se puede deshacer durante 7 segundos con el botón o
+        <kbd>Ctrl</kbd>+<kbd>Z</kbd>. El backend recibe la orden cuando el tiempo termina.
+      </p>
+      <ul class="dlg-list" id="dlg-undo"></ul>
+
+      <h2>D · Confirmación con impacto</h2>
+      <p>
+        Cuando sí hay que preguntar, el backend dice antes qué va a pasar (en streaming) y puede bloquear la acción con un
+        motivo. Lo destructivo se confirma manteniendo pulsado el botón.
+      </p>
+      <div class="dlg-row">
+        <nx-button id="dlg-c1" label="Anular OC-2291" variant="danger" log-mode="none"></nx-button>
+        <nx-button id="dlg-c2" label="Anular OC-2310 (tiene un pago)" variant="secondary" log-mode="none"></nx-button>
+      </div>
+      <ol class="stage__log btn-events" id="dlg-log"></ol>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">Diálogo</button>
+          <button role="tab" aria-selected="false">Deshacer</button>
+          <button role="tab" aria-selected="false">Confirmar</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;button popovertarget="nuevo"&gt;Nuevo pedido&lt;/button&gt;   &lt;!-- o: const valor = await nuevo.show() --&gt;
+
+&lt;nx-dialog id="nuevo" heading="Nuevo pedido"&gt;       &lt;!-- mode="panel" para apilar; url="" para «atrás» --&gt;
+  &lt;form method="dialog"&gt;…&lt;/form&gt;
+  &lt;div slot="footer"&gt;
+    &lt;button data-nx-close&gt;Cancelar&lt;/button&gt;
+    &lt;button onclick="guardar().then(() =&gt; { nuevo.dirty = false; nuevo.close('ok') })"&gt;Guardar&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/nx-dialog&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import { nxToast } from "nx-ui/toast";
+
+ocultar(fila);
+const r = await nxToast({ message: "OC-2291 anulada", undo: true });
+if (r === "undo") mostrar(fila);
+else await fetch("/compras/oc/2291/anular", { method: "POST", keepalive: true });</code></pre>
+        <pre role="tabpanel" hidden><code>import { nxConfirm } from "nx-ui/confirm";
+
+if (await nxConfirm({
+  heading: "Anular OC-2291",
+  confirmLabel: "Anular pedido",
+  impact: "/compras/oc/2291/impacto",     // o una lista: [{ label, detail, tone }]
+})) anular();
+
+// El endpoint transmite, una línea por evento:
+{"type":"impact","icon":"truck","label":"2 recepciones","detail":"se revierten"}
+{"type":"block","message":"Ya tiene un pago: primero hay que reversarlo."}
+{"type":"note","message":"Se notificará a 2 aprobadores."}
+{"type":"done"}</code></pre>
+        <pre role="tabpanel" hidden><code>import { Dialog, nxConfirm, nxToast } from "nx-ui/solid";
+
+&lt;Dialog open={abierto()} onOpenChange={(e) =&gt; setAbierto(e.detail.open)} heading="Nuevo pedido"&gt;
+  &lt;FormularioPedido /&gt;
+&lt;/Dialog&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>heading</code>, <code>description</code></td><td>Título y bajada (el título da nombre accesible al diálogo).</td></tr>
+            <tr><td><code>mode</code></td><td><code>modal</code> (por defecto) o <code>panel</code> (lateral, apilable, con migas). En móvil, los dos son hojas desde abajo.</td></tr>
+            <tr><td><code>size</code></td><td><code>sm</code>, <code>md</code>, <code>lg</code> o <code>full</code>.</td></tr>
+            <tr><td><code>persistent</code></td><td>Escape y el clic fuera no lo cierran.</td></tr>
+            <tr><td><code>url</code></td><td>Al abrir agrega una entrada al historial (esa URL, o la actual con <code>""</code>): «atrás» lo cierra.</td></tr>
+            <tr><td><code>open</code>, <code>show(origen?)</code>, <code>close(valor?)</code></td><td><code>show()</code> devuelve una promesa con el valor de cierre. Botones con <code>data-nx-close="valor"</code> y <code>&lt;form method="dialog"&gt;</code> cierran solos.</td></tr>
+            <tr><td><code>dirty</code></td><td>Cambios sin guardar: se marca al escribir en un campo. Lo que cierra la persona pasa por el aviso; <code>close()</code> desde código no.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-dialog-close</code> <code>{reason, value}</code> (cancelable) y <code>nx-open-change</code> <code>{open, value, reason}</code>.</td></tr>
+            <tr><td><code>nxToast(opciones)</code></td><td><code>{message, tone?, undo?, action?, duration?}</code> → <code>"undo" | "action" | "timeout" | "dismiss"</code>. Se pausa con el mouse o el foco encima.</td></tr>
+            <tr><td><code>nxConfirm(opciones)</code></td><td><code>{heading, message?, impact?, body?, confirmLabel?, tone?, hold?}</code> → <code>true</code> o <code>false</code>.</td></tr>
+            <tr><td><code>&lt;nx-button hold&gt;</code></td><td>Mantener pulsado (ms, 1000 por defecto) para activar. Con teclado, mantener <kbd>Enter</kbd> o <kbd>Espacio</kbd>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
     <!-- ================================================================ IA -->
     <template id="page-ai">
       <p class="eyebrow">Componentes</p>
