@@ -99,6 +99,10 @@
     "size": "node scripts/size.mjs",
     "bench": "node scripts/bench.mjs",
     "test": "vitest run",
+    "e2e": "playwright test --project=chromium",
+    "contrast": "node scripts/contrast.mjs",
+    "check": "node scripts/check.mjs",
+    "prepare": "git config core.hooksPath .githooks || true",
     "typecheck": "tsc --noEmit",
     "example:solid": "vite --config examples/solid/vite.config.ts"
   },
@@ -111,7 +115,9 @@
     }
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@iconify-json/lucide": "^1.2.136",
+    "@playwright/test": "^1.63.0",
     "@solidjs/router": "^1.0.0",
     "esbuild": "^0.28.2",
     "happy-dom": "^20.14.5",

@@ -62,6 +62,16 @@ describe("<nx-dialog>", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  it("si el origen es un envoltorio (<nx-button>), el foco vuelve a su botón de adentro", async () => {
+    const d = mount();
+    document.body.insertAdjacentHTML("afterbegin", '<nx-button id="nb" label="Nuevo"></nx-button>');
+    const nb = document.getElementById("nb")!;
+    const p = d.show(nb);
+    d.close("x");
+    await p;
+    expect(document.activeElement).toBe(nb.querySelector("button"));
+  });
+
   it("Escape y el clic fuera cierran; `persistent` no", async () => {
     const d = mount();
     void d.show();

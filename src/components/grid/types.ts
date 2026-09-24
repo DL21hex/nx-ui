@@ -90,6 +90,10 @@ export interface GridLabels {
   selectAll: string;
   clearSelection: string;
   selectRow: string;
+  undo: string;
+  redo: string;
+  undone: string;
+  redone: string;
 }
 
 /** Una faceta que manda el backend (modo `source`). */
@@ -107,6 +111,9 @@ export interface GridPage {
   facets?: GridFacetData[];
   totals?: Record<string, number>;
 }
+
+/** De dónde viene un cambio (en `nx-grid-change`). */
+export type GridChangeSource = "edit" | "paste" | "delete" | "undo" | "redo";
 
 export interface GridChange {
   id: string;

@@ -42,7 +42,7 @@ nx-agent .nx-glyph {
   border-block-end: 1px solid var(--nx-border-subtle);
 }
 .nx-agent__spark {
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
 }
 .nx-agent__title {
   font-weight: 600;
@@ -236,7 +236,7 @@ nx-agent .nx-glyph {
 }
 .nx-agent__reply {
   margin: 8px 0 0;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-weight: 550;
 }
 

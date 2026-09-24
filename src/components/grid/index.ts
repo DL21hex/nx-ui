@@ -8,6 +8,7 @@ export { applyFilters, crossfilter, filterLabel, formatCell, parseTSV, sortRows,
 export { parseNL } from "./nl";
 export type {
   GridChange,
+  GridChangeSource,
   GridColumn,
   GridColumnType,
   GridFacetData,
@@ -27,7 +28,7 @@ declare global {
   }
   interface HTMLElementEventMap {
     "nx-grid-filter": CustomEvent<{ filters: import("./types").GridFilter[]; sort: import("./types").GridSort | null; groupBy: string; count: number }>;
-    "nx-grid-change": CustomEvent<{ changes: import("./types").GridChange[] }>;
+    "nx-grid-change": CustomEvent<{ changes: import("./types").GridChange[]; source: import("./types").GridChangeSource }>;
     "nx-grid-columns": CustomEvent<{ columns: import("./types").GridColumn[] }>;
     "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
     "nx-grid-open": CustomEvent<{ id: string; row: import("./types").GridRow; key: string; origin: HTMLElement | null }>;

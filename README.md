@@ -47,6 +47,10 @@ o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
    - lo que se usa poco se carga al usarlo (el generador de Excel);
    - se mide: `npm run size` hace cumplir un límite de peso por pieza, y `npm run bench` mide la
      lógica con datos grandes (100.000 filas, 10.000 opciones).
+7. **Probada donde se usa.** Además de las pruebas de lógica y de DOM, las interacciones (Popover
+   API, foco, portapapeles, teclado, View Transitions, «atrás» del navegador) se prueban en
+   Chromium, Firefox y WebKit con Playwright, en local antes de cada envío, y cada componente pasa axe (WCAG 2.1 AA) sin
+   problemas graves. El contraste de los tokens se verifica en todas las paletas.
 
 ## Paletas
 
@@ -289,7 +293,9 @@ Una tabla de datos que se explora sola:
 - **Un solo modelo de filtros.** La barra, la casilla y la frase producen el mismo filtro y el mismo
   chip.
 - **Hoja de cálculo.** Navegación con teclado, rangos con suma, promedio, mínimo y máximo, copiar y
-  pegar con Excel (TSV) y edición en línea (`nx-grid-change`, cancelable).
+  pegar con Excel (TSV) y edición en línea (`nx-grid-change`, cancelable). Deshacer y rehacer
+  (Ctrl+Z, Ctrl+Y o Ctrl+Mayús+Z, y botones): cada edición, pegado o borrado es un paso; lo
+  deshecho queda seleccionado, y la marca de «editada» se va si la celda vuelve a su valor original.
 - **Agrupación con subtotales** por cualquier columna de categorías o por mes.
 - **Exportar a .xlsx.** Es un Excel de verdad: números, montos y fechas como valores, cabecera fija
   y autofiltro. El generador no tiene dependencias y se carga solo al exportar.
@@ -330,7 +336,7 @@ filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?} · 
 | | |
 |---|---|
 | Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
-| Métodos | `ask(frase)`, `clearFilters()`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()` |
+| Métodos | `ask(frase)`, `clearFilters()`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
 | Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open` |
 
 ## `<nx-dialog>`, `nxToast()` y `nxConfirm()`
@@ -433,6 +439,16 @@ npm run build          # dist/: ESM, IIFE, CSS, adaptador Solid, tipos y chequeo
 npm test               # vitest: lógica (node), render/ARIA (happy-dom) y dist/ si existe
 npm run typecheck
 npm run bench          # rendimiento de la lógica con datos grandes (mediana de varias corridas)
+npm run e2e            # Playwright sobre la galería en Chromium, con axe
+npm run contrast       # contraste AA de los tokens de texto, en claro y oscuro y en las 9 paletas
+npm run check          # todo lo anterior + build y límites de peso; Chromium, Firefox y WebKit
+```
+
+No hay CI en GitHub: las verificaciones corren en local. `npm install` activa el hook `pre-push`
+(`.githooks/`), que corre `npm run check` antes de cada `git push` y no deja enviar si algo falla.
+WebKit se prueba si la máquina lo puede abrir; en Linux necesita `sudo npx playwright install-deps webkit`.
+
+```bash
 npm run example:solid  # ejemplo con @solidjs/router sobre dist/ (hace falta build antes)
 ```
 

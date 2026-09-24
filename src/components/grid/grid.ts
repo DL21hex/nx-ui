@@ -43,7 +43,7 @@ import {
   type HistogramSpec,
 } from "./logic";
 import { parseNL } from "./nl";
-import type { GridChange, GridColumn, GridFilter, GridHistogram, GridLabels, GridPage, GridRow, GridSort, GridTone } from "./types";
+import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridHistogram, GridLabels, GridPage, GridRow, GridSort, GridTone } from "./types";
 
 export const GRID_LABELS: GridLabels = {
   ask: "Filtra con tus palabras: «pendientes de marzo de más de 5 millones»",
@@ -75,6 +75,10 @@ export const GRID_LABELS: GridLabels = {
   selectAll: "Seleccionar las {n}",
   clearSelection: "Quitar selección",
   selectRow: "Seleccionar fila",
+  undo: "Deshacer",
+  redo: "Rehacer",
+  undone: "Deshecho",
+  redone: "Rehecho",
 };
 
 const SPARK = '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>';
@@ -82,6 +86,10 @@ const SLIDERS = '<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path
 const DOWNLOAD = '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>';
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
 const ARROW = '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>';
+const UNDO = '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>';
+const REDO = '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>';
+/** Pasos que se pueden deshacer. */
+const HISTORY = 100;
 
 const ROW_H = 32;
 const OVERSCAN = 8;
@@ -137,6 +145,10 @@ export class NxGrid extends Base {
   #ids = new WeakMap<GridRow, string>();
   #byId = new Map<string, GridRow>();
   #edited = new Set<string>();
+  /** Valor antes de la primera edición de cada celda: si vuelve a él, la marca se quita. */
+  #orig = new Map<string, unknown>();
+  #undo: GridChange[][] = [];
+  #redo: GridChange[][] = [];
   #tones = new Map<string, GridTone>();
   // Servidor.
   #total = 0;
@@ -164,6 +176,8 @@ export class NxGrid extends Base {
   #groupSel?: HTMLSelectElement;
   #aiBtn?: HTMLButtonElement;
   #exportBtn?: HTMLButtonElement;
+  #undoBtn?: HTMLButtonElement;
+  #redoBtn?: HTMLButtonElement;
   #aiPop?: HTMLDivElement;
   #note?: HTMLParagraphElement;
   #chips?: HTMLDivElement;
@@ -197,9 +211,15 @@ export class NxGrid extends Base {
   set rows(v: GridRow[] | null | undefined) {
     // `grid.rows = grid.rows` (tras cambiar filas por fuera) recalcula sin copiar: las filas son
     // las mismas que la app ya tiene en la mano.
-    if (v !== this.#all) this.#all = Array.isArray(v) ? v.filter((r) => r && typeof r === "object").map((r) => ({ ...r })) : [];
+    // Filas nuevas: se empieza de cero (marcas de edición e historial para deshacer).
+    if (v !== this.#all) {
+      this.#all = Array.isArray(v) ? v.filter((r) => r && typeof r === "object").map((r) => ({ ...r })) : [];
+      this.#edited.clear();
+      this.#orig.clear();
+      this.#undo = [];
+      this.#redo = [];
+    }
     this.#byId.clear();
-    this.#edited.clear();
     this.#index(this.#all, 0);
     for (const id of this.#picked) if (!this.#byId.has(id)) this.#picked.delete(id);
     this.#dataChanged();
@@ -718,7 +738,11 @@ export class NxGrid extends Base {
     this.#aiBtn = h("button", { type: "button", class: "nx-grid__btn", popovertarget: `${u}-ai` }, glyph(SPARK), h("span"));
     this.#exportBtn = h("button", { type: "button", class: "nx-grid__btn" }, glyph(DOWNLOAD), h("span"));
     this.#exportBtn.addEventListener("click", () => void this.exportXlsx());
-    const bar = h("div", { class: "nx-grid__bar" }, ask, this.#facetBtn, this.#groupSel, this.#aiBtn, this.#exportBtn);
+    this.#undoBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__icon" }, glyph(UNDO));
+    this.#redoBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__icon" }, glyph(REDO));
+    this.#undoBtn.addEventListener("click", () => this.undo());
+    this.#redoBtn.addEventListener("click", () => this.redo());
+    const bar = h("div", { class: "nx-grid__bar" }, ask, this.#facetBtn, this.#groupSel, this.#aiBtn, this.#undoBtn, this.#redoBtn, this.#exportBtn);
 
     this.#selbar = h("div", { class: "nx-grid__selbar", hidden: true }, h("strong"), h("button", { type: "button", class: "nx-grid__clear", "data-pick": "all" }), h("button", { type: "button", class: "nx-grid__clear", "data-pick": "none" }));
     this.#selbar.addEventListener("click", (e) => {
@@ -894,6 +918,22 @@ export class NxGrid extends Base {
     this.#paintFacets();
     this.#paintRows(true);
     this.#paintPicked(false);
+    this.#paintHistory();
+  }
+
+  /** Los botones de deshacer y rehacer: solo si hay columnas editables. */
+  #paintHistory(): void {
+    const L = this.#labels;
+    const editable = this.#columns.some((c) => c.editable && !c.ai);
+    for (const [b, label, on] of [
+      [this.#undoBtn!, `${L.undo} (Ctrl+Z)`, this.canUndo],
+      [this.#redoBtn!, `${L.redo} (Ctrl+Y)`, this.canRedo],
+    ] as const) {
+      b.hidden = !editable;
+      b.disabled = !on;
+      b.setAttribute("aria-label", label);
+      b.title = label;
+    }
   }
 
   #colOf(key: string): GridColumn | undefined {
@@ -1298,6 +1338,13 @@ export class NxGrid extends Base {
     let { r, c } = this.#act;
     const it = this.#itemAt(r);
     const page = Math.max(1, Math.floor((this.#scroll!.clientHeight - this.#head!.offsetHeight) / ROW_H) - 1);
+    // Ctrl+Z deshace; Ctrl+Y o Ctrl+Mayús+Z rehace. (La tabla lo atiende: los avisos de la página no.)
+    if (mod && (e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")) {
+      e.preventDefault();
+      if (e.key.toLowerCase() === "y" || e.shiftKey) this.redo();
+      else this.undo();
+      return;
+    }
     if (mod && e.key.toLowerCase() === "a") {
       e.preventDefault();
       this.#anchor = { r: 0, c: 0 };
@@ -1508,13 +1555,23 @@ export class NxGrid extends Base {
 
   /** Aplica ediciones (una celda, un pegado, un borrado), si nadie cancela `nx-grid-change`. No
    *  reordena ni refiltra las filas, como una hoja de cálculo; sí recalcula totales e histogramas. */
-  #apply(changes: GridChange[]): void {
-    if (!changes.length || !this.#emit("nx-grid-change", { changes }, true)) return;
+  #apply(changes: GridChange[], source: GridChangeSource = "edit"): boolean {
+    if (!changes.length || !this.#emit("nx-grid-change", { changes, source }, true)) return false;
     for (const ch of changes) {
       const r = this.#byId.get(ch.id);
       if (!r) continue;
+      const k = `${ch.id}\u0000${ch.key}`;
+      if (!this.#orig.has(k)) this.#orig.set(k, ch.old);
       r[ch.key] = ch.value;
-      this.#edited.add(`${ch.id}\u0000${ch.key}`);
+      // La marca de «editada» se va si la celda vuelve a su valor original.
+      const o = this.#orig.get(k);
+      if (ch.value === o || ((ch.value === null || ch.value === undefined || ch.value === "") && (o === null || o === undefined || o === ""))) this.#edited.delete(k);
+      else this.#edited.add(k);
+    }
+    if (source !== "undo" && source !== "redo") {
+      this.#undo.push(changes);
+      if (this.#undo.length > HISTORY) this.#undo.shift();
+      this.#redo = [];
     }
     if (!this.#server) {
       // Como una hoja de cálculo: no se reordena ni se refiltra; sí se recalculan los agregados.
@@ -1525,6 +1582,46 @@ export class NxGrid extends Base {
       this.#groupStats();
     }
     this.#paintAll();
+    return true;
+  }
+
+  /** Deshace el último cambio (una celda, un pegado, un borrado). `false` si no había, o si la app
+   *  canceló `nx-grid-change`. */
+  undo(): boolean {
+    return this.#travel(this.#undo, this.#redo, "undo");
+  }
+  redo(): boolean {
+    return this.#travel(this.#redo, this.#undo, "redo");
+  }
+  get canUndo(): boolean {
+    return this.#undo.length > 0;
+  }
+  get canRedo(): boolean {
+    return this.#redo.length > 0;
+  }
+
+  #travel(from: GridChange[][], to: GridChange[][], source: "undo" | "redo"): boolean {
+    if (this.#editing) this.#endEdit(true);
+    const batch = from.pop();
+    if (!batch) return false;
+    const changes = source === "undo" ? batch.map((c) => ({ id: c.id, key: c.key, value: c.old, old: c.value })) : batch;
+    if (!this.#apply(changes, source)) {
+      from.push(batch);
+      return false;
+    }
+    to.push(batch);
+    // Queda seleccionado lo que cambió, para que se vea qué se deshizo.
+    const rows = changes.map((c) => this.#view.findIndex((it) => "r" in it && this.#ids.get(it.r) === c.id)).filter((i) => i >= 0);
+    const cols = changes.map((c) => this.#columns.findIndex((x) => x.key === c.key)).filter((i) => i >= 0);
+    if (rows.length && cols.length) {
+      this.#anchor = { r: Math.min(...rows), c: Math.min(...cols) };
+      this.#act = { r: Math.max(...rows), c: Math.max(...cols) };
+      this.#reveal();
+      this.#paintSel();
+    }
+    if (this.#live) this.#live.textContent = `${source === "undo" ? this.#labels.undone : this.#labels.redone} · ${this.#fmt(this.#labels.cells, { n: changes.length })}`;
+    this.#paintHistory();
+    return true;
   }
 
   #editableCells(fn: (row: GridRow, col: GridColumn, i: number, j: number) => void): void {
@@ -1544,7 +1641,7 @@ export class NxGrid extends Base {
     this.#editableCells((row, col) => {
       if (row[col.key] !== null && row[col.key] !== undefined && row[col.key] !== "") changes.push({ id: this.#ids.get(row)!, key: col.key, value: null, old: row[col.key] });
     });
-    this.#apply(changes);
+    this.#apply(changes, "delete");
   }
 
   /** Copia el rango como TSV: Excel y Sheets lo pegan en celdas. Los números van sin formato. */
@@ -1591,7 +1688,7 @@ export class NxGrid extends Base {
       if (value === null && t.trim()) return; // texto que no es número en una columna numérica
       if (value !== row[col.key]) changes.push({ id: this.#ids.get(row)!, key: col.key, value, old: row[col.key] });
     });
-    this.#apply(changes);
+    this.#apply(changes, "paste");
     this.#paintSel();
   }
 }
