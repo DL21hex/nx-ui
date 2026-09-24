@@ -3,9 +3,10 @@ import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
-import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDialog, type NxDocCapture, type NxGrid, type NxSelect, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
+import { registerIcons, type CaptureSchemaItem, type MenuItem, type NxAiAnswer, type NxButton, type NxDialog, type NxDocCapture, type GridRow, type NxGrid, type NxSelect, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
+import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
 
 registerIcons(lucide);
 
@@ -77,7 +78,8 @@ const NAV: MenuItem[] = [
   { id: "ai", label: "IA", href: "#/ai", icon: "circle-help", section: "Componentes" },
   { id: "capture", label: "Captura", href: "#/capture", icon: "receipt", section: "Componentes" },
   { id: "grid", label: "Tabla", href: "#/grid", icon: "chart-column", section: "Componentes" },
-  { id: "dialog", label: "Diálogos", href: "#/dialog", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
+  { id: "dialog", label: "Diálogos", href: "#/dialog", icon: "layout-dashboard", section: "Componentes" },
+  { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
 nav.items = NAV;
 
@@ -91,6 +93,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/capture": { template: "page-capture", mount: mountCaptureDemo },
   "#/grid": { template: "page-grid", mount: mountGridDemo },
   "#/dialog": { template: "page-dialog", mount: mountDialogDemo },
+  "#/th": { template: "page-th", mount: mountHrDemo },
 };
 
 const page = document.querySelector<HTMLElement>("#page")!;
@@ -604,4 +607,197 @@ function mountDialogDemo(root: HTMLElement) {
     });
   ask("#dlg-c1", "OC-2291");
   ask("#dlg-c2", "OC-2310");
+}
+
+// ---------------------------------------------------------------- ejemplo: directorio de TH
+
+function mountHrDemo(root: HTMLElement) {
+  const grid = root.querySelector<NxGrid>("#th-grid")!;
+  const emp = root.querySelector<NxDialog>("#th-emp")!;
+  const contract = root.querySelector<NxDialog>("#th-contract")!;
+  const log = root.querySelector<HTMLOListElement>("#th-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 5) log.lastElementChild!.remove();
+  };
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, ...kids: (Node | string | null)[]) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    n.append(...kids.filter((k): k is Node | string => k !== null));
+    return n;
+  };
+  const fmtDate = (iso: unknown) => (iso ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(String(iso))).replace(/ de /g, " ") : "—");
+  const money = (n: unknown) => `$ ${new Intl.NumberFormat("es-CO").format(Number(n))}`;
+  const label = (key: string, v: unknown) => HR_COLUMNS.find((c) => c.key === key)?.options?.find((o) => o.value === v)?.label ?? String(v ?? "—");
+
+  grid.columns = HR_COLUMNS;
+  grid.rows = hrEmployees();
+  // Tras cambiar filas por fuera de la tabla: recalcula filtros, conteos y la bandeja.
+  const refresh = () => {
+    grid.rows = grid.rows;
+    paintInbox();
+  };
+
+  // Bandeja de pendientes: cada tarjeta es un filtro de la tabla.
+  const inbox = root.querySelector("#th-inbox")!;
+  let active = "";
+  const paintInbox = () => {
+    inbox.replaceChildren(
+      ...HR_INBOX.map((it) => {
+        const n = applyFilters(grid.rows, it.filters).length;
+        const b = el("button", { type: "button", class: "th-card", "aria-pressed": String(active === it.id) }, el("strong", {}, String(n)), el("span", {}, it.label), el("small", {}, it.hint));
+        b.addEventListener("click", () => {
+          active = active === it.id ? "" : it.id;
+          grid.filters = active ? it.filters : [];
+          paintInbox();
+        });
+        return b;
+      }),
+    );
+  };
+  paintInbox();
+  grid.addEventListener("nx-grid-filter", () => {
+    // Si la persona cambia los filtros a mano, la tarjeta deja de estar activa.
+    const it = HR_INBOX.find((x) => x.id === active);
+    if (it && JSON.stringify(grid.filters) !== JSON.stringify(it.filters)) {
+      active = "";
+      paintInbox();
+    }
+  });
+  grid.addEventListener("nx-grid-change", (e) => add(`Editado: ${e.detail.changes.map((c) => `${c.id}.${c.key} → ${c.value}`).join(", ")}`));
+  grid.addEventListener("nx-grid-selection", (e) => add(`${e.detail.count} seleccionadas`));
+
+  // Acciones en lote: cambiar turno (con deshacer) y pedir documentos.
+  const turno = root.querySelector<HTMLSelectElement>("#th-turno")!;
+  turno.addEventListener("change", async () => {
+    const to = turno.value;
+    turno.value = "";
+    if (!to) return;
+    const rows = grid.selectedRows;
+    const before = rows.map((r) => r.turno);
+    rows.forEach((r) => (r.turno = to));
+    refresh();
+    const r = await nxToast({ message: `${rows.length} personas pasan a ${label("turno", to)}`, undo: true });
+    if (r === "undo") {
+      rows.forEach((row, i) => (row.turno = before[i]));
+      refresh();
+      add("Cambio de turno deshecho");
+    } else add(`PATCH /th/turnos · ${rows.length} personas → ${to}`);
+  });
+  const docsBtn = root.querySelector<NxButton>("#th-docs-btn")!;
+  docsBtn.addEventListener("click", () =>
+    void docsBtn.run(async ({ log: l }) => {
+      const n = grid.selectedRows.length;
+      l(`Enviando ${n} correos`);
+      await new Promise((r) => setTimeout(r, 900));
+      void nxToast({ message: `Se pidieron los documentos a ${n} personas`, tone: "success" });
+    }),
+  );
+
+  // Detalle: panel apilado. Persona → contrato.
+  const facts = (rows: [string, Node | string][]) => el("dl", { class: "dlg-facts" }, ...rows.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
+  const body = (d: NxDialog) => d.querySelector(".dlg-body") ?? d.appendChild(el("div", { class: "dlg-body" }));
+  const tone = (key: string, v: unknown) => HR_COLUMNS.find((c) => c.key === key)?.options?.find((o) => o.value === v)?.tone ?? "neutral";
+  const pill = (key: string, v: unknown) => el("span", { class: "th-pill", "data-tone": tone(key, v) }, label(key, v));
+  const years = (iso: unknown) => {
+    const y = (Date.parse(TODAY) - Date.parse(String(iso))) / (365.25 * 86_400_000);
+    return y < 1 ? `${Math.max(1, Math.round(y * 12))} meses` : `${Math.floor(y)} años`;
+  };
+  const DOCS = ["Cédula", "Contrato firmado", "Certificado bancario", "Afiliación a EPS", "Examen médico de ingreso"];
+
+  const openContract = (r: GridRow) => {
+    contract.heading = `Contrato · ${label("contrato", r.contrato)}`;
+    contract.description = String(r.nombre);
+    const renew = el("button", { type: "button", class: "dlg-link" }, "Renovar por un año");
+    renew.addEventListener("click", async (e) => {
+      const next = r.fin ? `${Number(String(r.fin).slice(0, 4)) + 1}${String(r.fin).slice(4)}` : null;
+      const yes = await nxConfirm({
+        heading: `Renovar el contrato de ${String(r.nombre).split(" ")[0]}`,
+        tone: "primary",
+        confirmLabel: "Renovar",
+        impact: [
+          { label: "Nuevo fin de contrato", detail: fmtDate(next) },
+          { label: "Otrosí para firma", detail: "se envía por correo" },
+          { label: "Salario", detail: `${money(r.salario)} (sin cambio)` },
+        ],
+        origin: e.currentTarget as Element,
+      });
+      if (!yes) return;
+      r.fin = next;
+      refresh();
+      contract.close("renovado");
+      void nxToast({ message: `Contrato renovado hasta ${fmtDate(next)}`, tone: "success" });
+    });
+    body(contract).replaceChildren(
+      facts([
+        ["Tipo", label("contrato", r.contrato)],
+        ["Ingreso", `${fmtDate(r.ingreso)} · ${years(r.ingreso)}`],
+        ["Fin", fmtDate(r.fin)],
+        ["Salario", money(r.salario)],
+        ["Jornada", r.turno === "oficina" ? "Oficina · L–V" : `${label("turno", r.turno)} · rotativo`],
+      ]),
+      r.contrato === "indefinido" ? el("p", { class: "th-note" }, "Contrato a término indefinido: no requiere renovación.") : renew,
+    );
+    void contract.show();
+  };
+
+  const openEmployee = (r: GridRow, origin?: Element | null) => {
+    emp.heading = String(r.nombre);
+    emp.description = `${r.cargo} · ${r.area}`;
+    const missing = Number(r.docs);
+    const docs = el(
+      "ul",
+      { class: "th-docs" },
+      ...DOCS.map((d, i) => {
+        const ok = i < DOCS.length - missing;
+        const ask = ok ? null : el("button", { type: "button", class: "dlg-plain" }, "Pedir");
+        ask?.addEventListener("click", () => void nxToast({ message: `Se pidió «${d}» a ${String(r.nombre).split(" ")[0]}`, tone: "success" }));
+        return el("li", { "data-ok": String(ok) }, el("span", {}, ok ? "✓" : "!"), el("span", {}, d), ask);
+      }),
+    );
+    const toContract = el("button", { type: "button", class: "dlg-link" }, "Ver contrato →");
+    toContract.addEventListener("click", () => openContract(r));
+    const retire = el("nx-button", { label: "Retirar…", variant: "danger", "log-mode": "none" });
+    retire.addEventListener("click", async (e) => {
+      const yes = await nxConfirm({
+        heading: `Retirar a ${r.nombre}`,
+        message: `${r.cargo} · ${r.area} · ${years(r.ingreso)} en la empresa.`,
+        confirmLabel: "Registrar retiro",
+        impact: `/demo/th/retiro?id=${r.id}`,
+        origin: e.currentTarget as Element,
+      });
+      if (!yes) return;
+      r.estado = "retirado";
+      refresh();
+      emp.close("retirado");
+      void nxToast({ message: `${r.nombre} quedó retirado · se generó el paz y salvo`, tone: "success" });
+      add(`POST /th/retiros · ${r.id}`);
+    });
+    const plural = missing > 1 ? "s" : "";
+    body(emp).replaceChildren(
+      el("div", { class: "th-badges" }, pill("estado", r.estado), pill("contrato", r.contrato), missing ? el("span", { class: "th-pill", "data-tone": "warning" }, `${missing} documento${plural} faltante${plural}`) : null),
+      el("h3", { class: "th-h" }, "Datos"),
+      facts([
+        ["Cédula", new Intl.NumberFormat("es-CO").format(Number(r.cedula))],
+        ["Sede", String(r.sede)],
+        ["Turno", label("turno", r.turno)],
+        ["Correo", String(r.correo)],
+        ["Vacaciones", `${r.vacaciones} ${r.vacaciones === 1 ? "día pendiente" : "días pendientes"}`],
+      ]),
+      el("h3", { class: "th-h" }, "Contrato"),
+      facts([
+        ["Tipo", label("contrato", r.contrato)],
+        ["Ingreso", `${fmtDate(r.ingreso)} · ${years(r.ingreso)}`],
+        ["Fin", fmtDate(r.fin)],
+      ]),
+      toContract,
+      el("h3", { class: "th-h" }, "Documentos"),
+      docs,
+      el("div", { class: "th-danger" }, r.estado === "retirado" ? el("p", { class: "th-note" }, "Retirado.") : retire),
+    );
+    void emp.show(origin);
+  };
+  grid.addEventListener("nx-grid-open", (e) => openEmployee(e.detail.row, e.detail.origin));
 }

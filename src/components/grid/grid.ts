@@ -16,7 +16,7 @@
  */
 import { Base, boolAttr } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
-import { glyph } from "../../core/icons";
+import { glyph, initials } from "../../core/icons";
 import { lineData, readLines } from "../../core/stream";
 import { foldText } from "../../core/text";
 import { nxFormat, resolveLocale, type NxFormat } from "../../core/locale";
@@ -70,6 +70,11 @@ export const GRID_LABELS: GridLabels = {
   more: "Ver {n} más",
   less: "Ver menos",
   empty: "Ninguna fila coincide con los filtros",
+  selected: "{n} seleccionadas",
+  selectedOne: "1 seleccionada",
+  selectAll: "Seleccionar las {n}",
+  clearSelection: "Quitar selección",
+  selectRow: "Seleccionar fila",
 };
 
 const SPARK = '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>';
@@ -84,7 +89,7 @@ const BLOCK = 100;
 const FACET_SHOWN = 6;
 const WIDTH: Record<string, number> = { text: 180, number: 110, money: 140, date: 120, status: 130, ai: 220 };
 const OPS = new Set(["in", "notIn", "range", "contains"]);
-const PROPS = ["columns", "rows", "filters", "sort", "labels", "source", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale"] as const;
+const PROPS = ["columns", "rows", "filters", "sort", "labels", "source", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale", "selectable", "selected"] as const;
 
 type Item = { g: GridGroup } | { r: GridRow };
 type Pos = { r: number; c: number };
@@ -104,7 +109,7 @@ const lo = (a: number | string | undefined, b: number | string) => (a === undefi
 const hi = (a: number | string | undefined, b: number | string) => (a === undefined ? undefined : a > b ? a : b);
 
 export class NxGrid extends Base {
-  static observedAttributes = ["columns", "rows", "filters", "labels", "source", "group-by", "facets-open", "height", "locale"];
+  static observedAttributes = ["columns", "rows", "filters", "labels", "source", "group-by", "facets-open", "height", "locale", "selectable"];
 
   #uid = `nx-grid${++uid}`;
   #labels: GridLabels = GRID_LABELS;
@@ -149,6 +154,8 @@ export class NxGrid extends Base {
   #win = { start: -1, end: -1 };
   #raf = 0;
   // Facetas.
+  #picked = new Set<string>();
+  #lastPick = -1;
   #facetQ = new Map<string, string>();
   #facetMore = new Set<string>();
   // Nodos.
@@ -169,6 +176,8 @@ export class NxGrid extends Base {
   #foot?: HTMLDivElement;
   #live?: HTMLSpanElement;
   #ths: HTMLElement[] = [];
+  #selbar?: HTMLDivElement;
+  #headCheck?: HTMLInputElement;
   #ro?: ResizeObserver;
 
   // ---------------------------------------------------------------- propiedades
@@ -180,15 +189,19 @@ export class NxGrid extends Base {
     this.#columns = Array.isArray(v) ? v.filter((c) => c && typeof c.key === "string" && typeof c.label === "string") : [];
     this.#dataChanged(true);
   }
-  /** Las filas (modo cliente). Se copian: las ediciones y los valores de IA quedan aquí, no en el original. */
+  /** Las filas (modo cliente). Se copian: las ediciones y los valores de IA quedan aquí, no en el
+   *  original. Asignar de nuevo `grid.rows` (el mismo arreglo) recalcula filtros y agregados. */
   get rows(): GridRow[] {
     return this.#all;
   }
   set rows(v: GridRow[] | null | undefined) {
-    this.#all = Array.isArray(v) ? v.filter((r) => r && typeof r === "object").map((r) => ({ ...r })) : [];
+    // `grid.rows = grid.rows` (tras cambiar filas por fuera) recalcula sin copiar: las filas son
+    // las mismas que la app ya tiene en la mano.
+    if (v !== this.#all) this.#all = Array.isArray(v) ? v.filter((r) => r && typeof r === "object").map((r) => ({ ...r })) : [];
     this.#byId.clear();
     this.#edited.clear();
     this.#index(this.#all, 0);
+    for (const id of this.#picked) if (!this.#byId.has(id)) this.#picked.delete(id);
     this.#dataChanged();
   }
   get filters(): GridFilter[] {
@@ -251,6 +264,26 @@ export class NxGrid extends Base {
   }
   set filename(v: string) {
     this.#attr("filename", v);
+  }
+  /** Casillas para seleccionar filas (acciones en lote). Lo que la app ponga con `slot="bulk"` se
+   *  muestra junto al conteo mientras haya filas seleccionadas. */
+  get selectable(): boolean {
+    return boolAttr(this, "selectable");
+  }
+  set selectable(v: boolean) {
+    this.toggleAttribute("selectable", !!v);
+  }
+  /** Los `id` de las filas seleccionadas (se conservan al filtrar). */
+  get selected(): string[] {
+    return [...this.#picked];
+  }
+  set selected(v: string[] | null | undefined) {
+    this.#picked = new Set(Array.isArray(v) ? v.map(String) : []);
+    this.#paintPicked(false);
+  }
+  /** Las filas seleccionadas (las que están cargadas). */
+  get selectedRows(): GridRow[] {
+    return this.selected.map((id) => this.#byId.get(id)).filter((r): r is GridRow => !!r);
   }
   /** Formato de números, montos, fechas y orden alfabético (`es-CO`, `en-US`…). Por defecto, el
    *  `lang` más cercano, o «es-CO». Los textos de la interfaz van aparte, en `labels`. */
@@ -407,7 +440,7 @@ export class NxGrid extends Base {
     }
     if (!this.#built || old === value) return;
     if (name === "source") this.#dataChanged(true);
-    else if (name === "locale") this.#dataChanged();
+    else if (name === "locale" || name === "selectable") this.#dataChanged(name === "selectable");
     else if (name === "group-by") {
       this.#collapsed.clear();
       this.#refilter(true, "order");
@@ -683,6 +716,11 @@ export class NxGrid extends Base {
     this.#exportBtn.addEventListener("click", () => void this.exportXlsx());
     const bar = h("div", { class: "nx-grid__bar" }, ask, this.#facetBtn, this.#groupSel, this.#aiBtn, this.#exportBtn);
 
+    this.#selbar = h("div", { class: "nx-grid__selbar", hidden: true }, h("strong"), h("button", { type: "button", class: "nx-grid__clear", "data-pick": "all" }), h("button", { type: "button", class: "nx-grid__clear", "data-pick": "none" }));
+    this.#selbar.addEventListener("click", (e) => {
+      const b = (e.target as Element).closest<HTMLElement>("[data-pick]");
+      if (b) this.#pickAll(b.dataset.pick === "all");
+    });
     this.#note = h("p", { class: "nx-grid__note", hidden: true });
     this.#chips = h("div", { class: "nx-grid__chips" });
     this.#chips.addEventListener("click", (e) => {
@@ -735,7 +773,20 @@ export class NxGrid extends Base {
       }
     });
     this.#rowsEl.addEventListener("dblclick", (e) => {
-      if (this.#posOf(e.target)) this.#startEdit();
+      if (this.#posOf(e.target) && !this.#startEdit()) this.#openRow();
+    });
+    this.#rowsEl.addEventListener("click", (e) => {
+      const t = e.target as Element;
+      const box = t.closest<HTMLInputElement>("input[data-pick]");
+      if (box) return this.#pick(Number(box.closest<HTMLElement>("[data-r]")!.dataset.r), box.checked, (e as MouseEvent).shiftKey);
+      if (t.closest(".nx-grid__link")) {
+        const p = this.#posOf(t);
+        if (p) this.#act = this.#anchor = p;
+        this.#openRow();
+      }
+    });
+    this.#head.addEventListener("change", (e) => {
+      if ((e.target as HTMLInputElement).dataset.pickAll !== undefined) this.#pickAll((e.target as HTMLInputElement).checked);
     });
     if (typeof ResizeObserver !== "undefined") {
       this.#ro = new ResizeObserver(() => this.#soon());
@@ -746,7 +797,7 @@ export class NxGrid extends Base {
     this.#foot = h("div", { class: "nx-grid__foot" });
     this.#live = h("span", { class: "nx-sr-only", role: "status" });
     this.#aiPop = this.#buildAiPop();
-    this.append(bar, this.#note, this.#chips, main, this.#foot, this.#live, this.#aiPop);
+    this.append(bar, this.#selbar, this.#note, this.#chips, main, this.#foot, this.#live, this.#aiPop);
   }
 
   #buildAiPop(): HTMLDivElement {
@@ -776,8 +827,9 @@ export class NxGrid extends Base {
   #buildHead(): void {
     const cols = this.#columns;
     const widths = cols.map((c) => c.width ?? WIDTH[c.ai ? "ai" : colType(c)] ?? 160);
-    this.#scroll!.style.setProperty("--_cols", widths.map((w, i) => (i === widths.length - 1 ? `minmax(${w}px, 1fr)` : `${w}px`)).join(" "));
-    this.#scroll!.style.setProperty("--_w", `${widths.reduce((a, b) => a + b, 0)}px`);
+    const check = this.selectable ? "36px " : "";
+    this.#scroll!.style.setProperty("--_cols", check + widths.map((w, i) => (i === widths.length - 1 ? `minmax(${w}px, 1fr)` : `${w}px`)).join(" "));
+    this.#scroll!.style.setProperty("--_w", `${widths.reduce((a, b) => a + b, check ? 36 : 0)}px`);
     this.#scroll!.setAttribute("aria-colcount", String(cols.length));
     this.#ths = cols.map((c, ci) =>
       h(
@@ -789,7 +841,8 @@ export class NxGrid extends Base {
         h("span", { class: "nx-grid__peek", "aria-hidden": "true" }),
       ),
     );
-    this.#head!.replaceChildren(...this.#ths);
+    this.#headCheck = this.selectable ? h("input", { type: "checkbox", "data-pick-all": "", "aria-label": this.#labels.selectAll.replace("{n}", "").trim() }) : undefined;
+    this.#head!.replaceChildren(...(this.#headCheck ? [h("div", { role: "columnheader", class: "nx-grid__th nx-grid__check" }, this.#headCheck)] : []), ...this.#ths);
     this.#win = { start: -1, end: -1 };
   }
 
@@ -836,6 +889,7 @@ export class NxGrid extends Base {
     this.#empty!.hidden = this.#count() > 0 || (this.#server && this.#blocks.get(0) === "loading") || !this.#columns.length;
     this.#paintFacets();
     this.#paintRows(true);
+    this.#paintPicked(false);
   }
 
   #colOf(key: string): GridColumn | undefined {
@@ -1000,6 +1054,13 @@ export class NxGrid extends Base {
     const u = this.#uid;
     const it = this.#itemAt(i);
     const row = h("div", { role: "row", class: "nx-grid__row", "aria-rowindex": i + 2, "data-r": i });
+    const rid = it && "r" in it ? (this.#ids.get(it.r) ?? "") : "";
+    if (this.selectable) {
+      const on = !!rid && this.#picked.has(rid);
+      row.append(h("div", { role: "gridcell", class: "nx-grid__cell nx-grid__check" }, rid ? h("input", { type: "checkbox", "data-pick": "", checked: on, tabindex: -1, "aria-label": this.#labels.selectRow }) : null));
+      row.classList.toggle("is-picked", on);
+      row.setAttribute("aria-selected", String(on));
+    }
     const cell = (c: GridColumn, ci: number) => h("div", { role: "gridcell", class: `nx-grid__cell${isNumeric(c) ? " is-num" : ""}`, id: `${u}-${i}-${ci}`, "data-c": ci });
     if (!it) {
       row.classList.add("is-loading");
@@ -1044,7 +1105,12 @@ export class NxGrid extends Base {
           const text = formatCell(v, c, this.#loc);
           const tone = c.ai ? this.#tones.get(`${c.key}\u0000${id}`) : c.options?.find((o) => o.value === String(v))?.tone;
           if (text && (colType(c) === "status" || tone)) el.append(h("span", { class: "nx-grid__pill", "data-tone": tone ?? "neutral" }, text));
-          else el.textContent = text;
+          else if (text && (c.link || c.avatar)) {
+            // El tono del avatar sale del texto: la misma persona, siempre el mismo color.
+            const hue = [...text].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 360, 7);
+            if (c.avatar) el.append(h("span", { class: "nx-grid__avatar", style: `--_h:${hue}`, "aria-hidden": "true" }, initials(text)));
+            el.append(c.link ? h("span", { class: "nx-grid__link" }, text) : text);
+          } else el.textContent = text;
           if (c.ai && text) el.title = text;
         }
         if (c.editable && !c.ai) el.classList.add("is-editable");
@@ -1067,6 +1133,7 @@ export class NxGrid extends Base {
     for (const row of this.#rowsEl!.children as HTMLCollectionOf<HTMLElement>) {
       const r = Number(row.dataset.r);
       for (const cell of row.children as HTMLCollectionOf<HTMLElement>) {
+        if (cell.dataset.c === undefined) continue;
         const c = Number(cell.dataset.c);
         const to = Number(cell.dataset.to ?? c);
         const inside = r >= r0 && r <= r1 && to >= c0 && c <= c1;
@@ -1277,9 +1344,14 @@ export class NxGrid extends Base {
           e.preventDefault();
           return this.#toggleGroup(r);
         }
+        if (e.key === " " && this.selectable) {
+          e.preventDefault();
+          return this.#pick(r, !this.#picked.has(it && "r" in it ? (this.#ids.get(it.r) ?? "") : ""), e.shiftKey);
+        }
         if (e.key !== " ") {
           e.preventDefault();
-          return this.#startEdit();
+          if (!this.#startEdit() && e.key === "Enter") this.#openRow();
+          return;
         }
       // falls through
       default:
@@ -1291,6 +1363,61 @@ export class NxGrid extends Base {
     }
     e.preventDefault();
     this.#moveTo({ r: Math.max(0, Math.min(n - 1, r)), c: Math.max(0, Math.min(m - 1, c)) }, e.shiftKey);
+  }
+
+  /** Marca o desmarca la fila `r`; con Mayús, todo el tramo desde la última marcada. */
+  #pick(r: number, on: boolean, range: boolean): void {
+    const from = range && this.#lastPick >= 0 ? Math.min(this.#lastPick, r) : r;
+    const to = range && this.#lastPick >= 0 ? Math.max(this.#lastPick, r) : r;
+    for (let i = from; i <= to; i++) {
+      const it = this.#itemAt(i);
+      const id = it && "r" in it ? this.#ids.get(it.r) : undefined;
+      if (id) on ? this.#picked.add(id) : this.#picked.delete(id);
+    }
+    this.#lastPick = r;
+    this.#paintPicked(true);
+  }
+
+  /** Todas las filas filtradas (en el servidor, las cargadas), o ninguna. */
+  #pickAll(on: boolean): void {
+    if (!on) this.#picked.clear();
+    else for (const r of this.#server ? this.#byId.values() : this.#filtered) this.#picked.add(this.#ids.get(r)!);
+    this.#paintPicked(true);
+  }
+
+  #paintPicked(emit: boolean): void {
+    if (!this.#built) return;
+    const n = this.#picked.size;
+    const L = this.#labels;
+    for (const row of this.#rowsEl!.children as HTMLCollectionOf<HTMLElement>) {
+      const box = row.querySelector<HTMLInputElement>("input[data-pick]");
+      const it = this.#itemAt(Number(row.dataset.r));
+      const on = !!it && "r" in it && this.#picked.has(this.#ids.get(it.r) ?? "");
+      if (box) box.checked = on;
+      row.classList.toggle("is-picked", on);
+      if (this.selectable) row.setAttribute("aria-selected", String(on));
+    }
+    const pool = this.#server ? this.#byId.size : this.#filtered.length;
+    if (this.#headCheck) {
+      this.#headCheck.checked = n > 0 && n >= pool;
+      this.#headCheck.indeterminate = n > 0 && n < pool;
+    }
+    if (n) this.setAttribute("data-selection", String(n));
+    else this.removeAttribute("data-selection");
+    this.#selbar!.hidden = !n;
+    const [count, all, none] = this.#selbar!.children as HTMLCollectionOf<HTMLElement>;
+    count.textContent = n === 1 ? L.selectedOne : this.#fmt(L.selected, { n: this.#loc.number(n) });
+    all.hidden = n >= pool;
+    all.textContent = this.#fmt(L.selectAll, { n: this.#loc.number(pool) });
+    none.textContent = L.clearSelection;
+    if (emit) this.#emit("nx-grid-selection", { ids: this.selected, count: n });
+  }
+
+  /** `nx-grid-open`: la persona quiere ver el detalle de la fila activa. */
+  #openRow(): void {
+    const it = this.#itemAt(this.#act.r);
+    if (!it || "g" in it) return;
+    this.#emit("nx-grid-open", { id: this.#ids.get(it.r), row: it.r, key: this.#columns[this.#act.c]?.key, origin: this.#cell(this.#act) });
   }
 
   #moveTo(p: Pos, extend: boolean): void {
@@ -1316,16 +1443,17 @@ export class NxGrid extends Base {
     return [...((row?.children ?? []) as HTMLCollectionOf<HTMLElement>)].find((x) => Number(x.dataset.c) <= p.c && p.c <= Number(x.dataset.to ?? x.dataset.c)) ?? null;
   }
 
-  #startEdit(initial?: string): void {
+  /** Empieza a editar la celda activa; `false` si no es editable. */
+  #startEdit(initial?: string): boolean {
     const { r, c } = this.#act;
     const it = this.#itemAt(r);
     const col = this.#columns[c];
-    if (!it || "g" in it || !col?.editable || col.ai) return;
+    if (!it || "g" in it || !col?.editable || col.ai) return false;
     this.#anchor = this.#act;
     this.#reveal();
     this.#paintSel();
     const cell = this.#cell(this.#act);
-    if (!cell) return;
+    if (!cell) return false;
     const v = it.r[col.key];
     const input = h("input", { class: "nx-grid__input", "aria-label": col.label, autocomplete: "off", inputmode: isNumeric(col) ? "decimal" : null });
     input.value = initial ?? (v === null || v === undefined ? "" : colType(col) === "status" ? formatCell(v, col, this.#loc) : String(v));
@@ -1353,6 +1481,7 @@ export class NxGrid extends Base {
     });
     input.focus();
     if (!ed.quick) input.select();
+    return true;
   }
 
   #endEdit(commit: boolean, dr = 0, dc = 0): void {

@@ -68,6 +68,15 @@ describe("<nx-grid>", () => {
     expect(rows[0].monto).toBe(8_000_000);
   });
 
+  it("grid.rows = grid.rows recalcula sin copiar (tras cambiar filas por fuera)", () => {
+    const el = mount();
+    const first = el.rows[0];
+    first.estado = "apr";
+    el.rows = el.rows;
+    expect(el.rows[0]).toBe(first);
+    expect(cellText(el, 0, 2)).toBe("Aprobado");
+  });
+
   it("clic en la etiqueta ordena: ascendente, descendente, sin orden", () => {
     const el = mount();
     const sort = el.querySelectorAll<HTMLButtonElement>(".nx-grid__sort")[3];
@@ -330,6 +339,54 @@ describe("<nx-grid>", () => {
     expect(row(0)).toBeNull();
     expect(row(30)).not.toBeNull();
     expect([...el.querySelectorAll<HTMLElement>(".nx-grid__row")].map((x) => Number(x.dataset.r))).toEqual([...Array(el.querySelectorAll(".nx-grid__row").length)].map((_, i) => i + 2));
+  });
+
+  it("selectable: casillas, Mayús para un tramo, Espacio, «seleccionar las n» y el slot bulk", () => {
+    document.body.innerHTML = `<nx-grid selectable><div slot="bulk"><button>Pedir documentos</button></div></nx-grid>`;
+    const el = document.querySelector("nx-grid")!;
+    el.columns = COLS;
+    el.rows = ROWS;
+    const seen: number[] = [];
+    el.addEventListener("nx-grid-selection", (e) => seen.push(e.detail.count));
+    const boxes = () => el.querySelectorAll<HTMLInputElement>("input[data-pick]");
+    expect(boxes()).toHaveLength(4);
+    expect(el.hasAttribute("data-selection")).toBe(false);
+    boxes()[0].click();
+    boxes()[2].dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
+    expect(el.selected).toEqual(["1", "2", "3"]);
+    expect(el.getAttribute("data-selection")).toBe("3");
+    expect(el.querySelector(".nx-grid__selbar")!.textContent).toContain("3 seleccionadas");
+    expect(el.querySelector('[data-r="1"]')!.classList.contains("is-picked")).toBe(true);
+    // Espacio marca o desmarca la fila activa.
+    key(el, "ArrowDown", {});
+    key(el, "ArrowDown", {});
+    key(el, "ArrowDown", {});
+    key(el, " ");
+    expect(el.selected).toHaveLength(4);
+    el.querySelector<HTMLButtonElement>("[data-pick='none']")!.click();
+    expect(el.selected).toEqual([]);
+    el.querySelector<HTMLButtonElement>("[data-pick='all']")!.click();
+    expect(el.selected).toHaveLength(4);
+    expect(seen.at(-1)).toBe(4);
+    // Se conserva al filtrar; las filas se marcan al volver a verse.
+    el.filters = [{ key: "estado", op: "in", values: ["pend"] }];
+    expect(el.selected).toHaveLength(4);
+    expect(el.selectedRows.map((r) => r.oc)).toEqual(["OC-1", "OC-2", "OC-3", "OC-4"]);
+  });
+
+  it("link: clic en el nombre o Enter emite nx-grid-open con la fila; avatar con iniciales", () => {
+    document.body.innerHTML = `<nx-grid></nx-grid>`;
+    const el = document.querySelector("nx-grid")!;
+    el.columns = [{ key: "prov", label: "Proveedor", link: true, avatar: true }, ...COLS.slice(2)];
+    el.rows = ROWS;
+    const opened: string[] = [];
+    el.addEventListener("nx-grid-open", (e) => opened.push(e.detail.id));
+    expect(el.querySelector(".nx-grid__avatar")!.textContent).toBe("Ac");
+    el.querySelector<HTMLElement>('[data-r="2"] .nx-grid__link')!.click();
+    expect(opened).toEqual(["3"]);
+    key(el, "ArrowUp");
+    key(el, "Enter");
+    expect(opened).toEqual(["3", "2"]);
   });
 
   it("etiquetas propias y BDUI", () => {

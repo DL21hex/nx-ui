@@ -833,6 +833,143 @@ td:first-child {
   }
 }
 
+/* ---------------------------------------------------------------- ejemplo: directorio de TH */
+
+.th-inbox {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  max-inline-size: none !important;
+  margin-block: 16px 14px;
+}
+.th-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--nx-motion-fast), background-color var(--nx-motion-fast);
+
+  & strong {
+    font-size: 24px;
+    font-weight: 650;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  & span {
+    font-size: 13.5px;
+    font-weight: 550;
+  }
+  & small {
+    color: var(--nx-text-tertiary);
+    font-size: 12px;
+  }
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  &[aria-pressed="true"] {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    & strong {
+      color: var(--nx-primary);
+    }
+  }
+}
+#th-grid {
+  max-inline-size: none;
+}
+.th-bulk select {
+  block-size: 36px;
+  padding-inline: 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 13.5px;
+}
+.th-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.th-pill {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-weight: 550;
+  &[data-tone="success"] {
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+  }
+  &[data-tone="warning"] {
+    background: color-mix(in oklch, oklch(0.75 0.15 75) 18%, transparent);
+    color: light-dark(oklch(0.5 0.12 65), oklch(0.82 0.13 75));
+  }
+  &[data-tone="danger"] {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+  &[data-tone="info"] {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary);
+  }
+}
+.th-h {
+  margin: 22px 0 10px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.th-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  & li {
+    display: grid;
+    grid-template-columns: 20px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    min-block-size: 30px;
+    font-size: 14px;
+  }
+  & li > span:first-child {
+    color: var(--nx-success);
+    font-weight: 700;
+    text-align: center;
+  }
+  & li[data-ok="false"] > span:first-child {
+    color: light-dark(oklch(0.55 0.14 65), oklch(0.8 0.13 75));
+  }
+  & .dlg-plain {
+    padding: 3px 10px;
+  }
+}
+.th-note {
+  margin: 14px 0 0;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.th-danger {
+  margin-block: 28px 4px;
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+
 /* ---------------------------------------------------------------- demo de la tabla */
 
 .grid-try {

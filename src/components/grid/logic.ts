@@ -140,7 +140,7 @@ export function filterLabel(f: GridFilter, c: GridColumn | undefined, fmt: NxFor
     case "contains":
       return `${name} contiene «${f.value}»`;
     case "range":
-      if (typeof f.min === "string" && typeof f.max === "string" && monthSpan(f.min, f.max) === 1) return `${name}: ${fmt.date(f.min.slice(0, 7))}`;
+      if (typeof f.min === "string" && typeof f.max === "string" && /-01$/.test(f.min) && /-01$/.test(f.max) && monthSpan(f.min, f.max) === 1) return `${name}: ${fmt.date(f.min.slice(0, 7))}`;
       if (f.min !== undefined && f.max !== undefined) return `${name}: ${show(f.min)} – ${show(f.max)}`;
       if (f.min !== undefined) return `${name} ≥ ${show(f.min)}`;
       return `${name} < ${show(f.max!)}`;

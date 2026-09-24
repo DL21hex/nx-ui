@@ -62,6 +62,7 @@ declare module "solid-js" {
       rows: GridRow[] | undefined;
       filters: GridFilter[] | undefined;
       sort: GridSort | null | undefined;
+      selected: string[] | undefined;
     }
     interface ExplicitAttributes {
       active: string | undefined;
@@ -106,6 +107,7 @@ declare module "solid-js" {
       feedback: boolean;
       "facets-open": boolean;
       persistent: boolean;
+      selectable: boolean;
     }
     interface CustomEvents {
       "nx-select": CustomEvent<SelectDetail>;
@@ -122,6 +124,8 @@ declare module "solid-js" {
       "nx-grid-change": CustomEvent<{ changes: GridChange[] }>;
       "nx-grid-columns": CustomEvent<{ columns: GridColumn[] }>;
       "nx-dialog-close": CustomEvent<DialogCloseDetail>;
+      "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
+      "nx-grid-open": CustomEvent<{ id: string; row: GridRow; key: string; origin: HTMLElement | null }>;
     }
     interface IntrinsicElements {
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
@@ -399,6 +403,9 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   groupBy?: string;
   rowKey?: string;
   facetsOpen?: boolean;
+  /** Casillas para seleccionar filas; las acciones van como hijo con `slot="bulk"`. */
+  selectable?: boolean;
+  selected?: string[];
   height?: number;
   filename?: string;
   /** Formato de números, montos, fechas y orden (`es-CO`, `en-US`…). Por defecto, el `lang` de la página. */
@@ -408,10 +415,14 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   /** Cancelable: con `preventDefault()` la edición no se aplica. */
   onChange?: (e: CustomEvent<{ changes: GridChange[] }>) => void;
   onColumns?: (e: CustomEvent<{ columns: GridColumn[] }>) => void;
+  onSelection?: (e: CustomEvent<{ ids: string[]; count: number }>) => void;
+  /** Clic en una columna `link` o Enter en una fila: el detalle (p. ej. un `<Dialog mode="panel">`). */
+  onOpen?: (e: CustomEvent<{ id: string; row: GridRow; key: string; origin: HTMLElement | null }>) => void;
+  children?: JSX.Element;
 }
 
 export function Grid(props: GridProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["columns", "rows", "source", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns"]);
+  const [local, rest] = splitProps(props, ["columns", "rows", "source", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
   return (
     <nx-grid
       {...rest}
@@ -432,7 +443,13 @@ export function Grid(props: GridProps): JSX.Element {
       on:nx-grid-filter={(e) => local.onFilter?.(e)}
       on:nx-grid-change={(e) => local.onChange?.(e)}
       on:nx-grid-columns={(e) => local.onColumns?.(e)}
-    />
+      on:nx-grid-selection={(e) => local.onSelection?.(e)}
+      on:nx-grid-open={(e) => local.onOpen?.(e)}
+      prop:selected={local.selected}
+      bool:selectable={!!local.selectable}
+    >
+      {local.children}
+    </nx-grid>
   );
 }
 

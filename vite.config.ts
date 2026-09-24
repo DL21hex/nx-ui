@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import { EMPLOYEE_FIELDS, EMPLOYEES } from "./gallery/demo-data";
 import { aiCell, purchasePage } from "./gallery/demo-grid";
+import { hrEmployees, hrExitImpact } from "./gallery/demo-hr";
 import { invoiceEvents, invoiceSvg } from "./gallery/demo-invoice";
 import { searchOptions } from "./src/components/select/logic";
 
@@ -191,6 +192,19 @@ function demoImpact(): Plugin {
   return {
     name: "nx-demo-impact",
     configureServer(server) {
+      // El impacto de retirar a una persona del «Directorio de TH».
+      const people = hrEmployees();
+      server.middlewares.use("/demo/th/retiro", async (req, res) => {
+        for await (const _ of req) void _;
+        const id = new URL(req.url ?? "", "http://x").searchParams.get("id");
+        res.setHeader("Content-Type", "application/x-ndjson");
+        await sleep(300);
+        for (const ev of hrExitImpact(people.find((p) => p.id === id))) {
+          res.write(`${JSON.stringify(ev)}\n`);
+          await sleep(220 + Math.random() * 180);
+        }
+        res.end(`${JSON.stringify({ type: "done" })}\n`);
+      });
       server.middlewares.use("/demo/impact", async (req, res) => {
         for await (const _ of req) void _;
         const oc = new URL(req.url ?? "", "http://x").searchParams.get("oc") ?? "2291";

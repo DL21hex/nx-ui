@@ -426,6 +426,47 @@ if (await nxConfirm({
       </div>
     </template>
 
+    <!-- ================================================================ Ejemplo: directorio de TH -->
+    <template id="page-th">
+      <p class="eyebrow">Ejemplos</p>
+      <h1>Directorio de TH</h1>
+      <p class="lead">
+        Así se arma una pantalla de gestión con las piezas de la librería: arriba lo que requiere atención, la tabla para
+        trabajar, el detalle en un panel que no te saca de la lista, cambios en lote que se deshacen, y el retiro con su
+        impacto antes de confirmar.
+      </p>
+      <div class="th-inbox" id="th-inbox"></div>
+      <nx-grid id="th-grid" selectable locale="es-CO" height="520" filename="directorio-th">
+        <div slot="bulk" class="th-bulk">
+          <select id="th-turno" aria-label="Cambiar turno">
+            <option value="">Cambiar turno…</option>
+            <option value="A">Turno A</option>
+            <option value="B">Turno B</option>
+            <option value="C">Turno C</option>
+            <option value="oficina">Oficina</option>
+          </select>
+          <nx-button id="th-docs-btn" label="Pedir documentos" icon="inbox" variant="secondary" log-mode="none"></nx-button>
+        </div>
+      </nx-grid>
+      <ol class="stage__log btn-events" id="th-log"></ol>
+      <nx-dialog id="th-emp" mode="panel" url=""></nx-dialog>
+      <nx-dialog id="th-contract" mode="panel" url=""></nx-dialog>
+
+      <h2>Cómo está hecho</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué hace aquí</th></tr></thead>
+          <tbody>
+            <tr><td>Bandeja de pendientes</td><td>El trabajo de TH va por excepciones. Cada tarjeta es un filtro normal de la tabla (<code>grid.filters = …</code>): se ve como chip y se puede combinar con los demás.</td></tr>
+            <tr><td><code>&lt;nx-grid selectable&gt;</code></td><td>Facetas, frase en lenguaje natural («operarios de producción en período de prueba»), sede y turno editables en la celda, casillas para acciones en lote (<code>slot="bulk"</code>) y exportar a Excel.</td></tr>
+            <tr><td>Panel apilado</td><td>Clic en el nombre (o <kbd>Enter</kbd>): el detalle se abre al lado y la lista, con sus filtros, sigue ahí. Persona → contrato es un segundo nivel; «atrás» del navegador lo cierra.</td></tr>
+            <tr><td>Deshacer</td><td>Cambiar el turno de varias personas no pregunta: se aplica y se puede deshacer.</td></tr>
+            <tr><td>Confirmación con impacto</td><td>Retirar muestra la liquidación estimada, lo que hay que devolver y los accesos que se revocan, y bloquea el retiro si la persona tiene una incapacidad activa.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
     <!-- ================================================================ IA -->
     <template id="page-ai">
       <p class="eyebrow">Componentes</p>

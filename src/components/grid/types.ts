@@ -27,6 +27,10 @@ export interface GridColumn {
   /** Panel de filtros: `true` la incluye, `false` la excluye (por defecto, las columnas con pocas
    *  opciones distintas). */
   facet?: boolean;
+  /** El valor se ve como enlace: un clic (o Enter) emite `nx-grid-open` con la fila. */
+  link?: boolean;
+  /** Un círculo con las iniciales del valor antes del texto (nombres de personas). */
+  avatar?: boolean;
   /** Columna calculada por IA: el backend (`ai-endpoint`) la llena fila por fila. */
   ai?: { prompt: string };
 }
@@ -81,6 +85,11 @@ export interface GridLabels {
   more: string;
   less: string;
   empty: string;
+  selected: string;
+  selectedOne: string;
+  selectAll: string;
+  clearSelection: string;
+  selectRow: string;
 }
 
 /** Una faceta que manda el backend (modo `source`). */

@@ -23,7 +23,7 @@ const BUDGET = [
   ["dist/select.js", 6 * 1024, "select + núcleo (ESM)"],
   ["dist/ai.js", 6 * 1024, "ai-answer + núcleo (ESM)"],
   ["dist/capture.js", 10 * 1024, "doc-capture + button + núcleo (ESM)"],
-  ["dist/grid.js", 18 * 1024, "grid + núcleo (ESM)"],
+  ["dist/grid.js", 19 * 1024, "grid + núcleo (ESM)"],
   [lazy("xlsx"), 3 * 1024, "generador de XLSX (se carga al exportar)"],
   ["dist/dialog.js", 5.5 * 1024, "dialog + núcleo (ESM)"],
   ["dist/confirm.js", 10 * 1024, "confirm + dialog + button + núcleo (ESM)"],

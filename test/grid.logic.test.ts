@@ -83,6 +83,8 @@ describe("filtros y orden", () => {
   it("filterLabel", () => {
     expect(filterLabel({ key: "estado", op: "in", values: ["pend", "apr"] }, COLS[3])).toBe("Estado: Pendiente, Aprobado");
     expect(filterLabel({ key: "fecha", op: "range", min: "2026-03-01", max: "2026-04-01" }, COLS[2])).toBe("Fecha: mar 2026");
+    // Un tramo que no empieza el día 1 no es «un mes».
+    expect(filterLabel({ key: "fecha", op: "range", min: "2026-09-24", max: "2026-10-24" }, COLS[2])).toBe("Fecha: 24 sept 2026 – 24 oct 2026");
     expect(filterLabel({ key: "monto", op: "range", min: 5_000_001 }, COLS[4])).toBe("Monto ≥ $5 M");
   });
 });
@@ -183,6 +185,11 @@ describe("lenguaje natural", () => {
     expect(filters).toContainEqual({ key: "monto", op: "range", min: 1_000_000, max: 2_000_000 });
     expect(filters).toContainEqual({ key: "prov", op: "in", values: ["Aceros del Caribe"] });
     expect(filters).toContainEqual({ key: "estado", op: "notIn", values: ["anu"] });
+  });
+
+  it("una etiqueta de varias palabras cuenta entera como entendida", () => {
+    const cols: GridColumn[] = [{ key: "estado", label: "Estado", type: "status", options: [{ value: "prueba", label: "Período de prueba" }, { value: "activo", label: "Activo" }] }];
+    expect(parseNL("en período de prueba", cols, [])).toEqual({ filters: [{ key: "estado", op: "in", values: ["prueba"] }], unknown: [] });
   });
 
   it("texto entre comillas es «contiene»; lo que no entiende se devuelve", () => {

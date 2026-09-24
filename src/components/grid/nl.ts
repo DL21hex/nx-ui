@@ -131,9 +131,12 @@ export function parseNL(query: string, columns: readonly GridColumn[], rows: rea
     const exc: string[] = [];
     for (const { value, words } of vocabulary(c, rows)) {
       const at = findPhrase(q, words);
-      if (at < 0 || inc.includes(value) || exc.includes(value)) continue;
-      (NEG.test(q.slice(0, at)) ? exc : inc).push(value);
+      if (at < 0) continue;
+      // Aunque el valor ya haya entrado por otra forma («prueba»), la frase completa («período de
+      // prueba») queda marcada como entendida.
       take(at, words.length);
+      if (inc.includes(value) || exc.includes(value)) continue;
+      (NEG.test(q.slice(0, at)) ? exc : inc).push(value);
     }
     if (inc.length) filters.push({ key: c.key, op: "in", values: inc });
     if (exc.length) filters.push({ key: c.key, op: "notIn", values: exc });

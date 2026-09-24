@@ -10,7 +10,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-select>` + núcleo (ESM) | ≈ 5,7 KB |
 | `<nx-ai-answer>` + núcleo (ESM) | ≈ 5,6 KB |
 | `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 9,4 KB |
-| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,3 KB, se carga al exportar | ≈ 17 KB |
+| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,3 KB, se carga al exportar | ≈ 18 KB |
 | `<nx-dialog>` + núcleo (ESM) | ≈ 4,2 KB |
 | `nxToast()` + núcleo (ESM) | ≈ 2,2 KB |
 | `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 8,6 KB |
@@ -298,6 +298,10 @@ Una tabla de datos que se explora sola:
   al desplazarse, y el backend devuelve los agregados.
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
   En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo; más allá, `source`.
+- **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,
+  «seleccionar las n» filtradas); lo que la app ponga con `slot="bulk"` aparece junto al conteo.
+  Una columna `link` abre el detalle (`nx-grid-open`, también con Enter) y `avatar` muestra las
+  iniciales. `grid.rows = grid.rows` recalcula tras cambiar filas por fuera.
 - **Locale.** Números, montos, fechas, lo que se escribe en una celda y el orden alfabético salen
   de `Intl` con `locale` («es-CO», «en-US», «pt-BR»…; por defecto, el `lang` de la página). Un
   `currency` ISO («COP», «USD») usa el formato de moneda del locale. Los textos de la interfaz van
@@ -324,9 +328,9 @@ filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?} · 
 
 | | |
 |---|---|
-| Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `labels` |
+| Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
 | Métodos | `ask(frase)`, `clearFilters()`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()` |
-| Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns` |
+| Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open` |
 
 ## `<nx-dialog>`, `nxToast()` y `nxConfirm()`
 

@@ -7,7 +7,11 @@
 nx-grid {
   --nx-grid-height: 440px;
   --nx-grid-warn: light-dark(oklch(0.68 0.15 70), oklch(0.8 0.14 75));
-  display: block;
+  /* Cada pieza ocupa su fila; la barra de selección y el slot="bulk" del autor comparten una. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
   container-type: inline-size;
   font-family: var(--nx-font-sans);
   font-size: 13px;
@@ -21,6 +25,104 @@ nx-grid *::after {
 }
 nx-grid [hidden] {
   display: none !important;
+}
+nx-grid > * {
+  flex: 1 0 100%;
+  min-inline-size: 0;
+}
+nx-grid > .nx-grid__bar {
+  order: 1;
+}
+nx-grid > :is(.nx-grid__selbar, [slot="bulk"]) {
+  order: 2;
+  margin-block-end: 8px;
+}
+nx-grid > [slot="bulk"] {
+  order: 3;
+}
+nx-grid > .nx-grid__note {
+  order: 4;
+}
+nx-grid > .nx-grid__chips {
+  order: 5;
+}
+nx-grid > .nx-grid__main {
+  order: 6;
+}
+nx-grid > .nx-grid__foot {
+  order: 7;
+}
+nx-grid > [slot="bulk"] {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+nx-grid:not([data-selection]) > [slot="bulk"] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- selección de filas */
+
+.nx-grid__selbar {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 36px;
+  padding: 4px 6px 4px 12px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary);
+  animation: nx-grid-in var(--nx-motion-base) var(--nx-ease-out);
+
+  & strong {
+    font-weight: 600;
+  }
+  & .nx-grid__clear {
+    color: inherit;
+  }
+}
+.nx-grid__check {
+  display: grid;
+  place-items: center;
+  padding: 0;
+
+  & input {
+    margin: 0;
+    accent-color: var(--nx-primary);
+    cursor: pointer;
+  }
+}
+.nx-grid__th.nx-grid__check {
+  justify-content: center;
+}
+.nx-grid__row.is-picked > .nx-grid__cell {
+  background: color-mix(in oklab, var(--nx-primary) 7%, transparent);
+}
+.nx-grid__link {
+  color: var(--nx-primary);
+  font-weight: 500;
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+.nx-grid__avatar {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  margin-inline-end: 8px;
+  border-radius: 50%;
+  background: light-dark(oklch(0.93 0.05 var(--_h)), oklch(0.36 0.07 var(--_h)));
+  color: light-dark(oklch(0.42 0.12 var(--_h)), oklch(0.88 0.07 var(--_h)));
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
 }
 nx-grid .nx-glyph {
   display: inline-flex;
