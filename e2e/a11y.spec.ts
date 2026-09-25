@@ -62,3 +62,27 @@ test("IA y captura", async ({ page }) => {
   await open(page, "#/capture");
   await audit(page, ["#cap-demo"]);
 });
+
+test("paleta de comandos abierta, con resultados del servidor", async ({ page }) => {
+  await open(page, "#/command");
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("aceros");
+  await expect(page.locator("#cmd .nx-command__group-h", { hasText: "Órdenes de compra" })).toBeVisible();
+  await audit(page, ["#cmd"]);
+});
+
+test("desglose de una cifra", async ({ page }) => {
+  await open(page, "#/explain");
+  await page.locator("nx-explain[endpoint*=factura]").click();
+  await expect(page.locator(".nx-explain-card .nx-explain__ok")).toBeVisible({ timeout: 10_000 });
+  await audit(page, [".nx-explain__mark", ".nx-explain-card"]);
+});
+
+test("bandeja con un ítem bloqueado y el motivo del rechazo", async ({ page }) => {
+  await open(page, "#/inbox");
+  await page.keyboard.press("j");
+  await expect(page.locator("#inbox-demo .nx-inbox__block")).toBeVisible();
+  await audit(page, ["#inbox-demo"]);
+  await page.keyboard.press("r");
+  await audit(page, ["#inbox-demo"]);
+});

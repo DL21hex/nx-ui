@@ -113,7 +113,10 @@ export class NxExplain extends Base {
 
   show(): void {
     if (this.#open) return;
-    this.#ensureCard().showPopover?.();
+    const card = this.#ensureCard();
+    card.showPopover?.();
+    // En el acto (no al llegar `toggle`, que es asíncrono), para que Escape y Tab ya sean suyos.
+    if (this.#open) card.focus({ preventScroll: true });
   }
   hide(): void {
     if (this.#open) this.#card?.hidePopover?.();

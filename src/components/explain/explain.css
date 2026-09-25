@@ -118,7 +118,7 @@ nx-explain[aria-expanded="true"] .nx-explain__mark {
   border: 0;
   border-radius: var(--nx-radius-sm);
   background: none;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
@@ -267,7 +267,7 @@ a.nx-explain__row {
   padding: 0 4px;
   border-radius: 999px;
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 9.5px;
   font-weight: 650;
 }

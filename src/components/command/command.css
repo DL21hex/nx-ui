@@ -75,7 +75,7 @@ nx-command .nx-icon {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 12px;
   font-weight: 550;
   white-space: nowrap;
@@ -92,7 +92,7 @@ nx-command .nx-icon {
   font: inherit;
   font-size: 15px;
   &::placeholder {
-    color: var(--nx-text-quaternary);
+    color: var(--nx-text-tertiary);
   }
 }
 .nx-command__spin {
@@ -159,7 +159,7 @@ nx-command .nx-icon {
   background: var(--nx-hover);
   & > .nx-icon,
   & > .nx-glyph {
-    color: var(--nx-primary);
+    color: var(--nx-primary-ink);
   }
 }
 .nx-command__opt[aria-disabled="true"] {
@@ -191,7 +191,7 @@ nx-command .nx-icon {
 }
 .nx-command__opt--ask .nx-command__label {
   flex: 1;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   & q {
     color: var(--nx-foreground);
     quotes: "«" "»";
@@ -218,7 +218,7 @@ nx-command kbd {
 nx-command mark {
   border-radius: 2px;
   background: none;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-weight: 650;
 }
 .nx-command__empty {

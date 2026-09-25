@@ -87,7 +87,7 @@ nx-inbox kbd {
   gap: 6px;
 }
 .nx-inbox__nsel {
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 12.5px;
   font-weight: 600;
 }
@@ -165,7 +165,7 @@ nx-inbox kbd {
   block-size: 30px;
   border-radius: 50%;
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 10.5px;
   font-weight: 650;
 }
@@ -370,7 +370,7 @@ nx-inbox kbd {
 }
 .nx-inbox__open {
   align-self: flex-start;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 12.5px;
   font-weight: 550;
   text-decoration: none;

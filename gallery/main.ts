@@ -923,6 +923,10 @@ function mountInboxDemo(root: HTMLElement) {
   inbox.addEventListener("nx-inbox-undo", (e) => add(`nx-inbox-undo → ${e.detail.ids.join(", ")}: no se envía nada`));
   inbox.addEventListener("nx-inbox-commit", (e) => add(`nx-inbox-commit → POST /compras/${e.detail.decision === "approve" ? "aprobar" : "rechazar"} · ${e.detail.ids.join(", ")}`));
   inbox.addEventListener("nx-inbox-open", (e) => add(`nx-inbox-open → ${e.detail.id}`));
-  // En la demo se trabaja con el teclado desde el primer momento.
-  requestAnimationFrame(() => inbox.querySelector<HTMLElement>(".nx-inbox__list")?.focus({ preventScroll: true }));
+  // En la demo se trabaja con el teclado desde el primer momento (salvo que el foco ya esté en otra
+  // parte, p. ej. en la paleta de comandos que se abrió al llegar).
+  requestAnimationFrame(() => {
+    const a = document.activeElement;
+    if (!a || a === document.body || a === page) inbox.querySelector<HTMLElement>(".nx-inbox__list")?.focus({ preventScroll: true });
+  });
 }

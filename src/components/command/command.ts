@@ -170,6 +170,9 @@ export class NxCommand extends Base {
       return;
     }
     this.showPopover?.();
+    // En el acto, no al llegar `toggle` (que es asíncrono): lo que se teclea justo después de ⌘K
+    // tiene que caer en la caja, no en lo que tenía el foco antes.
+    if (this.#open) this.#input!.focus({ preventScroll: true });
   }
   hide(): void {
     if (this.#open) this.hidePopover?.();

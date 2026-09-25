@@ -1046,7 +1046,7 @@ td:first-child {
     &[aria-pressed="true"] {
       border-color: var(--nx-primary-border);
       background: var(--nx-primary-soft);
-      color: var(--nx-primary);
+      color: var(--nx-primary-ink);
     }
   }
 }
