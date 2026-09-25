@@ -20,6 +20,7 @@ const entries = {
   explain: "src/components/explain/explain.css",
   inbox: "src/components/inbox/inbox.css",
   survey: "src/components/survey/survey.css",
+  tour: "src/components/tour/tour.css",
 };
 
 await build({

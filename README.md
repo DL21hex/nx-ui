@@ -14,7 +14,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-dialog>` + núcleo (ESM) | ≈ 4,2 KB |
 | `nxToast()` + núcleo (ESM) | ≈ 2,2 KB |
 | `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 8,6 KB |
-| `<nx-agent>` + IA + botón + BDUI + núcleo (ESM) | ≈ 14 KB |
+| `<nx-agent>` + IA + botón + BDUI + recorrido + núcleo (ESM) | ≈ 15,8 KB |
 | `<nx-command>` + núcleo (ESM) | ≈ 6,6 KB |
 | `<nx-explain>` + núcleo (ESM) | ≈ 6,7 KB |
 | `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 8,6 KB |
@@ -410,6 +410,7 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 | `nx_ask` | Pregunta con opciones o texto libre | `{answer}` |
 | `nx_notify` | Un resultado; con `undo`, espera 7 s por si la persona lo deshace | `{undone}` |
 | `nx_show` | Pinta un componente de nx-ui (nodo BDUI, con su lista de props permitidas) | `{shown}` |
+| `nx_tour` | Un recorrido guiado sobre la pantalla («¿cómo…?»): cada paso señala un elemento. Los `[data-tour]` visibles viajan en el contexto para que el modelo sepa qué puede señalar | `{completed, step}` |
 | `nx_grid_filter`, `nx_grid_select` | Filtra o selecciona en la tabla de `for` (y la tabla viaja como contexto) | `{rows}`, `{selected}` |
 
 ```html
@@ -430,6 +431,19 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 | Propiedades / atributos | `endpoint`, `for`, `heading`, `placeholder`, `suggestions`, `tools`, `context`, `state`, `labels` · `messages`, `threadId`, `running` (lectura) |
 | Métodos | `send(texto)`, `stop()`, `reset()` |
 | Eventos | `nx-agent-tool` (herramientas de la app), `nx-agent-send` (ajustar la entrada), `nx-agent-state`, `nx-agent-custom`, `nx-agent-event` (cada evento AG-UI) |
+
+**`nxTour(pasos)`** (`nx-ui/tour`) es el mismo recorrido, para cualquier app (una bienvenida, una
+novedad): ilumina el elemento de cada paso, oscurece lo demás y pone al lado una tarjeta con título
+y texto. `Enter`/`→` avanza, `←` vuelve y `Escape` termina; el foco vuelve a donde estaba. Solo
+muestra: no hace clic ni cambia nada.
+
+```js
+import { nxTour } from "nx-ui/tour";
+const { completed } = await nxTour([
+  { target: "#nuevo", title: "Crea un pedido", text: "Empieza aquí." },
+  { target: "[data-tour=filtros]", title: "Filtra", text: "Escribe en tus palabras." },
+]);
+```
 
 Nada que cambie datos ocurre en el navegador: las herramientas de la cabina solo muestran,
 preguntan y mueven la pantalla. Escribir datos lo hace el backend, después de la aprobación.

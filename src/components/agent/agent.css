@@ -1,4 +1,5 @@
 /* <nx-agent>. Variable propia: --nx-agent-height (100%): alto del panel (la conversación hace scroll). */
+@import "../tour/tour.css";
 
 nx-agent {
   display: flex;

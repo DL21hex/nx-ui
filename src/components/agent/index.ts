@@ -5,6 +5,8 @@ define("nx-agent", NxAgent);
 
 export { NxAgent, AGENT_LABELS } from "./agent";
 export { GRID_TOOLS, UI_TOOLS, applyPatch, parseAguiEvent } from "./logic";
+export { nxTour, TOUR_LABELS } from "../tour/index";
+export type { TourLabels, TourResult, TourStep } from "../tour/types";
 export type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiMessage, AguiTool, AguiToolCall, PatchOp, RunAgentInput } from "./types";
 
 declare global {

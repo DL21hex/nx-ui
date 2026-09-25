@@ -84,6 +84,10 @@ export interface AgentLabels {
   unavailable: string;
   context: string;
   empty: string;
+  /** «Te muestro en la pantalla» (al empezar un recorrido). */
+  touring: string;
+  /** Textos del recorrido guiado (`nx_tour`). */
+  tour: Partial<import("../tour/types").TourLabels>;
 }
 
 /** `nx-agent-tool`: una herramienta de la app. Responder con `respond(contenido, error?)`. */

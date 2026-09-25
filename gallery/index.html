@@ -759,10 +759,10 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
         trabajar, el detalle en un panel que no te saca de la lista, cambios en lote que se deshacen, y el retiro con su
         impacto antes de confirmar.
       </p>
-      <div class="th-inbox" id="th-inbox"></div>
+      <div class="th-inbox" id="th-inbox" data-tour="pendientes" aria-label="Pendientes de TH"></div>
       <div class="th-layout" data-agent>
       <nx-grid id="th-grid" selectable locale="es-CO" height="520" filename="directorio-th">
-        <div slot="bulk" class="th-bulk">
+        <div slot="bulk" class="th-bulk" data-tour="lote" aria-label="Acciones en lote">
           <select id="th-turno" aria-label="Cambiar turno">
             <option value="">Cambiar turno…</option>
             <option value="A">Turno A</option>
@@ -773,7 +773,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           <nx-button id="th-docs-btn" label="Pedir documentos" icon="inbox" variant="secondary" log-mode="none"></nx-button>
         </div>
       </nx-grid>
-      <nx-agent id="th-agent" for="th-grid" endpoint="/demo/agent" heading="Asistente de TH"></nx-agent>
+      <nx-agent id="th-agent" for="th-grid" endpoint="/demo/agent" heading="Asistente de TH" data-tour="asistente" aria-label="Asistente de TH"></nx-agent>
       </div>
       <ol class="stage__log btn-events" id="th-log"></ol>
       <nx-dialog id="th-emp" mode="panel" url=""></nx-dialog>

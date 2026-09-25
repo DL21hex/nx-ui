@@ -865,7 +865,7 @@ function mountHrDemo(root: HTMLElement) {
 
   // El agente trabaja sobre la misma tabla (`for="th-grid"`).
   const agent = root.querySelector<NxAgent>("#th-agent")!;
-  agent.suggestions = ["Pide los documentos faltantes a las personas en período de prueba", "¿Qué contratos vencen este mes?"];
+  agent.suggestions = ["Pide los documentos faltantes a las personas en período de prueba", "¿Qué contratos vencen este mes?", "¿Cómo pido documentos a varias personas?"];
   agent.addEventListener("nx-agent-state", (e) => {
     const st = e.detail.state as { scenario?: string; count?: number };
     add(`Estado compartido del agente → ${st.scenario ?? "—"} · ${st.count ?? 0} personas`);

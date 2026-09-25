@@ -73,6 +73,22 @@ export function* agentRun(input: RunAgentInput, people: GridRow[]): Generator<Ev
   // ---------------------------------------------------------------- un pedido nuevo
   if (last?.role === "user") {
     const q = last.content.toLowerCase();
+    if (/c[oó]mo|mu[eé]strame|ens[eé][nñ]ame/.test(q)) {
+      // «¿Cómo…?»: un recorrido sobre la pantalla (nx_tour). Un backend real elegiría los pasos
+      // con el modelo, a partir de los [data-tour] que el agente manda en el contexto.
+      yield* text("Te lo muestro en la pantalla, paso a paso:");
+      yield* tool("nx_tour", {
+        steps: [
+          { target: '[data-tour="pendientes"]', title: "1 · Empieza por lo pendiente", text: "Cada tarjeta es un filtro listo: «Documentos faltantes» te deja solo a quienes les falta algo." },
+          { target: "#th-grid .nx-grid__ask", title: "2 · O dilo con tus palabras", text: "Escribe «en período de prueba con documentos faltantes» y la tabla se filtra sola." },
+          { target: "#th-grid .nx-grid__head", title: "3 · Selecciona a las personas", text: "La casilla de la cabecera selecciona todo lo filtrado; también puedes elegir una por una." },
+          { target: '[data-tour="lote"]', title: "4 · Pide los documentos", text: "Con personas seleccionadas aparece esta barra: «Pedir documentos» les escribe a todas." },
+          { target: '[data-tour="asistente"]', title: "5 · O pídemelo a mí", text: "Escribe «pide los documentos faltantes» y lo hago yo, con tu aprobación antes de enviar." },
+        ],
+      });
+      yield { type: "RUN_FINISHED", threadId, runId };
+      return;
+    }
     if (/document/.test(q)) {
       yield { type: "STEP_STARTED", stepName: "Entendiendo el pedido" };
       yield { type: "PAUSE", ms: 500 };
@@ -119,7 +135,7 @@ export function* agentRun(input: RunAgentInput, people: GridRow[]): Generator<Ev
       yield { type: "RUN_FINISHED", threadId, runId };
       return;
     }
-    yield* text("Puedo trabajar sobre el directorio que tienes abierto. Prueba con «Pide los documentos faltantes a las personas en período de prueba» o «¿Qué contratos vencen este mes?».");
+    yield* text("Puedo trabajar sobre el directorio que tienes abierto. Prueba con «Pide los documentos faltantes a las personas en período de prueba», «¿Qué contratos vencen este mes?» o «¿Cómo pido documentos a varias personas?».");
     yield { type: "RUN_FINISHED", threadId, runId };
     return;
   }
@@ -153,6 +169,8 @@ export function* agentRun(input: RunAgentInput, people: GridRow[]): Generator<Ev
     } else {
       yield* text("Entendido, no hago nada.");
     }
+  } else if ("nx_tour" in r) {
+    yield* text(r.nx_tour.completed === true ? "¡Eso es todo! Si quieres, pídeme que lo haga por ti." : "Cuando quieras retomamos el recorrido.");
   } else if ("nx_notify" in r) {
     if (r.nx_notify.undone === true) {
       yield* text("Deshecho: no hice nada.");

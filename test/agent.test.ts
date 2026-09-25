@@ -85,7 +85,7 @@ describe("<nx-agent>", () => {
     a.send("Hola");
     await until(() => !a.running);
     expect(inputs[0]).toMatchObject({ messages: [{ role: "user", content: "Hola" }], forwardedProps: {} });
-    expect(inputs[0].tools.map((t) => t.name)).toEqual(["nx_confirm", "nx_ask", "nx_notify", "nx_show"]);
+    expect(inputs[0].tools.map((t) => t.name)).toEqual(["nx_confirm", "nx_ask", "nx_notify", "nx_tour", "nx_show"]);
     expect(a.threadId).toBe("t1");
     expect(a.querySelector(".nx-agent__user")!.textContent).toBe("Hola");
     expect(a.querySelector("nx-ai-answer")!.textContent).toContain("Hola, ¿en qué te ayudo?");

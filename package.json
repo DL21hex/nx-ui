@@ -74,6 +74,10 @@
       "types": "./dist/types/components/survey/index.d.ts",
       "import": "./dist/survey.js"
     },
+    "./tour": {
+      "types": "./dist/types/components/tour/index.d.ts",
+      "import": "./dist/tour.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -103,7 +107,8 @@
     "./command.css": "./dist/command.css",
     "./explain.css": "./dist/explain.css",
     "./inbox.css": "./dist/inbox.css",
-    "./survey.css": "./dist/survey.css"
+    "./survey.css": "./dist/survey.css",
+    "./tour.css": "./dist/tour.css"
   },
   "sideEffects": [
     "*.css",

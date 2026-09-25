@@ -147,6 +147,12 @@ export const UI_TOOLS: AguiTool[] = [
     parameters: { type: "object", properties: { message: str, tone: { type: "string", enum: ["neutral", "success", "warning", "danger"] }, undo: { type: "boolean" } }, required: ["message"] },
   },
   {
+    name: "nx_tour",
+    description:
+      "Muestra un recorrido guiado sobre la pantalla: cada paso señala un elemento (target: selector CSS, idealmente uno de los [data-tour] del contexto) con un título y un texto. Úsalo para «muéstrame cómo…». Solo señala: no hace clic. Devuelve {completed, step}.",
+    parameters: { type: "object", properties: { steps: { type: "array", items: { type: "object", properties: { target: str, title: str, text: str }, required: ["title"] } } }, required: ["steps"] },
+  },
+  {
     name: "nx_show",
     description: "Muestra un componente de nx-ui en la conversación: {component, props} (BDUI).",
     parameters: { type: "object", properties: { component: str, props: { type: "object" } }, required: ["component"] },

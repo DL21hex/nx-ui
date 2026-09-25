@@ -22,6 +22,7 @@ import "../ai/index";
 import type { NxButton } from "../button/button";
 import "../button/index";
 import type { GridFilter } from "../grid/types";
+import { nxTour } from "../tour/tour";
 import { GRID_TOOLS, UI_TOOLS, applyPatch, parseAguiEvent, parseArgs } from "./logic";
 import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiMessage, AguiTool, AguiToolCall, RunAgentInput } from "./types";
 
@@ -43,6 +44,8 @@ export const AGENT_LABELS: AgentLabels = {
   unavailable: "Esa herramienta no está disponible aquí",
   context: "Viendo",
   empty: "Pídele algo sobre lo que tienes en pantalla.",
+  touring: "Te muestro en la pantalla",
+  tour: {},
 };
 
 const SPARK = '<path d="M9.94 14.06 5 19"/><path d="m14 4 1.27 3.73L19 9l-3.73 1.27L14 14l-1.27-3.73L9 9l3.73-1.27Z"/><path d="M5 3v4"/><path d="M3 5h4"/>';
@@ -233,7 +236,7 @@ export class NxAgent extends Base {
       state: this.#state,
       messages: this.#messages,
       tools: [...UI_TOOLS, ...(grid ? GRID_TOOLS : []), ...this.#tools],
-      context: [...(grid ? [this.#gridContext(grid)] : []), ...this.#context],
+      context: [...(grid ? [this.#gridContext(grid)] : []), ...this.#tourContext(), ...this.#context],
       forwardedProps: {},
     };
     // La app puede ajustar la entrada (contexto, props) justo antes de enviarla.
@@ -368,6 +371,14 @@ export class NxAgent extends Base {
     return [...UI_TOOLS, ...(this.#grid() ? GRID_TOOLS : []), ...this.#tools].some((t) => t.name === name);
   }
 
+  /** Lo que se puede señalar con `nx_tour`: los `[data-tour]` visibles de la página, con su nombre. */
+  #tourContext(): AguiContext[] {
+    const marks = [...document.querySelectorAll<HTMLElement>("[data-tour]")].filter((el) => el.getClientRects().length);
+    if (!marks.length) return [];
+    const name = (el: HTMLElement) => (el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 60);
+    return [{ description: "Elementos de la pantalla que nx_tour puede señalar (target → qué es)", value: JSON.stringify(marks.map((el) => ({ target: `[data-tour="${el.dataset.tour}"]`, name: name(el) }))) }];
+  }
+
   #execute(callId: string, name: string, args: Record<string, unknown>): void {
     this.#endSeg();
     const L = this.#labels;
@@ -381,6 +392,13 @@ export class NxAgent extends Base {
         return this.#askCard(args, reply);
       case "nx_notify":
         return this.#notify(args, reply);
+      case "nx_tour": {
+        const steps = Array.isArray(args.steps) ? (args.steps as { title?: unknown }[]) : [];
+        if (!steps.length) return reply(null, L.unavailable);
+        this.#line(`${L.touring} · ${steps.length} ${steps.length === 1 ? "paso" : "pasos"}`);
+        void nxTour(steps as never, L.tour).then((r) => reply(r));
+        return;
+      }
       case "nx_show": {
         const box = h("div", { class: "nx-agent__card nx-agent__show is-done" });
         this.#turn!.append(box);

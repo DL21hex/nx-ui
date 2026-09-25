@@ -1,0 +1,154 @@
+/* nxTour(): el recorrido guiado. Variable propia: --nx-tour-width (320px). */
+
+.nx-tour[popover] {
+  position: fixed;
+  inset: 0;
+  inline-size: auto;
+  block-size: auto;
+  max-inline-size: none;
+  max-block-size: none;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: none;
+  font-family: var(--nx-font-sans);
+}
+.nx-tour:popover-open {
+  display: block;
+}
+.nx-tour *,
+.nx-tour *::before {
+  box-sizing: border-box;
+}
+.nx-tour [hidden] {
+  display: none !important;
+}
+/* La luz: un recorte en una sombra enorme que oscurece todo lo demás. */
+.nx-tour__spot {
+  position: fixed;
+  border-radius: var(--nx-radius-lg);
+  box-shadow:
+    0 0 0 3px var(--nx-primary),
+    0 0 0 9999px var(--nx-backdrop);
+  pointer-events: none;
+  transition:
+    left 0.35s var(--nx-ease-out),
+    top 0.35s var(--nx-ease-out),
+    width 0.35s var(--nx-ease-out),
+    height 0.35s var(--nx-ease-out);
+  animation: nx-tour-pulse 1.8s ease-in-out infinite;
+}
+.nx-tour__card {
+  position: fixed;
+  inline-size: min(var(--nx-tour-width, 320px), 100vw - 16px);
+  padding: 16px 16px 12px;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  outline: none;
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-size: 13.5px;
+  line-height: 1.45;
+  transition:
+    left 0.35s var(--nx-ease-out),
+    top 0.35s var(--nx-ease-out);
+  &.is-in {
+    animation: nx-tour-in 0.3s var(--nx-ease-out);
+  }
+}
+.nx-tour__title {
+  margin: 0 24px 4px 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+.nx-tour__text {
+  margin: 0;
+  color: var(--nx-muted-foreground);
+}
+.nx-tour__x {
+  position: absolute;
+  inset: 8px 8px auto auto;
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-text-tertiary);
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+  & .nx-glyph,
+  & svg {
+    display: block;
+    inline-size: 14px;
+    block-size: 14px;
+  }
+}
+.nx-tour__foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 14px;
+}
+.nx-tour__count {
+  flex: 1;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-tour__btn {
+  block-size: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible,
+  .nx-tour__x:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.nx-tour__btn--primary {
+  border-color: transparent;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  &:hover {
+    background: color-mix(in oklch, var(--nx-primary) 88%, black);
+  }
+}
+@keyframes nx-tour-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@keyframes nx-tour-pulse {
+  50% {
+    box-shadow:
+      0 0 0 6px color-mix(in oklch, var(--nx-primary) 45%, transparent),
+      0 0 0 9999px var(--nx-backdrop);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-tour__spot,
+  .nx-tour__card {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-tour__spot {
+    outline: 3px solid Highlight;
+  }
+}
