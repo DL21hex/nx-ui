@@ -101,3 +101,29 @@ describe("nxConfirm(): solo confirma el botón de adentro", () => {
     await expect(p).resolves.toBe(false);
   });
 });
+
+describe("nxConfirm() con View Transitions", () => {
+  it("el aviso de apertura (que llega después) no cancela el pedido del impacto", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }));
+    (document as unknown as { startViewTransition?: (cb: () => void) => object }).startViewTransition = (cb) => {
+      const done = new Promise<void>((r) => setTimeout(() => (cb(), r())));
+      return { finished: done, ready: done, updateCallbackDone: done };
+    };
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_u: string, init: RequestInit) => {
+        signal = init.signal ?? undefined;
+        await sleep(15);
+        return new Response('{"type":"impact","label":"2 recepciones"}\n{"type":"done"}\n');
+      }),
+    );
+    document.body.innerHTML = `<button id="origen">Anular</button>`;
+    void nxConfirm({ heading: "Anular", impact: "/impacto", hold: 0, origin: document.getElementById("origen")! });
+    await sleep(40);
+    delete (document as { startViewTransition?: unknown }).startViewTransition;
+    expect(signal?.aborted).toBe(false);
+    expect(document.querySelectorAll(".nx-confirm__item")).toHaveLength(1);
+    expect(okButton().disabled).toBe(false);
+  });
+});

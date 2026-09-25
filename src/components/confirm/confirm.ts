@@ -74,7 +74,13 @@ export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
     status.textContent = L.loading;
     status.classList.add("is-loading");
     const ctrl = new AbortController();
-    dlg.addEventListener("nx-open-change", () => ctrl.abort(), { once: true });
+    // Solo al cerrar: con View Transitions el evento de apertura llega después de este punto.
+    const onClose = (e: Event) => {
+      if ((e as CustomEvent<{ open: boolean }>).detail?.open) return;
+      dlg.removeEventListener("nx-open-change", onClose);
+      ctrl.abort();
+    };
+    dlg.addEventListener("nx-open-change", onClose);
     let blocked = false;
     // Falla cerrado: si no se pudo saber qué pasa (error de red o del servidor, un evento `error`,
     // un stream cortado antes de `done`), no se puede confirmar. `failOpen: true` lo permite igual.
