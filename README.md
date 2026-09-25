@@ -18,6 +18,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-command>` + núcleo (ESM) | ≈ 6,6 KB |
 | `<nx-explain>` + núcleo (ESM) | ≈ 6,7 KB |
 | `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 8,6 KB |
+| `<nx-survey>` + núcleo (ESM) | ≈ 10,7 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 15,4 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 66 KB |
 
@@ -534,6 +535,45 @@ backend cuando llega `nx-inbox-commit`. Al vaciarla, dice cuántas se decidieron
 | Propiedades / atributos | `items` (`{id, title, subtitle?, requester?, amount?, currency?, date?, tags?, facts?, impact?, href?, data?}`), `undo` (ms, 7000; 0 = sin aviso), `require-reason`, `heading`, `locale`, `labels` · `active`, `selected`, `pending` |
 | Métodos | `decide(decisión, ids?, motivo?)` → `"commit"`, `"undo"` o `"cancel"` |
 | Eventos | `nx-inbox-decide` `{decision, ids, items, reason?}` (cancelable), `nx-inbox-commit`, `nx-inbox-undo`, `nx-inbox-active`, `nx-inbox-open` (cancelable) |
+
+## `<nx-survey>`
+
+Una encuesta que da gusto contestar. Una pregunta a la vez, con transiciones, y todo con el
+teclado: `A`, `B`, `C`… eligen, los números califican (`1` y `0` seguidos es un 10), `Enter`
+sigue. Una elección simple pasa sola a la siguiente.
+
+- **Siete tipos:** `choice` (con «Otra…» si hay `other`), `multi` (`min`/`max`), `scale` (con `nps`:
+  0–10 con los colores de detractores, pasivos y promotores), `rating` (estrellas o caras),
+  `text` (con contador), `rank` (ordenar arrastrando o con ↑↓) y `slider` (con monto, porcentaje o
+  unidad).
+- **Lógica condicional:** `when: {question, equals | in | lt | gt | answered}`. Un NPS bajo abre
+  «¿qué cambiarías?», uno alto «¿qué te gusta?». Lo contestado en una rama abandonada no se envía.
+- **Respuestas en el texto:** `{{area}}` en un título inserta la respuesta («¿Qué cambiarías en
+  Producción?»).
+- **Borrador:** con `storage`, se retoma donde se quedó.
+- **Resultados al terminar:** cómo respondieron los demás, con la respuesta propia marcada «Tú»:
+  barras, NPS con su reparto, histograma de calificaciones, promedio contra el propio valor en un
+  deslizador, posición promedio al ordenar y las palabras más repetidas en los textos.
+  `aggregateSurvey(preguntas, respuestas)` arma esos resultados, en el navegador o en un backend
+  en JavaScript.
+
+```html
+<nx-survey id="clima" heading="¿Cómo va todo?" action="/encuestas/clima" storage="clima-2026"></nx-survey>
+<script>
+  clima.questions = [
+    { id: "area", type: "choice", title: "¿En qué área trabajas?", required: true,
+      options: [{ value: "prod", label: "Producción", emoji: "🏭" }, { value: "adm", label: "Administración" }] },
+    { id: "nps", type: "scale", nps: true, title: "¿Recomendarías trabajar en {{area}}?" },
+    { id: "mejorar", type: "text", long: true, title: "¿Qué cambiarías?", when: { question: "nps", lt: 7 } },
+  ];
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `questions`, `answers`, `results`, `heading`, `description`, `action` (`POST {answers, ms}`; puede responder con los resultados), `storage`, `locale`, `labels` · `screen`, `current` |
+| Métodos | `start()`, `next()`, `back()`, `submit()`, `reset()` |
+| Eventos | `nx-survey-change` `{id, value, answers}`, `nx-survey-submit` `{answers, ms}` (cancelable) |
 
 ## Desarrollo
 

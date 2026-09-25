@@ -11,5 +11,6 @@ export * from "./components/agent/index";
 export * from "./components/command/index";
 export * from "./components/explain/index";
 export * from "./components/inbox/index";
+export * from "./components/survey/index";
 export { registerIcons, hasIcon } from "./core/icons";
 export { nxFormat, resolveLocale, type NxFormat } from "./core/locale";

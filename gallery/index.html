@@ -659,6 +659,97 @@ bandeja.addEventListener("nx-inbox-commit", (e) =&gt;
       </div>
     </template>
 
+    <!-- ================================================================ Encuesta -->
+    <template id="page-survey">
+      <p class="eyebrow">Componentes</p>
+      <h1>Encuesta <code class="tag">&lt;nx-survey&gt;</code></h1>
+      <p class="lead">
+        Una encuesta que da gusto contestar: una pregunta a la vez, con el teclado, con preguntas que aparecen según lo
+        que respondes y que usan tus respuestas. Al terminar ves cómo respondieron los demás, con tu respuesta resaltada.
+      </p>
+      <nx-survey id="survey-demo" heading="¿Cómo va todo por aquí?" description="Encuesta de clima laboral 2026. Es anónima: nadie ve tus respuestas por separado." storage="nx-ui-demo-encuesta" locale="es-CO"></nx-survey>
+      <div class="dlg-row">
+        <button type="button" class="dlg-plain" id="survey-reset">Contestar de nuevo</button>
+      </div>
+      <p class="sel-tip">
+        Prueba con el teclado: <kbd>A</kbd>, <kbd>B</kbd>… eligen, los números califican (<kbd>1</kbd><kbd>0</kbd> es un
+        10), <kbd>Enter</kbd> sigue. Da un NPS bajo y luego uno alto: la pregunta siguiente cambia. Recarga la página a
+        mitad de camino: te ofrece continuar donde quedaste.
+      </p>
+      <ol class="stage__log btn-events" id="survey-log"></ol>
+
+      <h2>Tipos de pregunta</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tipo</th><th>Cómo se contesta</th><th>Respuesta</th></tr></thead>
+          <tbody>
+            <tr><td><code>choice</code></td><td>Una opción (letra o clic); pasa sola a la siguiente. Con <code>other</code>, «Otra…» con texto.</td><td><code>"produccion"</code></td></tr>
+            <tr><td><code>multi</code></td><td>Varias, con <code>min</code> y <code>max</code>.</td><td><code>["horario", "salud"]</code></td></tr>
+            <tr><td><code>scale</code></td><td>Una fila de números (<code>min</code>–<code>max</code>, 1–5 por defecto). Con <code>nps</code>: 0–10 con los colores de detractores, pasivos y promotores.</td><td><code>9</code></td></tr>
+            <tr><td><code>rating</code></td><td>Estrellas, o caras con <code>icon: "face"</code>.</td><td><code>4</code></td></tr>
+            <tr><td><code>text</code></td><td>Una línea, o varias con <code>long</code>; <code>max</code> muestra el contador.</td><td><code>"Más capacitación"</code></td></tr>
+            <tr><td><code>rank</code></td><td>Ordenar arrastrando, o con <kbd>↑</kbd><kbd>↓</kbd> sobre una opción.</td><td><code>["salario", "ambiente", …]</code></td></tr>
+            <tr><td><code>slider</code></td><td>Un deslizador con el valor grande, con <code>format</code> (<code>money</code>, <code>percent</code>) o <code>unit</code>.</td><td><code>35</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Lógica y resultados</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td><code>when</code></td><td><code>{question, equals | in | lt | gt | answered}</code> (o una lista): la pregunta aparece solo si se cumple. Lo contestado en una rama que se abandona no se envía.</td></tr>
+            <tr><td><code>{{id}}</code></td><td>En un título, inserta la respuesta a otra pregunta: «¿Qué cambiarías en {{area}}?» → «… en Producción?».</td></tr>
+            <tr><td><code>action</code></td><td>Recibe <code>POST {answers, ms}</code> y puede responder con los resultados. O <code>nx-survey-submit</code> (cancelable) y <code>survey.results = …</code>.</td></tr>
+            <tr><td><code>aggregate()</code></td><td>Arma los resultados desde muchas respuestas (conteos, promedios, NPS, posición promedio, palabras más repetidas). Sirve en el navegador o en un backend en JavaScript.</td></tr>
+            <tr><td><code>storage</code></td><td>Guarda el borrador en <code>localStorage</code> y ofrece continuar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">Backend</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-survey id="clima" heading="¿Cómo va todo?" action="/encuestas/clima" storage="clima-2026"&gt;&lt;/nx-survey&gt;
+
+clima.questions = [
+  { id: "area", type: "choice", title: "¿En qué área trabajas?", required: true,
+    options: [{ value: "prod", label: "Producción", emoji: "🏭" }, { value: "adm", label: "Administración" }] },
+  { id: "nps", type: "scale", nps: true, title: "¿Recomendarías trabajar en {{area}}?" },
+  { id: "mejorar", type: "text", long: true, title: "¿Qué cambiarías?", when: { question: "nps", lt: 7 } },
+];</code></pre>
+        <pre role="tabpanel" hidden><code>import { aggregateSurvey } from "nx-ui/survey";
+
+app.post("/encuestas/clima", async (req, res) =&gt; {
+  await db.respuestas.insert(req.body.answers);
+  res.json({ results: aggregateSurvey(preguntas, await db.respuestas.all()) });
+});</code></pre>
+        <pre role="tabpanel" hidden><code>import { Survey } from "nx-ui/solid";
+
+&lt;Survey heading="¿Cómo va todo?" questions={preguntas} action="/encuestas/clima"
+  onSubmit={(e) =&gt; console.log(e.detail.answers)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>questions</code>, <code>answers</code>, <code>results</code></td><td>Las preguntas, las respuestas (se pueden precargar) y los resultados de todos.</td></tr>
+            <tr><td><code>heading</code>, <code>description</code></td><td>La portada (sin <code>heading</code> empieza directo).</td></tr>
+            <tr><td><code>action</code>, <code>storage</code>, <code>locale</code>, <code>labels</code></td><td>Dónde se envía, clave del borrador, formato de números y textos.</td></tr>
+            <tr><td><code>start()</code>, <code>next()</code>, <code>back()</code>, <code>submit()</code>, <code>reset()</code></td><td>Moverse desde código; <code>screen</code> y <code>current</code> dicen dónde va.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-survey-change</code> <code>{id, value, answers}</code>, <code>nx-survey-submit</code> <code>{answers, ms}</code> (cancelable).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

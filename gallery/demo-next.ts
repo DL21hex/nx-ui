@@ -3,7 +3,7 @@
  * servidor de desarrollo (vite.config.ts). No es parte de la librería.
  */
 import { foldText } from "../src/core/text";
-import type { CommandItem, ExplainEvent, InboxItem } from "../src/index";
+import type { CommandItem, ExplainEvent, InboxItem, SurveyAnswers, SurveyQuestion } from "../src/index";
 import { EMPLOYEES } from "./demo-data";
 import { purchaseRows } from "./demo-grid";
 
@@ -134,3 +134,76 @@ export const INBOX_IMPACT: Record<string, object[]> = {
     { type: "impact", icon: "wallet", label: "Presupuesto de Mantenimiento", detail: "queda en 58 %" },
   ],
 };
+
+// ---------------------------------------------------------------- encuesta
+
+
+export const SURVEY: SurveyQuestion[] = [
+  {
+    id: "area",
+    type: "choice",
+    title: "Para empezar, ¿en qué área trabajas?",
+    required: true,
+    options: [
+      { value: "produccion", label: "Producción", emoji: "🏭" },
+      { value: "logistica", label: "Logística", emoji: "🚚" },
+      { value: "mantenimiento", label: "Mantenimiento", emoji: "🔧" },
+      { value: "administracion", label: "Administración", emoji: "💼" },
+    ],
+  },
+  { id: "nps", type: "scale", nps: true, title: "¿Qué tan probable es que recomiendes trabajar en {{area}} a un amigo?", minLabel: "Nada probable", maxLabel: "Muy probable", required: true },
+  { id: "mejorar", type: "text", long: true, title: "Lamentamos oír eso. ¿Qué es lo primero que cambiarías en {{area}}?", description: "Tu respuesta es anónima.", max: 280, placeholder: "Escribe con confianza…", when: { question: "nps", lt: 7 } },
+  { id: "orgullo", type: "text", title: "¡Qué bien! ¿Qué es lo que más te gusta de {{area}}?", max: 140, when: { question: "nps", gt: 8 } },
+  { id: "animo", type: "rating", icon: "face", title: "¿Cómo te has sentido esta semana?" },
+  { id: "beneficios", type: "multi", title: "¿Cuáles beneficios valoras más?", description: "Elige hasta 3.", max: 3, other: true, options: [
+    { value: "horario", label: "Horario flexible", emoji: "⏰" },
+    { value: "salud", label: "Medicina prepagada", emoji: "🩺" },
+    { value: "estudio", label: "Auxilio de estudio", emoji: "🎓" },
+    { value: "casino", label: "Casino", emoji: "🍽️" },
+    { value: "transporte", label: "Ruta de transporte", emoji: "🚌" },
+  ] },
+  { id: "casino", type: "rating", title: "Califica la comida del casino", when: { question: "beneficios", in: ["casino"] } },
+  { id: "prioridades", type: "rank", title: "Ordena lo que más te importa para el próximo año", options: [
+    { value: "salario", label: "Salario", emoji: "💰" },
+    { value: "crecimiento", label: "Crecer en la empresa", emoji: "📈" },
+    { value: "ambiente", label: "Buen ambiente", emoji: "🤝" },
+    { value: "equilibrio", label: "Tiempo para mi familia", emoji: "🏡" },
+  ] },
+  { id: "traslado", type: "slider", title: "¿Cuánto tardas en llegar al trabajo?", min: 0, max: 120, step: 5, unit: "min", minLabel: "0 min", maxLabel: "2 h o más" },
+  { id: "capacitacion", type: "choice", title: "¿Te gustaría recibir capacitación este semestre?", options: [
+    { value: "si", label: "Sí, cuanto antes", emoji: "🙌" },
+    { value: "talvez", label: "Tal vez", emoji: "🤔" },
+    { value: "no", label: "No por ahora", emoji: "✋" },
+  ] },
+];
+
+/** Respuestas de ejemplo (con semilla: las mismas en cada carga) para los resultados de la demo. */
+export function surveyResponses(n = 240): SurveyAnswers[] {
+  let seed = 11;
+  const r = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+  const pick = <T,>(a: readonly T[], w?: number[]) => {
+    if (!w) return a[Math.floor(r() * a.length)];
+    let x = r() * w.reduce((s, v) => s + v, 0);
+    for (let i = 0; i < a.length; i++) if ((x -= w[i]) < 0) return a[i];
+    return a[a.length - 1];
+  };
+  const MEJORAR = ["Más capacitación en el ERP", "Los turnos de la noche son muy largos", "Mejor comunicación con los supervisores", "Más herramientas y repuestos a tiempo", "La comunicación entre turnos", "Capacitación y herramientas", "Menos horas extra"];
+  const ORGULLO = ["El equipo de trabajo", "Mi supervisor y el equipo", "El ambiente", "Aprendo mucho", "El equipo y la estabilidad"];
+  const out: SurveyAnswers[] = [];
+  for (let i = 0; i < n; i++) {
+    const area = pick(["produccion", "logistica", "mantenimiento", "administracion"], [5, 3, 2, 2]);
+    const nps = Math.min(10, Math.max(0, Math.round(7.4 + (r() + r() + r() - 1.5) * 4)));
+    const a: SurveyAnswers = { area, nps, animo: pick([1, 2, 3, 4, 5], [1, 2, 4, 6, 3]) };
+    if (nps < 7) a.mejorar = pick(MEJORAR);
+    if (nps > 8) a.orgullo = pick(ORGULLO);
+    const ben = ["horario", "salud", "estudio", "casino", "transporte"].filter(() => r() < 0.45).slice(0, 3);
+    if (ben.length) a.beneficios = ben;
+    if (ben.includes("casino")) a.casino = pick([1, 2, 3, 4, 5], [1, 2, 3, 5, 2]);
+    const pr = ["salario", "crecimiento", "ambiente", "equilibrio"];
+    a.prioridades = pr.map((p) => [p, r() + (p === "salario" ? 0.6 : p === "equilibrio" ? 0.35 : 0)] as const).sort((x, y) => y[1] - x[1]).map(([p]) => p);
+    a.traslado = Math.round((20 + r() * 50 + (area === "produccion" ? 10 : 0)) / 5) * 5;
+    a.capacitacion = pick(["si", "talvez", "no"], [6, 3, 1]);
+    out.push(a);
+  }
+  return out;
+}

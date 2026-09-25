@@ -56,14 +56,21 @@ export function frecency(use: { n: number; t: number } | undefined, now: number)
   return use ? use.n * 0.5 ** (Math.max(0, now - use.t) / HALF_LIFE) : 0;
 }
 
+/** De lo que más a lo que menos pesa; a igual peso, lo más reciente. Dos usos en el mismo
+ *  milisegundo empatan también en `t`: ahí decide el orden en que se anotaron (lo último anotado
+ *  queda al final del objeto, y se recorre al revés). */
+const byWeight = (a: { n: number; t: number }, b: { n: number; t: number }, now: number) => frecency(b, now) - frecency(a, now) || b.t - a.t;
+
 /** Anota un uso. Se guardan las `max` entradas que más pesan (sin sus submenús: se vuelven a leer). */
 export function recordUse(usage: CommandUsage, item: CommandItem, now: number, max = 30): CommandUsage {
   const key = itemKey(item);
   const prev = usage[key];
-  const next: CommandUsage = { ...usage, [key]: { n: (prev ? frecency(prev, now) : 0) + 1, t: now, item: { ...item, children: undefined } } };
-  const keys = Object.keys(next);
+  const next: CommandUsage = { ...usage };
+  delete next[key];
+  next[key] = { n: (prev ? frecency(prev, now) : 0) + 1, t: now, item: { ...item, children: undefined } };
+  const keys = Object.keys(next).reverse();
   if (keys.length <= max) return next;
-  keys.sort((a, b) => frecency(next[b], now) - frecency(next[a], now));
+  keys.sort((a, b) => byWeight(next[a], next[b], now));
   return Object.fromEntries(keys.slice(0, max).map((k) => [k, next[k]]));
 }
 
@@ -138,7 +145,8 @@ export function searchCommands(items: readonly CommandItem[], query: string, usa
 export function recentItems(usage: CommandUsage, items: readonly CommandItem[], now = Date.now(), max = 5): CommandItem[] {
   const current = new Map(items.map((i) => [itemKey(i), i]));
   return Object.entries(usage)
-    .sort((a, b) => frecency(b[1], now) - frecency(a[1], now))
+    .reverse()
+    .sort((a, b) => byWeight(a[1], b[1], now))
     .slice(0, max)
     .map(([k, u]) => current.get(k) ?? cleanItem(u.item))
     .filter((i): i is CommandItem => !!i);

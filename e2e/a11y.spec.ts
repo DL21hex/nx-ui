@@ -86,3 +86,13 @@ test("bandeja con un ítem bloqueado y el motivo del rechazo", async ({ page }) 
   await page.keyboard.press("r");
   await audit(page, ["#inbox-demo"]);
 });
+
+test("encuesta: una pregunta, la escala NPS y los resultados", async ({ page }) => {
+  await open(page, "#/survey");
+  const s = page.locator("#survey-demo");
+  await s.getByRole("button", { name: /Empezar|Continuar/ }).click();
+  await audit(page, ["#survey-demo"]);
+  await page.keyboard.press("a");
+  await expect(s.locator(".nx-survey__scale")).toBeVisible();
+  await audit(page, ["#survey-demo"]);
+});

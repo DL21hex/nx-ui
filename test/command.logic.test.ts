@@ -112,3 +112,14 @@ describe("menú, grupos y datos", () => {
     expect(matchesHotkey(k("k", { ctrlKey: true }), "none")).toBe(false);
   });
 });
+
+describe("recientes empatados", () => {
+  it("dos usos en el mismo milisegundo: primero el último que se anotó", () => {
+    let u = recordUse({}, { label: "Primero" }, NOW);
+    u = recordUse(u, { label: "Segundo" }, NOW);
+    expect(recentItems(u, [], NOW).map((i) => i.label)).toEqual(["Segundo", "Primero"]);
+    u = recordUse(u, { label: "Primero" }, NOW);
+    u = recordUse(u, { label: "Segundo" }, NOW);
+    expect(recentItems(u, [], NOW).map((i) => i.label)).toEqual(["Segundo", "Primero"]);
+  });
+});

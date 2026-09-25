@@ -212,3 +212,28 @@ describe("<nx-inbox>", () => {
     expect(el.undo).toBe(0);
   });
 });
+
+describe("<nx-inbox> y el impacto que llega tarde", () => {
+  it("si el impacto llega mientras se escribe el motivo, el texto y el foco se conservan", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    vi.stubGlobal("fetch", async () => {
+      await gate;
+      return new Response('{"type":"impact","label":"1 recepción"}\n{"type":"done"}');
+    });
+    const el = mount();
+    key(el, "j"); // OC-2310: su impacto viene del servidor
+    await sleep(200);
+    key(el, "r");
+    const ta = el.querySelector("textarea")!;
+    ta.value = "Sin papeles";
+    ta.setSelectionRange(3, 3);
+    release();
+    await sleep(20);
+    const now = el.querySelector("textarea")!;
+    expect(el.querySelector(".nx-inbox__impact")!.textContent).toContain("1 recepción");
+    expect(now.value).toBe("Sin papeles");
+    expect(document.activeElement).toBe(now);
+    expect(now.selectionStart).toBe(3);
+  });
+});

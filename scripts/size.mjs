@@ -32,6 +32,7 @@ const BUDGET = [
   ["dist/command.js", 7 * 1024, "command + núcleo (ESM)"],
   ["dist/explain.js", 7 * 1024, "explain + núcleo (ESM)"],
   ["dist/inbox.js", 9 * 1024, "inbox + toast + núcleo (ESM)"],
+  ["dist/survey.js", 11 * 1024, "survey + núcleo (ESM)"],
   ["dist/bdui.js", 1024, "adaptador BDUI"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -48,6 +49,7 @@ const BUDGET = [
   ["dist/command.css", 2 * 1024, "command (CSS)"],
   ["dist/explain.css", 2 * 1024, "explain (CSS)"],
   ["dist/inbox.css", 2.5 * 1024, "inbox (CSS)"],
+  ["dist/survey.css", 4 * 1024, "survey (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

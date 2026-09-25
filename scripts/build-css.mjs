@@ -19,6 +19,7 @@ const entries = {
   command: "src/components/command/command.css",
   explain: "src/components/explain/explain.css",
   inbox: "src/components/inbox/inbox.css",
+  survey: "src/components/survey/survey.css",
 };
 
 await build({

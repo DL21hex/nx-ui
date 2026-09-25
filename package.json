@@ -70,6 +70,10 @@
       "types": "./dist/types/components/inbox/index.d.ts",
       "import": "./dist/inbox.js"
     },
+    "./survey": {
+      "types": "./dist/types/components/survey/index.d.ts",
+      "import": "./dist/survey.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -98,7 +102,8 @@
     "./agent.css": "./dist/agent.css",
     "./command.css": "./dist/command.css",
     "./explain.css": "./dist/explain.css",
-    "./inbox.css": "./dist/inbox.css"
+    "./inbox.css": "./dist/inbox.css",
+    "./survey.css": "./dist/survey.css"
   },
   "sideEffects": [
     "*.css",

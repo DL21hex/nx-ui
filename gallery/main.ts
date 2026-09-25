@@ -3,11 +3,11 @@ import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
-import { registerIcons, type CaptureSchemaItem, type CommandItem, type MenuItem, type NxAiAnswer, type NxButton, type NxCommand, type NxDialog, type NxDocCapture, type GridRow, type NxAgent, type NxExplain, type NxGrid, type NxInbox, type NxSelect, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
+import { registerIcons, type CaptureSchemaItem, type CommandItem, type MenuItem, type NxAiAnswer, type NxButton, type NxCommand, type NxDialog, type NxDocCapture, type GridRow, type NxAgent, type NxExplain, type NxGrid, type NxInbox, type NxSelect, type NxSurvey, aggregateSurvey, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
-import { EXPLAIN, INBOX } from "./demo-next";
+import { EXPLAIN, INBOX, SURVEY, surveyResponses } from "./demo-next";
 
 registerIcons(lucide);
 
@@ -83,6 +83,7 @@ const NAV: MenuItem[] = [
   { id: "command", label: "Paleta de comandos", href: "#/command", icon: "circle-help", section: "Componentes", badge: "Nuevo" },
   { id: "explain", label: "Explicar cifras", href: "#/explain", icon: "trending-up", section: "Componentes", badge: "Nuevo" },
   { id: "inbox", label: "Bandeja", href: "#/inbox", icon: "inbox", section: "Componentes", badge: "Nuevo" },
+  { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
 nav.items = NAV;
@@ -100,6 +101,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/command": { template: "page-command", mount: mountCommandDemo },
   "#/explain": { template: "page-explain", mount: mountExplainDemo },
   "#/inbox": { template: "page-inbox", mount: mountInboxDemo },
+  "#/survey": { template: "page-survey", mount: mountSurveyDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 
@@ -929,4 +931,26 @@ function mountInboxDemo(root: HTMLElement) {
     const a = document.activeElement;
     if (!a || a === document.body || a === page) inbox.querySelector<HTMLElement>(".nx-inbox__list")?.focus({ preventScroll: true });
   });
+}
+
+// ---------------------------------------------------------------- demo de la encuesta
+
+function mountSurveyDemo(root: HTMLElement) {
+  const survey = root.querySelector<NxSurvey>("#survey-demo")!;
+  survey.questions = SURVEY;
+  const log = root.querySelector<HTMLOListElement>("#survey-log")!;
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 5) log.lastElementChild!.remove();
+  };
+  // Sin servidor: los resultados salen de 240 respuestas de ejemplo más la tuya.
+  const others = surveyResponses();
+  survey.addEventListener("nx-survey-change", (e) => add(`nx-survey-change → ${e.detail.id} = ${JSON.stringify(e.detail.value)}`));
+  survey.addEventListener("nx-survey-submit", (e) => {
+    add(`nx-survey-submit → ${Object.keys(e.detail.answers).length} respuestas en ${Math.round(e.detail.ms / 1000)} s`);
+    queueMicrotask(() => (survey.results = aggregateSurvey(SURVEY, [...others, e.detail.answers])));
+  });
+  root.querySelector("#survey-reset")!.addEventListener("click", () => survey.reset());
 }

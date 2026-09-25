@@ -378,6 +378,7 @@ export default defineConfig(({ command, mode }) => {
           command: "src/components/command/index.ts",
           explain: "src/components/explain/index.ts",
           inbox: "src/components/inbox/index.ts",
+          survey: "src/components/survey/index.ts",
           icons: "src/icons/index.ts",
           bdui: "src/bdui.ts",
         },

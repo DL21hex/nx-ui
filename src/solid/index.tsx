@@ -1,7 +1,7 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
- * `<Inbox>`), y `nxToast` / `nxConfirm`.
+ * `<Inbox>`, `<Survey>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -45,6 +45,9 @@ import type { ExplainEvent, ExplainLabels } from "../components/explain/types";
 import "../components/inbox/index";
 import type { NxInbox } from "../components/inbox/inbox";
 import type { InboxDecisionDetail, InboxItem, InboxLabels } from "../components/inbox/types";
+import "../components/survey/index";
+import type { NxSurvey } from "../components/survey/survey";
+import type { SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail } from "../components/survey/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -59,6 +62,7 @@ export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, G
 export type { NxCommand, CommandItem, CommandLabels, CommandSelectDetail };
 export type { NxExplain, ExplainEvent, ExplainLabels };
 export type { NxInbox, InboxDecisionDetail, InboxItem, InboxLabels };
+export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
 
@@ -66,7 +70,7 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -82,6 +86,9 @@ declare module "solid-js" {
       selected: string[] | undefined;
       tools: AguiTool[] | undefined;
       explanation: ExplainEvent[] | null | undefined;
+      questions: SurveyQuestionInput[] | undefined;
+      answers: SurveyAnswers | undefined;
+      results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
       active: string | undefined;
@@ -161,6 +168,8 @@ declare module "solid-js" {
       "nx-inbox-commit": CustomEvent<InboxDecisionDetail>;
       "nx-inbox-undo": CustomEvent<InboxDecisionDetail>;
       "nx-inbox-active": CustomEvent<{ id: string; item: InboxItem }>;
+      "nx-survey-submit": CustomEvent<SurveySubmitDetail>;
+      "nx-survey-change": CustomEvent<{ id: string; value: unknown; answers: SurveyAnswers }>;
     }
     interface IntrinsicElements {
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
@@ -174,6 +183,7 @@ declare module "solid-js" {
       "nx-command": HTMLAttributes<NxCommand>;
       "nx-explain": HTMLAttributes<NxExplain> & { endpoint?: string };
       "nx-inbox": HTMLAttributes<NxInbox> & { heading?: string };
+      "nx-survey": HTMLAttributes<NxSurvey> & { heading?: string };
     }
   }
 }
@@ -680,6 +690,41 @@ export function Inbox(props: InboxProps): JSX.Element {
       on:nx-inbox-commit={(e) => local.onCommit?.(e)}
       on:nx-inbox-undo={(e) => local.onUndo?.(e)}
       on:nx-inbox-active={(e) => local.onActive?.(e)}
+    />
+  );
+}
+
+export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmit" | "onChange"> {
+  questions: SurveyQuestionInput[];
+  heading?: string;
+  description?: string;
+  /** Recibe `POST {answers, ms}`; puede responder con los resultados. */
+  action?: string;
+  /** Clave de `localStorage` para el borrador. */
+  storage?: string;
+  results?: SurveyResults | null;
+  locale?: string;
+  labels?: Partial<SurveyLabels>;
+  /** Cancelable: no se envía a `action`. */
+  onSubmit?: (e: CustomEvent<SurveySubmitDetail>) => void;
+  onChange?: (e: CustomEvent<{ id: string; value: unknown; answers: SurveyAnswers }>) => void;
+}
+
+export function Survey(props: SurveyProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["questions", "heading", "description", "action", "storage", "results", "locale", "labels", "onSubmit", "onChange"]);
+  return (
+    <nx-survey
+      {...rest}
+      prop:questions={local.questions}
+      prop:results={local.results}
+      prop:labels={local.labels}
+      attr:heading={local.heading}
+      attr:description={local.description}
+      attr:action={local.action}
+      attr:storage={local.storage}
+      attr:locale={local.locale}
+      on:nx-survey-submit={(e) => local.onSubmit?.(e)}
+      on:nx-survey-change={(e) => local.onChange?.(e)}
     />
   );
 }

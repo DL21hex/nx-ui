@@ -574,7 +574,18 @@ export class NxInbox extends Base {
       href ? h("a", { class: "nx-inbox__open", href }, L.open, " →") : null,
       reject,
     ];
+    // Repintar (llega el impacto del servidor) no borra el motivo que se está escribiendo.
+    const old = d.querySelector("textarea");
+    const typing = old && document.activeElement === old;
     d.replaceChildren(...parts.filter((n): n is HTMLElement => n !== null));
+    const ta = d.querySelector("textarea");
+    if (old && ta) {
+      ta.value = old.value;
+      if (typing) {
+        ta.focus({ preventScroll: true });
+        ta.setSelectionRange(old.selectionStart, old.selectionEnd);
+      }
+    }
   }
 
   #paint(): void {
