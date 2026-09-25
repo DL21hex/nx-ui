@@ -1,0 +1,510 @@
+/*
+ * <nx-trend> y su popover «¿por qué?». Variables propias:
+ *   --nx-trend-1 … --nx-trend-8   colores de las series (paleta categórica validada para daltonismo,
+ *                                 en este orden, sobre --nx-card claro y oscuro)
+ *   --nx-trend-muted              la serie de referencia (`muted`: el año anterior)
+ *   --nx-trend-surface            el fondo sobre el que va (el anillo de los marcadores), --nx-card
+ */
+
+nx-trend,
+.nx-trend-why {
+  --nx-trend-1: light-dark(#2a78d6, #3987e5);
+  --nx-trend-2: light-dark(#eb6834, #d95926);
+  --nx-trend-3: light-dark(#1baf7a, #199e70);
+  --nx-trend-4: light-dark(#eda100, #c98500);
+  --nx-trend-5: light-dark(#e87ba4, #d55181);
+  --nx-trend-6: #008300;
+  --nx-trend-7: light-dark(#4a3aa7, #9085e9);
+  --nx-trend-8: light-dark(#e34948, #e66767);
+  --nx-trend-muted: light-dark(#8b919b, #6f747d);
+  & [data-slot="1"] { --c: var(--nx-trend-1); }
+  & [data-slot="2"] { --c: var(--nx-trend-2); }
+  & [data-slot="3"] { --c: var(--nx-trend-3); }
+  & [data-slot="4"] { --c: var(--nx-trend-4); }
+  & [data-slot="5"] { --c: var(--nx-trend-5); }
+  & [data-slot="6"] { --c: var(--nx-trend-6); }
+  & [data-slot="7"] { --c: var(--nx-trend-7); }
+  & [data-slot="8"] { --c: var(--nx-trend-8); }
+  & [data-slot="m"] { --c: var(--nx-trend-muted); }
+}
+
+nx-trend {
+  display: block;
+  min-inline-size: 0;
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  & [hidden] {
+    display: none !important;
+  }
+}
+
+.nx-trend__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-block-end: 10px;
+}
+.nx-trend__heading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+.nx-trend__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.nx-trend__key,
+.nx-trend__view,
+.nx-trend-why__close {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background-color var(--nx-motion-fast), color var(--nx-motion-fast);
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+.nx-trend__key[aria-pressed="false"] {
+  color: var(--nx-text-tertiary);
+  & .nx-trend__swatch {
+    opacity: 0.3;
+  }
+}
+.nx-trend__view {
+  margin-inline-start: auto;
+  border-color: var(--nx-border);
+  color: var(--nx-muted-foreground);
+}
+.nx-trend__swatch {
+  inline-size: 16px;
+  block-size: 12px;
+  flex: none;
+  overflow: visible;
+  fill: var(--c);
+  & .nx-trend__kl {
+    stroke: var(--c);
+    stroke-width: 2;
+  }
+}
+
+.nx-trend__plot {
+  position: relative;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+nx-trend[busy] .nx-trend__plot {
+  border-radius: var(--nx-radius-md);
+  background: linear-gradient(90deg, transparent 30%, var(--nx-hover) 50%, transparent 70%) 0 0 / 200% 100%, repeating-linear-gradient(transparent 0 47px, var(--nx-border-subtle) 47px 48px);
+  animation: nx-trend-shimmer 1.4s linear infinite;
+}
+.nx-trend__svg {
+  display: block;
+  overflow: visible;
+  font-family: inherit;
+}
+.nx-trend__grid,
+.nx-trend__base,
+.nx-trend__cross {
+  stroke: var(--nx-border-subtle);
+  shape-rendering: crispEdges;
+}
+.nx-trend__base,
+.nx-trend__cross {
+  stroke: var(--nx-border-strong);
+}
+.nx-trend__tick,
+.nx-trend__end,
+.nx-trend__empty {
+  fill: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-trend__end {
+  fill: var(--nx-muted-foreground);
+  font-weight: 600;
+}
+.nx-trend__empty {
+  font-size: 13px;
+}
+.nx-trend__line {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.nx-trend__mk,
+.nx-trend__bar,
+.nx-trend__pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.nx-trend__mk {
+  fill: var(--c);
+  stroke: var(--nx-trend-surface, var(--nx-card));
+  stroke-width: 2;
+  paint-order: stroke;
+  transition: scale var(--nx-motion-fast) var(--nx-ease-out);
+  &.is-on {
+    scale: 1.4;
+  }
+}
+[data-dense] .nx-trend__mk:not(.is-on) {
+  display: none;
+}
+.nx-trend__bar {
+  fill: var(--c);
+  transform-origin: 50% 100%;
+  transition: opacity var(--nx-motion-fast);
+  &[data-neg] {
+    transform-origin: 50% 0;
+  }
+}
+.nx-trend__svg[data-active] .nx-trend__bar:not(.is-on) {
+  opacity: 0.45;
+}
+.nx-trend__flag {
+  pointer-events: none;
+  & rect {
+    fill: var(--nx-popover);
+    stroke: var(--nx-border-strong);
+  }
+  & text {
+    fill: var(--nx-foreground);
+    font-size: 11px;
+    font-weight: 600;
+  }
+}
+.nx-trend__ring {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 2;
+}
+.nx-trend__pulse {
+  fill: var(--c);
+  opacity: 0;
+  animation: nx-trend-pulse 1.8s var(--nx-ease-out) infinite;
+}
+
+/* Entrada: la línea se dibuja, las barras crecen desde la base, lo demás aparece. */
+.is-enter {
+  & .nx-trend__line {
+    stroke-dasharray: 1;
+    animation: nx-trend-draw 0.9s var(--nx-ease-out) both;
+  }
+  & .nx-trend__mk {
+    animation: nx-trend-in 0.3s calc(0.15s + var(--d) * 55ms) both;
+  }
+  & .nx-trend__bar {
+    animation: nx-trend-grow 0.6s calc(var(--d) * 35ms) var(--nx-ease-out) both;
+  }
+  & .nx-trend__flag {
+    animation: nx-trend-in 0.4s 0.7s both;
+  }
+}
+
+/* Los puntos: botones de 24 px sobre las marcas, un solo Tab. */
+.nx-trend__points {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.nx-trend__pt {
+  position: absolute;
+  inline-size: 24px;
+  block-size: 24px;
+  margin: -12px 0 0 -12px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  &:focus-visible,
+  &[aria-expanded] {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: -3px;
+  }
+  &[aria-expanded] {
+    outline-color: var(--c);
+  }
+}
+
+.nx-trend__tip {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 2;
+  min-inline-size: 160px;
+  padding: 8px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-popover);
+  box-shadow: var(--nx-shadow-popover);
+  font-size: 12px;
+  pointer-events: none;
+  transition: transform 90ms ease-out;
+  & p {
+    margin: 0 0 4px;
+    font-weight: 600;
+  }
+  & em {
+    color: var(--nx-danger);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 600;
+  }
+}
+.nx-trend__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-block: 1px;
+  & strong {
+    font-variant-numeric: tabular-nums;
+  }
+  & span {
+    flex: 1;
+    color: var(--nx-muted-foreground);
+  }
+}
+.nx-trend__lk {
+  inline-size: 12px;
+  block-size: 2px;
+  border-radius: 1px;
+  background: var(--c);
+}
+.nx-trend__tip .nx-trend__tip-ask {
+  margin: 6px 0 0;
+  color: var(--nx-primary-ink);
+  font-size: 11px;
+}
+
+.nx-trend__summary {
+  margin: 8px 0 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+
+/* La tabla: para el lector de pantalla siempre; a la vista con «Ver como tabla». */
+nx-trend:not([data-table]) .nx-trend__table,
+.nx-trend__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+nx-trend[data-table] :is(.nx-trend__plot, .nx-trend__summary) {
+  display: none;
+}
+.nx-trend__table {
+  overflow: auto;
+  max-block-size: 420px;
+  & table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  & caption {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+  & th,
+  & td {
+    padding: 6px 10px;
+    border: 0;
+    border-block-end: 1px solid var(--nx-border-subtle);
+    background: none;
+    color: var(--nx-foreground);
+    text-align: end;
+    white-space: nowrap;
+  }
+  & th:first-child {
+    text-align: start;
+  }
+  & tr:last-child > * {
+    border-block-end: 0;
+  }
+  & thead th {
+    color: var(--nx-muted-foreground);
+    font-weight: 600;
+  }
+  & tbody th {
+    font-weight: 500;
+  }
+  & [data-flag] {
+    font-weight: 650;
+  }
+  & small {
+    color: var(--nx-danger);
+    font-size: 11px;
+  }
+}
+
+/* ---------------------------------------------------------------- el popover «¿por qué?» */
+
+.nx-trend-why {
+  box-sizing: border-box;
+  position: fixed;
+  inset: auto;
+  inline-size: min(400px, 100vw - 16px);
+  max-block-size: min(560px, 100dvh - 16px);
+  margin: 0;
+  padding: 12px 14px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  outline: none;
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  &:popover-open {
+    animation: nx-trend-in var(--nx-motion-base) var(--nx-ease-out);
+  }
+  & nx-ai-answer {
+    margin-block-start: 10px;
+  }
+}
+.nx-trend-why__head {
+  position: relative;
+  padding-inline-end: 30px;
+  & p {
+    margin: 0;
+  }
+}
+.nx-trend-why__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+}
+.nx-trend-why__value {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.nx-trend-why__delta {
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  & span {
+    margin-inline-start: 8px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+    font-weight: 600;
+  }
+}
+.nx-trend-why__close {
+  position: absolute;
+  inset: -4px -6px auto auto;
+  padding: 6px;
+  color: var(--nx-text-tertiary);
+  & svg {
+    inline-size: 14px;
+    block-size: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+}
+
+@keyframes nx-trend-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes nx-trend-grow {
+  from {
+    scale: 1 0;
+  }
+}
+@keyframes nx-trend-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nx-trend-pulse {
+  from {
+    opacity: 0.45;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 2.4;
+  }
+}
+@keyframes nx-trend-shimmer {
+  to {
+    background-position: -200% 0, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-trend *,
+  .nx-trend-why {
+    animation: none !important;
+    transition: none !important;
+  }
+  .nx-trend__pulse {
+    opacity: 0.2;
+    scale: 1.3;
+  }
+}
+
+@media (forced-colors: active) {
+  nx-trend svg {
+    forced-color-adjust: none;
+  }
+  .nx-trend__tick,
+  .nx-trend__end,
+  .nx-trend__flag text {
+    fill: CanvasText;
+  }
+  .nx-trend__grid,
+  .nx-trend__base,
+  .nx-trend__cross {
+    stroke: GrayText;
+  }
+  .nx-trend__pt:focus-visible,
+  .nx-trend__pt[aria-expanded] {
+    outline-color: Highlight;
+  }
+  .nx-trend__key[aria-pressed="false"] {
+    text-decoration: line-through;
+  }
+  .nx-trend__tip,
+  .nx-trend-why {
+    border-color: CanvasText;
+  }
+  .nx-trend__lk {
+    forced-color-adjust: none;
+  }
+}
