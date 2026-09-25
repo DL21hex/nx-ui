@@ -228,6 +228,7 @@ declare module "solid-js" {
     interface CustomEvents {
       "nx-sync-done": CustomEvent<{ op: SyncOp; data: unknown }>;
       "nx-sync-change": CustomEvent<SyncChangeDetail>;
+      "nx-sync-auth": CustomEvent<{ op: SyncOp }>;
       "nx-scan-error": CustomEvent<{ problem: ScanProblem }>;
       "nx-scan-count": CustomEvent<ScanCountDetail>;
       "nx-scan": CustomEvent<ScanDetail>;
@@ -1300,10 +1301,12 @@ export interface SyncProps extends Omit<JSX.HTMLAttributes<NxSync>, "onChange"> 
   onChange?: (e: CustomEvent<SyncChangeDetail>) => void;
   /** Una operación llegó al servidor: `{op, data}` con la respuesta. */
   onDone?: (e: CustomEvent<{ op: SyncOp; data: unknown }>) => void;
+  /** El servidor pidió iniciar sesión (401): la cola se detiene hasta `flush()` con la sesión nueva. */
+  onAuth?: (e: CustomEvent<{ op: SyncOp }>) => void;
 }
 
 export function Sync(props: SyncProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["ping", "fields", "locale", "labels", "onChange", "onDone"]);
+  const [local, rest] = splitProps(props, ["ping", "fields", "locale", "labels", "onChange", "onDone", "onAuth"]);
   return (
     <nx-sync
       {...rest}
@@ -1313,6 +1316,7 @@ export function Sync(props: SyncProps): JSX.Element {
       attr:locale={local.locale}
       on:nx-sync-change={(e) => local.onChange?.(e)}
       on:nx-sync-done={(e) => local.onDone?.(e)}
+      on:nx-sync-auth={(e) => local.onAuth?.(e)}
     />
   );
 }

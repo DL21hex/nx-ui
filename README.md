@@ -188,7 +188,10 @@ btn.run(async ({ log, progress }) => {
 
 **Desde el backend (BDUI):** con `stream="/url"` el clic pide la URL (`POST` por defecto) y pinta
 cada línea de la respuesta, NDJSON o `data:` de SSE: `{"msg":"Subiendo","progress":0.4}`,
-`{"msg":"…","level":"warn"}` y al final `{"ok":true}` o `{"ok":false,"msg":"…"}`.
+`{"msg":"…","level":"warn"}` y al final `{"ok":true}` o `{"ok":false,"msg":"…"}`. Ese resultado
+cierra la tarea aunque el servidor deje la conexión abierta. `stream` solo se pide si es del mismo
+origen (o de uno permitido con `allowOrigins`); si el botón sale de la página, la petición se
+cancela y una pulsación larga a medio camino no se completa.
 
 | | |
 |---|---|
@@ -216,6 +219,8 @@ sel.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", 
 - Resalta lo que coincidió y dice en qué columna («Cargo»).
 - `multiple` deja lo elegido como chips; elegir no cierra y Backspace quita el último.
 - Participa en un `<form>` nativo (`name`, `required`, `reset`).
+- `source`: mismo origen (o `allowOrigins`); lo que se escribe no sale hacia un tercero. Una
+  búsqueda nueva cancela la anterior.
 
 | | |
 |---|---|
@@ -246,10 +251,19 @@ El texto admite un Markdown mínimo (negrita, código, listas, párrafos) y nunc
 HTML. Un tipo de evento desconocido se ignora. Con otro transporte (WebSocket, SDK propio) la app
 entrega los eventos: `begin(q)`, `push(evento)`, `end()`.
 
+Lo que manda el modelo no es de fiar. `endpoint` solo puede ser del mismo origen (u otro permitido
+con `allowOrigins`). Con `method="GET"`, la pregunta va en `?q=` y el contexto en `?context=`
+(JSON). El enlace de una **acción** solo se pinta si es del mismo origen; si no, la acción queda
+como botón que emite `nx-ai-action`. Una **fuente** puede ser de otro sitio y lleva
+`rel="noopener noreferrer"`. Al llegar `done` o `error` se deja de leer y se suelta la conexión:
+lo que el servidor siga mandando no entra en la respuesta siguiente. La respuesta se escribe en
+su lugar (un bloque nuevo o el último que cambia), con `aria-busy` mientras llega y un solo aviso
+al lector de pantalla al terminar.
+
 | | |
 |---|---|
 | Propiedades / atributos | `endpoint`, `method`, `question`, `placeholder`, `suggestions`, `context`, `feedback`, `labels` |
-| Métodos | `ask(q)`, `stop()`, `begin(q)`, `push(evento)`, `end()`, `state`, `text` |
+| Métodos | `ask(q)`, `stop()`, `begin(q)`, `push(evento)`, `end()`, `state`, `busy`, `text` |
 | Eventos | `nx-ai-start`, `nx-ai-done` `{question, text, sources, status}`, `nx-ai-action` `{id, label, data}`, `nx-ai-feedback` `{value, question, text}` |
 
 ## `<nx-doc-capture>`
@@ -282,9 +296,15 @@ cap.schema = [
 cap.addEventListener("nx-capture-submit", (e) => guardar(e.detail.values)); // o action="/url"
 ```
 
+El archivo se valida antes de enviarlo, también al soltarlo: tipo según `accept` y tamaño según
+`max-size`, con el aviso en la zona para soltar (`labels.badType`, `labels.tooBig`). Lo que una
+persona corrigió o confirmó no lo pisa un evento que llegue después. Solo queda «por revisar» lo
+que tiene dónde verse (un campo o una celda del `schema`). `endpoint` y `action`: mismo origen (o
+`allowOrigins`).
+
 | | |
 |---|---|
-| Propiedades / atributos | `schema`, `endpoint`, `action`, `review-below`, `accept`, `labels` |
+| Propiedades / atributos | `schema`, `endpoint`, `action`, `review-below`, `accept`, `max-size` (bytes, 20 MB), `labels` |
 | Métodos | `extract(file)`, `begin()`, `push(evento)`, `end()`, `setCheck()`, `reset()`, `values`, `pending`, `state` |
 | Eventos | `nx-capture-file` (cancelable), `nx-capture-start`, `nx-capture-done`, `nx-capture-change`, `nx-capture-submit` (cancelable) |
 
@@ -311,8 +331,12 @@ Una tabla de datos que se explora sola:
   (Ctrl+Z, Ctrl+Y o Ctrl+Mayús+Z, y botones): cada edición, pegado o borrado es un paso; lo
   deshecho queda seleccionado, y la marca de «editada» se va si la celda vuelve a su valor original.
 - **Agrupación con subtotales** por cualquier columna de categorías o por mes.
-- **Exportar a .xlsx.** Es un Excel de verdad: números, montos y fechas como valores, cabecera fija
-  y autofiltro. El generador no tiene dependencias y se carga solo al exportar.
+- **Exportar a .xlsx.** Es un Excel de verdad: números, montos (con el símbolo de su moneda y
+  decimales solo si los hay) y fechas como valores, cabecera fija y autofiltro. El generador no
+  tiene dependencias y se carga solo al exportar. Con `source`, las filas se piden por bloques de
+  5.000 (hasta el tope de una hoja de Excel); si el servidor falla, `exportXlsx()` se rechaza.
+- **Copiar sin fórmulas.** Un texto que empieza con `=`, `+`, `-` o `@` se copia con un apóstrofo
+  delante (Excel lo pega como texto, no como fórmula); al pegarlo de vuelta en la tabla se quita.
 - **Columnas de IA.** Un nombre y un prompt; `ai-endpoint` recibe las filas visibles, en lotes, y
   responde celda por celda en streaming.
 - **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques
@@ -347,6 +371,12 @@ nl-endpoint  POST {q, columns} → {filters, unknown?}
 filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?} · {key, op:"contains", value}
 ```
 
+`source`, `ai-endpoint` y `nl-endpoint` solo se usan si son del mismo origen (o de uno permitido con
+`allowOrigins`): las filas no salen hacia un tercero. En modo servidor, «seleccionar las n» y las
+acciones en lote alcanzan solo las filas de la consulta actual; sin `row-key`, una marca por
+posición se pierde al cambiar de filtro u orden. Con filas nuevas (o otra consulta) las columnas de
+IA se vuelven a pedir, y lo que llegue tarde de la petición anterior se descarta.
+
 | | |
 |---|---|
 | Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
@@ -361,9 +391,14 @@ Cuatro formas de hacer lo que hoy se hace con un modal, cada una para su caso:
   vuelve a él (View Transitions; sin ellas, un fundido). En móvil es una hoja desde abajo que se
   arrastra para cerrar. Si hay cambios sin guardar, avisa dentro del propio diálogo en vez de
   perderlos: lo que cierra la persona pasa por el aviso; lo que cierra la app con `close()`, no.
+  Buscar o filtrar dentro de un `<nx-select>` o una `<nx-grid>` no cuenta como cambio (sus
+  controles de consulta llevan `data-nx-ephemeral`, y el diálogo ignora lo que venga de ahí);
+  elegir un valor (`nx-change`) o editar una celda (`nx-grid-change`) sí.
 - **B · Paneles apilados.** `mode="panel"`: cada nivel se apila sobre el anterior (pedido →
-  proveedor → factura), con migas para volver, y la página sigue a la vista. Con `url`, «atrás»
-  del navegador cierra el nivel de arriba.
+  proveedor → factura), con migas para volver, y la página sigue a la vista. Con `url` (del mismo
+  origen; si no, se ignora), «atrás» del navegador cierra el nivel de arriba. Al cerrarse quita su
+  entrada del historial solo si sigue siendo la de arriba: si la app navegó desde el diálogo, no
+  deshace esa navegación.
 - **C · Deshacer en vez de confirmar.** `nxToast({ message, undo: true })`: la acción ocurre al
   instante y se puede deshacer mientras corre el tiempo (con el botón o Ctrl+Z). La promesa dice
   si se deshizo; si no, la app confirma en el backend.
@@ -396,8 +431,8 @@ if (await nxConfirm({ heading: "Anular OC-2291", impact: "/compras/oc/2291/impac
 | | |
 |---|---|
 | `<nx-dialog>` | `heading`, `description`, `mode` (`modal` / `panel`), `size` (`sm` / `md` / `lg` / `full`), `persistent`, `url`, `open`, `dirty`, `labels` · `show(origen?)` → promesa con el valor, `close(valor?)` · `nx-dialog-close` (cancelable), `nx-open-change` |
-| `nxToast()` | `{message, tone?, undo?, action?, duration?}` → `"undo"`, `"action"`, `"timeout"` o `"dismiss"`. Se pausa con el mouse o el foco encima; al cerrar la página, los pendientes terminan como `"timeout"` |
-| `nxConfirm()` | `{heading, message?, impact?, body?, confirmLabel?, tone?, hold?}` → `true` / `false` |
+| `nxToast()` | `{message, tone?, undo?, action?, duration?, signal?}` → `"undo"`, `"action"`, `"timeout"` o `"dismiss"`. Abortar `signal` lo cierra con `"dismiss"`. Se pausa con el mouse o el foco encima; al cerrar la página, los pendientes terminan como `"timeout"`. Un `tone` desconocido es neutro; `duration` se acota a lo que acepta `setTimeout` (0 = hasta cerrarlo) |
+| `nxConfirm()` | `{heading, message?, impact?, body?, confirmLabel?, tone?, hold?, failOpen?}` → `true` / `false`. Con `impact` como URL (mismo origen o `allowOrigins`) falla cerrado: si hay un error de red o del servidor, un evento `error` o el stream termina sin `done`, no se puede confirmar; `failOpen: true` deja confirmar igual, con el aviso a la vista |
 | `<nx-button hold>` | Mantener pulsado (ms, 1000 por defecto) para activarlo; con teclado, mantener Enter o Espacio |
 
 ## `<nx-agent>` (AG-UI)
@@ -419,7 +454,7 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 | `nx_confirm` | Tarjeta de aprobación con impacto (`tone: "danger"` → mantener pulsado) | `{approved}` |
 | `nx_ask` | Pregunta con opciones o texto libre | `{answer}` |
 | `nx_notify` | Un resultado; con `undo`, espera 7 s por si la persona lo deshace | `{undone}` |
-| `nx_show` | Pinta un componente de nx-ui (nodo BDUI, con su lista de props permitidas) | `{shown}` |
+| `nx_show` | Pinta un componente de nx-ui (nodo BDUI, con su lista de props permitidas). Nunca pasan las props con URL (`endpoint`, `action`, `source`, `*Endpoint`…); con `show="Trend, Grid"`, solo esos componentes | `{shown}` |
 | `nx_tour` | Un recorrido guiado sobre la pantalla («¿cómo…?»): cada paso señala un elemento. Los `[data-tour]` visibles viajan en el contexto para que el modelo sepa qué puede señalar | `{completed, step}` |
 | `nx_grid_filter`, `nx_grid_select` | Filtra o selecciona en la tabla de `for` (y la tabla viaja como contexto) | `{rows}`, `{selected}` |
 
@@ -438,14 +473,15 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 
 | | |
 |---|---|
-| Propiedades / atributos | `endpoint`, `for`, `heading`, `placeholder`, `suggestions`, `tools`, `context`, `state`, `labels` · `messages`, `threadId`, `running` (lectura) |
+| Propiedades / atributos | `endpoint`, `for`, `heading`, `placeholder`, `suggestions`, `tools` (con `confirm`), `show` (componentes que `nx_show` puede pintar; sin él, todos los registrados), `context`, `state`, `labels` · `messages`, `threadId`, `running` (lectura) |
 | Métodos | `send(texto)`, `stop()`, `reset()` |
 | Eventos | `nx-agent-tool` (herramientas de la app), `nx-agent-send` (ajustar la entrada), `nx-agent-state`, `nx-agent-custom`, `nx-agent-event` (cada evento AG-UI) |
 
 **`nxTour(pasos)`** (`nx-ui/tour`) es el mismo recorrido, para cualquier app (una bienvenida, una
 novedad): ilumina el elemento de cada paso, oscurece lo demás y pone al lado una tarjeta con título
-y texto. `Enter`/`→` avanza, `←` vuelve y `Escape` termina; el foco vuelve a donde estaba. Solo
-muestra: no hace clic ni cambia nada.
+y texto. `Enter`/`→` avanza, `←` vuelve y `Escape` termina; el foco vuelve a donde estaba. Mientras
+se escribe en un campo de la página, las flechas y `Enter` son del campo. Solo muestra: no hace
+clic ni cambia nada.
 
 ```js
 import { nxTour } from "nx-ui/tour";
@@ -457,6 +493,15 @@ const { completed } = await nxTour([
 
 Nada que cambie datos ocurre en el navegador: las herramientas de la cabina solo muestran,
 preguntan y mueven la pantalla. Escribir datos lo hace el backend, después de la aprobación.
+
+Una herramienta de la app que cambia datos lleva `confirm: true` (o `{title, detail, tone:
+"danger"}`). El componente pide la aprobación con su propia tarjeta antes de despachar
+`nx-agent-tool`, sin depender de que el modelo llame a `nx_confirm`. Si se rechaza, el modelo
+recibe `{declined: true}`. `confirm` no viaja al backend. **El backend debe revalidar igual:** el
+historial (con `{approved: true}`) lo arma el navegador. Detener con una tarjeta pendiente la cierra
+(«Cancelado») y le responde `{cancelled: true}` a esa llamada, para que el historial siga siendo
+válido. `endpoint`: mismo origen (o `allowOrigins`). El hilo no es una región viva: mientras corre
+lleva `aria-busy`, y al terminar la respuesta se anuncia una vez.
 
 ## `<nx-command>`
 
@@ -474,8 +519,12 @@ fuentes, todas JSON:
 Busca sin tildes ni mayúsculas, en el nombre, la pista y las palabras clave, y también por
 iniciales («np» → «Nuevo pedido»). Aprende: lo que se elige seguido sube (cada semana pesa la
 mitad) y sin escribir nada aparece en «Recientes». Eso se recuerda en `localStorage`, solo en ese
-navegador (`storage="none"` lo desactiva). El elemento es la capa superior (Popover API):
-`<button popovertarget="cmd">` la abre sin JS.
+navegador (`storage="none"` lo desactiva). Se guarda solo `{id, label, href, icon, group}`, nunca
+`data` ni `hint`. Los registros de `source` no se guardan. Un reciente se muestra solo si sigue en
+la paleta (`items`, sus submenús o `menu`). En un equipo compartido, la clave debe incluir al
+usuario (`storage="nx-command:ana"`). `source` va al mismo origen (o `allowOrigins`). Un `hotkey`
+sin modificador (`"/"`) no se atiende mientras se escribe en un campo. El elemento es la capa
+superior (Popover API): `<button popovertarget="cmd">` la abre sin JS.
 
 ```html
 <button popovertarget="cmd">Buscar… ⌘K</button>
@@ -519,7 +568,9 @@ valores. Una cifra que se puede auditar con un clic es una cifra en la que se co
 
 `op` es `+` (por defecto), `-`, `×`, `÷` o `=` (subtotal, no suma); `format` es `money`, `number` o
 `percent` (0,19 = 19 %); `total` fija contra qué se comprueba (por defecto, la cifra). Sin servidor,
-`explanation` recibe los mismos eventos.
+`explanation` recibe los mismos eventos. `endpoint` y cada `explain` solo se piden si son del mismo
+origen (o de uno permitido con `allowOrigins`): un desglose que manda el backend no puede llevar el
+`context` a otro sitio. Los enlaces a otro sitio llevan `rel="noopener noreferrer"`.
 
 ```html
 Total: <nx-explain endpoint="/explicar/factura/10482">$ 10.601.500</nx-explain>
@@ -540,7 +591,9 @@ aprobaciones son cuarenta teclas, no cuarenta diálogos.
 
 Cada ítem muestra qué pasa si se aprueba (`impact`: una lista, o una URL con el protocolo de
 `nxConfirm`, `POST {id, data}`), y el backend puede bloquearlo con un motivo: queda con un candado
-y aprobar en lote lo omite y lo dice. Nada pregunta «¿está seguro?»: la decisión se aplica al
+y aprobar en lote lo omite y lo dice. Aprobar espera el impacto que aún no llegó, también el de los
+ítems de una selección que nunca se abrieron. Uno que no se pudo calcular (o de otro origen) queda
+«sin verificar» y no se aprueba. Nada pregunta «¿está seguro?»: la decisión se aplica al
 instante y se deshace mientras corre el tiempo (el aviso o `Ctrl`+`Z`). La app registra en el
 backend cuando llega `nx-inbox-commit`. Al vaciarla, dice cuántas se decidieron y en cuánto tiempo.
 
@@ -579,7 +632,10 @@ También con el teclado, sin anunciarlo en cada pregunta: `A`, `B`, `C`… elige
   «¿qué cambiarías?», uno alto «¿qué te gusta?». Lo contestado en una rama abandonada no se envía.
 - **Respuestas en el texto:** `{{area}}` en un título inserta la respuesta («¿Qué cambiarías en
   Producción?»).
-- **Borrador:** con `storage`, se retoma donde se quedó.
+- **Borrador:** con `storage`, se retoma donde se quedó. Las respuestas abiertas pueden ser
+  sensibles: en un equipo compartido, la clave debe incluir al usuario (`"clima-2026:ana"`). El
+  borrador (y `answers`) se valida contra las preguntas: lo de otra versión del cuestionario se
+  descarta. `action` va al mismo origen (o `allowOrigins`).
 - **Resultados al terminar:** cómo respondieron los demás, con la respuesta propia marcada «Tú»:
   barras, NPS con su reparto, histograma de calificaciones, promedio contra el propio valor en un
   deslizador, posición promedio al ordenar y las palabras más repetidas en los textos.
@@ -626,7 +682,9 @@ formateado al salir.
   `numberToWords(n, {currency})` hace lo mismo en el backend.
 - **Formulario:** `name`, `required`, validez nativa con mensaje (`valueMissing`, `badInput`,
   `rangeUnderflow`/`rangeOverflow`), `reset` y `<fieldset disabled>`. El valor va en formato de
-  máquina («1450000.5»).
+  máquina, sin exponente («1450000.5», «0.0000001»). Con un texto que no se entiende al salir
+  («1200x»), `value` es `null` y el formulario no envía nada hasta que se corrija (Escape vuelve a
+  lo confirmado). Desde mil billones no hay valor (`value = 1e21` queda `null`).
 
 ```html
 <label for="precio">Precio unitario</label>
@@ -654,7 +712,9 @@ las flechas mueven entre posiciones y columnas, `Espacio` suelta y `Escape` canc
 anunciado al lector de pantalla («Tarjeta OC-2291 levantada. Columna Aprobado, posición 2 de 5»).
 
 Nada espera al servidor: el movimiento se ve al instante y se deshace mientras corre el aviso (o con
-`Ctrl`+`Z`); la app registra en el backend cuando llega `nx-kanban-commit`. Una columna con `confirm`
+`Ctrl`+`Z`); la app registra en el backend cuando llega `nx-kanban-commit`. Si el tablero sale del DOM
+con un movimiento pendiente, se registra en ese momento y el aviso se cierra (el evento ya no sube
+hasta `document`: escúchelo en el elemento). Una columna con `confirm`
 pide confirmación con impacto antes de aceptar la tarjeta (el protocolo de `nxConfirm`, que se carga
 solo cuando hace falta; si se niega, la tarjeta vuelve). Una con `wip` se marca en rojo cuando se pasa
 de su límite («6/5») y lo avisa al llevarle una tarjeta. Cada columna muestra cuántas tarjetas tiene y
@@ -704,10 +764,14 @@ La máquina del tiempo de un registro: quién cambió qué y cuándo, y cómo es
   encuentra valores formateados.
 - **Revertir** un cambio que sigue vigente: `nx-history-revert` (cancelable), se aplica al instante
   con un evento que lo cuenta, se deshace desde el aviso (o Ctrl+Z) y, al acabar el tiempo,
-  `nx-history-commit`: ahí la app guarda.
+  `nx-history-commit`: ahí la app guarda. Deshacer no pisa un registro más nuevo que haya llegado
+  mientras tanto. Si el historial sale del DOM con una reversión pendiente, se registra en ese momento
+  (el evento ya no sube hasta `document`: escúchelo en el elemento).
 - **Notas** que aparecen al instante (`nx-history-comment`, cancelable).
-- **`source`:** una URL que devuelve `{events, record?, more?}`; al llegar al final de la línea pide
-  `?before=<id>` (la página anterior).
+- **`source`:** una URL http(s) del mismo origen (o de `allowOrigins`) que devuelve
+  `{events, record?, more?}`; al llegar al final de la línea pide `?before=<id>` (la página
+  anterior). Cambiarla empieza de cero: filtros, eventos y el `record` de la anterior (salvo uno
+  puesto por la app). Un `at` sin hora («2026-09-12») es ese día en la hora local.
 
 ```html
 <nx-history id="historia" heading="OC-2291" source="/compras/oc-2291/historial"></nx-history>
@@ -743,8 +807,9 @@ debajo, atajos y un calendario de dos meses.
   «hasta el 10 de abril», «15/03/2026 - 20/04/2026», «primer semestre», «semana 12», «en lo que va
   del año», «año fiscal» (con `fiscal-start`). Sin año, la más reciente que ya empezó (en
   septiembre, «Q4» es el del año pasado); en un rango, el extremo que no dice su año o su mes lo
-  toma del otro («15 al 20 de abril», «de noviembre a febrero»). «Último trimestre» es el anterior
-  completo; «últimos N días» cuenta hoy.
+  toma del otro («15 al 20 de abril», «de noviembre a febrero»); un día suelto que así quedaría
+  del lado equivocado es del mes de al lado («25 al 5»: del 25 del mes pasado al 5). «Último
+  trimestre» es el anterior completo; «últimos N días» cuenta hoy.
 - **Calendario** de dos meses (uno en móvil): clic en el inicio y en el fin con vista previa al
   pasar; teclado completo (flechas, `PageUp`/`PageDown`, con `Shift` un año, `Home`/`End`, `Enter`,
   `Escape` suelta un inicio a medias y luego cierra); `min`/`max` deshabilitan días; hoy marcado.
@@ -806,7 +871,9 @@ WhatsApp o una firma —con Ctrl/⌘+V sobre el formulario, en la zona «Pega aq
   `POST {text, fields}`; la respuesta (NDJSON o SSE) gana:
   `{"type":"field","name","value","confidence","source":{"start","end"},"hint"?}`,
   `{"type":"note","message"}`, `{"type":"done"}` / `{"type":"error"}`. Si falla, queda lo local y
-  se avisa.
+  se avisa. El `endpoint` es del mismo origen (o de uno de `allowOrigins()`).
+- **Lo que se pega en un control es de ese control:** en un campo (también una contraseña o una
+  casilla) no se intercepta ni se lee. Más de 50 000 caracteres no se leen: la zona lo dice.
 
 ```html
 <nx-paste-fill endpoint="/proveedores/leer" fields='[{"name":"monto","kind":"money"}]'>
@@ -832,7 +899,7 @@ Quién más está aquí, en vivo: los avatares de quienes tienen abierto el mism
 campo está cada quien y quién escribe, sin depender de ningún backend.
 
 - **Pila de avatares** sin la persona actual (`me`): color estable por persona (sale de su `id`,
-  igual en todas las pestañas), foto (`avatar`, si pasa `safeHref()`) o iniciales, punto verde si
+  igual en todas las pestañas), foto (`avatar`, solo `https:` o del mismo origen, sin referrer) o iniciales, punto verde si
   está activa y gris si no. Los que no caben van en «+N» (`max`); la lista completa dice qué hace
   cada quien: «viendo», «editando Monto», «inactivo hace 4 min».
 - **Campos compartidos:** con `for="id-del-formulario"`, los campos con `data-presence="clave"` (o
@@ -847,7 +914,8 @@ campo está cada quien y quién escribe, sin depender de ningún backend.
   despide al instante. Pestaña oculta o `idle` ms sin actividad (120000): inactivo.
 - **Transporte:** `channel` (`BroadcastChannel` entre pestañas), `source` (`EventSource`/SSE) o
   `push(evento)` con el tuyo. Lo que hace la persona actual sale en `nx-presence-local`: la app lo
-  manda a su servidor.
+  manda a su servidor. `source` es del mismo origen. El `user` de un evento no se verifica en el
+  navegador: el servidor debe sellarlo con la sesión de quien envía.
 - **Accesible:** la pila es una lista con nombres y actividad; entradas, salidas y ediciones se
   anuncian en una región `aria-live`, agrupadas («Ana y Héctor entraron») y como mucho una frase
   cada 3 s.
@@ -898,7 +966,8 @@ comparación de escenarios— es suyo.
   tabla oculta con los datos para el lector de pantalla).
 - **Cálculo:** con espera entre cambios (`debounce`, 250 ms); la petición anterior se cancela
   (`AbortController`) y una respuesta vieja nunca pisa a una nueva. Mientras llega, los resultados se
-  atenúan. Sin `endpoint`, el evento `nx-what-if-compute` le pide el cálculo a la app.
+  atenúan. Sin `endpoint` (o con uno de otro origen, que no se usa), el evento
+  `nx-what-if-compute` le pide el cálculo a la app.
 - **Escenarios:** «Guardar como…» guarda supuestos y resultados con un nombre. Una tabla compara la
   base, el escenario actual y los guardados lado a lado, con la mejor celda de cada métrica resaltada;
   desde el encabezado de cada columna se cargan, renombran y borran. La app los persiste
@@ -952,7 +1021,7 @@ en SVG propio y sin librerías, con la pregunta que importa a un clic: **«¿por
   `explain-endpoint` «¿Por qué sube Materia prima en agosto?» con `context: {series, point, previous,
   window, anomaly?}` y muestra la respuesta en streaming con sus pasos y citas (el protocolo de IA de
   la librería). Se puede repreguntar desde la caja. `<nx-ai-answer>` se carga con `import()` la
-  primera vez.
+  primera vez. `explain-endpoint` es del mismo origen (o de uno de `allowOrigins()`).
 - **Accesible:** el SVG es una imagen con un resumen generado («Ventas: sube 11 % de julio a agosto;
   máximo en agosto»), que también se ve debajo; cada punto es un botón (un solo Tab); la tabla
   equivalente está siempre para el lector de pantalla y a la vista con «Ver como tabla»; cada serie
@@ -999,7 +1068,7 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
   ese campo como siempre: nunca se roba lo que la persona teclea.
 - **Conteo** (`mode="count"`): cada lectura suma a una lista agrupada por código, con la cantidad
   editable (−/+ o escribiéndola), la última lectura resaltada, deshacer (el aviso o `Ctrl`+`Z`) y
-  totales. Con `source`, cada código nuevo trae su descripción: «Lámina HR 3 mm · esperadas 40 ·
+  totales. Con `source` (del mismo origen), cada código nuevo trae su descripción: «Lámina HR 3 mm · esperadas 40 ·
   contadas 38», con faltantes (rojo), completas (verde) y sobrantes (ámbar).
 - **Modo único** (por defecto): una lectura dispara `nx-scan` y la cámara se apaga.
 - **Sin cámara prendida de más:** se apaga al salir de la página, al ocultarse la pestaña o si el
@@ -1037,7 +1106,14 @@ intermitente.
   intentar nada, y la envía cuando hay conexión, **en orden**, de a una. Cerrar la pestaña o
   recargar no la pierde: lo que iba en camino vuelve a la fila.
 - **Reintentos** sin respuesta, 5xx, 429 o 408: toda la cola espera 1 s, 2 s, 4 s… (tope 60 s, ±20 %
-  al azar), o lo que diga `Retry-After` (segundos o fecha).
+  al azar), o lo que diga `Retry-After` (segundos o fecha) si es más, hasta 1 h. Tras 8 respuestas
+  de error del servidor (`maxAttempts`), «fallida»; sin red se espera lo que haga falta. Un 401
+  detiene la cola hasta que la app renueve la sesión (`configure({headers})`).
+- **Una pestaña envía:** con varias abiertas, `navigator.locks` elige una; las demás se enteran por
+  `BroadcastChannel`. `enqueue()` rechaza si no se pudo guardar en el dispositivo, y
+  `state.durable` dice si lo pendiente sobrevive a cerrar la página. Lo guardado va en claro: llama
+  a `nxSync.clear()` al cerrar sesión (usa una cola por usuario, `createSync({name})`), y acota con
+  `maxOps` y `ttl`.
 - **Conexión real:** `navigator.onLine`, los eventos `online`/`offline` y un `ping` opcional; con
   red «arriba» pero sin llegar al servidor, se sigue probando sin gastar intentos.
 - **Sin duplicados:** cada envío lleva `Idempotency-Key` con el id de la operación; si la respuesta
@@ -1071,10 +1147,10 @@ intermitente.
 
 | | |
 |---|---|
-| `nxSync` | `enqueue({id?, method, url, body?, label, group?})` → la operación guardada · `pending()` · `retry(id, body?)` · `resolve(id, body)` · `discard(id)` · `flush()` · `check()` · `clear()` · `subscribe(fn)` → dejar de escuchar (`fn(state, event)`) · `state` `{online, ops, pending, conflicts, failed, progress}` · `configure({ping, base, max, timeout, headers})` · `createSync()` para otra cola |
-| Propiedades / atributos | `ping`, `fields` (`[{key, label}]`, con `*` y `{hermano}`), `labels`, `locale` · `online`, `pending`, `conflicts`, `state`, `open` |
+| `nxSync` | `enqueue({id?, method, url, body?, label, group?})` → la operación guardada (rechaza si no se pudo guardar) · `pending()` · `retry(id, body?)` · `resolve(id, body)` · `discard(id)` · `flush()` · `check()` · `clear()` (al cerrar sesión) · `subscribe(fn)` → dejar de escuchar (`fn(state, event)`) · `state` `{online, ops, pending, conflicts, failed, progress, durable, auth}` · `configure({ping, base, max, timeout, headers, maxAttempts, maxRetryAfter, maxOps, ttl})` · `createSync({name})` para otra cola |
+| Propiedades / atributos | `ping` (mismo origen), `fields` (`[{key, label}]`, con `*` y `{hermano}`), `labels`, `locale` · `online`, `pending`, `conflicts`, `state`, `open` |
 | Métodos | `show()`, `hide()`, `toggle()`, `resolve(id)` |
-| Eventos | `nx-sync-change` `{online, pending, conflicts}`, `nx-sync-done` `{op, data}` |
+| Eventos | `nx-sync-change` `{online, pending, conflicts}`, `nx-sync-done` `{op, data}`, `nx-sync-auth` `{op}` |
 | Protocolo | cada envío con `Idempotency-Key`, `Content-Type: application/json` e `If-Match` al resolver · 409 `{server, local?, fields?, etag?, message?}` · otro 4xx `{message}` · `GET ping`: cualquier respuesta es conexión |
 
 ## Desarrollo
