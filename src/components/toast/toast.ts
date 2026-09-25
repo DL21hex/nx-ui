@@ -96,6 +96,8 @@ export class NxToaster extends Base {
         const r = (e.target as Element).closest<HTMLElement>("[data-r]")?.dataset.r as ToastResult | undefined;
         if (r) this.end(t, r);
       });
+      if (opts.signal?.aborted) return void resolve("dismiss");
+      opts.signal?.addEventListener("abort", () => this.end(t, "dismiss"), { once: true });
       this.#live.push(t);
       this.#list!.append(el);
       this.raise();

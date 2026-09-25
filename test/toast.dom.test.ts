@@ -40,3 +40,15 @@ describe("nxToast() robusto", () => {
     expect(result).toBe("timeout");
   });
 });
+
+describe("nxToast con signal", () => {
+  it("abortar la señal cierra el aviso con «dismiss»; una señal ya abortada ni lo muestra", async () => {
+    const ctrl = new AbortController();
+    const p = nxToast({ message: "Movida", undo: true, signal: ctrl.signal });
+    ctrl.abort();
+    await expect(p).resolves.toBe("dismiss");
+    const dead = new AbortController();
+    dead.abort();
+    await expect(nxToast({ message: "x", signal: dead.signal })).resolves.toBe("dismiss");
+  });
+});

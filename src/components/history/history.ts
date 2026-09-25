@@ -72,12 +72,11 @@ type Pending = { done: boolean; close: () => void };
 /** Lo que espera la búsqueda antes de volver a pintar: no se repinta todo por cada tecla. */
 const SEARCH_MS = 120;
 
-/** El aviso con deshacer y cómo cerrarlo desde aquí (`nxToast` no devuelve su nodo: es el último
- *  que agregó el toaster). Cerrarlo lo resuelve con `"dismiss"`, que vale como «hazlo». */
+/** El aviso con deshacer y cómo cerrarlo desde aquí (se resuelve con `"dismiss"`, que vale
+ *  como «hazlo»). */
 function undoToast(opts: Parameters<typeof nxToast>[0] & object): { result: ReturnType<typeof nxToast>; close: () => void } {
-  const result = nxToast(opts);
-  const li = document.querySelector("nx-toaster .nx-toaster__list")?.lastElementChild;
-  return { result, close: () => li?.querySelector<HTMLElement>('[data-r="dismiss"]')?.click() };
+  const ctrl = new AbortController();
+  return { result: nxToast({ ...opts, signal: ctrl.signal }), close: () => ctrl.abort() };
 }
 
 export class NxHistory extends Base {

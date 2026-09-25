@@ -64,12 +64,11 @@ type Pending = { detail: KanbanMoveDetail; done: boolean; close: () => void };
 
 let uid = 0;
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-/** El aviso con deshacer y cómo cerrarlo desde aquí (`nxToast` no devuelve su nodo: es el último
- *  que agregó el toaster). Cerrarlo lo resuelve con `"dismiss"`, que vale como «hazlo». */
+/** El aviso con deshacer y cómo cerrarlo desde aquí (se resuelve con `"dismiss"`, que vale
+ *  como «hazlo»). */
 function undoToast(opts: Parameters<typeof nxToast>[0] & object): { result: ReturnType<typeof nxToast>; close: () => void } {
-  const result = nxToast(opts);
-  const li = document.querySelector("nx-toaster .nx-toaster__list")?.lastElementChild;
-  return { result, close: () => li?.querySelector<HTMLElement>('[data-r="dismiss"]')?.click() };
+  const ctrl = new AbortController();
+  return { result: nxToast({ ...opts, signal: ctrl.signal }), close: () => ctrl.abort() };
 }
 const isCard = (n: Element) => n.classList.contains("nx-kanban__card");
 /** Cuánto desplazar cerca de un borde: negativo hacia el inicio, positivo hacia el final. */
