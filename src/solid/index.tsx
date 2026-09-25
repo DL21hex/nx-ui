@@ -2,7 +2,7 @@
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
- * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`), y `nxToast` / `nxConfirm`.
+ * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -70,6 +70,9 @@ import type { WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels
 import "../components/trend/index";
 import type { NxTrend } from "../components/trend/trend";
 import type { TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, TrendWhyDetail } from "../components/trend/types";
+import "../components/scan/index";
+import type { NxScan } from "../components/scan/scan";
+import type { ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMode, ScanProblem, ScanWedge } from "../components/scan/types";
 import "../components/date-range/index";
 import type { NxDateRange } from "../components/date-range/date-range";
 import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
@@ -95,6 +98,7 @@ export type { NxPasteFill, PasteFieldInput, PasteFillDoneDetail, PasteFillLabels
 export type { NxPresence, PresenceEvent, PresenceLabels, PresenceState, PresenceUser };
 export type { NxWhatIf, WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfSaveDetail, WhatIfScenario, WhatIfSeries, WhatIfValues };
 export type { NxTrend, TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, TrendWhyDetail };
+export type { NxScan, ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMode, ScanProblem, ScanWedge };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -102,6 +106,7 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      formats: string[] | undefined;
       anomalies: TrendAnomaly[] | undefined;
       values: WhatIfValues | undefined;
       scenarios: WhatIfScenario[] | undefined;
@@ -109,8 +114,8 @@ declare module "solid-js" {
       outputs: WhatIfMetric[] | undefined;
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
-      items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | undefined;
+      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -136,6 +141,7 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      wedge: ScanWedge | undefined;
       "explain-endpoint": string | undefined;
       detect: string | undefined;
       kind: TrendKind | undefined;
@@ -166,7 +172,7 @@ declare module "solid-js" {
       locale: string | undefined;
       heading: string | undefined;
       description: string | undefined;
-      mode: DialogMode | undefined;
+      mode: DialogMode | ScanMode | undefined;
       size: DialogSize | undefined;
       url: string | undefined;
       hold: string | undefined;
@@ -193,6 +199,8 @@ declare module "solid-js" {
       "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
+      autostart: boolean;
+      muted: boolean;
       collapsed: boolean;
       collapsible: boolean;
       "auto-collapse": boolean;
@@ -212,6 +220,9 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-scan-error": CustomEvent<{ problem: ScanProblem }>;
+      "nx-scan-count": CustomEvent<ScanCountDetail>;
+      "nx-scan": CustomEvent<ScanDetail>;
       "nx-trend-toggle": CustomEvent<{ id: string; visible: boolean }>;
       "nx-trend-why": CustomEvent<TrendWhyDetail>;
       "nx-what-if-change": CustomEvent<WhatIfChangeDetail>;
@@ -260,6 +271,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-scan": HTMLAttributes<NxScan> & { source?: string };
       "nx-trend": HTMLAttributes<NxTrend> & { heading?: string };
       "nx-what-if": HTMLAttributes<NxWhatIf> & { heading?: string; endpoint?: string };
       "nx-presence": HTMLAttributes<NxPresence> & { channel?: string; source?: string; for?: string };
@@ -1224,6 +1236,52 @@ export function Trend(props: TrendProps): JSX.Element {
       bool:busy={!!local.busy}
       on:nx-trend-why={(e) => local.onWhy?.(e)}
       on:nx-trend-toggle={(e) => local.onToggle?.(e)}
+    />
+  );
+}
+
+export interface ScanProps extends Omit<JSX.HTMLAttributes<NxScan>, "onError"> {
+  /** `single` (por defecto): una lectura y la cámara se apaga. `count`: cada lectura suma a la lista. */
+  mode?: ScanMode;
+  /** `["ean_13", "code_128", "qr_code"]`… Por defecto, los de inventario y QR. */
+  formats?: string[];
+  /** URL que describe un código: se le agrega el código (o reemplaza `{code}`). Responde `{code, name, unit?, expected?}`. */
+  source?: string;
+  /** Las líneas del conteo (se pueden precargar con `expected` y `qty: 0`). */
+  items?: ScanItem[];
+  /** Sin el «bip» al leer. */
+  muted?: boolean;
+  /** Abre la cámara al montarse. */
+  autostart?: boolean;
+  /** Dónde se escucha la pistola lectora: `page` (por defecto), `field` u `off`. */
+  wedge?: ScanWedge;
+  locale?: string;
+  labels?: Partial<ScanLabels>;
+  /** Cada lectura: `{code, format, via}`. Cancelable (en el conteo, no se suma). */
+  onScan?: (e: CustomEvent<ScanDetail>) => void;
+  /** La lista después de cada cambio: `{items}`. */
+  onCount?: (e: CustomEvent<ScanCountDetail>) => void;
+  /** Sin cámara: `{problem}`. */
+  onError?: (e: CustomEvent<{ problem: ScanProblem }>) => void;
+}
+
+export function Scan(props: ScanProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["mode", "formats", "source", "items", "muted", "autostart", "wedge", "locale", "labels", "onScan", "onCount", "onError"]);
+  return (
+    <nx-scan
+      {...rest}
+      prop:formats={local.formats}
+      prop:items={local.items}
+      prop:labels={local.labels}
+      attr:mode={local.mode}
+      attr:source={local.source}
+      attr:wedge={local.wedge}
+      attr:locale={local.locale}
+      bool:muted={!!local.muted}
+      bool:autostart={!!local.autostart}
+      on:nx-scan={(e) => local.onScan?.(e)}
+      on:nx-scan-count={(e) => local.onCount?.(e)}
+      on:nx-scan-error={(e) => local.onError?.(e)}
     />
   );
 }

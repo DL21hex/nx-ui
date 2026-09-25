@@ -9,6 +9,8 @@ import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
 import { EXPLAIN, INBOX, SURVEY, surveyResponses } from "./demo-next";
+import { mountScanDemo } from "./demo-scan";
+import "./pages/scan.css";
 import { mountTrendDemo } from "./demo-trend";
 import "./pages/trend.css";
 import { mountWhatIfDemo } from "./demo-what-if";
@@ -106,6 +108,7 @@ const NAV: MenuItem[] = [
   { id: "presence", label: "Presencia", href: "#/presence", icon: "users", section: "Componentes", badge: "Nuevo" },
   { id: "what-if", label: "Simulador", href: "#/what-if", icon: "trending-up", section: "Componentes", badge: "Nuevo" },
   { id: "trend", label: "Tendencias", href: "#/trend", icon: "chart-column", section: "Componentes", badge: "Nuevo" },
+  { id: "scan", label: "Escanear", href: "#/scan", icon: "package", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -125,6 +128,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/explain": { template: "page-explain", mount: mountExplainDemo },
   "#/inbox": { template: "page-inbox", mount: mountInboxDemo },
   "#/survey": { template: "page-survey", mount: mountSurveyDemo },
+  "#/scan": { template: "page-scan", mount: mountScanDemo },
   "#/trend": { template: "page-trend", mount: mountTrendDemo },
   "#/what-if": { template: "page-what-if", mount: mountWhatIfDemo },
   "#/presence": { template: "page-presence", mount: mountPresenceDemo },

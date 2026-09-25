@@ -42,6 +42,7 @@ const BUDGET = [
   ["dist/presence.js", 7.5 * 1024, "presence + núcleo (ESM)"],
   ["dist/what-if.js", 10 * 1024, "what-if + núcleo (ESM)"],
   ["dist/trend.js", 10 * 1024, "trend + núcleo (ESM; nx-ai-answer se carga aparte)"],
+  ["dist/scan.js", 12.5 * 1024, "scan + núcleo (ESM; el toast se carga aparte)"],
   ["dist/bdui.js", 1.25 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -68,6 +69,7 @@ const BUDGET = [
   ["dist/presence.css", 2.25 * 1024, "presence (CSS)"],
   ["dist/what-if.css", 3 * 1024, "what-if (CSS)"],
   ["dist/trend.css", 3 * 1024, "trend (CSS)"],
+  ["dist/scan.css", 3.5 * 1024, "scan (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

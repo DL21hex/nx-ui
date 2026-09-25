@@ -32,6 +32,7 @@ const registry = new Map<string, Entry>([
   ["Presence", { tag: "nx-presence", props: ["me", "channel", "source", "for", "idle", "max", "labels"] }],
   ["WhatIf", { tag: "nx-what-if", props: ["inputs", "outputs", "series", "scenarios", "values", "endpoint", "debounce", "heading", "locale", "labels"] }],
   ["Trend", { tag: "nx-trend", props: ["series", "anomalies", "heading", "kind", "format", "currency", "height", "detect", "explainEndpoint", "busy", "locale", "labels"] }],
+  ["Scan", { tag: "nx-scan", props: ["mode", "formats", "source", "muted", "autostart", "wedge", "items", "labels", "locale"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

@@ -110,6 +110,10 @@
       "types": "./dist/types/components/trend/index.d.ts",
       "import": "./dist/trend.js"
     },
+    "./scan": {
+      "types": "./dist/types/components/scan/index.d.ts",
+      "import": "./dist/scan.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -141,6 +145,7 @@
     "./inbox.css": "./dist/inbox.css",
     "./survey.css": "./dist/survey.css",
     "./tour.css": "./dist/tour.css",
+    "./scan.css": "./dist/scan.css",
     "./trend.css": "./dist/trend.css",
     "./what-if.css": "./dist/what-if.css",
     "./presence.css": "./dist/presence.css",

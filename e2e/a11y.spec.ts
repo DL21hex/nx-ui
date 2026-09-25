@@ -247,3 +247,30 @@ test("tendencias: gráfico, tooltip, popover con la respuesta y tabla", async ({
   await page.locator("#trend-cost").getByRole("button", { name: "Ver como tabla" }).click();
   await audit(page, ["#trend-cost"]);
 });
+
+test("escáner: sin cámara, contando con faltantes y sobrantes, y con la cámara activa", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as Record<string, unknown>).BarcodeDetector = class {
+      async detect() {
+        return [];
+      }
+    };
+    if (navigator.mediaDevices)
+      navigator.mediaDevices.getUserMedia = async () => {
+        const c = document.createElement("canvas");
+        c.getContext("2d")!.fillRect(0, 0, 10, 10);
+        return c.captureStream(5);
+      };
+  });
+  await open(page, "#/scan");
+  await audit(page, ["#scan-count", "#scan-single"]);
+  for (const name of ["Lámina HR 3 mm 4×8", 'Disco de corte 7"', "Etiqueta de lote"]) await page.getByRole("button", { name: `Simular la lectura de ${name}` }).click();
+  await expect(page.locator('#scan-count .nx-scan__item[data-status="over"]')).toBeVisible();
+  await page.locator("#scan-single .nx-scan__input").fill("7707123450042");
+  await page.locator("#scan-single .nx-scan__input").press("Enter");
+  await expect(page.locator("#scan-single .nx-scan__product")).toHaveText(/Soldadura/);
+  await audit(page, ["#scan-count", "#scan-single", ".scan-sim"]);
+  await page.locator("#scan-count").getByRole("button", { name: "Activar cámara" }).click();
+  await expect(page.locator("#scan-count .nx-scan__viewer")).toHaveAttribute("data-state", "live");
+  await audit(page, ["#scan-count"]);
+});

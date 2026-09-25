@@ -978,6 +978,53 @@ en SVG propio y sin librerías, con la pregunta que importa a un clic: **«¿por
 | Eventos | `nx-trend-why` `{question, series, point, previous, window, anomaly?}` (cancelable: no se abre el popover), `nx-trend-toggle` `{id, visible}` |
 | Funciones | `detectAnomalies(serie, umbral?, ventana?)`, `niceTicks(min, max)`, `periodLabel(x, locale, estilo)`, `summarizeTrend(series, anomalías, labels, locale)`, `trendQuestion(…)`, `trendContext(…)` |
 
+## `<nx-scan>`
+
+Escanear códigos de barras y QR con la cámara, para inventario y recepción. Abre la cámara trasera
+(`getUserMedia`) y lee con `BarcodeDetector` los `formats` pedidos: un recuadro guía con una línea que
+barre, linterna si la cámara la tiene (`torch`), cambio de cámara, y al leer vibra, suena un «bip»
+(desactivable) y el visor destella con un recuadro sobre el código. El mismo código no vuelve a
+contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
+
+- **Sin cámara también sirve.** Sin `BarcodeDetector` (Firefox, Safari de escritorio, Chrome en
+  Windows/Linux), sin permiso, sin HTTPS o sin cámara, lo dice en el visor y quedan: el campo para
+  escribir el código (`12*7707123450011` suma 12), la **pistola lectora USB** y **leer desde una foto**
+  (si hay detector).
+- **Pistola lectora.** Las pistolas «teclean» el código y un Enter. Una ráfaga así (menos de 60 ms
+  entre teclas, 40 en promedio) se toma como lectura en cualquier parte de la página, aunque el foco
+  no esté en el campo, y su Enter no activa el botón enfocado. Con el foco en otro campo, escribe en
+  ese campo como siempre: nunca se roba lo que la persona teclea.
+- **Conteo** (`mode="count"`): cada lectura suma a una lista agrupada por código, con la cantidad
+  editable (−/+ o escribiéndola), la última lectura resaltada, deshacer (el aviso o `Ctrl`+`Z`) y
+  totales. Con `source`, cada código nuevo trae su descripción: «Lámina HR 3 mm · esperadas 40 ·
+  contadas 38», con faltantes (rojo), completas (verde) y sobrantes (ámbar).
+- **Modo único** (por defecto): una lectura dispara `nx-scan` y la cámara se apaga.
+- **Sin cámara prendida de más:** se apaga al salir de la página, al ocultarse la pestaña o si el
+  componente queda fuera de la pantalla, y vuelve sola.
+- Todo se usa sin cámara y con teclado; cada lectura se anuncia (`aria-live`).
+
+```html
+<nx-scan id="recepcion" mode="count" source="/inventario/producto?code=" formats="ean_13,code_128,qr_code"></nx-scan>
+<script>
+  // Las líneas de la orden: lo que falta se ve desde el comienzo.
+  recepcion.items = [{ code: "7707123450011", name: "Lámina HR 3 mm", unit: "und", expected: 40, qty: 0 }];
+  recepcion.addEventListener("nx-scan-count", (e) => guardarBorrador(e.detail.items));
+</script>
+
+<nx-scan id="buscar"></nx-scan>
+<script>
+  buscar.addEventListener("nx-scan", (e) => abrirProducto(e.detail.code)); // {code, format, via}
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `mode` (`single`, `count`), `formats` (lista con comas o JSON; `ean_13`, `ean_8`, `upc_a`, `upc_e`, `code_128`, `code_39`, `code_93`, `codabar`, `itf`, `qr_code`, `data_matrix`, `pdf417`, `aztec`), `source` (URL + código, o con `{code}`), `items` (`{code, qty, name?, unit?, expected?, format?}`), `muted`, `autostart`, `wedge` (`page`, `field`, `off`), `locale`, `labels` · `state`, `problem` (solo lectura) |
+| Métodos | `start()`, `stop()`, `add(código, cantidad?)`, `undo()`, `clear()`, `focus()` |
+| Eventos | `nx-scan` `{code, format, via}` (cancelable; `via`: `camera`, `photo`, `manual`, `wedge`, `api`), `nx-scan-count` `{items}`, `nx-scan-error` `{problem}` (`nodetector`, `nocamera`, `insecure`, `denied`, `busy`, `failed`) |
+| `source` | `GET` → `{code, name, unit?, expected?}`; 404 si no existe («Código sin registrar»). Una vez por código |
+| Funciones | `wedgeKey(estado, tecla, ms)` (la detección de la pistola, sin DOM), `gtinValid(código)`, `scanTotals(items)`, `scanItemStatus(item)`, `parseScanEntry(texto)` |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos
