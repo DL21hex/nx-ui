@@ -5,22 +5,22 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 
 | Paquete | min + gzip |
 |---|---|
-| `<nx-sidemenu>` + núcleo (ESM) | ≈ 5,8 KB |
-| `<nx-button>` + núcleo (ESM) | ≈ 4,1 KB |
-| `<nx-select>` + núcleo (ESM) | ≈ 5,7 KB |
-| `<nx-ai-answer>` + núcleo (ESM) | ≈ 5,6 KB |
-| `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 9,4 KB |
-| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,3 KB, se carga al exportar | ≈ 18 KB |
-| `<nx-dialog>` + núcleo (ESM) | ≈ 4,2 KB |
-| `nxToast()` + núcleo (ESM) | ≈ 2,2 KB |
-| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 8,6 KB |
-| `<nx-agent>` + IA + botón + BDUI + recorrido + núcleo (ESM) | ≈ 15,8 KB |
-| `<nx-command>` + núcleo (ESM) | ≈ 6,6 KB |
-| `<nx-explain>` + núcleo (ESM) | ≈ 6,7 KB |
-| `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 8,6 KB |
-| `<nx-survey>` + núcleo (ESM) | ≈ 11,4 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 15,4 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 66 KB |
+| `<nx-sidemenu>` + núcleo (ESM) | ≈ 5,9 KB |
+| `<nx-button>` + núcleo (ESM) | ≈ 5,4 KB |
+| `<nx-select>` + núcleo (ESM) | ≈ 6,2 KB |
+| `<nx-ai-answer>` + núcleo (ESM) | ≈ 7 KB |
+| `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 11,2 KB |
+| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,6 KB, se carga al exportar | ≈ 20,6 KB |
+| `<nx-dialog>` + núcleo (ESM) | ≈ 4,8 KB |
+| `nxToast()` + núcleo (ESM) | ≈ 2,5 KB |
+| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 9,8 KB |
+| `<nx-agent>` + IA + botón + BDUI + recorrido + núcleo (ESM) | ≈ 18,6 KB |
+| `<nx-command>` + núcleo (ESM) | ≈ 7,1 KB |
+| `<nx-explain>` + núcleo (ESM) | ≈ 7,9 KB |
+| `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 10,2 KB |
+| `<nx-survey>` + núcleo (ESM) | ≈ 12,1 KB |
+| `nx-ui.css` (tokens + todos los componentes) | ≈ 34,6 KB |
+| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 171 KB |
 
 Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
 
