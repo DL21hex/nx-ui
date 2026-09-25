@@ -14,9 +14,10 @@
  * envío de formularios funcionan solos.
  */
 import { Base, boolAttr } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
 import { formatElapsed } from "../../core/format";
+import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
 import { readLines } from "../../core/stream";
 import { normalizeProgress, parseStreamLine } from "./logic";
@@ -60,6 +61,8 @@ export class NxButton extends Base {
   #fill?: HTMLSpanElement;
   #holdTimer = 0;
   #held = false;
+  /** La petición de `stream` en curso: se cancela si el botón sale del documento. */
+  #streamAbort?: AbortController;
 
   // ---------------------------------------------------------------- propiedades
 
@@ -132,7 +135,7 @@ export class NxButton extends Base {
     return this.#labels;
   }
   set labels(v: Partial<ButtonLabels> | null | undefined) {
-    this.#labels = { ...BUTTON_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(BUTTON_LABELS, v);
     this.#paint();
   }
   /** Mantener pulsado (ms) para activarlo: para lo destructivo, en vez de «¿Está seguro?».
@@ -224,6 +227,11 @@ export class NxButton extends Base {
   disconnectedCallback(): void {
     clearInterval(this.#tick);
     this.#tick = 0;
+    // Una pulsación larga a medio camino no se completa con el botón fuera de la página (si no, la
+    // acción destructiva se dispararía sobre un botón que ya nadie ve), y el stream se corta.
+    clearTimeout(this.#holdTimer);
+    if (this.#btn) delete this.#btn.dataset.holding;
+    this.#streamAbort?.abort();
   }
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -336,13 +344,16 @@ export class NxButton extends Base {
   }
 
   async #runStream(): Promise<void> {
-    const url = safeHref(this.stream);
+    // Solo del mismo origen (o de uno permitido con `allowOrigins`).
+    const url = safeEndpoint(this.stream);
     if (!url) return;
+    const ctrl = (this.#streamAbort = new AbortController());
     await this.run(async ({ log, progress }) => {
       const res = await fetch(url, {
         method: this.method,
         credentials: "same-origin",
         headers: { Accept: "application/x-ndjson, text/event-stream, text/plain" },
+        signal: ctrl.signal,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       let final: StreamEvent | null = null;
@@ -350,8 +361,12 @@ export class NxButton extends Base {
         const ev = parseStreamLine(raw);
         if (!ev) return;
         if (ev.progress !== undefined) progress(ev.progress);
-        if (ev.done) final = ev;
-        else if (ev.msg) log(ev.msg, ev.level);
+        // El resultado final cierra la tarea aunque el servidor deje la conexión abierta.
+        if (ev.done) {
+          final = ev;
+          return false;
+        }
+        if (ev.msg) log(ev.msg, ev.level);
       });
       const end = final as StreamEvent | null;
       if (end?.ok === false) throw new Error(end.msg ?? this.#labels.failed);

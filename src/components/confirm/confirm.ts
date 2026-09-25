@@ -8,9 +8,10 @@
  *
  * Es un `<nx-dialog>` que se crea al llamar y se quita al cerrar: nace del botón que lo pidió.
  */
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
 import { hasIcon, icon } from "../../core/icons";
 import { parseImpactEvent } from "../../core/impact";
+import { mergeLabels } from "../../core/labels";
 import { lineData, readLines } from "../../core/stream";
 import type { NxButton } from "../button/button";
 import "../button/index";
@@ -29,7 +30,7 @@ export const CONFIRM_LABELS: ConfirmLabels = {
 };
 
 export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
-  const L = { ...CONFIRM_LABELS, ...opts.labels };
+  const L = mergeLabels(CONFIRM_LABELS, opts.labels);
   const danger = (opts.tone ?? "danger") === "danger";
   const dlg = h("nx-dialog", { size: "sm", class: "nx-confirm", heading: opts.heading, "data-tone": danger ? "danger" : "primary" }) as NxDialog;
   const list = h("ul", { class: "nx-confirm__list" });
@@ -52,7 +53,11 @@ export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
       it.detail ? h("span", { class: "nx-confirm__detail" }, it.detail) : null,
     );
 
-  ok.addEventListener("click", () => dlg.close("confirm", "api"));
+  // Solo el clic del <button> de adentro confirma: ese ya respeta `disabled` y la pulsación larga
+  // (un `ok.click()` sobre el envoltorio, o un clic en su borde, no se los salta).
+  ok.addEventListener("click", (e) => {
+    if ((e.target as Element).closest?.(".nx-button__btn")) dlg.close("confirm", "api");
+  });
   document.body.append(dlg);
   const result = dlg.show(opts.origin).then((v) => {
     // Se quita cuando termina de salir.
@@ -62,7 +67,8 @@ export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
 
   if (Array.isArray(opts.impact)) list.append(...opts.impact.map(item));
   else if (typeof opts.impact === "string") {
-    const url = safeHref(opts.impact);
+    // Solo del mismo origen (o de uno permitido con `allowOrigins`): `body` no sale hacia un tercero.
+    const url = safeEndpoint(opts.impact);
     ok.disabled = true;
     list.setAttribute("aria-busy", "true");
     status.textContent = L.loading;
@@ -70,12 +76,14 @@ export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
     const ctrl = new AbortController();
     dlg.addEventListener("nx-open-change", () => ctrl.abort(), { once: true });
     let blocked = false;
+    // Falla cerrado: si no se pudo saber qué pasa (error de red o del servidor, un evento `error`,
+    // un stream cortado antes de `done`), no se puede confirmar. `failOpen: true` lo permite igual.
     const end = (error?: string) => {
       list.removeAttribute("aria-busy");
       status.classList.remove("is-loading");
       status.textContent = error ?? "";
       status.hidden = !error;
-      ok.disabled = blocked;
+      ok.disabled = blocked || (!!error && !opts.failOpen);
     };
     void (async () => {
       try {
@@ -89,9 +97,15 @@ export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         let error: string | undefined;
+        let complete = false;
         await readLines(res, (line) => {
           const ev = parseImpactEvent(lineData(line));
           if (!ev) return;
+          // `done` cierra la lista aunque el servidor deje la conexión abierta.
+          if (ev.type === "done") {
+            complete = true;
+            return false;
+          }
           if (ev.type === "impact") list.append(item(ev));
           else if (ev.type === "block") {
             blocked = true;
@@ -100,7 +114,7 @@ export function nxConfirm(opts: ConfirmOptions): Promise<boolean> {
           } else if (ev.type === "note") notes.append(h("p", null, ev.message));
           else if (ev.type === "error") error = ev.message;
         });
-        end(error);
+        end(error ?? (complete ? undefined : L.error));
       } catch {
         if (!ctrl.signal.aborted) end(L.error);
       }

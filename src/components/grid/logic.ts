@@ -157,7 +157,10 @@ function monthSpan(a: string, b: string): number {
 
 /** Bordes «bonitos» (1-2-5) entre min y max; logarítmicos si los datos abarcan varios órdenes. */
 export function niceEdges(min: number, max: number, target = 10): number[] {
-  if (!(max > min)) return [min, min + 1];
+  if (!(max > min) || !Number.isFinite(min) || !Number.isFinite(max)) return [min, min + 1];
+  // Un rango por debajo de la precisión del número (0,3 y 0,1 + 0,2; 1e17 y 1e17 + 16): sumar el
+  // paso no mueve el borde y el bucle no terminaría. Se trata como un solo valor.
+  if ((max - min) / Math.max(Math.abs(min), Math.abs(max)) < 1e-9) return [min, max + Math.abs(max) * 1e-6];
   if (min > 0 && max / min > 100) {
     const edges: number[] = [];
     for (let e = Math.floor(Math.log10(min)); e <= Math.ceil(Math.log10(max)); e++) {
@@ -175,7 +178,12 @@ export function niceEdges(min: number, max: number, target = 10): number[] {
   const step = [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw)!;
   const start = Math.floor(min / step) * step;
   const edges = [start];
-  while (edges[edges.length - 1] <= max) edges.push(edges[edges.length - 1] + step);
+  // Con un paso ≥ rango/objetivo bastan objetivo + 2 bordes; el tope es una red por si el redondeo
+  // de coma flotante deja de avanzar.
+  while (edges[edges.length - 1] <= max) {
+    if (edges.length > target * 4 + 2) return [min, max + Math.abs(max - min) * 1e-6 || max + 1];
+    edges.push(edges[edges.length - 1] + step);
+  }
   return edges;
 }
 
@@ -353,6 +361,20 @@ export function stats(values: readonly number[]): { count: number; sum: number; 
 export function toTSV(matrix: readonly (readonly string[])[]): string {
   const cell = (s: string) => (/[\t\n"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
   return matrix.map((r) => r.map(cell).join("\t")).join("\n");
+}
+
+const FORMULA = /^[=+\-@\t\r]/;
+
+/** Un texto que Excel o Sheets tomarían como fórmula al pegarlo (`=HYPERLINK(…)`, `+cmd`, `@SUMA`)
+ *  va con un apóstrofo delante: así queda como texto. Solo para columnas que no son numéricas (un
+ *  «-5» de verdad se copia como número). */
+export function formulaSafe(text: string): string {
+  return FORMULA.test(text) ? `'${text}` : text;
+}
+
+/** Lo inverso al pegar en la tabla: quita ese apóstrofo (y solo ese). */
+export function unformulaSafe(text: string): string {
+  return text.startsWith("'") && FORMULA.test(text.slice(1)) ? text.slice(1) : text;
 }
 
 /** TSV (lo que Excel copia) a matriz, con las comillas de Excel. */

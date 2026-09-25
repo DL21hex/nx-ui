@@ -15,8 +15,9 @@
  * `<form method="dialog">` o `dlg.close(valor)`.
  */
 import { Base, boolAttr } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
+import { mergeLabels } from "../../core/labels";
 import type { CloseReason, DialogLabels, DialogMode, DialogSize } from "./types";
 
 export const DIALOG_LABELS: DialogLabels = {
@@ -42,17 +43,43 @@ let lastInvoker: Element | null = null;
 let wired = false;
 /** Los saltos de historial que hizo la librería: sus `popstate` no son la persona pulsando «atrás». */
 let ownBacks = 0;
-let backQueue = 0;
-/** Quita las entradas de los diálogos cerrados. Varios cierres seguidos (las migas cierran varios
- *  niveles) van en un solo `history.go(-n)`: los `back()` seguidos el navegador los fusiona. */
-function queueBack(): void {
-  if (backQueue++) return;
+/** Las entradas por quitar en el próximo salto, de la de más arriba a la de más abajo. */
+let backQueue: string[] = [];
+
+/** Quita la entrada `state` de un diálogo cerrado. Varios cierres seguidos (las migas cierran varios
+ *  niveles) van en un solo `history.go(-n)`: los `back()` seguidos el navegador los fusiona.
+ *
+ *  Solo se retrocede si la entrada de arriba del historial sigue siendo la del diálogo (antes de
+ *  encolar y justo antes de saltar). Si la app navegó mientras tanto (un enlace dentro del diálogo,
+ *  un router que lo desmonta al cambiar de ruta), retroceder desharía esa navegación: la entrada
+ *  del diálogo se queda, y «atrás» sobre ella no hace nada. */
+function queueBack(state: string): void {
+  const top = backQueue[0] ?? state;
+  if (history.state?.nxDialog !== top) return;
+  if (backQueue.push(state) > 1) return;
   setTimeout(() => {
-    const n = backQueue;
-    backQueue = 0;
+    const n = backQueue.length;
+    const first = backQueue[0];
+    backQueue = [];
+    if (history.state?.nxDialog !== first) return;
     ownBacks++;
     history.go(-n);
   });
+}
+
+/** La URL de la entrada de historial de un diálogo: del mismo origen (`pushState` no acepta otro, y
+ *  lanzaría a medio abrir) y de un esquema navegable. */
+function historyUrl(url: string): string | undefined {
+  const href = url ? safeHref(url) : location.href;
+  if (!href) return undefined;
+  try {
+    const u = new URL(href, location.href);
+    if (u.origin === location.origin) return u.href;
+  } catch {
+    /* inválida */
+  }
+  console.warn(`[nx-dialog] url fuera del origen de la página, se ignora: ${url}`);
+  return undefined;
 }
 
 /** Listeners de documento, una sola vez: Escape y Tab van al diálogo de arriba. */
@@ -202,7 +229,7 @@ export class NxDialog extends Base {
     return this.#labels;
   }
   set labels(v: Partial<DialogLabels> | null | undefined) {
-    this.#labels = { ...DIALOG_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(DIALOG_LABELS, v);
     this.#paint();
   }
 
@@ -233,15 +260,25 @@ export class NxDialog extends Base {
       this.toggleAttribute("open", true);
       paintStack();
       this.focusFirst();
+      // Ya en la capa superior: quien escucha (los avisos de `nxToast`, que vuelven a subir) lo
+      // hace sobre el diálogo ya visible. Con View Transitions esto llega un cuadro después.
+      if (this.#open) this.dispatchEvent(new CustomEvent("nx-open-change", { detail: { open: true }, bubbles: true, composed: true }));
     };
+    if (this.url !== null && typeof history !== "undefined" && typeof location !== "undefined") {
+      const url = historyUrl(this.url);
+      const state = `${SESSION}:${this.#uid}`;
+      try {
+        if (url) {
+          history.pushState({ ...history.state, nxDialog: state }, "", url);
+          this.pushedState = state;
+        }
+      } catch (err) {
+        console.warn("[nx-dialog] no se pudo agregar la entrada de historial", err);
+      }
+    }
     // Los paneles se deslizan desde el borde; el modal nace del botón.
     if (this.mode === "modal") morph(this.#origin, this, update);
     else update();
-    if (this.url !== null && typeof history !== "undefined") {
-      this.pushedState = `${SESSION}:${this.#uid}`;
-      history.pushState({ ...history.state, nxDialog: this.pushedState }, "", this.url || location.href);
-    }
-    this.dispatchEvent(new CustomEvent("nx-open-change", { detail: { open: true }, bubbles: true, composed: true }));
     return this.#promise;
   }
 
@@ -419,11 +456,16 @@ export class NxDialog extends Base {
     });
 
     // Cambios sin guardar: lo que se escribe en los campos del autor.
+    // No cuentan los controles de consulta de los componentes de adentro (`data-nx-ephemeral`: el
+    // buscador de un <nx-select>, la frase, las facetas o las casillas de una <nx-grid>): buscar o
+    // filtrar no es cambiar datos. Sí cuentan sus cambios de valor (`nx-change`, `nx-grid-change`).
     const touch = (e: Event) => {
-      if (!this.#head!.contains(e.target as Node) && !this.#guard!.contains(e.target as Node)) this.#dirty = true;
+      const t = e.target as Element;
+      if (this.#head!.contains(t) || this.#guard!.contains(t) || t.closest?.("[data-nx-ephemeral]")) return;
+      if (e.type === "nx-grid-change" && e.defaultPrevented) return;
+      this.#dirty = true;
     };
-    this.addEventListener("input", touch);
-    this.addEventListener("change", touch);
+    for (const type of ["input", "change", "nx-change", "nx-grid-change"]) this.addEventListener(type, touch);
     this.addEventListener("reset", () => (this.dirty = false));
     // `<form method="dialog">`: cierra con el valor del botón que lo envió.
     this.addEventListener("submit", (e) => {
@@ -523,9 +565,9 @@ export class NxDialog extends Base {
     };
     if (this.mode === "modal" && !silent) morph(this, origin, hide);
     else hide();
-    // «Atrás» ya quitó la entrada; si se cerró de otra forma, se quita aquí. Sin mirar
-    // `history.state`: al cerrar varios niveles seguidos, los `back()` anteriores aún no llegaron.
-    if (this.pushedState && reason !== "history") queueBack();
+    // «Atrás» ya quitó la entrada; si se cerró de otra forma, se quita aquí (si sigue arriba: ver
+    // `queueBack`, que también resuelve varios niveles cerrados seguidos).
+    if (this.pushedState && reason !== "history") queueBack(this.pushedState);
     this.pushedState = null;
     // El foco vuelve a quien abrió (o al diálogo que queda arriba).
     const top = stack[stack.length - 1];

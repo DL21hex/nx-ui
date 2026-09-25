@@ -43,7 +43,9 @@ export interface ChildPanel {
 }
 
 export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
-  const children = Array.isArray(o.item.children) ? o.item.children : [];
+  // Los hijos vienen del backend: lo que no es un objeto se ignora (un `null` rompía el panel).
+  const children = Array.isArray(o.item.children) ? o.item.children.filter((c): c is MenuItem => !!c && typeof c === "object") : [];
+  const title = String(o.item.label ?? "");
   const searchable = panelHasSearch(children);
   const listId = `${o.idPrefix}-list`;
   let query = "";
@@ -63,13 +65,14 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
     autocomplete: "off",
     spellcheck: "false",
     autofocus: o.autofocus,
+    "data-nx-ephemeral": "",
   }) : null;
   const scroller = h("div", { class: "nx-panel__scroll" });
   const utils = h("div", { class: "nx-panel__utils", role: "group" });
   // Sin buscador, la lista misma toma el foco y lleva el `aria-activedescendant`.
   const listbox = h(
     "div",
-    { id: listId, class: "nx-panel__list", role: "listbox", "aria-label": o.item.label, tabindex: input ? null : "-1", autofocus: !input && o.autofocus },
+    { id: listId, class: "nx-panel__list", role: "listbox", "aria-label": title, tabindex: input ? null : "-1", autofocus: !input && o.autofocus },
     scroller,
     utils,
   );
@@ -90,7 +93,7 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
         "data-nx-key": o.keyOf(child),
         href: safeHref(child.href),
         tabindex: "-1",
-        title: chip ? child.description : null,
+        title: chip && child.description ? String(child.description) : null,
       },
       icon(child.icon, label),
       chip
@@ -99,7 +102,7 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
             "span",
             { class: "nx-panel__text" },
             h("span", { class: "nx-panel__label" }, label),
-            child.description ? h("span", { class: "nx-panel__desc" }, child.description) : null,
+            child.description ? h("span", { class: "nx-panel__desc" }, String(child.description)) : null,
           ),
       badgeEl(badge),
     );
@@ -143,12 +146,12 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
     h(
       "div",
       { class: input ? "nx-panel__head" : "nx-panel__head nx-panel__head--rule" },
-      h("span", { class: "nx-panel__glyph" }, icon(o.item.icon, o.item.label)),
+      h("span", { class: "nx-panel__glyph" }, icon(o.item.icon, title)),
       h(
         "div",
         { class: "nx-panel__titles" },
-        h("p", { class: "nx-panel__title" }, String(o.item.label ?? "")),
-        o.item.description ? h("p", { class: "nx-panel__desc" }, o.item.description) : null,
+        h("p", { class: "nx-panel__title" }, title),
+        o.item.description ? h("p", { class: "nx-panel__desc" }, String(o.item.description)) : null,
       ),
     ),
     input ? h("div", { class: "nx-panel__search" }, glyph("search", "nx-panel__search-icon"), input) : null,

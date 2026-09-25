@@ -15,6 +15,7 @@
 import { Base, boolAttr } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
+import { mergeLabels } from "../../core/labels";
 import { badgeEl, renderChildPanel } from "./flyout";
 import { formatBadge, groupBySection, resolveActive, type ActiveMatch } from "./logic";
 import type { MenuItem, SidemenuLabels } from "./types";
@@ -73,7 +74,7 @@ export class NxSidemenu extends Base {
     return this.#labels;
   }
   set labels(value: Partial<SidemenuLabels> | null | undefined) {
-    this.#labels = { ...DEFAULT_LABELS, ...(value && typeof value === "object" ? value : {}) };
+    this.#labels = mergeLabels(DEFAULT_LABELS, value);
     this.#schedule();
   }
 

@@ -8,9 +8,10 @@
  * <form> nativo con `name` y `required`.
  */
 import { Base, boolAttr } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { listKeyStep } from "../../core/keys";
+import { mergeLabels } from "../../core/labels";
 import { fieldText, formatDigits, initialsOf, matchOption, matchRanges, searchOptions, searchScope, type Match } from "./logic";
 import type { SelectField, SelectLabels, SelectOption } from "./types";
 
@@ -178,7 +179,7 @@ export class NxSelect extends Base {
     return this.#labels;
   }
   set labels(v: Partial<SelectLabels> | null | undefined) {
-    this.#labels = { ...SELECT_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(SELECT_LABELS, v);
     this.#paint();
   }
   get open(): boolean {
@@ -211,6 +212,13 @@ export class NxSelect extends Base {
     this.#track?.();
     this.#abort?.abort();
     clearTimeout(this.#timer);
+    // Quitar un popover del documento lo oculta SIN `beforetoggle` ni `toggle`: si estaba abierto,
+    // `open` quedaría en `true` y, al volver (un portal, una lista que se reordena), ningún clic lo
+    // abriría otra vez.
+    this.#isOpen = false;
+    this.#loading = false;
+    this.#query = "";
+    this.#field?.setAttribute("aria-expanded", "false");
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
@@ -288,6 +296,8 @@ export class NxSelect extends Base {
     this.#input = h("input", {
       type: "text",
       class: "nx-select__input",
+      // Buscar no es cambiar el valor: un <nx-dialog> no lo cuenta como «cambios sin guardar».
+      "data-nx-ephemeral": "",
       role: "combobox",
       "aria-expanded": "true",
       "aria-controls": listId,
@@ -442,7 +452,10 @@ export class NxSelect extends Base {
     const ctrl = (this.#abort = new AbortController());
     const q = this.#query;
     try {
-      const url = new URL(src, location.href);
+      // Solo del mismo origen (o de uno permitido): lo que se escribe no sale hacia un tercero.
+      const safe = safeEndpoint(src);
+      if (!safe) throw new Error("source");
+      const url = new URL(safe, location.href);
       url.searchParams.set("q", q.trim());
       const res = await fetch(url, { signal: ctrl.signal, credentials: "same-origin", headers: { Accept: "application/json" } });
       if (!res.ok) throw new Error(String(res.status));

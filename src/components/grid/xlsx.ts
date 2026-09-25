@@ -101,11 +101,40 @@ export function excelDate(iso: string): number | null {
   return (Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) - Date.UTC(1899, 11, 30)) / 86400000;
 }
 
-// Estilos: 0 normal · 1 cabecera en negrita · 2 fecha · 3 moneda · 4 número con miles.
-const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;$&quot;\\ #,##0"/><numFmt numFmtId="165" formatCode="d\\ mmm\\ yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+/** El formato de Excel de un monto: el símbolo de la moneda de la columna («$», «US$», «€») y sus
+ *  decimales (0 si todos los montos son enteros). */
+export function moneyFormat(symbol: string, decimals: number): string {
+  // Dentro de las comillas de Excel no puede ir una comilla; el resto del símbolo va literal.
+  const sym = symbol.replace(/"/g, "").trim() || "$";
+  const d = Math.max(0, Math.min(4, Math.floor(decimals) || 0));
+  return `"${sym}"\\ #,##0${d ? `.${"0".repeat(d)}` : ""}`;
+}
 
-export function sheetXml(header: string[], rows: XlsxCell[][], types: XlsxType[], widths: number[]): string {
+const DEFAULT_MONEY = moneyFormat("$", 0);
+
+// Estilos: 0 normal · 1 cabecera en negrita · 2 fecha · 3 moneda · 4 número con miles · 5… los
+// formatos propios de cada columna (montos en otra moneda o con decimales).
+function stylesXml(formats: string[]): string {
+  const custom = formats.map((f, i) => `<numFmt numFmtId="${166 + i}" formatCode="${xmlText(f)}"/>`).join("");
+  const xfs = formats.map((_, i) => `<xf numFmtId="${166 + i}" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="${2 + formats.length}"><numFmt numFmtId="164" formatCode="${xmlText(DEFAULT_MONEY)}"/><numFmt numFmtId="165" formatCode="d\\ mmm\\ yyyy"/>${custom}</numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${5 + formats.length}"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>${xfs}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+}
+
+/** Los formatos distintos de las columnas y el estilo (`s`) que le toca a cada una. */
+function columnStyles(types: XlsxType[], formats: (string | undefined)[] = []): { list: string[]; style: (number | undefined)[] } {
+  const list: string[] = [];
+  const style = types.map((t, i) => {
+    const f = formats[i];
+    if (!f || (t !== "number" && t !== "money")) return undefined;
+    let at = list.indexOf(f);
+    if (at < 0) at = list.push(f) - 1;
+    return 5 + at;
+  });
+  return { list, style };
+}
+
+export function sheetXml(header: string[], rows: XlsxCell[][], types: XlsxType[], widths: number[], styles: (number | undefined)[] = []): string {
   const style = { text: 0, date: 2, money: 3, number: 4 } as const;
   const out: string[] = [];
   const last = colName(header.length - 1);
@@ -126,7 +155,7 @@ export function sheetXml(header: string[], rows: XlsxCell[][], types: XlsxType[]
         const d = excelDate(v);
         if (d !== null) return void cells.push(`<c r="${ref}" s="2"><v>${d}</v></c>`);
       }
-      if ((t === "number" || t === "money") && typeof v === "number" && Number.isFinite(v)) return void cells.push(`<c r="${ref}" s="${style[t]}"><v>${v}</v></c>`);
+      if ((t === "number" || t === "money") && typeof v === "number" && Number.isFinite(v)) return void cells.push(`<c r="${ref}" s="${styles[ci] ?? style[t]}"><v>${v}</v></c>`);
       cells.push(`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlText(String(v))}</t></is></c>`);
     });
     out.push(`<row r="${r}">${cells.join("")}</row>`);
@@ -135,9 +164,18 @@ export function sheetXml(header: string[], rows: XlsxCell[][], types: XlsxType[]
   return out.join("");
 }
 
+/** El nombre de la hoja como lo acepta Excel: sin `\ / ? * [ ] :`, sin apóstrofo al principio ni al
+ *  final, 31 caracteres como mucho. */
+export function sheetName(name: string): string {
+  return name.replace(/[\\/?*[\]:]/g, " ").trim().slice(0, 31).replace(/^['\s]+|['\s]+$/g, "") || "Hoja1";
+}
+
 /** El libro completo, listo para descargar. */
-export async function buildXlsx(sheetName: string, header: string[], rows: XlsxCell[][], types: XlsxType[], widths: number[]): Promise<Blob> {
-  const name = xmlText(sheetName.replace(/[\\/?*[\]:]/g, " ").slice(0, 31) || "Hoja1");
+export async function buildXlsx(title: string, header: string[], rows: XlsxCell[][], types: XlsxType[], widths: number[], formats?: (string | undefined)[]): Promise<Blob> {
+  const name = xmlText(sheetName(title));
+  // En la referencia del autofiltro el nombre va entre apóstrofos: uno propio se duplica («O''Brien»).
+  const ref = name.replace(/'/g, "''");
+  const { list, style } = columnStyles(types, formats);
   const files: [string, string][] = [
     [
       "[Content_Types].xml",
@@ -149,14 +187,14 @@ export async function buildXlsx(sheetName: string, header: string[], rows: XlsxC
     ],
     [
       "xl/workbook.xml",
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${name}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${name}'!$A$1:$${colName(header.length - 1)}$${rows.length + 1}</definedName></definedNames></workbook>`,
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${name}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${ref}'!$A$1:$${colName(header.length - 1)}$${rows.length + 1}</definedName></definedNames></workbook>`,
     ],
     [
       "xl/_rels/workbook.xml.rels",
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
     ],
-    ["xl/styles.xml", STYLES],
-    ["xl/worksheets/sheet1.xml", sheetXml(header, rows, types, widths)],
+    ["xl/styles.xml", stylesXml(list)],
+    ["xl/worksheets/sheet1.xml", sheetXml(header, rows, types, widths, style)],
   ];
   return zip(files.map(([n, s]) => ({ name: n, data: enc.encode(s) })));
 }

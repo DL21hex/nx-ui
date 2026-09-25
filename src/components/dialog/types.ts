@@ -60,6 +60,10 @@ export interface ConfirmOptions {
   /** De dónde nace el diálogo (el botón que lo abrió). */
   origin?: Element | null;
   labels?: Partial<ConfirmLabels>;
+  /** Con `impact` como URL: si el impacto no se pudo calcular (error de red o del servidor, un
+   *  evento `error`, o un stream que termina sin `done`), por defecto NO se puede confirmar. `true`
+   *  deja confirmar igual, con el aviso a la vista. */
+  failOpen?: boolean;
 }
 
 export interface ConfirmLabels {

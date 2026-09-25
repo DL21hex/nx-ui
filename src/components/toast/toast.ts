@@ -13,7 +13,11 @@
 import { Base } from "../../core/define";
 import { h } from "../../core/dom";
 import { glyph } from "../../core/icons";
-import type { ToastLabels, ToastOptions, ToastResult } from "./types";
+import { mergeLabels } from "../../core/labels";
+import { clampDelay } from "../../core/time";
+import type { ToastLabels, ToastOptions, ToastResult, ToastTone } from "./types";
+
+const TONES = new Set<ToastTone>(["neutral", "success", "warning", "danger"]);
 
 export const TOAST_LABELS: ToastLabels = {
   undo: "Deshacer",
@@ -37,7 +41,7 @@ let wired = false;
 
 /** Textos de los avisos (para otros idiomas). */
 export function setToastLabels(v: Partial<ToastLabels>): void {
-  labels = { ...TOAST_LABELS, ...v };
+  labels = mergeLabels(TOAST_LABELS, v);
 }
 
 export class NxToaster extends Base {
@@ -67,14 +71,17 @@ export class NxToaster extends Base {
 
   push(opts: ToastOptions): Promise<ToastResult> {
     const L = labels;
-    const tone = opts.tone ?? "neutral";
-    const duration = opts.duration ?? (opts.undo ? 7000 : 5000);
-    const lead = opts.undo ? ICONS.undo : ICONS[tone];
+    // `tone` y `duration` pueden venir de un payload: un tono desconocido es neutro (y nunca una
+    // clave heredada como «constructor»); un tiempo inválido o enorme se acota a lo que acepta
+    // `setTimeout` (0 = hasta cerrarlo).
+    const tone: ToastTone = TONES.has(opts.tone as ToastTone) ? (opts.tone as ToastTone) : "neutral";
+    const duration = clampDelay(opts.duration, opts.undo ? 7000 : 5000);
+    const lead = opts.undo ? ICONS.undo : Object.hasOwn(ICONS, tone) ? ICONS[tone] : undefined;
     // El tiempo que queda, como un anillo que se vacía (lo anima CSS; se pausa con el toaster).
     const ring = duration ? h("span", { class: "nx-toast__ring", "aria-hidden": "true" }) : null;
     const el = h(
       "li",
-      { class: "nx-toast", "data-tone": tone, role: opts.tone === "danger" ? "alert" : "status" },
+      { class: "nx-toast", "data-tone": tone, role: tone === "danger" ? "alert" : "status" },
       lead ? glyph(lead, "nx-toast__icon") : null,
       h("span", { class: "nx-toast__msg" }, opts.message),
       opts.undo ? h("button", { type: "button", class: "nx-toast__btn", "data-r": "undo" }, L.undo) : null,

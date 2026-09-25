@@ -15,17 +15,20 @@
  * `textContent`.
  */
 import { Base, boolAttr } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
+import { mergeLabels } from "../../core/labels";
 import { lineData, readLines } from "../../core/stream";
 import { foldText } from "../../core/text";
 import { nxFormat, resolveLocale, type NxFormat } from "../../core/locale";
+import { extent } from "../../core/time";
 import {
   colType,
   crossfilter,
   facetColumns,
   facetOrder,
   filterLabel,
+  formulaSafe,
   formatCell,
   groupRows,
   histogram,
@@ -38,6 +41,7 @@ import {
   stats,
   toggleFacet,
   toTSV,
+  unformulaSafe,
   type GridFacet,
   type GridGroup,
   type HistogramSpec,
@@ -95,6 +99,9 @@ const ROW_H = 32;
 const OVERSCAN = 8;
 const BLOCK = 100;
 const FACET_SHOWN = 6;
+/** Exportar pide las filas al servidor de a este tanto, hasta el tope de filas de una hoja de Excel. */
+const EXPORT_BLOCK = 5000;
+const EXPORT_MAX = 1_048_575;
 const WIDTH: Record<string, number> = { text: 180, number: 110, money: 140, date: 120, status: 130, ai: 220 };
 const OPS = new Set(["in", "notIn", "range", "contains"]);
 const PROPS = ["columns", "rows", "filters", "sort", "labels", "source", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale", "selectable", "selected"] as const;
@@ -158,6 +165,9 @@ export class NxGrid extends Base {
   #aiPending = new Set<string>();
   #aiQueue = new Map<string, Set<string>>();
   #aiTimer?: ReturnType<typeof setTimeout>;
+  #aiAbort?: AbortController;
+  #askGen = 0;
+  #askAbort?: AbortController;
   // Hoja de cálculo.
   #act: Pos = { r: 0, c: 0 };
   #anchor: Pos = { r: 0, c: 0 };
@@ -165,6 +175,9 @@ export class NxGrid extends Base {
   #editing: Editing | null = null;
   #win = { start: -1, end: -1 };
   #raf = 0;
+  /** El pie se recalcula solo si cambió el rango o esto (datos, textos, grupos). */
+  #footDirty = true;
+  #footKey = "";
   // Facetas.
   #picked = new Set<string>();
   #lastPick = -1;
@@ -193,6 +206,7 @@ export class NxGrid extends Base {
   #selbar?: HTMLDivElement;
   #headCheck?: HTMLInputElement;
   #ro?: ResizeObserver;
+  #urls = new Map<string, { raw: string | null; at: string; url: string | undefined }>();
 
   // ---------------------------------------------------------------- propiedades
 
@@ -218,6 +232,8 @@ export class NxGrid extends Base {
       this.#orig.clear();
       this.#undo = [];
       this.#redo = [];
+      // Las filas nuevas no traen los valores de IA: se vuelven a pedir.
+      this.#resetAi();
     }
     this.#byId.clear();
     this.#index(this.#all, 0);
@@ -321,11 +337,24 @@ export class NxGrid extends Base {
     return this.#labels;
   }
   set labels(v: Partial<GridLabels> | null | undefined) {
-    this.#labels = { ...GRID_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(GRID_LABELS, v);
     this.#paintAll();
   }
   get #server(): boolean {
-    return !!safeHref(this.source);
+    return !!this.#url("source");
+  }
+
+  /** La URL de un atributo (`source`, `ai-endpoint`, `nl-endpoint`) si es del mismo origen (o de uno
+   *  permitido con `allowOrigins`). Se recuerda por valor y página: se consulta en cada pintado y
+   *  `safeEndpoint` avisa por consola cada vez que bloquea una. */
+  #url(attr: string): string | undefined {
+    const raw = this.getAttribute(attr);
+    const at = typeof location === "undefined" ? "" : location.href;
+    const hit = this.#urls.get(attr);
+    if (hit && hit.raw === raw && hit.at === at) return hit.url;
+    const url = raw ? safeEndpoint(raw) : undefined;
+    this.#urls.set(attr, { raw, at, url });
+    return url;
   }
 
   // ---------------------------------------------------------------- API
@@ -340,17 +369,24 @@ export class NxGrid extends Base {
       return f ? { ...c, options: f.options.map((o) => ({ value: o.value, label: o.label })) } : c;
     });
     let { filters, unknown } = parseNL(q, cols, this.#server ? [...this.#byId.values()] : this.#all);
-    const url = safeHref(this.nlEndpoint);
+    // Dos frases seguidas: solo cuenta la última. La anterior se cancela, y si su respuesta llega
+    // tarde no pisa los filtros de la nueva.
+    const gen = ++this.#askGen;
+    this.#askAbort?.abort();
+    this.#askAbort = undefined;
+    const url = this.#url("nl-endpoint");
     if (url && (unknown.length || !filters.length)) {
+      const ctrl = (this.#askAbort = new AbortController());
       try {
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           credentials: "same-origin",
           body: JSON.stringify({ q, columns: this.#meta() }),
+          signal: ctrl.signal,
         });
         const data = (await res.json()) as { filters?: unknown; unknown?: unknown };
-        const f = validFilters(data.filters).filter((x) => this.#columns.some((c) => c.key === x.key));
+        const f = validFilters(data?.filters).filter((x) => this.#columns.some((c) => c.key === x.key));
         if (f.length) {
           filters = f;
           unknown = Array.isArray(data.unknown) ? data.unknown.map(String) : [];
@@ -358,12 +394,14 @@ export class NxGrid extends Base {
       } catch {
         /* se queda con lo que entendió el analizador local */
       }
+      if (gen !== this.#askGen) return { filters: [], unknown: [] };
     }
     if (filters.length) {
       // Una frase reemplaza lo que ya hubiera sobre las mismas columnas.
       const keys = new Set(filters.map((f) => f.key));
       this.#setFilters([...this.#filters.filter((f) => !keys.has(f.key)), ...filters]);
-      if (this.#askInput) this.#askInput.value = "";
+      // Se limpia la caja solo si sigue diciendo lo que se preguntó (no lo que se escribió después).
+      if (this.#askInput && this.#askInput.value.trim() === q) this.#askInput.value = "";
     }
     if (this.#note) {
       this.#note.hidden = !unknown.length;
@@ -412,9 +450,10 @@ export class NxGrid extends Base {
     if (this.#server) this.#reload();
   }
 
-  /** Descarga las filas filtradas y ordenadas como .xlsx (el generador se carga solo en este momento). */
+  /** Descarga las filas filtradas y ordenadas como .xlsx (el generador se carga solo en este
+   *  momento). En modo servidor las pide por bloques; si el servidor falla, la promesa se rechaza. */
   async exportXlsx(filename = this.filename): Promise<void> {
-    const [{ buildXlsx }, rows] = await Promise.all([import("./xlsx"), this.#server ? this.#fetchAll() : Promise.resolve(this.#sorted)]);
+    const [{ buildXlsx, moneyFormat }, rows] = await Promise.all([import("./xlsx"), this.#server ? this.#fetchAll() : Promise.resolve(this.#sorted)]);
     const cols = this.#columns;
     const cells = rows.map((r) =>
       cols.map((c) => {
@@ -426,8 +465,20 @@ export class NxGrid extends Base {
       }),
     );
     const types = cols.map((c) => (isNumeric(c) ? (colType(c) as "number" | "money") : colType(c) === "date" ? "date" : "text"));
-    const widths = cols.map((c, ci) => Math.min(50, Math.max(10, c.label.length + 3, ...cells.slice(0, 200).map((r) => String(r[ci] ?? "").length + 2))));
-    const blob = await buildXlsx(filename, cols.map((c) => c.label), cells, types, widths);
+    const widths = cols.map((c, ci) => {
+      let w = Math.max(10, c.label.length + 3);
+      for (let i = 0; i < cells.length && i < 200; i++) w = Math.max(w, String(cells[i][ci] ?? "").length + 2);
+      return Math.min(50, w);
+    });
+    // Cada columna de dinero con su moneda (el símbolo que se ve en la tabla) y con decimales solo
+    // si alguno de sus montos los tiene.
+    const formats = cols.map((c, ci) => {
+      if (colType(c) !== "money") return undefined;
+      const symbol = this.#loc.money(0, c).replace(/[\d\s.,\u00a0\u202f-]/g, "");
+      const decimals = cells.some((r) => typeof r[ci] === "number" && !Number.isInteger(r[ci])) ? 2 : 0;
+      return moneyFormat(symbol, decimals);
+    });
+    const blob = await buildXlsx(filename, cols.map((c) => c.label), cells, types, widths, formats);
     const a = h("a", { href: URL.createObjectURL(blob), download: `${filename}.xlsx` });
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
@@ -444,13 +495,28 @@ export class NxGrid extends Base {
         self[p] = v;
       }
     }
-    if (!this.#built) this.#build();
-    this.#dataChanged(true);
+    const first = !this.#built;
+    if (first) this.#build();
+    if (typeof ResizeObserver !== "undefined" && !this.#ro) {
+      this.#ro = new ResizeObserver(() => this.#soon());
+      this.#ro.observe(this.#scroll!);
+    }
+    // Movido en el DOM (un portal, una lista que se reordena): los datos no cambiaron, no se
+    // recalcula ni se vuelve a pedir nada; solo se repintan las filas visibles (y se vuelven a
+    // pedir las celdas de IA que quedaron en cola al desconectarse).
+    if (first) this.#dataChanged(true);
+    else this.#paintRows(true);
   }
 
   disconnectedCallback(): void {
     this.#ro?.disconnect();
     this.#ro = undefined;
+    cancelAnimationFrame(this.#raf);
+    this.#raf = 0;
+    // Lo que esperaba en cola no se pide fuera del documento: se olvida, y al volver se pide de nuevo.
+    clearTimeout(this.#aiTimer);
+    for (const [key, ids] of this.#aiQueue) for (const id of ids) this.#aiPending.delete(`${key}\u0000${id}`);
+    this.#aiQueue.clear();
   }
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -475,9 +541,13 @@ export class NxGrid extends Base {
 
   #index(rows: readonly GridRow[], offset: number): void {
     const key = this.rowKey;
+    // Sin `row-key`, el id es la posición. En el servidor la posición cambia con cada filtro u
+    // orden: el id lleva la generación de la consulta, para que una selección vieja no caiga
+    // sobre otra fila que hoy ocupa ese lugar.
+    const pos = this.#server ? `#${this.#gen}:` : "#";
     rows.forEach((r, i) => {
       const v = r[key];
-      const id = v === null || v === undefined ? `#${offset + i}` : String(v);
+      const id = v === null || v === undefined ? `${pos}${offset + i}` : String(v);
       this.#ids.set(r, id);
       this.#byId.set(id, r);
     });
@@ -582,13 +652,19 @@ export class NxGrid extends Base {
   #reload(): void {
     this.#gen++;
     this.#blocks.clear();
+    // Solo quedan indexadas las filas de ESTA consulta: «Seleccionar todo», el conteo y las acciones
+    // en lote nunca alcanzan filas que ya no pasan el filtro. Las marcas con id real se conservan
+    // (pueden volver a aparecer); las posicionales de otra consulta ya no significan nada.
+    this.#byId.clear();
+    for (const id of this.#picked) if (id.startsWith("#")) this.#picked.delete(id);
+    this.#resetAi();
     this.#win = { start: -1, end: -1 };
     void this.#load(0);
     this.#paintAll();
   }
 
   async #request(offset: number, limit: number): Promise<GridPage | null> {
-    const url = safeHref(this.source);
+    const url = this.#url("source");
     if (!url) return null;
     const res = await fetch(url, {
       method: "POST",
@@ -631,12 +707,27 @@ export class NxGrid extends Base {
           selected: (this.#filters.find((x) => x.key === f.key && x.op === "in") as { values: string[] } | undefined)?.values ?? [],
         }));
     if (page.totals && typeof page.totals === "object") this.#totals = page.totals;
-    this.#paintAll();
+    // Un bloque que llega no rehace todo: los agregados, y las filas que esperaban sus datos (las
+    // que siguen a la vista se reutilizan en el próximo cuadro).
+    this.#footDirty = true;
+    this.#paintChrome();
+    this.#paintFoot();
+    this.#soon();
+    this.#paintPicked(false);
   }
 
+  /** Todas las filas de la consulta (para exportar), por bloques: nunca una sola respuesta con
+   *  millones de filas. Se detiene en el tope de una hoja de Excel. */
   async #fetchAll(): Promise<GridRow[]> {
-    const page = await this.#request(0, Math.max(this.#total, 1)).catch(() => null);
-    return page?.rows ?? [];
+    const out: GridRow[] = [];
+    for (let offset = 0; out.length < EXPORT_MAX; offset += EXPORT_BLOCK) {
+      const page = await this.#request(offset, EXPORT_BLOCK);
+      if (!page) break;
+      for (const r of page.rows) if (r && typeof r === "object" && out.length < EXPORT_MAX) out.push(r);
+      const total = Number(page.total) || 0;
+      if (page.rows.length < EXPORT_BLOCK || offset + EXPORT_BLOCK >= total) break;
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------- IA
@@ -645,9 +736,20 @@ export class NxGrid extends Base {
     return this.#columns.filter((c) => !c.ai).map(({ key, label, type, options }) => ({ key, label, type: type ?? "text", options }));
   }
 
+  /** Olvida lo pedido a la IA (filas nuevas, otra consulta): lo que llegue de antes se descarta y
+   *  las celdas vacías se vuelven a pedir al pintarse. */
+  #resetAi(): void {
+    this.#aiAbort?.abort();
+    this.#aiAbort = undefined;
+    clearTimeout(this.#aiTimer);
+    this.#aiPending.clear();
+    this.#aiQueue.clear();
+    this.#tones.clear();
+  }
+
   #queueAi(c: GridColumn, id: string): void {
     const k = `${c.key}\u0000${id}`;
-    if (this.#aiPending.has(k) || !safeHref(this.aiEndpoint)) return;
+    if (this.#aiPending.has(k) || !this.#url("ai-endpoint")) return;
     this.#aiPending.add(k);
     let q = this.#aiQueue.get(c.key);
     if (!q) this.#aiQueue.set(c.key, (q = new Set()));
@@ -664,9 +766,11 @@ export class NxGrid extends Base {
   }
 
   async #fetchAi(col: GridColumn, ids: string[]): Promise<void> {
-    const url = safeHref(this.aiEndpoint);
+    const url = this.#url("ai-endpoint");
     if (!url || !col.ai) return;
+    const ctrl = (this.#aiAbort ??= new AbortController());
     const meta = this.#meta();
+    const wanted = new Set(ids);
     const rows = ids.map((id) => {
       const r = this.#byId.get(id);
       const o: GridRow = { id };
@@ -680,20 +784,24 @@ export class NxGrid extends Base {
         headers: { "Content-Type": "application/json", Accept: "application/x-ndjson, text/event-stream" },
         credentials: "same-origin",
         body: JSON.stringify({ prompt: col.ai.prompt, column: col.key, label: col.label, columns: meta, rows }),
+        signal: ctrl.signal,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await readLines(res, (line) => {
         const d = lineData(line);
-        if (!d || d === "[DONE]") return;
+        if (!d) return;
+        if (d === "[DONE]") return false;
         let ev: { type?: string; id?: unknown; value?: unknown; tone?: GridTone };
         try {
           ev = JSON.parse(d);
         } catch {
           return;
         }
+        if (ev?.type === "done") return false;
+        if (ctrl.signal.aborted) return false;
         const id = String(ev?.id);
         const r = this.#byId.get(id);
-        if (ev?.type !== "cell" || !r || !ids.includes(id) || !this.#columns.includes(col)) return;
+        if (ev?.type !== "cell" || !r || !wanted.has(id) || !this.#columns.includes(col)) return;
         r[col.key] = ev.value ?? null;
         if (typeof ev.tone === "string") this.#tones.set(`${col.key}\u0000${id}`, ev.tone);
         done.add(id);
@@ -702,6 +810,8 @@ export class NxGrid extends Base {
     } catch {
       /* las que no llegaron quedan vacías (no se vuelven a pedir en bucle) */
     }
+    // Filas nuevas u otra consulta mientras se esperaba: esas celdas ya no son de esta petición.
+    if (ctrl.signal.aborted) return;
     for (const id of ids) {
       const r = this.#byId.get(id);
       if (r && !done.has(id) && r[col.key] === undefined && this.#columns.includes(col)) r[col.key] = null;
@@ -726,18 +836,26 @@ export class NxGrid extends Base {
     this.#built = true;
     const u = this.#uid;
     this.#askInput = h("input", { type: "text", class: "nx-grid__ask-input", autocomplete: "off", spellcheck: "false" });
-    const ask = h("form", { class: "nx-grid__ask", role: "search" }, glyph(SPARK), this.#askInput);
+    // `data-nx-ephemeral`: buscar, filtrar, agrupar o seleccionar no son cambios de datos (un
+    // <nx-dialog> que contiene la tabla no los cuenta como «cambios sin guardar»).
+    const ask = h("form", { class: "nx-grid__ask", role: "search", "data-nx-ephemeral": "" }, glyph(SPARK), this.#askInput);
     ask.addEventListener("submit", (e) => {
       e.preventDefault();
       void this.ask(this.#askInput!.value);
     });
     this.#facetBtn = h("button", { type: "button", class: "nx-grid__btn", "aria-controls": `${u}-facets` }, glyph(SLIDERS), h("span"), h("span", { class: "nx-grid__badge" }));
     this.#facetBtn.addEventListener("click", () => (this.facetsOpen = !this.facetsOpen));
-    this.#groupSel = h("select", { class: "nx-grid__btn nx-grid__group" });
+    this.#groupSel = h("select", { class: "nx-grid__btn nx-grid__group", "data-nx-ephemeral": "" });
     this.#groupSel.addEventListener("change", () => (this.groupBy = this.#groupSel!.value));
     this.#aiBtn = h("button", { type: "button", class: "nx-grid__btn", popovertarget: `${u}-ai` }, glyph(SPARK), h("span"));
     this.#exportBtn = h("button", { type: "button", class: "nx-grid__btn" }, glyph(DOWNLOAD), h("span"));
-    this.#exportBtn.addEventListener("click", () => void this.exportXlsx());
+    this.#exportBtn.addEventListener("click", () => {
+      const b = this.#exportBtn!;
+      b.setAttribute("aria-busy", "true");
+      this.exportXlsx()
+        .catch((err) => console.warn("[nx-grid] no se pudo exportar", err))
+        .finally(() => b.removeAttribute("aria-busy"));
+    });
     this.#undoBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__icon" }, glyph(UNDO));
     this.#redoBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__icon" }, glyph(REDO));
     this.#undoBtn.addEventListener("click", () => this.undo());
@@ -759,7 +877,7 @@ export class NxGrid extends Base {
       this.#scroll?.focus({ preventScroll: true });
     });
 
-    this.#aside = h("aside", { class: "nx-grid__facets", id: `${u}-facets` });
+    this.#aside = h("aside", { class: "nx-grid__facets", id: `${u}-facets`, "data-nx-ephemeral": "" });
     this.#aside.addEventListener("change", (e) => {
       const t = e.target as HTMLInputElement;
       if (t.type === "checkbox" && t.dataset.key) this.#setFilters(toggleFacet(this.#filters, t.dataset.key, t.dataset.value ?? ""));
@@ -816,10 +934,6 @@ export class NxGrid extends Base {
     this.#head.addEventListener("change", (e) => {
       if ((e.target as HTMLInputElement).dataset.pickAll !== undefined) this.#pickAll((e.target as HTMLInputElement).checked);
     });
-    if (typeof ResizeObserver !== "undefined") {
-      this.#ro = new ResizeObserver(() => this.#soon());
-      this.#ro.observe(this.#scroll);
-    }
     const main = h("div", { class: "nx-grid__main" }, this.#aside, this.#scroll);
 
     this.#foot = h("div", { class: "nx-grid__foot" });
@@ -832,7 +946,7 @@ export class NxGrid extends Base {
     const name = h("input", { class: "nx-grid__field", required: true, maxlength: 40, autocomplete: "off" });
     const prompt = h("textarea", { class: "nx-grid__field", required: true, rows: 3 });
     const form = h("form", { class: "nx-grid__ai-form" }, h("label", null, h("span"), name), h("label", null, h("span"), prompt), h("button", { type: "submit", class: "nx-grid__btn is-primary" }, glyph(SPARK), h("span")));
-    const pop = h("div", { class: "nx-grid__pop", id: `${this.#uid}-ai`, popover: "auto" }, form);
+    const pop = h("div", { class: "nx-grid__pop", id: `${this.#uid}-ai`, popover: "auto", "data-nx-ephemeral": "" }, form);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       if (!this.addAiColumn(name.value, prompt.value)) return;
@@ -869,7 +983,7 @@ export class NxGrid extends Base {
         h("span", { class: "nx-grid__peek", "aria-hidden": "true" }),
       ),
     );
-    this.#headCheck = this.selectable ? h("input", { type: "checkbox", "data-pick-all": "", "aria-label": this.#labels.selectAll.replace("{n}", "").trim() }) : undefined;
+    this.#headCheck = this.selectable ? h("input", { type: "checkbox", "data-pick-all": "", "data-nx-ephemeral": "", "aria-label": this.#labels.selectAll.replace("{n}", "").trim() }) : undefined;
     this.#head!.replaceChildren(...(this.#headCheck ? [h("div", { role: "columnheader", class: "nx-grid__th nx-grid__check" }, this.#headCheck)] : []), ...this.#ths);
     this.#win = { start: -1, end: -1 };
   }
@@ -877,6 +991,15 @@ export class NxGrid extends Base {
   // ---------------------------------------------------------------- pintar
 
   #paintAll(): void {
+    if (!this.#built) return;
+    this.#footDirty = true;
+    this.#paintChrome();
+    this.#paintRows(true);
+    this.#paintPicked(false);
+  }
+
+  /** Todo menos las filas: barra, chips, cabeceras con histogramas, facetas e historial. */
+  #paintChrome(): void {
     if (!this.#built) return;
     const L = this.#labels;
     const height = Number(this.getAttribute("height"));
@@ -894,7 +1017,7 @@ export class NxGrid extends Base {
     this.#groupSel!.setAttribute("aria-label", this.#fmt(L.groupBy, { col: "" }).trim());
     this.#groupSel!.replaceChildren(h("option", { value: "" }, L.noGroup), ...groupable.map((c) => h("option", { value: c.key }, this.#fmt(L.groupBy, { col: c.label }))));
     this.#groupSel!.value = groupable.some((c) => c.key === this.groupBy) ? this.groupBy : "";
-    this.#aiBtn!.hidden = !safeHref(this.aiEndpoint);
+    this.#aiBtn!.hidden = !this.#url("ai-endpoint");
     this.#aiBtn!.lastElementChild!.textContent = L.aiColumn;
     this.#exportBtn!.lastElementChild!.textContent = L.export;
     const [nameL, promptL] = this.#aiPop!.querySelectorAll("label > span");
@@ -916,8 +1039,6 @@ export class NxGrid extends Base {
     this.#empty!.textContent = L.empty;
     this.#empty!.hidden = this.#count() > 0 || (this.#server && this.#blocks.get(0) === "loading") || !this.#columns.length;
     this.#paintFacets();
-    this.#paintRows(true);
-    this.#paintPicked(false);
     this.#paintHistory();
   }
 
@@ -1101,7 +1222,7 @@ export class NxGrid extends Base {
     const rid = it && "r" in it ? (this.#ids.get(it.r) ?? "") : "";
     if (this.selectable) {
       const on = !!rid && this.#picked.has(rid);
-      row.append(h("div", { role: "gridcell", class: "nx-grid__cell nx-grid__check" }, rid ? h("input", { type: "checkbox", "data-pick": "", checked: on, tabindex: -1, "aria-label": this.#labels.selectRow }) : null));
+      row.append(h("div", { role: "gridcell", class: "nx-grid__cell nx-grid__check" }, rid ? h("input", { type: "checkbox", "data-pick": "", "data-nx-ephemeral": "", checked: on, tabindex: -1, "aria-label": this.#labels.selectRow }) : null));
       row.classList.toggle("is-picked", on);
       row.setAttribute("aria-selected", String(on));
     }
@@ -1199,9 +1320,16 @@ export class NxGrid extends Base {
     return this.#filters.length && !this.#server ? this.#fmt(this.#labels.of, { n, total: this.#loc.number(total) }) : this.#fmt(this.#labels.rows, { n });
   }
 
+  /** El pie: conteo y totales, o las estadísticas del rango. Se recalcula solo si cambió el rango o
+   *  los datos (`#footDirty`), no en cada cuadro del scroll: con Ctrl+A sobre 100 000 filas recorrer
+   *  el rango en cada cuadro trababa el desplazamiento. */
   #paintFoot(): void {
     const L = this.#labels;
     const { r0, r1, c0, c1 } = this.#range();
+    const key = `${r0},${r1},${c0},${c1}`;
+    if (!this.#footDirty && key === this.#footKey) return;
+    this.#footDirty = false;
+    this.#footKey = key;
     const parts: Node[] = [];
     const part = (label: string, value: string) => h("span", null, h("span", { class: "nx-grid__foot-k" }, label), ` ${value}`);
     if ((r1 > r0 || c1 > c0) && this.#count()) {
@@ -1326,6 +1454,7 @@ export class NxGrid extends Base {
     if (!this.#collapsed.delete(it.g.key)) this.#collapsed.add(it.g.key);
     this.#flatten();
     this.#scroll!.setAttribute("aria-rowcount", String(this.#count() + 1));
+    this.#footDirty = true;
     this.#paintRows(true);
   }
 
@@ -1573,16 +1702,33 @@ export class NxGrid extends Base {
       if (this.#undo.length > HISTORY) this.#undo.shift();
       this.#redo = [];
     }
-    if (!this.#server) {
-      // Como una hoja de cálculo: no se reordena ni se refiltra; sí se recalculan los agregados.
-      this.#specs = new Map(this.#columns.map((c) => [c.key, histogramSpec(c, this.#all, this.#loc)]));
-      this.#order = facetOrder(this.#facetCols, this.#all);
-      this.#facetList = crossfilter(this.#all, this.#filters, this.#facetCols, this.#order).facets;
-      this.#histAndTotals();
-      this.#groupStats();
-    }
+    if (!this.#server) this.#reaggregate(new Set(changes.map((c) => c.key)));
     this.#paintAll();
     return true;
+  }
+
+  /** Como una hoja de cálculo: una edición no reordena ni refiltra, pero sí mueve los agregados.
+   *  Solo se recalcula lo de las columnas tocadas (antes, cada Enter recorría todas las filas por
+   *  cada columna). */
+  #reaggregate(keys: Set<string>): void {
+    const touched = this.#columns.filter((c) => keys.has(c.key));
+    for (const c of touched) {
+      const spec = histogramSpec(c, this.#all, this.#loc);
+      this.#specs.set(c.key, spec);
+      if (spec) this.#hist.set(c.key, histogram(spec, this.#all, this.#filtered));
+      else this.#hist.delete(c.key);
+      if (colType(c) === "money") {
+        let t = 0;
+        for (const r of this.#filtered) t += num(r[c.key]) ?? 0;
+        this.#totals[c.key] = t;
+      }
+    }
+    const facets = this.#facetCols.filter((c) => keys.has(c.key));
+    for (const c of facets) this.#order.set(c.key, facetOrder([c], this.#all).get(c.key) ?? []);
+    // Las facetas cuentan con los filtros de las demás columnas: cambian si se editó una faceta o
+    // una columna con filtro.
+    if (facets.length || this.#filters.some((f) => keys.has(f.key))) this.#facetList = crossfilter(this.#all, this.#filters, this.#facetCols, this.#order).facets;
+    if (this.#groups && touched.some(isNumeric)) this.#groupStats();
   }
 
   /** Deshace el último cambio (una celda, un pegado, un borrado). `false` si no había, o si la app
@@ -1611,11 +1757,17 @@ export class NxGrid extends Base {
     }
     to.push(batch);
     // Queda seleccionado lo que cambió, para que se vea qué se deshizo.
-    const rows = changes.map((c) => this.#view.findIndex((it) => "r" in it && this.#ids.get(it.r) === c.id)).filter((i) => i >= 0);
-    const cols = changes.map((c) => this.#columns.findIndex((x) => x.key === c.key)).filter((i) => i >= 0);
-    if (rows.length && cols.length) {
-      this.#anchor = { r: Math.min(...rows), c: Math.min(...cols) };
-      this.#act = { r: Math.max(...rows), c: Math.max(...cols) };
+    // Un mapa id → índice (no un `findIndex` por cambio: un pegado grande era cuadrático) y los
+    // extremos con un bucle (`Math.min(...x)` lanza con ~120 000 elementos).
+    const at = new Map<string, number>();
+    if (!this.#server) this.#view.forEach((it, i) => "r" in it && at.set(this.#ids.get(it.r) ?? "", i));
+    else for (const [b, rows] of this.#blocks) if (Array.isArray(rows)) rows.forEach((r, i) => at.set(this.#ids.get(r) ?? "", b * BLOCK + i));
+    const colAt = new Map(this.#columns.map((c, i) => [c.key, i]));
+    const rows = extent(changes.map((c) => at.get(c.id) ?? Number.NaN));
+    const cols = extent(changes.map((c) => colAt.get(c.key) ?? Number.NaN));
+    if (rows && cols) {
+      this.#anchor = { r: rows[0], c: cols[0] };
+      this.#act = { r: rows[1], c: cols[1] };
       this.#reveal();
       this.#paintSel();
     }
@@ -1656,7 +1808,9 @@ export class NxGrid extends Base {
       for (let c = c0; c <= c1; c++) {
         const col = this.#columns[c];
         const v = it.r[col.key];
-        line.push(isNumeric(col) ? String(num(v) ?? "") : colType(col) === "date" ? String(v ?? "") : formatCell(v, col, this.#loc));
+        // Un texto que empieza con = + - @ se pegaría en Excel como fórmula (y una fórmula puede
+        // sacar datos de las celdas vecinas): va con el apóstrofo que lo deja como texto.
+        line.push(isNumeric(col) ? String(num(v) ?? "") : formulaSafe(colType(col) === "date" ? String(v ?? "") : formatCell(v, col, this.#loc)));
       }
       out.push(line);
     }
@@ -1677,14 +1831,16 @@ export class NxGrid extends Base {
     const { r0, r1, c0, c1 } = this.#range();
     const fill = m.length === 1 && m[0].length === 1;
     const rows = fill ? r1 - r0 + 1 : m.length;
-    const cols = fill ? c1 - c0 + 1 : Math.max(...m.map((x) => x.length));
+    let cols = fill ? c1 - c0 + 1 : 0;
+    if (!fill) for (const x of m) if (x.length > cols) cols = x.length;
     this.#anchor = { r: r0, c: c0 };
     this.#act = { r: Math.min(this.#count() - 1, r0 + rows - 1), c: Math.min(this.#columns.length - 1, c0 + cols - 1) };
     const changes: GridChange[] = [];
     this.#editableCells((row, col, i, j) => {
       const t = fill ? m[0][0] : m[i]?.[j];
       if (t === undefined) return;
-      const value = parseInput(t, col, this.#loc);
+      // El apóstrofo con el que se copió un texto que parecía fórmula (ver `formulaSafe`) se quita.
+      const value = parseInput(isNumeric(col) ? t : unformulaSafe(t), col, this.#loc);
       if (value === null && t.trim()) return; // texto que no es número en una columna numérica
       if (value !== row[col.key]) changes.push({ id: this.#ids.get(row)!, key: col.key, value, old: row[col.key] });
     });

@@ -22,8 +22,9 @@ export function panelHasSearch(children: readonly unknown[]): boolean {
 /** Los ítems cuyo nombre o descripción contienen la consulta; vacía ⇒ todos. */
 export function filterItems(items: readonly MenuItem[], query: string): MenuItem[] {
   const q = foldText(query);
-  if (!q) return [...items];
-  return items.filter((c) => foldText(c.label).includes(q) || foldText(c.description ?? "").includes(q));
+  if (!q) return items.filter((c) => c && typeof c === "object");
+  // `label` y `description` vienen del backend: un número o un `null` no rompen la búsqueda.
+  return items.filter((c) => c && typeof c === "object" && (foldText(String(c.label ?? "")).includes(q) || foldText(String(c.description ?? "")).includes(q)));
 }
 
 export interface MenuGroup<T = MenuItem> {
