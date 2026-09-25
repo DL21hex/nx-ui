@@ -1,0 +1,653 @@
+/*
+ * <nx-sync>. Variables propias:
+ *   --nx-sync-width (400px): ancho del panel
+ */
+
+nx-sync {
+  --_warn: light-dark(oklch(0.43 0.1 60), oklch(0.88 0.1 85));
+  --_warn-soft: light-dark(oklch(0.95 0.06 85), oklch(0.36 0.07 75));
+  --_warn-dot: light-dark(oklch(0.72 0.15 70), oklch(0.8 0.13 80));
+  --_mark: light-dark(oklch(0.92 0.1 95), oklch(0.45 0.09 85));
+  display: inline-block;
+  color: var(--nx-foreground);
+  font: 13px/1.45 var(--nx-font-sans);
+  vertical-align: middle;
+}
+nx-sync * {
+  box-sizing: border-box;
+}
+nx-sync [hidden] {
+  display: none !important;
+}
+nx-sync button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+nx-sync :focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+nx-sync .nx-glyph {
+  display: inline-flex;
+  flex: none;
+  inline-size: 1em;
+  block-size: 1em;
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+.nx-sync__vh {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- la píldora */
+
+.nx-sync__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  block-size: 30px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-muted-foreground);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  /* Sin transición de color: el cambio de estado se nota con su animación, y el texto nunca pasa
+     por un contraste intermedio. */
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  &[aria-expanded="true"] {
+    border-color: var(--nx-border-strong);
+    box-shadow: 0 0 0 3px var(--nx-hover);
+  }
+}
+.nx-sync__dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--nx-success);
+  font-size: 14px;
+  & .nx-glyph {
+    display: none;
+  }
+}
+
+nx-sync[data-state="online"] .nx-sync__pill {
+  animation: nx-sync-ok var(--nx-motion-base) var(--nx-ease-out);
+}
+nx-sync[data-state="offline"] .nx-sync__pill,
+nx-sync[data-state="waiting"] .nx-sync__pill {
+  border-color: color-mix(in oklab, var(--_warn) 30%, transparent);
+  background: var(--_warn-soft);
+  color: var(--_warn);
+  animation: nx-sync-bump var(--nx-motion-base) var(--nx-ease-out);
+}
+nx-sync[data-state="offline"] .nx-sync__dot {
+  inline-size: 14px;
+  block-size: 14px;
+  background: none;
+  & .nx-glyph:first-child {
+    display: inline-flex;
+  }
+}
+nx-sync[data-state="waiting"] .nx-sync__dot {
+  background: var(--_warn-dot);
+  animation: nx-sync-pulse 1.6s ease-in-out infinite;
+}
+nx-sync[data-state="syncing"] .nx-sync__pill {
+  border-color: var(--nx-primary-border);
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+}
+/* Un anillo con el avance de la tanda y un arco que gira mientras va. */
+nx-sync[data-state="syncing"] .nx-sync__dot {
+  inline-size: 14px;
+  block-size: 14px;
+  background: conic-gradient(var(--nx-primary) var(--p, 0%), color-mix(in oklab, var(--nx-primary) 22%, transparent) 0);
+  mask: radial-gradient(circle, transparent 3.5px, #000 4px);
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid transparent;
+    border-block-start-color: var(--nx-primary);
+    border-radius: 50%;
+    animation: nx-sync-spin 0.9s linear infinite;
+  }
+}
+nx-sync[data-state="alert"] .nx-sync__pill {
+  border-color: transparent;
+  background: var(--nx-danger);
+  color: var(--nx-danger-foreground);
+  animation:
+    nx-sync-nudge 0.5s var(--nx-ease-out),
+    nx-sync-halo 1.8s ease-out 2;
+}
+nx-sync[data-state="alert"] .nx-sync__dot {
+  inline-size: 14px;
+  block-size: 14px;
+  background: none;
+  & .nx-glyph:last-child {
+    display: inline-flex;
+  }
+}
+
+/* ---------------------------------------------------------------- el panel */
+
+.nx-sync__pop {
+  position: fixed;
+  inset: auto;
+  inline-size: min(var(--nx-sync-width, 400px), calc(100vw - 16px));
+  max-block-size: min(580px, calc(100dvh - 16px));
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  overscroll-behavior: contain;
+}
+.nx-sync__pop:popover-open {
+  display: flex;
+  flex-direction: column;
+  animation: nx-sync-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+.nx-sync__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px 6px;
+  & h2 {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    &:focus:not(:focus-visible) {
+      outline: none;
+    }
+  }
+}
+.nx-sync__back {
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  margin-inline-start: -6px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  font-size: 16px;
+  &:hover {
+    background: var(--nx-hover);
+  }
+}
+.nx-sync__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 14px 10px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-sync__sum {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+  & .nx-glyph {
+    font-size: 14px;
+    color: var(--nx-success);
+  }
+  &[data-tone="offline"],
+  &[data-tone="waiting"] {
+    color: var(--_warn);
+    & .nx-glyph {
+      color: inherit;
+    }
+  }
+  &[data-tone="syncing"] .nx-glyph {
+    color: var(--nx-primary-ink);
+  }
+  &[data-tone="alert"] {
+    color: var(--nx-danger);
+    & .nx-glyph {
+      color: inherit;
+    }
+  }
+}
+.nx-sync__now {
+  flex: none;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-primary-ink) !important;
+  font-weight: 600;
+  &:hover {
+    background: var(--nx-primary-soft);
+  }
+}
+
+.nx-sync__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-sync__op {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 0 10px;
+  padding: 11px 14px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  &[data-new] {
+    animation: nx-sync-row var(--nx-motion-base) var(--nx-ease-out);
+  }
+  &:last-child {
+    border-block-end: 0;
+  }
+  & p {
+    margin: 0;
+  }
+}
+.nx-sync__ico {
+  display: grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 14px;
+}
+.nx-sync__label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.nx-sync__meta {
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-sync__tag {
+  display: inline-block;
+  margin-inline-end: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.nx-sync__why {
+  margin-block-start: 2px !important;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+}
+.nx-sync__acts {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 8px;
+}
+.nx-sync__ask {
+  flex-basis: 100%;
+  color: var(--nx-danger);
+  font-size: 12px;
+  font-weight: 550;
+}
+.nx-sync__op[data-status="waiting"] {
+  & .nx-sync__ico,
+  & .nx-sync__tag {
+    background: var(--_warn-soft);
+    color: var(--_warn);
+  }
+}
+.nx-sync__op[data-status="sending"] {
+  & .nx-sync__ico,
+  & .nx-sync__tag {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  & .nx-sync__ico .nx-glyph {
+    animation: nx-sync-lift 0.9s ease-in-out infinite;
+  }
+}
+.nx-sync__op:is([data-status="conflict"], [data-status="failed"]) {
+  & .nx-sync__ico,
+  & .nx-sync__tag {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+  & .nx-sync__why {
+    color: var(--nx-danger);
+  }
+}
+.nx-sync__op[data-status="sent"] {
+  animation: nx-sync-sent 1.4s var(--nx-ease-out) forwards;
+  & .nx-sync__ico,
+  & .nx-sync__tag {
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+  }
+}
+
+.nx-sync__btn {
+  block-size: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  font-size: 12.5px;
+  font-weight: 550;
+  white-space: nowrap;
+  transition: background-color var(--nx-motion-fast);
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &.is-primary,
+  &.is-danger {
+    border-color: transparent;
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+    &:hover {
+      background: color-mix(in oklab, var(--nx-primary) 88%, var(--nx-foreground));
+    }
+  }
+  &.is-danger {
+    background: var(--nx-danger);
+    color: var(--nx-danger-foreground);
+    &:hover {
+      background: color-mix(in oklab, var(--nx-danger) 88%, var(--nx-foreground));
+    }
+  }
+}
+
+.nx-sync__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 26px 24px 28px;
+  color: var(--nx-muted-foreground);
+  text-align: center;
+  font-size: 12.5px;
+  & .nx-glyph {
+    inline-size: 40px;
+    block-size: 40px;
+    margin-block-end: 6px;
+    padding: 10px;
+    border-radius: 50%;
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+    animation: nx-sync-ok var(--nx-motion-base) var(--nx-ease-out);
+  }
+  & strong {
+    color: var(--nx-foreground);
+    font-size: 13.5px;
+  }
+}
+
+/* ---------------------------------------------------------------- comparador y editor */
+
+.nx-sync__hint {
+  margin: 0;
+  padding: 0 14px 10px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  & strong {
+    color: var(--nx-foreground);
+  }
+}
+.nx-sync__all {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 10px;
+}
+.nx-sync__cmp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px;
+}
+.nx-sync__f {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 4px 8px 8px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  & legend {
+    padding: 0 4px;
+    color: var(--nx-muted-foreground);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  &[data-hot] {
+    border-color: color-mix(in oklab, var(--nx-danger) 45%, var(--nx-border));
+    & legend {
+      color: var(--nx-danger);
+    }
+  }
+}
+.nx-sync__opt {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-inline-size: 0;
+  padding: 7px 9px 8px 30px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  cursor: pointer;
+  transition:
+    background-color var(--nx-motion-fast),
+    border-color var(--nx-motion-fast);
+  & input {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-start: 9px;
+    margin: 0;
+    accent-color: var(--nx-primary);
+  }
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:has(input:checked) {
+    border-color: var(--nx-primary);
+    background: var(--nx-primary-soft);
+  }
+  &:has(input:focus-visible) {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+  & input:focus-visible {
+    outline: none;
+  }
+}
+.nx-sync__who {
+  color: var(--nx-muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.nx-sync__val {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  & mark {
+    border-radius: 3px;
+    padding-inline: 1px;
+    background: var(--_mark);
+    color: inherit;
+  }
+  &[data-blank] {
+    color: var(--nx-muted-foreground);
+    font-weight: 400;
+    font-style: italic;
+  }
+}
+.nx-sync__same {
+  margin: 8px 14px 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+}
+.nx-sync__foot {
+  position: sticky;
+  inset-block-end: 0;
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: 12px;
+  padding: 10px 14px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  background: var(--nx-popover);
+}
+.nx-sync__lbl {
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.nx-sync__json {
+  inline-size: calc(100% - 28px);
+  margin: 4px 14px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-canvas);
+  color: var(--nx-foreground);
+  font: 12px/1.5 var(--nx-font-mono);
+  resize: vertical;
+  &[aria-invalid="true"] {
+    border-color: var(--nx-danger);
+  }
+}
+.nx-sync__bad {
+  min-block-size: 1.4em;
+  margin: 4px 14px 0;
+  color: var(--nx-danger);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------- movimiento */
+
+@keyframes nx-sync-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+    scale: 0.98;
+  }
+}
+@keyframes nx-sync-row {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+@keyframes nx-sync-sent {
+  0%,
+  65% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    translate: 8px 0;
+  }
+}
+@keyframes nx-sync-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+@keyframes nx-sync-lift {
+  50% {
+    translate: 0 -2px;
+  }
+}
+@keyframes nx-sync-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes nx-sync-ok {
+  from {
+    scale: 0.94;
+  }
+}
+@keyframes nx-sync-bump {
+  40% {
+    scale: 1.04;
+  }
+}
+@keyframes nx-sync-nudge {
+  30% {
+    scale: 1.08;
+  }
+  60% {
+    scale: 0.98;
+  }
+}
+@keyframes nx-sync-halo {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--nx-danger) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-sync *,
+  nx-sync *::after {
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+  }
+  /* El que acaba de enviarse no se desvanece: se ve con su ✓ hasta que se va. */
+  .nx-sync__op[data-status="sent"] {
+    animation: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-sync__pill,
+  .nx-sync__opt:has(input:checked),
+  .nx-sync__f[data-hot] {
+    border: 2px solid CanvasText;
+  }
+  nx-sync[data-state="alert"] .nx-sync__pill {
+    border-color: Highlight;
+  }
+  nx-sync:is([data-state="online"], [data-state="waiting"]) .nx-sync__dot {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  .nx-sync__val mark {
+    background: Mark;
+    color: MarkText;
+  }
+}
