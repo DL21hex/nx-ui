@@ -102,6 +102,10 @@
       "types": "./dist/types/components/presence/index.d.ts",
       "import": "./dist/presence.js"
     },
+    "./what-if": {
+      "types": "./dist/types/components/what-if/index.d.ts",
+      "import": "./dist/what-if.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -133,6 +137,7 @@
     "./inbox.css": "./dist/inbox.css",
     "./survey.css": "./dist/survey.css",
     "./tour.css": "./dist/tour.css",
+    "./what-if.css": "./dist/what-if.css",
     "./presence.css": "./dist/presence.css",
     "./paste-fill.css": "./dist/paste-fill.css",
     "./date-range.css": "./dist/date-range.css",

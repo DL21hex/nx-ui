@@ -875,6 +875,63 @@ propios que devuelva el servidor se ignoran.
 | Métodos | `push(evento)` → `boolean` (objeto o JSON) |
 | Eventos | `nx-presence-change` `{users}`, `nx-presence-local` (un evento del protocolo) |
 
+## `<nx-what-if>`
+
+Un simulador de escenarios para decisiones de negocio: «¿qué pasa con el margen si el acero sube 8 %
+y vendemos 5 % menos?». El componente no lleva fórmulas: el cálculo lo hace el backend (en
+streaming) o la app. Todo lo demás —deslizadores, animación, diferencias contra la base, gráfico y
+comparación de escenarios— es suyo.
+
+- **Supuestos:** deslizadores con la base marcada en la pista y el tramo desde ella resaltado. El
+  valor grande se escribe con un clic («4.600», «4,5 M», «150 mil»; en porcentaje, puntos) y debajo
+  va «+8 % vs. base». «Restablecer» por supuesto y para todos. La grilla de `step` parte de la base,
+  así que arrastrando se vuelve exacto a ella.
+- **Teclado:** ←/→ ± `step` (Mayús ×10), RePág/AvPág ± 10 pasos, Inicio/Fin. `aria-valuetext` dice el
+  valor con su formato y la diferencia («US$ 842, +8 % vs. base»).
+- **Resultados:** tarjetas con el valor del escenario (el número corre hacia el nuevo; directo con
+  `prefers-reduced-motion`), la base y la diferencia, en verde si mejora según `better` y en rojo si
+  empeora (en porcentajes, en puntos: «-2,8 p. p.»). Un gráfico de líneas propio, sin librerías:
+  base punteada, escenario continuo, el área entre los dos y el cero si el rango lo cruza (y una
+  tabla oculta con los datos para el lector de pantalla).
+- **Cálculo:** con espera entre cambios (`debounce`, 250 ms); la petición anterior se cancela
+  (`AbortController`) y una respuesta vieja nunca pisa a una nueva. Mientras llega, los resultados se
+  atenúan. Sin `endpoint`, el evento `nx-what-if-compute` le pide el cálculo a la app.
+- **Escenarios:** «Guardar como…» guarda supuestos y resultados con un nombre. Una tabla compara la
+  base, el escenario actual y los guardados lado a lado, con la mejor celda de cada métrica resaltada;
+  desde el encabezado de cada columna se cargan, renombran y borran. La app los persiste
+  (`nx-what-if-save`).
+
+```html
+<nx-what-if id="plan" heading="Plan de compras 2027" endpoint="/finanzas/plan-2027/simular"></nx-what-if>
+<script>
+  plan.inputs = [
+    { id: "acero", label: "Precio del acero", value: 780, min: 546, max: 1014, step: 5, format: "money", currency: "US$" },
+    { id: "volumen", label: "Volumen de ventas", value: 144000, min: 115200, max: 172800, step: 1440, unit: "u." },
+  ];
+  plan.outputs = [
+    { id: "margen", label: "Margen bruto", format: "percent", better: "up" },
+    { id: "equilibrio", label: "Punto de equilibrio", unit: "u.", better: "down" },
+  ];
+  plan.addEventListener("nx-what-if-save", (e) => guardar(e.detail.scenarios));
+</script>
+```
+
+El backend recibe `POST {inputs: {acero: 842, volumen: 136800}}` y responde una línea por evento:
+
+```
+{"type":"metric","id":"margen","value":0.193,"base":0.221}
+{"type":"series","id":"caja","label":"Saldo de caja","format":"money","currency":"COP","points":[{"x":"ene","base":7640e6,"value":7329e6}, …]}
+{"type":"note","message":"El margen cae bajo el 15 %","tone":"warning"}
+{"type":"done"}
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `inputs` (`[{id, label, value, min, max, step?, format?, currency?, unit?, hint?}]`), `outputs` (`[{id, label, value?, base?, format?, currency?, unit?, better?}]`), `series` (`[{id, label, format?, currency?, points: [{x, base?, value}]}]`), `scenarios` (`[{id, name, inputs, outputs}]`), `values`, `endpoint`, `debounce`, `heading`, `locale`, `labels` |
+| Métodos | `reset(id?)`, `recompute()`, `save(name?)` |
+| Eventos | `nx-what-if-compute` `{inputs, respond(events)}`, `nx-what-if-save` `{action, scenario, scenarios}` (cancelable), `nx-what-if-change` `{id, inputs}` |
+| Protocolo | NDJSON o SSE: `metric`, `series`, `note` (`tone`), `error`, `done` |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos

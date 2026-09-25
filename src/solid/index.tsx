@@ -2,7 +2,7 @@
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
- * `<PasteFill>`, `<Presence>`), y `nxToast` / `nxConfirm`.
+ * `<PasteFill>`, `<Presence>`, `<WhatIf>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -64,6 +64,9 @@ import type { PasteFieldInput, PasteFillDoneDetail, PasteFillLabels } from "../c
 import "../components/presence/index";
 import type { NxPresence } from "../components/presence/presence";
 import type { PresenceEvent, PresenceLabels, PresenceState, PresenceUser } from "../components/presence/types";
+import "../components/what-if/index";
+import type { NxWhatIf } from "../components/what-if/what-if";
+import type { WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfSaveDetail, WhatIfScenario, WhatIfSeries, WhatIfValues } from "../components/what-if/types";
 import "../components/date-range/index";
 import type { NxDateRange } from "../components/date-range/date-range";
 import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
@@ -87,6 +90,7 @@ export type { NxHistory, HistoryActor, HistoryCommitDetail, HistoryEvent, Histor
 export type { NxDateRange, DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue };
 export type { NxPasteFill, PasteFieldInput, PasteFillDoneDetail, PasteFillLabels };
 export type { NxPresence, PresenceEvent, PresenceLabels, PresenceState, PresenceUser };
+export type { NxWhatIf, WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfSaveDetail, WhatIfScenario, WhatIfSeries, WhatIfValues };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -94,9 +98,14 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      values: WhatIfValues | undefined;
+      scenarios: WhatIfScenario[] | undefined;
+      series: WhatIfSeries[] | undefined;
+      outputs: WhatIfMetric[] | undefined;
+      inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -122,6 +131,7 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      debounce: string | undefined;
       idle: string | undefined;
       channel: string | undefined;
       active: string | undefined;
@@ -194,6 +204,9 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-what-if-change": CustomEvent<WhatIfChangeDetail>;
+      "nx-what-if-save": CustomEvent<WhatIfSaveDetail>;
+      "nx-what-if-compute": CustomEvent<WhatIfComputeDetail>;
       "nx-presence-local": CustomEvent<PresenceEvent>;
       "nx-presence-change": CustomEvent<{ users: PresenceState[] }>;
       "nx-select": CustomEvent<SelectDetail>;
@@ -237,6 +250,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-what-if": HTMLAttributes<NxWhatIf> & { heading?: string; endpoint?: string };
       "nx-presence": HTMLAttributes<NxPresence> & { channel?: string; source?: string; for?: string };
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
       "nx-button": HTMLAttributes<NxButton> & { label?: string; icon?: string; variant?: ButtonVariant };
@@ -1103,6 +1117,53 @@ export function Presence(props: PresenceProps): JSX.Element {
       attr:locale={local.locale}
       on:nx-presence-change={(e) => local.onChange?.(e)}
       on:nx-presence-local={(e) => local.onLocal?.(e)}
+    />
+  );
+}
+
+export interface WhatIfProps extends Omit<JSX.HTMLAttributes<NxWhatIf>, "onChange"> {
+  /** Los supuestos: `value` es la base; en `percent`, la fracción. */
+  inputs: WhatIfInput[];
+  /** Las métricas (`better: "up" | "down"` colorea la diferencia). */
+  outputs?: WhatIfMetric[];
+  /** Series del gráfico de líneas (base punteada vs. escenario). */
+  series?: WhatIfSeries[];
+  /** Los escenarios guardados; la app los persiste con `onSave`. */
+  scenarios?: WhatIfScenario[];
+  /** Los supuestos de ahora (para cargar un escenario desde fuera). */
+  values?: WhatIfValues;
+  /** `POST {inputs}` → NDJSON. Sin él, `onCompute`. */
+  endpoint?: string;
+  /** Espera en ms entre el último cambio y el cálculo (250). */
+  debounce?: number;
+  heading?: string;
+  locale?: string;
+  labels?: Partial<WhatIfLabels>;
+  /** Sin `endpoint`: calcula `e.detail.inputs` y llama `e.detail.respond(events)` (o `preventDefault()` y responde después). */
+  onCompute?: (e: CustomEvent<WhatIfComputeDetail>) => void;
+  /** Cancelable: guardar, renombrar o borrar; `e.detail.scenarios` es la lista nueva. */
+  onSave?: (e: CustomEvent<WhatIfSaveDetail>) => void;
+  onChange?: (e: CustomEvent<WhatIfChangeDetail>) => void;
+}
+
+export function WhatIf(props: WhatIfProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["inputs", "outputs", "series", "scenarios", "values", "endpoint", "debounce", "heading", "locale", "labels", "onCompute", "onSave", "onChange"]);
+  return (
+    <nx-what-if
+      {...rest}
+      prop:inputs={local.inputs}
+      prop:outputs={local.outputs}
+      prop:series={local.series}
+      prop:scenarios={local.scenarios}
+      prop:values={local.values}
+      prop:labels={local.labels}
+      attr:endpoint={local.endpoint}
+      attr:debounce={local.debounce === undefined ? undefined : String(local.debounce)}
+      attr:heading={local.heading}
+      attr:locale={local.locale}
+      on:nx-what-if-compute={(e) => local.onCompute?.(e)}
+      on:nx-what-if-save={(e) => local.onSave?.(e)}
+      on:nx-what-if-change={(e) => local.onChange?.(e)}
     />
   );
 }

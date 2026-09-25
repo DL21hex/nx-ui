@@ -9,6 +9,7 @@ import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
 import { EXPLAIN, INBOX, SURVEY, surveyResponses } from "./demo-next";
+import { mountWhatIfDemo } from "./demo-what-if";
 import { mountPresenceDemo } from "./demo-presence";
 import { mountPasteFillDemo } from "./demo-paste-fill";
 import "./pages/paste-fill.css";
@@ -101,6 +102,7 @@ const NAV: MenuItem[] = [
   { id: "date-range", label: "Rango de fechas", href: "#/date-range", icon: "calendar", section: "Componentes", badge: "Nuevo" },
   { id: "paste-fill", label: "Pegar y llenar", href: "#/paste-fill", icon: "file-text", section: "Componentes", badge: "Nuevo" },
   { id: "presence", label: "Presencia", href: "#/presence", icon: "users", section: "Componentes", badge: "Nuevo" },
+  { id: "what-if", label: "Simulador", href: "#/what-if", icon: "trending-up", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -120,6 +122,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/explain": { template: "page-explain", mount: mountExplainDemo },
   "#/inbox": { template: "page-inbox", mount: mountInboxDemo },
   "#/survey": { template: "page-survey", mount: mountSurveyDemo },
+  "#/what-if": { template: "page-what-if", mount: mountWhatIfDemo },
   "#/presence": { template: "page-presence", mount: mountPresenceDemo },
   "#/paste-fill": { template: "page-paste-fill", mount: mountPasteFillDemo },
   "#/date-range": { template: "page-date-range", mount: mountDateRangeDemo },

@@ -1507,6 +1507,106 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Simulador de escenarios -->
+        <template id="page-what-if">
+          <p class="eyebrow">Componentes</p>
+          <h1>Simulador de escenarios <code class="tag">&lt;nx-what-if&gt;</code></h1>
+          <p class="lead">
+            «¿Qué pasa con el margen si el acero sube 8 % y vendemos 5 % menos?». Mueve los supuestos y los resultados corren
+            hacia su valor nuevo, cada uno con la base al lado y la diferencia en verde o en rojo según lo que conviene. El
+            cálculo lo hace el backend, en streaming: el componente no lleva fórmulas. Guarda los escenarios que te gusten y
+            compáralos lado a lado.
+          </p>
+          <nx-what-if id="what-if-demo" heading="Plan de compras 2027 · Planta Malambo" endpoint="/demo/what-if" locale="es-CO"></nx-what-if>
+          <p class="sel-tip">
+            Enfoca un deslizador y usa <kbd>←</kbd> <kbd>→</kbd> (<kbd>Mayús</kbd> ×10), <kbd>RePág</kbd>/<kbd>AvPág</kbd>,
+            <kbd>Inicio</kbd>/<kbd>Fin</kbd>. Haz clic en un valor grande para escribirlo («4.600», «150 mil»). Sube el acero
+            al máximo para ver la advertencia del margen, o las ventas al máximo para ver que la planta no alcanza; luego
+            «Guardar como…» y compara con los dos escenarios que ya están.
+          </p>
+          <ol class="stage__log btn-events" id="what-if-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Supuestos</td><td>Deslizadores con la base marcada en la pista y el tramo recorrido desde ella resaltado; el valor grande se escribe con un clic (formato del locale, «4,5 M», «150 mil»; en porcentaje, puntos). Debajo, «+8 % vs. base» y un botón para restablecer ese supuesto.</td></tr>
+                <tr><td>Resultados</td><td>Tarjetas con el valor del escenario (el número corre hacia el nuevo; sin animación con movimiento reducido), la base y la diferencia coloreada según <code>better</code>: verde si mejora, rojo si empeora.</td></tr>
+                <tr><td>Gráfico</td><td>SVG propio, sin librerías: la base punteada, el escenario continuo y el área entre los dos; el cero si el rango lo cruza. Para el lector de pantalla, los mismos datos en una tabla.</td></tr>
+                <tr><td>Cálculo</td><td>Con espera entre cambios (<code>debounce</code>, 250 ms); la petición anterior se cancela (<code>AbortController</code>) y una respuesta vieja no pisa a una nueva. Mientras llega, los resultados se atenúan un poco.</td></tr>
+                <tr><td>Escenarios</td><td>«Guardar como…» guarda supuestos y resultados con un nombre. La tabla compara la base, el escenario actual y los guardados, con la mejor celda de cada métrica resaltada. Cargar, renombrar y borrar desde el encabezado de cada columna.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+              <tbody>
+                <tr><td><code>POST endpoint</code></td><td><code>{inputs: {id: valor}}</code> → NDJSON (o <code>data:</code> de SSE), un evento por línea.</td></tr>
+                <tr><td><code>metric</code></td><td><code>{"type":"metric","id","label?","value","base?","format?","currency?","unit?","better?"}</code>. Sin <code>base</code>, la da el cálculo con todo en la base.</td></tr>
+                <tr><td><code>series</code></td><td><code>{"type":"series","id","label","points":[{x, base, value}]}</code>: reemplaza la serie.</td></tr>
+                <tr><td><code>note</code>, <code>error</code></td><td><code>{"type":"note","message","tone"}</code> (<code>neutral</code>, <code>success</code>, <code>warning</code>, <code>danger</code>) · <code>{"type":"error","message"}</code>, con «Reintentar».</td></tr>
+                <tr><td><code>done</code></td><td>Terminó: las notas de este cálculo reemplazan a las anteriores.</td></tr>
+                <tr><td><code>nx-what-if-compute</code></td><td>Sin <code>endpoint</code>: <code>{inputs, respond(events)}</code>. La app calcula y responde con los mismos eventos (ya, o después de <code>preventDefault()</code>).</td></tr>
+                <tr><td><code>nx-what-if-save</code></td><td><code>{action: "save" | "rename" | "delete", scenario, scenarios}</code>, cancelable: aquí la app persiste la lista.</td></tr>
+                <tr><td><code>nx-what-if-change</code></td><td><code>{id, inputs}</code>: cambió un supuesto (<code>id: null</code>, varios a la vez).</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-what-if id="plan" heading="Plan de compras 2027" endpoint="/finanzas/plan-2027/simular"&gt;&lt;/nx-what-if&gt;
+
+    plan.inputs = [
+      { id: "acero", label: "Precio del acero", value: 780, min: 546, max: 1014, step: 5,
+        format: "money", currency: "US$", hint: "Lámina HR, por tonelada" },
+      { id: "volumen", label: "Volumen de ventas", value: 144000, min: 115200, max: 172800, step: 1440, unit: "u." },
+    ];
+    plan.outputs = [
+      { id: "margen", label: "Margen bruto", format: "percent", better: "up" },
+      { id: "utilidad", label: "Utilidad operativa", format: "money", currency: "COP", better: "up" },
+    ];
+    plan.scenarios = await (await fetch("/finanzas/plan-2027/escenarios")).json();
+    plan.addEventListener("nx-what-if-save", (e) =&gt;
+      fetch("/finanzas/plan-2027/escenarios", { method: "PUT", body: JSON.stringify(e.detail.scenarios) }));
+
+    // Sin servidor: la app calcula.
+    plan.addEventListener("nx-what-if-compute", (e) =&gt; {
+      const { acero, volumen } = e.detail.inputs;
+      e.detail.respond([{ type: "metric", id: "margen", value: margen(acero, volumen) }]);
+    });</code></pre>
+            <pre role="tabpanel" hidden><code>import { WhatIf } from "nx-ui/solid";
+
+    &lt;WhatIf heading="Plan de compras 2027" endpoint="/finanzas/plan-2027/simular"
+      inputs={supuestos} outputs={metricas} scenarios={escenarios()}
+      onSave={(e) =&gt; setEscenarios(e.detail.scenarios)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>inputs</code></td><td><code>[{id, label, value, min, max, step?, format?: "number" | "money" | "percent", currency?, unit?, hint?}]</code>. <code>value</code> es la base; en <code>percent</code>, la fracción (0,08 es 8 %).</td></tr>
+                <tr><td><code>outputs</code>, <code>series</code></td><td>Las métricas <code>[{id, label, value?, base?, format?, currency?, unit?, better?: "up" | "down"}]</code> y las series del gráfico <code>[{id, label, format?, currency?, points: [{x, base?, value}]}]</code>.</td></tr>
+                <tr><td><code>scenarios</code></td><td><code>[{id, name, inputs, outputs}]</code>: los guardados. La app los persiste.</td></tr>
+                <tr><td><code>endpoint</code>, <code>debounce</code>, <code>heading</code>, <code>locale</code>, <code>labels</code></td><td>URL del cálculo, espera en ms (250), título, formato y textos.</td></tr>
+                <tr><td><code>values</code>, <code>reset(id?)</code>, <code>recompute()</code>, <code>save(name?)</code></td><td>Los supuestos de ahora (asignables), volver a la base, recalcular y guardar desde código.</td></tr>
+                <tr><td>Teclado</td><td>Sobre un deslizador: <kbd>←</kbd>/<kbd>→</kbd> ± <code>step</code> (<kbd>Mayús</kbd> ×10), <kbd>RePág</kbd>/<kbd>AvPág</kbd> ± 10 pasos, <kbd>Inicio</kbd>/<kbd>Fin</kbd>. En el valor escrito, <kbd>↵</kbd> aplica y <kbd>Esc</kbd> deshace. <code>aria-valuetext</code> dice el valor formateado y la diferencia con la base.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-what-if-compute</code>, <code>nx-what-if-save</code> (cancelable), <code>nx-what-if-change</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

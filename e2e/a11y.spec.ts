@@ -197,3 +197,23 @@ test("presencia: la pila, los campos marcados, el aviso de bloqueo y la lista", 
   await page.waitForTimeout(250);
   await audit(page, ["#presence-demo"]);
 });
+
+test("simulador: en la base, con notas de advertencia y peligro, escribiendo y renombrando", async ({ page }) => {
+  await open(page, "#/what-if");
+  const demo = page.locator("#what-if-demo");
+  await expect(demo.locator(".nx-what-if__card").first()).toBeVisible();
+  await audit(page, ["#what-if-demo"]);
+  await demo.getByRole("slider", { name: "Precio del acero" }).focus();
+  await page.keyboard.press("End");
+  await demo.getByRole("slider", { name: "Tasa de cambio USD/COP" }).focus();
+  await page.keyboard.press("End");
+  await demo.getByRole("slider", { name: "Volumen de ventas" }).focus();
+  await page.keyboard.press("Home");
+  await expect(demo.locator('.nx-what-if__note[data-tone="danger"]')).toBeVisible();
+  await expect(demo.locator(".nx-what-if__results")).not.toHaveAttribute("data-busy", "");
+  await audit(page, ["#what-if-demo"]);
+  await demo.locator(".nx-what-if__big").first().click();
+  await demo.getByRole("button", { name: "Guardar como…" }).click();
+  await demo.getByRole("button", { name: "Renombrar Plan agresivo de ventas" }).click();
+  await audit(page, ["#what-if-demo"]);
+});
