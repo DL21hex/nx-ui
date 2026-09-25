@@ -1,0 +1,191 @@
+/* ---------------------------------------------------------------- demo de <nx-date-range> */
+
+.drg-board {
+  margin-block: 8px 18px;
+  padding: 16px 18px 12px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.drg-board__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block-end: 14px;
+}
+.drg-board__title {
+  margin: 0 !important;
+  font-size: 17px;
+}
+.drg-board__sub {
+  margin: 2px 0 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+}
+.drg-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.drg-tile {
+  padding: 12px 14px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  & p {
+    margin: 0;
+  }
+}
+.drg-tile__label {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 550;
+}
+.drg-tile__value {
+  margin-block: 4px 2px !important;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.drg-tile__delta {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  & strong {
+    font-weight: 650;
+  }
+  &[data-dir="up"] strong,
+  &[data-dir="up"] .drg-tile__arrow {
+    color: var(--nx-success);
+  }
+  &[data-dir="down"] strong,
+  &[data-dir="down"] .drg-tile__arrow {
+    color: var(--nx-danger);
+  }
+}
+.drg-tile__arrow {
+  margin-inline-end: 3px;
+  font-size: 9px;
+}
+.drg-figure {
+  margin: 16px 0 0;
+  & figcaption {
+    margin-block-end: 8px;
+    color: var(--nx-muted-foreground);
+    font-size: 12.5px;
+    font-weight: 550;
+  }
+}
+.drg-plot {
+  position: relative;
+}
+.drg-chart {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr));
+  align-items: end;
+  block-size: 150px;
+  border-block-end: 1px solid var(--nx-border);
+  /* La línea del máximo, recesiva, con su valor. */
+  background: linear-gradient(var(--nx-border-subtle), var(--nx-border-subtle)) top / 100% 1px no-repeat;
+  &::before {
+    content: attr(data-max);
+    position: absolute;
+    inset: 2px 0 auto auto;
+    color: var(--nx-text-tertiary);
+    font-size: 11px;
+  }
+}
+.drg-bar {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  block-size: 100%;
+  padding-inline: 1px;
+  &::after {
+    content: "";
+    inline-size: min(100%, 24px);
+    block-size: var(--h);
+    border-radius: 4px 4px 0 0;
+    background: var(--nx-primary);
+    transition: block-size var(--nx-motion-base) var(--nx-ease-out);
+  }
+  &[data-on]::after {
+    background: var(--nx-primary-ink);
+  }
+}
+.drg-tip[hidden] {
+  display: none;
+}
+.drg-tip {
+  position: absolute;
+  inset-block-start: -8px;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-popover);
+  box-shadow: var(--nx-shadow-popover);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  & span {
+    color: var(--nx-text-tertiary);
+  }
+}
+.drg-details {
+  margin-block-start: 10px;
+  font-size: 12.5px;
+  & summary {
+    color: var(--nx-primary-ink);
+    cursor: pointer;
+  }
+  & table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+.drg-phrases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-end: 18px;
+}
+.drg-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  &:hover {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+.drg-form nx-date-range {
+  inline-size: 100%;
+  max-inline-size: 360px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drg-bar::after {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .drg-bar::after {
+    background: CanvasText;
+  }
+  .drg-bar[data-on]::after {
+    background: Highlight;
+  }
+}

@@ -1,0 +1,568 @@
+/*
+ * <nx-date-range>. Variables propias:
+ *   --nx-date-range-width (auto) · --nx-date-range-height (36px) · --nx-date-range-cell (34px)
+ */
+
+nx-date-range {
+  --_cmp: light-dark(oklch(0.72 0.15 65), oklch(0.78 0.13 70));
+  display: inline-block;
+  inline-size: var(--nx-date-range-width, auto);
+  min-inline-size: 240px;
+  max-inline-size: 100%;
+  vertical-align: middle;
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+nx-date-range *,
+nx-date-range *::before,
+nx-date-range *::after {
+  box-sizing: border-box;
+}
+nx-date-range [hidden] {
+  display: none !important;
+}
+nx-date-range .nx-glyph {
+  display: inline-flex;
+  flex: none;
+  inline-size: 15px;
+  block-size: 15px;
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- el campo cerrado */
+
+.nx-date-range__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 100%;
+  min-block-size: var(--nx-date-range-height, 36px);
+  padding: 4px 8px 4px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast);
+}
+.nx-date-range__field:hover {
+  border-color: var(--nx-border-strong);
+}
+.nx-date-range__field:focus-visible,
+.nx-date-range__field[aria-expanded="true"] {
+  border-color: var(--nx-primary-border);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--nx-primary-soft);
+}
+.nx-date-range__field:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.nx-date-range__icon,
+.nx-date-range__chev {
+  color: var(--nx-text-tertiary);
+}
+.nx-date-range__chev {
+  margin-inline-start: auto;
+  transition: rotate var(--nx-motion-fast);
+}
+.nx-date-range__field[aria-expanded="true"] .nx-date-range__chev {
+  rotate: 180deg;
+}
+.nx-date-range__placeholder {
+  flex: 1;
+  color: var(--nx-text-tertiary);
+}
+.nx-date-range__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+  font-variant-numeric: tabular-nums;
+}
+.nx-date-range__main,
+.nx-date-range__cmpline {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-date-range__range {
+  font-weight: 550;
+}
+.nx-date-range__days {
+  color: var(--nx-text-tertiary);
+}
+.nx-date-range__cmpline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+  &::before {
+    content: "";
+    inline-size: 8px;
+    block-size: 3px;
+    border-radius: 2px;
+    background: var(--_cmp);
+  }
+}
+
+/* ---------------------------------------------------------------- el panel */
+
+.nx-date-range__pop {
+  --_cell: var(--nx-date-range-cell, 34px);
+  position: fixed;
+  inset: auto;
+  inline-size: min(calc(150px + 14 * var(--_cell) + 64px), calc(100vw - 16px));
+  margin: 0;
+  padding: 10px;
+  max-block-size: calc(100dvh - 16px);
+  overflow: auto;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  overscroll-behavior: contain;
+}
+.nx-date-range__pop[data-months="1"] {
+  --_cell: calc((min(380px, 100vw - 16px) - 22px) / 7);
+  inline-size: min(380px, calc(100vw - 16px));
+}
+.nx-date-range__pop:popover-open {
+  display: flex;
+  flex-direction: column;
+  animation: nx-date-range-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+
+/* La caja de texto: lo importante, arriba. */
+.nx-date-range__ask {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.nx-date-range__spark {
+  position: absolute;
+  inset-inline-start: 11px;
+  color: var(--nx-primary-ink);
+  pointer-events: none;
+}
+.nx-date-range__input {
+  inline-size: 100%;
+  block-size: 38px;
+  padding-block: 0;
+  padding-inline: 34px 40px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  outline: none;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 14.5px;
+
+  &::placeholder {
+    color: var(--nx-text-tertiary);
+  }
+  &:focus {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+}
+.nx-date-range__enter {
+  position: absolute;
+  inset-inline-end: 8px;
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 24px;
+  block-size: 22px;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-sm);
+  color: var(--nx-text-tertiary);
+  font: 600 12px/1 var(--nx-font-sans);
+  opacity: 0;
+  scale: 0.9;
+  transition:
+    opacity var(--nx-motion-fast),
+    scale var(--nx-motion-fast);
+}
+.nx-date-range__pop[data-ready] .nx-date-range__enter {
+  opacity: 1;
+  scale: 1;
+}
+
+/* Cómo se entendió. */
+.nx-date-range__said {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 4px;
+  min-block-size: 20px;
+  margin: 7px 4px 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  & strong {
+    color: var(--nx-foreground);
+    font-weight: 600;
+  }
+  &[data-state="bad"] {
+    color: var(--nx-danger);
+  }
+}
+.nx-date-range__ok {
+  color: var(--nx-success);
+}
+.nx-date-range__said-vs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.nx-date-range__said.is-shake {
+  animation: nx-date-range-shake 0.32s var(--nx-ease-out);
+}
+
+/* ---------------------------------------------------------------- atajos y calendario */
+
+.nx-date-range__body {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  margin-block-start: 10px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+.nx-date-range__presets {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-inline-end: 10px;
+  border-inline-end: 1px solid var(--nx-border-subtle);
+}
+.nx-date-range__preset {
+  padding: 6px 9px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: -2px;
+  }
+  &[aria-pressed="true"] {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+    font-weight: 550;
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+.nx-date-range__cal {
+  position: relative;
+  min-inline-size: 0;
+}
+.nx-date-range__nav {
+  position: absolute;
+  inset-block-start: -2px;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-muted-foreground);
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 0.35;
+  }
+}
+.nx-date-range__nav--prev {
+  inset-inline-start: 0;
+}
+.nx-date-range__nav--next {
+  inset-inline-end: 0;
+}
+.nx-date-range__months {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  overflow: hidden;
+}
+.nx-date-range__months[data-dir="1"] .nx-date-range__month {
+  animation: nx-date-range-next var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-date-range__months[data-dir="-1"] .nx-date-range__month {
+  animation: nx-date-range-prev var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-date-range__title {
+  margin: 0 0 6px;
+  block-size: 26px;
+  font-weight: 600;
+  line-height: 26px;
+  text-align: center;
+}
+.nx-date-range__grid {
+  display: grid;
+  row-gap: 2px;
+}
+.nx-date-range__row {
+  display: grid;
+  grid-template-columns: repeat(7, var(--_cell));
+}
+.nx-date-range__wd {
+  padding-block: 4px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 550;
+  text-align: center;
+}
+
+/* Un día: el fondo es la banda del rango; inicio y fin, sólidos. */
+.nx-date-range__day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  block-size: 32px;
+  border-radius: var(--nx-radius-md);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--nx-motion-fast),
+    color var(--nx-motion-fast);
+  &:hover:not([data-s], [data-e], [aria-disabled]) {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    z-index: 1;
+    outline: 2px solid var(--nx-ring);
+    outline-offset: -1px;
+  }
+  &[aria-current="date"] {
+    font-weight: 700;
+    &::after {
+      content: "";
+      position: absolute;
+      inset-block-end: 3px;
+      inline-size: 4px;
+      block-size: 4px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  }
+  &[aria-current="date"]:not([data-in]) {
+    color: var(--nx-primary-ink);
+  }
+  &[data-c]:not([data-in])::before {
+    content: "";
+    position: absolute;
+    inset: auto 3px 1px;
+    block-size: 3px;
+    border-radius: 2px;
+    background: var(--_cmp);
+  }
+  &[data-in] {
+    border-radius: 0;
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  &[data-in]:first-child,
+  &[data-s] {
+    border-start-start-radius: var(--nx-radius-md);
+    border-end-start-radius: var(--nx-radius-md);
+  }
+  &[data-in]:last-child,
+  &[data-e] {
+    border-start-end-radius: var(--nx-radius-md);
+    border-end-end-radius: var(--nx-radius-md);
+  }
+  &[data-s],
+  &[data-e] {
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+    font-weight: 650;
+  }
+  &[aria-disabled="true"] {
+    color: var(--nx-text-tertiary);
+    text-decoration: line-through;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+/* Mientras se elige, se escribe o se pasa sobre un atajo: el rango aún no es el valor. */
+.nx-date-range__pop[data-tentative] .nx-date-range__day:is([data-s], [data-e]) {
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  box-shadow: inset 0 0 0 1.5px var(--nx-primary);
+}
+
+/* ---------------------------------------------------------------- comparar */
+
+.nx-date-range__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-block-start: 10px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  font-size: 12.5px;
+}
+.nx-date-range__cmp-label {
+  color: var(--nx-text-tertiary);
+  font-weight: 550;
+}
+.nx-date-range__seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-hover);
+  & label {
+    position: relative;
+    padding: 4px 10px;
+    border-radius: var(--nx-radius-sm);
+    color: var(--nx-muted-foreground);
+    cursor: pointer;
+    transition:
+      background-color var(--nx-motion-fast),
+      color var(--nx-motion-fast);
+  }
+  & input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  & label:has(:checked) {
+    background: var(--nx-card);
+    color: var(--nx-foreground);
+    font-weight: 550;
+    box-shadow: 0 1px 2px light-dark(rgb(15 20 30 / 0.12), rgb(0 0 0 / 0.4));
+  }
+  & label:has(:focus-visible) {
+    outline: 2px solid var(--nx-ring);
+  }
+}
+.nx-date-range__vs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: auto;
+  color: var(--nx-muted-foreground);
+  &:not(:empty)::before {
+    content: "";
+    inline-size: 12px;
+    block-size: 3px;
+    border-radius: 2px;
+    background: var(--_cmp);
+  }
+}
+
+/* ---------------------------------------------------------------- un mes (móvil) */
+
+.nx-date-range__pop[data-months="1"] {
+  & .nx-date-range__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  & .nx-date-range__presets {
+    flex-direction: row;
+    gap: 6px;
+    margin-inline: -10px;
+    padding: 0 10px 2px;
+    overflow-x: auto;
+    border: 0;
+    scrollbar-width: none;
+  }
+  & .nx-date-range__preset {
+    flex: none;
+    padding: 5px 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: 999px;
+  }
+  & .nx-date-range__vs {
+    margin-inline-start: 0;
+  }
+}
+
+@keyframes nx-date-range-in {
+  from {
+    opacity: 0;
+    translate: 0 -3px;
+  }
+}
+@keyframes nx-date-range-next {
+  from {
+    opacity: 0;
+    translate: 12px 0;
+  }
+}
+@keyframes nx-date-range-prev {
+  from {
+    opacity: 0;
+    translate: -12px 0;
+  }
+}
+@keyframes nx-date-range-shake {
+  20%,
+  60% {
+    translate: -4px 0;
+  }
+  40%,
+  80% {
+    translate: 4px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-date-range *,
+  .nx-date-range__pop {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-date-range__day[data-in] {
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+  .nx-date-range__day:is([data-s], [data-e]) {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+  .nx-date-range__day[aria-current="date"] {
+    text-decoration: underline;
+  }
+  .nx-date-range__seg label:has(:checked),
+  .nx-date-range__preset[aria-pressed="true"] {
+    outline: 2px solid Highlight;
+  }
+}
