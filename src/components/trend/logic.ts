@@ -73,18 +73,24 @@ export function niceTicks(min: number, max: number, count = 5, zero = false): nu
     max = Math.max(0, max);
   }
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+  if (min > max) [min, max] = [max, min];
   if (max === min) {
     const pad = Math.abs(max) * 0.1 || 1;
     min -= zero && min === 0 ? 0 : pad;
     max += pad;
   }
-  const raw = (max - min) / Math.max(1, count);
+  const raw = (max - min) / Math.max(1, Math.min(count, 20));
   const mag = 10 ** Math.floor(Math.log10(raw));
   const n = raw / mag;
   const step = (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+  const k0 = Math.floor(min / step + 1e-9);
+  const k1 = Math.ceil(max / step - 1e-9);
+  // Un rango que no cabe en un `number` (±1e308) o un paso que se pierde junto a valores enormes
+  // (1e17 con un rango de 64: `k + 1 === k` pasado 2⁵³) no dan ticks redondos: los extremos, y ya.
+  if (!Number.isFinite(step) || step <= 0 || !Number.isSafeInteger(k0) || !Number.isSafeInteger(k1) || k1 - k0 > 100) return [min, max];
   const ticks: number[] = [];
   // En pasos enteros y con 12 cifras, contra el ruido del punto flotante (3 × 0,2 = 0,6000…01).
-  for (let k = Math.floor(min / step + 1e-9); k <= Math.ceil(max / step - 1e-9); k++) ticks.push(+(k * step).toPrecision(12));
+  for (let k = k0; k <= k1; k++) ticks.push(+(k * step).toPrecision(12));
   return ticks;
 }
 

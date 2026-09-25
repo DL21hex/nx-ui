@@ -209,6 +209,21 @@ test("tendencias: gráfico, tooltip, popover con la respuesta y tabla", async ({
 });
 ```
 
+## Seguridad y robustez
+
+- `explain-endpoint` solo del mismo origen (o de uno de `allowOrigins()`): el contexto del gráfico
+  no viaja a un tercero. Con otro, «¿por qué?» solo emite `nx-trend-why`.
+- `locale` es también propiedad (refleja el atributo): el BDUI la manda como propiedad.
+- `niceTicks` siempre termina: con valores enormes y poco rango (1e17 con 64 de rango; pasado 2⁵³
+  `k + 1 === k`) o un rango que no cabe en un `number` (±1e308) devuelve los extremos. La escala se
+  calcula a la mitad para no desbordar, y el mínimo y el máximo salen de `extent()` (no de
+  `Math.min(...valores)`, que lanza con ~120 000).
+- Miles de puntos: índices por periodo en el dibujo, la tabla y las anomalías (antes `indexOf` y
+  `find` por punto y por celda: cuadrático), y el resaltado toca solo las marcas de la columna que
+  se va y la que llega.
+- Desconectar con el popover abierto quita sus listeners de `window` (quitar un popover abierto no
+  dispara `toggle`).
+
 ## Notas
 
 - **No toqué el núcleo** (`src/core/`). Uso `h()`, `safeHref()`, `nxFormat()`/`resolveLocale()` y

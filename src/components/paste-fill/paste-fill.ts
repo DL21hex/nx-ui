@@ -17,12 +17,13 @@
  * dentro del formulario del autor (solo `data-nx-fill` y la descripción accesible del campo).
  */
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { lineData, readLines } from "../../core/stream";
 import { foldText } from "../../core/text";
-import { PASTE_HINTS, cleanFields, confidenceTier, fmtText, humanize, matchFields, mergeFields, parsePasteEvent } from "./logic";
+import { MAX_TEXT, PASTE_HINTS, cleanFields, confidenceTier, fmtText, humanize, matchFields, mergeFields, parsePasteEvent } from "./logic";
 import type { PasteField, PasteFieldInput, PasteFill, PasteFillDoneDetail, PasteFillLabels, PasteFillState, PasteSource } from "./types";
 
 export const PASTE_FILL_LABELS: PasteFillLabels = {
@@ -55,6 +56,7 @@ export const PASTE_FILL_LABELS: PasteFillLabels = {
   same: "Ya tenía este valor",
   yours: "Tienes «{value}»",
   fromText: "Llenado desde el texto pegado",
+  tooLong: "El texto es muy largo ({max} caracteres como máximo): pega solo la parte con los datos",
 };
 
 const PASTE = '<path d="M11 14h10"/><path d="M16 4h2a2 2 0 0 1 2 2v1.344"/><path d="m17 18 4-4-4-4"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 1.793-1.113"/><rect x="8" y="2" width="8" height="4" rx="1"/>';
@@ -78,6 +80,10 @@ type Mark = { name: string; label: string; hue: number; value: string; shown: st
 type Session = { text: string; marks: Map<string, Mark>; before: Map<string, string>; notes: string[]; failed: boolean };
 
 let uid = 0;
+/** Cualquier control donde se escribe o se elige (también contraseñas, casillas, archivos): pegar o
+ *  soltar ahí es de ese control. Interceptarlo mandaba al `endpoint` una contraseña pegada en su
+ *  campo (y la mostraba como evidencia). */
+const editable = (t: EventTarget | null): boolean => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 const isField = (t: EventTarget | null): boolean =>
   t instanceof HTMLElement && (t.isContentEditable || /^(TEXTAREA|SELECT)$/.test(t.tagName) || (t.tagName === "INPUT" && !SKIP.test((t as HTMLInputElement).type)));
 const same = (a: string, b: string) => foldText(a.trim()) === foldText(b.trim());
@@ -128,6 +134,8 @@ export class NxPasteFill extends Base {
   #open: boolean | null = null;
   #writing = false;
   #abort?: AbortController;
+  /** El último texto pasó de `MAX_TEXT`: la zona lo dice hasta que se escriba otro. */
+  #tooLong = false;
   #ro?: ResizeObserver;
   #raf = 0;
   #built = false;
@@ -188,7 +196,7 @@ export class NxPasteFill extends Base {
     return this.#labels;
   }
   set labels(v: Partial<PasteFillLabels> | null | undefined) {
-    this.#labels = { ...PASTE_FILL_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(PASTE_FILL_LABELS, v);
     this.#paint();
   }
   /** `idle`, `busy` (leyendo o esperando al servidor) o `filled`. */
@@ -216,6 +224,15 @@ export class NxPasteFill extends Base {
       .replace(/\r\n?/g, "\n")
       .trim();
     if (!text) return null;
+    if (text.length > MAX_TEXT) {
+      // No se lee ni se envía: se dice por qué, en la zona y al lector de pantalla.
+      if (!this.#built) this.#build();
+      this.#tooLong = true;
+      this.#paintZone();
+      this.#say(this.#tooLongText());
+      return null;
+    }
+    this.#tooLong = false;
     const go = this.dispatchEvent(new CustomEvent("nx-paste-fill-start", { detail: { text }, bubbles: true, composed: true, cancelable: true }));
     if (!go) return null;
     this.#abort?.abort();
@@ -228,7 +245,8 @@ export class NxPasteFill extends Base {
     const fields = this.fields;
     const fmt = nxFormat(resolveLocale(this));
     matchFields(fields, text, { fmt, hints: this.#labels }).forEach((f, i) => this.#apply(ses, f, i));
-    const url = safeHref(this.endpoint);
+    // Solo del mismo origen (o uno de `allowOrigins`): el texto pegado no viaja a un tercero.
+    const url = safeEndpoint(this.endpoint);
     this.#state = url ? "busy" : "filled";
     this.#busy = url ? this.#labels.server : "";
     this.#paint();
@@ -241,8 +259,10 @@ export class NxPasteFill extends Base {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         let failed = false;
         await readLines(res, (line) => {
+          // Otro texto (o deshacer) tomó su lugar: se deja de leer y se suelta la conexión.
+          if (this.#top() !== ses) return false;
           const ev = parsePasteEvent(lineData(line));
-          if (!ev || this.#top() !== ses) return;
+          if (!ev) return;
           if (ev.type === "field") this.#apply(ses, ev, n++);
           else if (ev.type === "note" && ev.message) ses.notes.push(ev.message);
           else if (ev.type === "error") failed = true;
@@ -465,7 +485,7 @@ export class NxPasteFill extends Base {
     this.prepend(this.#bar, this.#panel);
     this.append(this.#layer, this.#descs, this.#live);
 
-    this.#input.addEventListener("input", () => this.#paintZone());
+    this.#input.addEventListener("input", () => ((this.#tooLong = false), this.#paintZone()));
     this.#input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -476,7 +496,7 @@ export class NxPasteFill extends Base {
     this.addEventListener("paste", (e) => {
       const t = e.target as Element;
       // Pegar en un campo es pegar en ese campo; en la zona o en un hueco del formulario, llenar.
-      if (isField(t) && t !== this.#input) return;
+      if (editable(t) && t !== this.#input) return;
       const text = e.clipboardData?.getData("text/plain") ?? "";
       if (!text.trim()) return;
       e.preventDefault();
@@ -484,7 +504,7 @@ export class NxPasteFill extends Base {
       void this.fill(text);
     });
     this.addEventListener("keydown", (e) => {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z" && !isField(e.target) && this.#stack.length) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z" && !editable(e.target) && this.#stack.length) {
         e.preventDefault();
         this.undo();
       }
@@ -492,7 +512,7 @@ export class NxPasteFill extends Base {
     // Arrastrar texto (no archivos) sobre el formulario; sobre un campo, cae en el campo.
     const textDrag = (e: DragEvent) => {
       const types = [...(e.dataTransfer?.types ?? [])];
-      return types.includes("text/plain") && !types.includes("Files") && (!isField(e.target) || e.target === this.#input);
+      return types.includes("text/plain") && !types.includes("Files") && (!editable(e.target) || e.target === this.#input);
     };
     this.addEventListener("dragover", (e) => {
       if (!textDrag(e)) return;
@@ -720,13 +740,19 @@ export class NxPasteFill extends Base {
     input.placeholder = L.zone;
     input.setAttribute("aria-label", L.zone);
     const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-    this.#zone!.querySelector(".nx-pf__hint")!.textContent = fmtText(L.zoneHint, { mod: mac ? "⌘" : "Ctrl" });
+    const hint = this.#zone!.querySelector<HTMLElement>(".nx-pf__hint")!;
+    hint.textContent = this.#tooLong ? this.#tooLongText() : fmtText(L.zoneHint, { mod: mac ? "⌘" : "Ctrl" });
+    hint.toggleAttribute("data-warn", this.#tooLong);
     const [fill, paste] = this.#zone!.querySelectorAll<HTMLButtonElement>("button");
     fill.textContent = L.fill;
     paste.textContent = L.paste;
     const typed = !!input.value.trim();
     fill.hidden = !typed;
     paste.hidden = typed || typeof navigator === "undefined" || !navigator.clipboard?.readText;
+  }
+
+  #tooLongText(): string {
+    return fmtText(this.#labels.tooLong, { max: nxFormat(resolveLocale(this)).number(MAX_TEXT) });
   }
 
   #isOpen(): boolean {

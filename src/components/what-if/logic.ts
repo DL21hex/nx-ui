@@ -1,6 +1,7 @@
 /** Lógica pura del simulador: validar, mover y leer valores, diferencias contra la base, el mejor
  *  escenario por métrica y el trazo del gráfico. Sin DOM. */
 import type { NxFormat } from "../../core/locale";
+import { extent } from "../../core/time";
 import type { WhatIfBetter, WhatIfEvent, WhatIfFormat, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfPoint, WhatIfScenario, WhatIfSeries, WhatIfSpec, WhatIfTone, WhatIfValues } from "./types";
 
 const FORMATS = new Set<WhatIfFormat>(["number", "money", "percent"]);
@@ -270,12 +271,16 @@ export interface ChartPaths {
 
 /** Los trazos de un gráfico de líneas de `w`×`h` (el margen vertical es `pad`). */
 export function chartPaths(points: readonly WhatIfPoint[], w: number, h: number, pad = 6): ChartPaths {
-  const all = points.flatMap((p) => (p.base === undefined ? [p.value] : [p.value, p.base]));
-  let lo = Math.min(...all);
-  let hi = Math.max(...all);
-  if (lo === hi) (lo -= 1), (hi += 1);
-  const x = (i: number) => round((i * w) / (points.length - 1), 1);
-  const y = (v: number) => round(pad + ((hi - v) * (h - 2 * pad)) / (hi - lo), 1);
+  // Sin `Math.min(...all)`: con ~120 000 valores lanza `RangeError`.
+  let [lo, hi] = extent(points.flatMap((p) => (p.base === undefined ? [p.value] : [p.value, p.base]))) ?? [0, 0];
+  if (lo === hi) {
+    // Un rango plano se abre alrededor; con valores enormes, ±1 se pierde (1e17 − 1 === 1e17).
+    const m = Math.max(1, Math.abs(lo) * 1e-6);
+    (lo -= m), (hi += m);
+  }
+  const x = (i: number) => round((i * w) / Math.max(1, points.length - 1), 1);
+  // A la mitad, para que `hi − lo` no desborde con valores cerca de ±1e308.
+  const y = (v: number) => round(pad + ((hi / 2 - v / 2) / (hi / 2 - lo / 2 || 1)) * (h - 2 * pad), 1);
   const line = (vals: number[]) => vals.map((v, i) => `${i ? "L" : "M"}${x(i)} ${y(v)}`).join("");
   const hasBase = points.every((p) => p.base !== undefined);
   const base = hasBase ? line(points.map((p) => p.base!)) : "";

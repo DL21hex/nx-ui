@@ -136,6 +136,11 @@ nx-paste-fill[data-wide][data-open] {
   @media (pointer: coarse) {
     display: none;
   }
+  /* El texto era demasiado largo: el aviso se ve también en el teléfono. */
+  &[data-warn] {
+    display: block;
+    color: var(--_warn-ink);
+  }
 }
 .nx-pf__btn,
 .nx-pf__act {

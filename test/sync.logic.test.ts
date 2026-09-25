@@ -31,12 +31,13 @@ describe("esperas y respuestas", () => {
     expect(retryAfter(null, now)).toBeNull();
   });
 
-  it("clasifica: 2xx listo, 408/425/429/5xx reintento, 409/412 conflicto, otro 4xx fallo", () => {
+  it("clasifica: 2xx listo, 408/425/429/5xx reintento, 409/412 conflicto, 401 sesión, otro 4xx fallo", () => {
     const at = (codes: number[]) => codes.map(classify);
     expect(at([200, 201, 204])).toEqual(["ok", "ok", "ok"]);
     expect(at([408, 425, 429, 500, 502, 503, 504])).toEqual(Array(7).fill("retry"));
     expect(at([409, 412])).toEqual(["conflict", "conflict"]);
-    expect(at([400, 401, 403, 404, 410, 422])).toEqual(Array(6).fill("failed"));
+    expect(at([400, 403, 404, 410, 422])).toEqual(Array(5).fill("failed"));
+    expect(at([401, 419, 440])).toEqual(["auth", "auth", "auth"]);
   });
 
   it("el mensaje de error del cuerpo", () => {
@@ -53,7 +54,8 @@ describe("datos de entrada", () => {
     const op = cleanInput({ method: "post", url: "/pedidos", body: { a: 1, f: () => 1 }, label: "Pedido", group: "t-1", onclick: "x" }, "id-1", 4, 100)!;
     expect(op).toMatchObject({ id: "id-1", key: "id-1", method: "POST", url: "/pedidos", body: { a: 1 }, label: "Pedido", group: "t-1", status: "pending", seq: 4, createdAt: 100, attempts: 0 });
     expect("onclick" in op).toBe(false);
-    expect(cleanInput({ id: "mio", method: "DELETE", url: "https://api.example.com/x/1" }, "otro", 1, 0)).toMatchObject({ id: "mio", label: "DELETE https://api.example.com/x/1" });
+    // Sin `label`, vacía: la URL no se muestra (puede llevar una llave en la query).
+    expect(cleanInput({ id: "mio", method: "DELETE", url: "https://api.example.com/x/1?token=s3cr3t" }, "otro", 1, 0)).toMatchObject({ id: "mio", label: "" });
     expect(cleanInput({ method: "GET", url: "/x" }, "i", 1, 0)).toBeNull();
     expect(cleanInput({ method: "POST", url: "javascript:alert(1)" }, "i", 1, 0)).toBeNull();
     expect(cleanInput({ method: "POST", url: "  " }, "i", 1, 0)).toBeNull();

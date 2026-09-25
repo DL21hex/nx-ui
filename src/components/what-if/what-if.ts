@@ -11,7 +11,7 @@
  * se comparan lado a lado con la base, con la mejor celda de cada métrica resaltada.
  */
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { lineData, readLines } from "../../core/stream";
@@ -67,7 +67,7 @@ export const WHAT_IF_LABELS: WhatIfLabels = {
   scenario: "Escenario",
 };
 
-const PROPS = ["inputs", "outputs", "series", "scenarios", "values", "labels", "endpoint", "debounce", "heading"] as const;
+const PROPS = ["inputs", "outputs", "series", "scenarios", "values", "labels", "endpoint", "debounce", "heading", "locale"] as const;
 const RESET = '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>';
 const SAVE = '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>';
 const LOAD = '<path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/>';
@@ -184,7 +184,8 @@ export class NxWhatIf extends Base {
   set values(v: WhatIfValues) {
     this.#setMany(v ?? {});
   }
-  /** URL que calcula: `POST {inputs}` → NDJSON (`metric`, `series`, `note`, `error`, `done`). Sin ella, `nx-what-if-compute`. */
+  /** URL que calcula: `POST {inputs}` → NDJSON (`metric`, `series`, `note`, `error`, `done`). Sin ella, `nx-what-if-compute`.
+   *  Solo del mismo origen (o uno de `allowOrigins`); otra se ignora, como si no hubiera. */
   get endpoint(): string {
     return this.getAttribute("endpoint") ?? "";
   }
@@ -198,6 +199,13 @@ export class NxWhatIf extends Base {
   }
   set debounce(v: number) {
     this.#attr("debounce", String(v));
+  }
+  /** Idioma de números y montos («es-CO», «en-US»); sin él, el `lang` más cercano. */
+  get locale(): string | null {
+    return this.getAttribute("locale");
+  }
+  set locale(v: string | null | undefined) {
+    this.#attr("locale", v);
   }
   /** Título arriba a la izquierda («Plan de compras 2027»). */
   get heading(): string {
@@ -486,7 +494,7 @@ export class NxWhatIf extends Base {
     this.#ctrl = undefined;
     const inputs = this.values;
     const run: Run = { seq: ++this.#seq, atBase: this.#inputs.every((i) => inputs[i.id] === i.value), notes: [] };
-    const url = safeHref(this.endpoint);
+    const url = safeEndpoint(this.endpoint);
     if (!url) {
       let answered = false;
       const respond = (evs: unknown[]) => {
@@ -513,8 +521,11 @@ export class NxWhatIf extends Base {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await readLines(res, (line) => {
+        // Otro cálculo tomó su lugar (o terminó con `done`): se deja de leer y se suelta la conexión.
+        if (ctrl.signal.aborted || run.done) return false;
         const ev = parseEvent(lineData(line));
-        if (ev && !ctrl.signal.aborted) this.#apply(run, ev);
+        if (ev) this.#apply(run, ev);
+        if (run.done) return false;
       });
     } catch {
       if (ctrl.signal.aborted) return;

@@ -186,6 +186,21 @@ test("pegar y llenar: en reposo, con revisar y sugerencia, y con el servidor que
 });
 ```
 
+## Seguridad y robustez
+
+- **Pegar en un control es de ese control:** cualquier `input` (también contraseña, casilla,
+  archivo, deshabilitado o de solo lectura), `textarea`, `select` o `contenteditable` que no sea la
+  zona propia recibe su pegado y su texto soltado sin que el componente lo lea. Antes, una contraseña
+  pegada en su campo se interceptaba, se mandaba al `endpoint` y quedaba a la vista como evidencia.
+  Ctrl+Z en esos controles también es suyo.
+- **Tope de 50 000 caracteres** (`MAX_TEXT`): más, y no se lee ni se envía; la zona lo dice
+  (`labels.tooLong`, también al lector de pantalla).
+- `endpoint` solo del mismo origen (o de uno de `allowOrigins()`): el texto pegado no viaja a un
+  tercero. El stream del servidor se deja de leer (y se suelta la conexión) si otro texto o
+  deshacer toman su lugar.
+- `extract()` ya no es cuadrático: los tramos tomados son una lista ordenada con búsqueda binaria y
+  la deduplicación usa índices por tipo y valor (400 KB: de 16 s a ~0,1 s).
+
 ## Notas
 
 - **No toqué el núcleo** (`src/core/`).

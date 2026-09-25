@@ -173,6 +173,64 @@ describe("<nx-trend>", () => {
     expect(document.activeElement).toBe(p);
   });
 
+  it("explain-endpoint de otro origen: solo el evento, el contexto no sale", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const el = mount('explain-endpoint="https://otro.example/ia"');
+    const log: string[] = [];
+    el.addEventListener("nx-trend-why", (e) => log.push(e.detail.question));
+    el.explain("mo", "2026-08");
+    await sleep(0);
+    expect(log).toHaveLength(1);
+    expect(document.querySelector(".nx-trend-why")).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("desconectarse con el «¿por qué?» abierto quita el popover y sus listeners de window", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ndjson([{ type: "done" }])));
+    const el = mount();
+    const added: string[] = [];
+    const removed: string[] = [];
+    const add = vi.spyOn(window, "addEventListener").mockImplementation(function (this: Window, t: string) {
+      added.push(t);
+    } as never);
+    const rm = vi.spyOn(window, "removeEventListener").mockImplementation(function (this: Window, t: string) {
+      removed.push(t);
+    } as never);
+    el.explain("mp", "2026-08");
+    await sleep(0);
+    expect(added).toEqual(expect.arrayContaining(["resize", "scroll"]));
+    el.remove();
+    expect(document.querySelector(".nx-trend-why")).toBeNull();
+    expect(removed).toEqual(expect.arrayContaining(["resize", "scroll"]));
+    add.mockRestore();
+    rm.mockRestore();
+  });
+
+  it("locale: propiedad que refleja el atributo (el BDUI la manda como propiedad)", () => {
+    const el = mount();
+    el.locale = "en-US";
+    expect(el.getAttribute("locale")).toBe("en-US");
+    expect(el.querySelector("tbody th")!.textContent).toBe("January 2026");
+    el.locale = null;
+    expect(el.hasAttribute("locale")).toBe(false);
+  });
+
+  it("miles de puntos: dibuja y resalta la columna sin recorrer todo el SVG", () => {
+    const many = Array.from({ length: 3000 }, (_, i) => ({ x: `20${String(10 + Math.floor(i / 365)).padStart(2, "0")}-${String((Math.floor(i / 28) % 12) + 1).padStart(2, "0")}-${String((i % 28) + 1).padStart(2, "0")}`, y: 100 + Math.sin(i) * 10 }));
+    const el = mount("", (t) => (t.series = [{ id: "a", label: "A", points: many }]));
+    const t0 = performance.now();
+    el.series = [{ id: "a", label: "A", points: many }];
+    expect(performance.now() - t0).toBeLessThan(3000);
+    const b = pts(el)[10];
+    b.focus();
+    expect(el.querySelectorAll(".is-on").length).toBe(1);
+    key(b, "ArrowRight");
+    expect(el.querySelectorAll(".is-on").length).toBe(1);
+  });
+
   it("explain() desde código y sin endpoint solo emite el evento", async () => {
     const el = mount("");
     const log: string[] = [];

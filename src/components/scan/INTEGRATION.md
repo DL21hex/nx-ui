@@ -228,6 +228,16 @@ test("escáner: sin cámara, contando con faltantes y sobrantes, y con la cámar
 (Probado en claro y en oscuro, sin detector, con cámara activa y en modo único: cero violaciones,
 ni siquiera menores.)
 
+## Seguridad y robustez
+
+- `source` solo del mismo origen que la página (o de uno permitido con `allowOrigins()` del
+  núcleo): el código leído no viaja a un tercero. Con otro origen no se consulta y la lectura queda
+  sin descripción (y un aviso en la consola).
+- La cámara queda a cargo de `#halt()` en cuanto `getUserMedia` la entrega: si después falla el
+  `BarcodeDetector` (un constructor que lanza), las pistas se apagan igual y el problema es
+  `failed`.
+- La foto (`ImageBitmap`) se libera también cuando `detect()` falla.
+
 ## Notas
 
 - **No toqué el núcleo** (`src/core/`) ni otros componentes.

@@ -56,6 +56,15 @@ describe("niceTicks", () => {
     expect(t[t.length - 1]).toBeGreaterThan(100);
     expect(niceTicks(0, 0, 5, true)).toEqual([0, 0.2, 0.4, 0.6, 0.8, 1]);
   });
+  it("valores enormes: termina siempre (antes, 1e17 con un rango de 64 no salía del bucle) y sin NaN", () => {
+    expect(niceTicks(1e17, 1e17 + 64)).toEqual([1e17, 1e17 + 64]);
+    const wide = niceTicks(-1.7e308, 1.7e308);
+    expect(wide.every(Number.isFinite)).toBe(true);
+    expect(wide).toEqual([-1.7e308, 1.7e308]);
+    expect(niceTicks(0, 1e-320).every(Number.isFinite)).toBe(true);
+    expect(niceTicks(10, 0)).toEqual(niceTicks(0, 10));
+    expect(niceTicks(0, 100, 1e9).length).toBeLessThanOrEqual(101);
+  });
 });
 
 describe("anomalías", () => {

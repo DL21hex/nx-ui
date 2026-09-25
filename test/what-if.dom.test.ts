@@ -265,6 +265,44 @@ describe("<nx-what-if>", () => {
     expect(el.outputs[1].value).toBe(79_000);
   });
 
+  it("endpoint de otro origen: los supuestos no salen; calcula quien escuche nx-what-if-compute", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const { calls } = mount({ attrs: 'endpoint="https://otro.example/calc"' });
+    await tick(20);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(calls.length).toBeGreaterThan(0);
+    warn.mockRestore();
+  });
+
+  it("deja de leer el stream después de done (y suelta la conexión)", async () => {
+    let cancelled = false;
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      const v = JSON.parse(init.body as string).inputs as WhatIfValues;
+      const head = events(v).map((e) => JSON.stringify(e)).join("\n") + "\n";
+      return new Response(
+        new ReadableStream({
+          start: (c) => c.enqueue(new TextEncoder().encode(head)),
+          cancel: () => void (cancelled = true),
+        }),
+      );
+    });
+    const { el } = mount({ respond: false, attrs: 'endpoint="/calc"' });
+    await tick(20);
+    expect(el.querySelector(".nx-what-if__results")!.hasAttribute("data-busy")).toBe(false);
+    expect(cancelled).toBe(true);
+  });
+
+  it("locale: propiedad que refleja el atributo", async () => {
+    const { el } = mount();
+    await tick();
+    el.locale = "en-US";
+    expect(el.getAttribute("locale")).toBe("en-US");
+    await tick();
+    expect(nb(card(el, 1).querySelector(".nx-what-if__num")!.textContent)).toBe("78,000");
+  });
+
   it("un endpoint que falla dice el error, con reintentar", async () => {
     vi.stubGlobal("fetch", async () => new Response("no", { status: 500 }));
     const { el } = mount({ respond: false, attrs: 'endpoint="/calc"' });

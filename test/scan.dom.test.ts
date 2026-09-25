@@ -103,12 +103,24 @@ describe("<nx-scan> sin cámara", () => {
     typeCode(el, "7707123450042");
     expect($(el, ".nx-scan__product").textContent).toBe("Buscando…");
     await vi.waitFor(() => expect($(el, ".nx-scan__product").textContent).toBe("Soldadura E6013 · caja"));
-    expect(fetchMock).toHaveBeenCalledWith("/api/producto?code=7707123450042", expect.objectContaining({ credentials: "same-origin" }));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^(https?:\/\/[^/]+)?\/api\/producto\?code=7707123450042$/), expect.objectContaining({ credentials: "same-origin" }));
     typeCode(el, "NO-EXISTE");
     await vi.waitFor(() => expect($(el, ".nx-scan__product").textContent).toBe("Código sin registrar"));
     // Una segunda vez no se vuelve a pedir.
     typeCode(el, "7707123450042");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("<nx-scan> source de otro origen", () => {
+  it("no manda el código leído a un tercero: queda sin descripción", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = catalog({});
+    const el = mount('source="https://otro.example/p?code="');
+    typeCode(el, "7707123450042");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect($(el, ".nx-scan__product").textContent).not.toBe("Buscando…");
+    warn.mockRestore();
   });
 });
 
@@ -499,6 +511,23 @@ describe("cámara (simulada)", () => {
     el.remove();
     expect(cam.track.stop).toHaveBeenCalledTimes(2);
     expect(el.state).toBe("paused");
+  });
+
+  it("si el BarcodeDetector lanza después de abrir la cámara, las pistas se apagan", async () => {
+    const cam = fakeCamera();
+    (window as unknown as Record<string, unknown>).BarcodeDetector = class {
+      static getSupportedFormats = async () => ["ean_13"];
+      constructor() {
+        throw new TypeError("formato no soportado");
+      }
+    };
+    const el = mount();
+    const errors: unknown[] = [];
+    el.addEventListener("nx-scan-error", (e) => errors.push((e as CustomEvent).detail));
+    await el.start();
+    expect(el.state).toBe("unavailable");
+    expect(cam.track.stop).toHaveBeenCalledTimes(1);
+    expect(errors).toEqual([{ problem: "failed" }]);
   });
 
   it("detenerse mientras se pide permiso no deja la cámara prendida", async () => {

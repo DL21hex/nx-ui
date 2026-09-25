@@ -221,6 +221,17 @@ test("simulador: en la base, con notas de advertencia y peligro, escribiendo y r
 
 (Probado en claro y en oscuro: cero violaciones, ni siquiera menores.)
 
+## Seguridad y robustez
+
+- `endpoint` solo del mismo origen (o de uno de `allowOrigins()`): los supuestos no viajan a un
+  tercero. Con otro se ignora, como si no hubiera (calcula quien escuche `nx-what-if-compute`).
+- `locale` es también propiedad (refleja el atributo): el BDUI la manda como propiedad.
+- El stream se deja de leer (y se suelta la conexión) en cuanto llega `done` o empieza otro
+  cálculo.
+- `chartPaths`: el mínimo y el máximo salen de `extent()` (sin `RangeError` con cientos de miles de
+  puntos), un rango plano se abre con un margen relativo (±1 se perdía junto a 1e17) y la escala se
+  calcula a la mitad para no desbordar con ±1e308.
+
 ## Notas
 
 - **No toqué el núcleo** (`src/core/`) ni otros componentes.

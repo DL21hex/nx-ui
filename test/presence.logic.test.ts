@@ -24,6 +24,8 @@ describe("cleanUser / cleanEvent", () => {
     expect(cleanUser({ id: 7, name: " Ana " })).toEqual({ id: "7", name: "Ana" });
     expect(cleanUser({ id: "a", name: "Ana", avatar: "javascript:alert(1)" })).toEqual({ id: "a", name: "Ana" });
     expect(cleanUser({ id: "a", name: "Ana", avatar: "/fotos/ana.jpg" })).toEqual({ id: "a", name: "Ana", avatar: "/fotos/ana.jpg" });
+    expect(cleanUser({ id: "a", name: "Ana", avatar: "https://cdn.example/ana.jpg" })!.avatar).toBe("https://cdn.example/ana.jpg");
+    expect(cleanEvent({ type: "focus", user: { id: "a", name: "Ana" }, field: "mon\nto\u0007" })!.field).toBe("monto");
     expect(cleanUser({ id: "a" })).toBeNull();
     expect(cleanUser({ name: "Ana" })).toBeNull();
     expect(cleanUser("Ana")).toBeNull();

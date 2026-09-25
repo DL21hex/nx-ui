@@ -1,5 +1,5 @@
 /** Lógica pura de la presencia: validar eventos, llevar la lista de quién está, colores, textos y anuncios. Sin DOM. */
-import { safeHref } from "../../core/dom";
+import { safeImageSrc } from "../../core/dom";
 import type { PresenceEvent, PresenceEventType, PresenceLabels, PresenceState, PresenceUser } from "./types";
 
 /** Cada cuánto manda su latido quien está (ms). */
@@ -17,14 +17,16 @@ export const TYPING_MS = 3_000;
 const TYPES = new Set<PresenceEventType>(["join", "leave", "focus", "blur", "typing", "lock", "unlock", "heartbeat"]);
 const str = (v: unknown, max: number): string | undefined => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
 
-/** Una persona válida (`id` y `name`), con la foto solo si es una URL segura. */
+/** Una persona válida (`id` y `name`), con la foto solo si es `https:` o del mismo origen: el
+ *  avatar lo manda otra persona, y un `http:` o una ruta cualquiera la cargaría el navegador de
+ *  todos los que miran (rastreo, o un GET con cookies a la propia app). */
 export function cleanUser(v: unknown): PresenceUser | null {
   if (!v || typeof v !== "object") return null;
   const o = v as Record<string, unknown>;
   const id = typeof o.id === "number" && Number.isFinite(o.id) ? String(o.id) : str(o.id, 128);
   const name = str(o.name, 80);
   if (!id || !name) return null;
-  const avatar = safeHref(o.avatar);
+  const avatar = safeImageSrc(o.avatar);
   return avatar ? { id, name, avatar } : { id, name };
 }
 
@@ -42,7 +44,9 @@ export function cleanEvent(v: unknown): PresenceEvent | null {
   const user = cleanUser(o.user);
   if (!user || !TYPES.has(o.type as PresenceEventType)) return null;
   const ev: PresenceEvent = { type: o.type as PresenceEventType, user };
-  const field = str(o.field, 128);
+  // Sin caracteres de control: una clave con salto de línea rompía el selector que la busca.
+  // eslint-disable-next-line no-control-regex
+  const field = str(typeof o.field === "string" ? o.field.replace(/[\u0000-\u001f\u007f]/g, "") : o.field, 128);
   if (field) ev.field = field;
   else if (o.field === null) ev.field = null;
   if (typeof o.idle === "boolean") ev.idle = o.idle;

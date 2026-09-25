@@ -168,14 +168,54 @@ function nameLike(s: string): boolean {
 
 // ---------------------------------------------------------------- extraer
 
+/** Lo más largo que se lee (50 000 caracteres): un correo con su firma cabe de sobra; un volcado de
+ *  una hoja de cálculo no, y leerlo congelaría la página. */
+export const MAX_TEXT = 50_000;
+
+/**
+ * Los tramos del texto ya reconocidos, ordenados y fundidos donde se solapan. Preguntar si un tramo
+ * está libre es una búsqueda binaria: recorrer la lista entera en cada coincidencia era cuadrático
+ * (100 KB de texto tardaban más de un segundo; 400 KB, dieciséis). El solape es estricto, como antes:
+ * dos tramos que solo se tocan no chocan.
+ */
+export class Spans {
+  #a: number[] = [];
+  #b: number[] = [];
+  /** El índice del último tramo que empieza antes de `e`, o −1. */
+  #last(e: number): number {
+    let lo = 0;
+    let hi = this.#a.length;
+    while (lo < hi) {
+      const m = (lo + hi) >> 1;
+      if (this.#a[m] < e) lo = m + 1;
+      else hi = m;
+    }
+    return lo - 1;
+  }
+  /** ¿No se solapa con nada? (Los fines crecen con el índice: basta mirar el último.) */
+  free(s: number, e: number): boolean {
+    const i = this.#last(e);
+    return i < 0 || this.#b[i] <= s;
+  }
+  take(s: number, e: number): void {
+    const i = this.#last(e);
+    let j = i;
+    let lo = s;
+    let hi = e;
+    for (; j >= 0 && this.#b[j] > s; j--) (lo = Math.min(lo, this.#a[j])), (hi = Math.max(hi, this.#b[j]));
+    this.#a.splice(j + 1, i - j, lo);
+    this.#b.splice(j + 1, i - j, hi);
+  }
+}
+
 /** Todo lo que se reconoce en el texto, en orden de aparición (sin repetidos). */
 export function extract(text: string, today: Date = new Date(), hints: PasteHints = PASTE_HINTS): PasteFinding[] {
   const raw = text;
   const low = foldText(raw);
   const found: PasteFinding[] = [];
-  const taken: [number, number][] = [];
-  const free = (s: number, e: number) => !taken.some(([a, b]) => s < b && e > a);
-  const take = (s: number, e: number) => void taken.push([s, e]);
+  const taken = new Spans();
+  const free = (s: number, e: number) => taken.free(s, e);
+  const take = (s: number, e: number) => taken.take(s, e);
   const add = (kind: PasteKind, value: string, s: number, e: number, confidence: number, extra?: Partial<PasteFinding>, mark = true) => {
     found.push({ kind, value, start: s, end: e, confidence, ctx: ctxAt(low, s), ...extra });
     if (mark) take(s, e);
@@ -476,10 +516,36 @@ function ctxAt(low: string, start: number): string {
 function tidy(xs: PasteFinding[]): PasteFinding[] {
   const out: PasteFinding[] = [];
   const over = (a: PasteFinding, b: PasteFinding) => a.start < b.end && a.end > b.start;
+  // Con índices en vez de recorrer lo aceptado en cada hallazgo (era cuadrático, y con `foldText` en
+  // cada comparación): por tipo, lo aceptado ordenado por inicio (no se solapa entre sí, así que los
+  // fines también quedan en orden) y el primero de cada valor.
+  const order = new Map<PasteFinding, number>();
+  const byKind = new Map<string, PasteFinding[]>();
+  const byValue = new Map<string, PasteFinding>();
+  const first = (a: PasteFinding | undefined, b: PasteFinding) => (!a || order.get(b)! < order.get(a)! ? b : a);
   for (const x of xs.sort((a, b) => b.confidence - a.confidence || b.end - b.start - (a.end - a.start))) {
-    const same = out.find((o) => o.kind === x.kind && (over(o, x) || (x.kind !== "text" && foldText(o.value) === foldText(x.value))));
-    if (!same) out.push(x);
-    else if (!over(same, x)) same.confidence = Math.round(Math.min(0.99, same.confidence + 0.04) * 100) / 100;
+    let list = byKind.get(x.kind);
+    if (!list) byKind.set(x.kind, (list = []));
+    let lo = 0;
+    let hi = list.length;
+    while (lo < hi) {
+      const m = (lo + hi) >> 1;
+      if (list[m].end <= x.start) lo = m + 1;
+      else hi = m;
+    }
+    let same: PasteFinding | undefined;
+    for (let i = lo; i < list.length && list[i].start < x.end; i++) if (over(list[i], x)) same = first(same, list[i]);
+    const key = x.kind !== "text" ? `${x.kind}\u0000${foldText(x.value)}` : "";
+    const eq = key ? byValue.get(key) : undefined;
+    if (eq) same = first(same, eq);
+    if (!same) {
+      order.set(x, out.length);
+      out.push(x);
+      let at = lo;
+      while (at < list.length && list[at].start < x.start) at++;
+      list.splice(at, 0, x);
+      if (key && !byValue.has(key)) byValue.set(key, x);
+    } else if (!over(same, x)) same.confidence = Math.round(Math.min(0.99, same.confidence + 0.04) * 100) / 100;
   }
   return out.sort((a, b) => a.start - b.start);
 }

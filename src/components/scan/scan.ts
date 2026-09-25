@@ -14,7 +14,7 @@
  * con faltantes y sobrantes, deshacer y totales. La cámara se apaga sola cuando no se ve.
  */
 import { Base, boolAttr } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import {
@@ -292,9 +292,11 @@ export class NxScan extends Base {
         video: this.#deviceId ? { deviceId: { exact: this.#deviceId } } : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       if (gen !== this.#gen || !this.isConnected) return stopTracks(stream);
-      this.#detector ??= await this.#makeDetector();
-      if (gen !== this.#gen) return stopTracks(stream);
+      // Desde aquí la cámara ya está prendida: queda a cargo de `#halt()` aunque lo que sigue falle
+      // (un `BarcodeDetector` que lanza no puede dejar la luz de la cámara encendida).
       this.#stream = stream;
+      this.#detector ??= await this.#makeDetector();
+      if (gen !== this.#gen) return;
       const video = this.#video!;
       video.srcObject = stream;
       await video.play().catch(() => {});
@@ -660,7 +662,13 @@ export class NxScan extends Base {
     this.#pending.add(code);
     this.#paintAll();
     const enc = encodeURIComponent(code);
-    fetch(src.includes("{code}") ? src.replace("{code}", enc) : src + enc, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+    // Solo del mismo origen (o uno de `allowOrigins`): el código leído no viaja a un tercero.
+    const url = safeEndpoint(src.includes("{code}") ? src.replace("{code}", enc) : src + enc);
+    if (!url) {
+      this.#pending.delete(code);
+      return this.#paintAll();
+    }
+    fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
       .then(async (res) => {
         if (res.status === 404) return null;
         if (!res.ok) throw new Error(String(res.status));
@@ -797,13 +805,15 @@ export class NxScan extends Base {
     const L = this.#labels;
     this.#note$(L.photoBusy);
     let found: Detected[] = [];
+    let bmp: ImageBitmap | undefined;
     try {
       const d = (this.#detector ??= await this.#makeDetector());
-      const bmp = await createImageBitmap(file);
+      bmp = await createImageBitmap(file);
       found = await d.detect(bmp);
-      bmp.close?.();
     } catch {
       found = [];
+    } finally {
+      bmp?.close?.();
     }
     const b = found.find((x) => cleanCode(x.rawValue));
     if (!b) {

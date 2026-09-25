@@ -11,8 +11,10 @@
  * `<nx-ai-answer>` se carga con `import()` la primera vez que se pregunta.
  */
 import { Base, boolAttr } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
+import { extent } from "../../core/time";
 import { change, cleanAnomalies, cleanSeries, explainContext, flagsOf, niceTicks, pctText, periodLabel, periodsOf, summarize, trendStep, whyQuestion } from "./logic";
 import type { TrendAnomaly, TrendFlag, TrendFormat, TrendKind, TrendLabels, TrendSeries } from "./types";
 
@@ -46,7 +48,7 @@ const shape = (i: number, x = 0, y = 0) => {
   const [dx, dy, d] = SHAPES[i % SHAPES.length];
   return `M${r1(x + dx)} ${r1(y + dy)}${d}`;
 };
-const PROPS = ["series", "anomalies", "labels", "heading", "format", "currency", "kind", "height", "detect", "explainEndpoint", "busy"] as const;
+const PROPS = ["series", "anomalies", "labels", "heading", "format", "currency", "kind", "height", "detect", "explainEndpoint", "busy", "locale"] as const;
 
 type Attrs = Record<string, string | number | null | undefined | false>;
 /** Un nodo SVG (los textos, siempre como nodos de texto). */
@@ -81,6 +83,11 @@ export class NxTrend extends Base {
   #flags: TrendFlag[] = [];
   #periods: string[] = [];
   #pts: Pt[] = [];
+  /** Las marcas del SVG por periodo (para resaltar la columna sin recorrer todo el SVG). */
+  #marks: SVGElement[][] = [];
+  #on: SVGElement[] = [];
+  /** Los listeners de `window` que pone el popover abierto (para quitarlos también al desconectar). */
+  #unplace?: () => void;
   #geo?: Geo;
   #at = -1;
   #tab = "";
@@ -127,8 +134,15 @@ export class NxTrend extends Base {
     return this.#labels;
   }
   set labels(v: Partial<TrendLabels> | null | undefined) {
-    this.#labels = { ...TREND_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(TREND_LABELS, v);
     this.#render();
+  }
+  /** Idioma de fechas y números («es-CO», «en-US»); sin él, el `lang` más cercano. */
+  get locale(): string | null {
+    return this.getAttribute("locale");
+  }
+  set locale(v: string | null | undefined) {
+    this.#attr("locale", v);
   }
   /** Título del gráfico (y su nombre accesible). */
   get heading(): string {
@@ -179,7 +193,8 @@ export class NxTrend extends Base {
     if (v === true) this.setAttribute("detect", "");
     else this.#attr("detect", v ? String(v) : null);
   }
-  /** URL del protocolo de IA que contesta «¿por qué?» (POST `{question, context}`). */
+  /** URL del protocolo de IA que contesta «¿por qué?» (POST `{question, context}`). Solo del mismo
+   *  origen (o uno de `allowOrigins`): el contexto del gráfico no viaja a un tercero. */
   get explainEndpoint(): string | null {
     return this.getAttribute("explain-endpoint");
   }
@@ -234,8 +249,11 @@ export class NxTrend extends Base {
 
   disconnectedCallback(): void {
     this.#ro?.disconnect();
+    // Quitar un popover abierto no dispara `toggle`: sus listeners de `window` se quitan aquí.
+    this.#unplace?.();
     this.#card?.remove();
     this.#card = undefined;
+    this.#anchor = undefined;
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
@@ -397,14 +415,17 @@ export class NxTrend extends Base {
   #table_(loc: string): void {
     const L = this.#labels;
     const vis = this.#visible();
+    // Por periodo, sin buscar en cada celda (miles de periodos × series era cuadrático).
+    const at = vis.map((q) => new Map(q.points.map((p) => [p.x, p])));
+    const flags = new Map(this.#flags.map((f) => [`${f.series}\u0000${f.x}`, f]));
     const rows = this.#periods.map((x) =>
       h(
         "tr",
         null,
         h("th", { scope: "row" }, periodLabel(x, loc, "full")),
-        ...vis.map((q) => {
-          const p = q.points.find((p) => p.x === x);
-          const flag = this.#flags.find((f) => f.series === q.id && f.x === x);
+        ...vis.map((q, qi) => {
+          const p = at[qi].get(x);
+          const flag = flags.get(`${q.id}\u0000${x}`);
           return h("td", flag ? { "data-flag": "" } : null, p?.y == null ? "—" : this.#fmt(q, p.y), flag ? h("small", null, ` · ${flag.label ?? L.anomaly}`) : null);
         }),
       ),
@@ -431,6 +452,8 @@ export class NxTrend extends Base {
     const P = this.#periods;
     const n = P.length;
     this.#pts = [];
+    this.#marks = [];
+    this.#on = [];
     this.#at = -1;
     this.#tip!.hidden = true;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -443,10 +466,13 @@ export class NxTrend extends Base {
     }
 
     // Escalas: el eje y sale de lo que se ve (desde cero si hay barras); el x, de todos los periodos.
-    const vals = vis.flatMap((q) => q.points.flatMap((p) => (p.y === null ? [] : [p.y])));
+    // Sin `Math.min(...vals)`: con ~120 000 valores lanza `RangeError`.
+    const ext = extent((function* () {
+      for (const q of vis) for (const p of q.points) if (p.y !== null) yield p.y;
+    })()) ?? [Infinity, -Infinity];
     const bars = vis.filter((q) => this.#kind(q) === "bar");
     const lines = vis.filter((q) => this.#kind(q) === "line");
-    const ticks = niceTicks(Math.min(...vals), Math.max(...vals), H < 200 ? 3 : 5, bars.length > 0);
+    const ticks = niceTicks(ext[0], ext[1], H < 200 ? 3 : 5, bars.length > 0);
     const lo = ticks[0];
     const hi = ticks[ticks.length - 1];
     const ref = vis[0];
@@ -459,7 +485,9 @@ export class NxTrend extends Base {
     const Lm = Math.max(...ticks.map((t) => tickText(t).length)) * 6.6 + 14;
     const Rm = ends ? 62 : 14;
     const band = (W - Lm - Rm) / n;
-    const y = (v: number) => T + (1 - (v - lo) / (hi - lo || 1)) * (H - T - B);
+    // A la mitad, para que `hi − lo` no desborde con valores cerca de ±1e308.
+    const y = (v: number) => T + (1 - (v / 2 - lo / 2) / (hi / 2 - lo / 2 || 1)) * (H - T - B);
+    const xi = new Map(P.map((x, i) => [x, i]));
     const cx = (i: number) => Lm + band * (i + 0.5);
     this.#geo = { L: Lm, R: Rm, T, B, band, y, cx };
     const kids: SVGElement[] = [];
@@ -493,11 +521,13 @@ export class NxTrend extends Base {
       const g = s("g", { class: "nx-trend__series", "data-slot": this.#slot(q) });
       q.points.forEach((p, pi) => {
         if (p.y === null) return;
-        const xi = P.indexOf(p.x);
-        const x = cx(xi) - gw / 2 + j * (bw + 2);
+        const i = xi.get(p.x)!;
+        const x = cx(i) - gw / 2 + j * (bw + 2);
         const top = y(p.y);
-        g.append(s("path", { d: barPath(x, bw, y0, top), class: "nx-trend__bar", "data-i": xi, "data-neg": p.y < 0 ? "" : null, style: `--d:${xi}` }));
-        this.#pts.push({ si: sIndex(q), pi, xi, x: x + bw / 2, y: top, bar: [x, bw] });
+        const bar = s("path", { d: barPath(x, bw, y0, top), class: "nx-trend__bar", "data-i": i, "data-neg": p.y < 0 ? "" : null, style: `--d:${i}` });
+        g.append(bar);
+        (this.#marks[i] ??= []).push(bar);
+        this.#pts.push({ si: sIndex(q), pi, xi: i, x: x + bw / 2, y: top, bar: [x, bw] });
       });
       kids.push(g);
     });
@@ -512,13 +542,15 @@ export class NxTrend extends Base {
       const marks: SVGElement[] = [];
       q.points.forEach((p, pi) => {
         if (p.y === null) return void (gap = true);
-        const xi = P.indexOf(p.x);
-        const px = cx(xi);
+        const i = xi.get(p.x)!;
+        const px = cx(i);
         const py = y(p.y);
         d += `${gap ? "M" : "L"}${r1(px)} ${r1(py)}`;
         gap = false;
-        marks.push(s("path", { d: shape(si, px, py), class: "nx-trend__mk", "data-i": xi, style: `--d:${xi}` }));
-        this.#pts.push({ si, pi, xi, x: px, y: py });
+        const mk = s("path", { d: shape(si, px, py), class: "nx-trend__mk", "data-i": i, style: `--d:${i}` });
+        marks.push(mk);
+        (this.#marks[i] ??= []).push(mk);
+        this.#pts.push({ si, pi, xi: i, x: px, y: py });
       });
       const last = [...q.points].reverse().find((p) => p.y !== null);
       if (ends && last) labels.push({ y: y(last.y!), t: this.#fmt(q, last.y!, true), slot: this.#slot(q) });
@@ -532,9 +564,10 @@ export class NxTrend extends Base {
     });
 
     // Anomalías: un anillo que late y una etiqueta corta (arriba, o abajo si no cabe).
+    const ptAt = new Map(this.#pts.map((p) => [`${p.si}\u0000${this.#series[p.si].points[p.pi].x}`, p]));
     for (const f of this.#flags) {
       const si = this.#series.findIndex((q) => q.id === f.series);
-      const pt = this.#pts.find((p) => p.si === si && this.#series[si].points[p.pi].x === f.x);
+      const pt = ptAt.get(`${si}\u0000${f.x}`);
       if (!pt) continue;
       const t = f.label ?? pctText(f.delta, loc);
       const w = t.length * 6.3 + 14;
@@ -562,11 +595,12 @@ export class NxTrend extends Base {
     const keys = this.#pts.map((p) => `${p.si}:${p.pi}`);
     if (!keys.includes(this.#tab)) this.#tab = keys[0] ?? "";
     const had = this.#layer!.contains(document.activeElement);
+    const flags = new Map(this.#flags.map((f) => [`${f.series}\u0000${f.x}`, f]));
     this.#layer!.replaceChildren(
       ...this.#pts.map((p, k) => {
         const q = this.#series[p.si];
         const pt = q.points[p.pi];
-        const flag = this.#flags.find((f) => f.series === q.id && f.x === pt.x);
+        const flag = flags.get(`${q.id}\u0000${pt.x}`);
         const label = `${q.label}, ${periodLabel(pt.x, loc, "full")}: ${this.#fmt(q, pt.y!)}${flag ? `, ${L.anomaly} ${flag.label ?? pctText(flag.delta, loc)}` : ""}`;
         return h("button", {
           type: "button",
@@ -590,7 +624,10 @@ export class NxTrend extends Base {
     this.#at = i;
     const svg = this.#svg!;
     svg.toggleAttribute("data-active", i >= 0);
-    for (const m of svg.querySelectorAll("[data-i]")) m.classList.toggle("is-on", Number(m.getAttribute("data-i")) === i);
+    // Solo las marcas de la columna que se va y la que llega (no todo el SVG en cada movimiento).
+    for (const m of this.#on) m.classList.remove("is-on");
+    this.#on = i >= 0 ? (this.#marks[i] ?? []) : [];
+    for (const m of this.#on) m.classList.add("is-on");
     this.#cross!.setAttribute("visibility", i < 0 ? "hidden" : "visible");
     const tip = this.#tip!;
     tip.hidden = i < 0;
@@ -669,7 +706,7 @@ export class NxTrend extends Base {
     const flag = this.#flags.find((f) => f.series === q.id && f.x === p.x);
     const ctx = explainContext(q, pi, q.format ?? this.format, q.format === "money" || (!q.format && this.format === "money") ? (q.currency ?? this.currency) : undefined, loc, flag);
     const ask = question ?? whyQuestion(q, pi, this.#labels, loc);
-    const url = safeHref(this.explainEndpoint);
+    const url = safeEndpoint(this.explainEndpoint);
     if (!this.#emit("why", { ...ctx, question: ask }, true) || !url) return;
 
     const L = this.#labels;
@@ -711,14 +748,19 @@ export class NxTrend extends Base {
     this.#card = card;
     document.body.append(card);
     const place = () => this.#place();
+    const unplace = () => {
+      removeEventListener("resize", place);
+      removeEventListener("scroll", place, true);
+      this.#unplace = undefined;
+    };
     card.addEventListener("toggle", (e) => {
       if ((e as ToggleEvent).newState === "open") {
         addEventListener("resize", place);
         addEventListener("scroll", place, true);
+        this.#unplace = unplace;
         return;
       }
-      removeEventListener("resize", place);
-      removeEventListener("scroll", place, true);
+      unplace();
       card.querySelector("nx-ai-answer")?.remove();
       const a = this.#anchor;
       a?.removeAttribute("aria-expanded");

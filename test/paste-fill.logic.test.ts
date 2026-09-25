@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanFields, confidenceTier, extract, formatNit, inferKind, matchFields, mergeFields, nitCheckDigit, parseAmountNumber, parsePasteEvent, titleCase } from "../src/components/paste-fill/logic";
+import { MAX_TEXT, Spans, cleanFields, confidenceTier, extract, formatNit, inferKind, matchFields, mergeFields, nitCheckDigit, parseAmountNumber, parsePasteEvent, titleCase } from "../src/components/paste-fill/logic";
 import type { PasteField, PasteKind } from "../src/components/paste-fill/types";
 import { PASTE_CITIES, PASTE_SAMPLES } from "../gallery/demo-paste-fill";
 
@@ -586,5 +586,34 @@ describe("protocolo y utilidades", () => {
     expect(confidenceTier(0.85, 0.8)).toBe("mid");
     expect(confidenceTier(0.4, 0.8)).toBe("low");
     expect(titleCase("MARÍA DEL PILAR ORTIZ")).toBe("María del Pilar Ortiz");
+  });
+});
+
+describe("tramos y textos grandes", () => {
+  it("Spans: solape estricto (tocarse no choca), y los tramos se funden", () => {
+    const t = new Spans();
+    expect(t.free(0, 10)).toBe(true);
+    t.take(5, 10);
+    expect(t.free(0, 5)).toBe(true);
+    expect(t.free(10, 12)).toBe(true);
+    expect(t.free(9, 12)).toBe(false);
+    expect(t.free(0, 6)).toBe(false);
+    t.take(20, 30);
+    t.take(8, 22);
+    expect(t.free(12, 13)).toBe(false);
+    expect(t.free(30, 31)).toBe(true);
+    // Un tramo vacío choca con lo que lo contiene estrictamente, como antes.
+    t.take(40, 40);
+    expect(t.free(39, 41)).toBe(false);
+    expect(t.free(40, 41)).toBe(true);
+  });
+
+  it("extract ya no es cuadrático: 400 KB en bastante menos de lo que antes tardaban 100 KB", () => {
+    const text = Array.from({ length: 8000 }, (_, i) => `Item ${i} $ ${1000 + i} pesos tel 310 ${String(100 + (i % 900))} 45 67 x@y${i}.com`).join("\n");
+    const t0 = performance.now();
+    const found = extract(text);
+    expect(found.length).toBeGreaterThan(10_000);
+    expect(performance.now() - t0).toBeLessThan(3000);
+    expect(MAX_TEXT).toBe(50_000);
   });
 });

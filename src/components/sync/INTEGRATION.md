@@ -120,7 +120,12 @@ intermitente.
   intentar nada, y la envía cuando hay conexión, **en orden**, de a una. Cerrar la pestaña o
   recargar no la pierde: lo que iba en camino vuelve a la fila.
 - **Reintentos** sin respuesta, 5xx, 429 o 408: toda la cola espera 1 s, 2 s, 4 s… (tope 60 s, ±20 %
-  al azar), o lo que diga `Retry-After` (segundos o fecha).
+  al azar), o lo que diga `Retry-After` (segundos o fecha) si es más, hasta 1 h. Tras 8 respuestas
+  de error del servidor (`maxAttempts`), «fallida»; sin red se espera lo que haga falta. Un 401
+  detiene la cola hasta que la app renueve la sesión (`configure({headers})`).
+- **Una pestaña envía:** con varias abiertas, `navigator.locks` elige una; las demás se enteran por
+  `BroadcastChannel`. `enqueue()` rechaza si no se pudo guardar en el dispositivo, y
+  `state.durable` dice si lo pendiente sobrevive a cerrar la página.
 - **Conexión real:** `navigator.onLine`, los eventos `online`/`offline` y un `ping` opcional; con
   red «arriba» pero sin llegar al servidor, se sigue probando sin gastar intentos.
 - **Sin duplicados:** cada envío lleva `Idempotency-Key` con el id de la operación; si la respuesta
@@ -154,10 +159,10 @@ intermitente.
 
 | | |
 |---|---|
-| `nxSync` | `enqueue({id?, method, url, body?, label, group?})` → la operación guardada · `pending()` · `retry(id, body?)` · `resolve(id, body)` · `discard(id)` · `flush()` · `check()` · `clear()` · `subscribe(fn)` → dejar de escuchar (`fn(state, event)`) · `state` `{online, ops, pending, conflicts, failed, progress}` · `configure({ping, base, max, timeout, headers})` · `createSync()` para otra cola |
+| `nxSync` | `enqueue({id?, method, url, body?, label, group?})` → la operación guardada (rechaza si no se pudo guardar) · `pending()` · `retry(id, body?)` · `resolve(id, body)` · `discard(id)` · `flush()` · `check()` · `clear()` (al cerrar sesión) · `subscribe(fn)` → dejar de escuchar (`fn(state, event)`) · `state` `{online, ops, pending, conflicts, failed, progress, durable, auth}` · `configure({ping, base, max, timeout, headers, maxAttempts, maxRetryAfter, maxOps, ttl})` · `createSync({name})` para otra cola (una por usuario) |
 | Propiedades / atributos | `ping`, `fields` (`[{key, label}]`, con `*` y `{hermano}`), `labels`, `locale` · `online`, `pending`, `conflicts`, `state`, `open` |
 | Métodos | `show()`, `hide()`, `toggle()`, `resolve(id)` |
-| Eventos | `nx-sync-change` `{online, pending, conflicts}`, `nx-sync-done` `{op, data}` |
+| Eventos | `nx-sync-change` `{online, pending, conflicts}`, `nx-sync-done` `{op, data}`, `nx-sync-auth` `{op}` |
 | Protocolo | cada envío con `Idempotency-Key`, `Content-Type: application/json` e `If-Match` al resolver · 409 `{server, local?, fields?, etag?, message?}` · otro 4xx `{message}` · `GET ping`: cualquier respuesta es conexión |
 ````
 
@@ -231,8 +236,43 @@ test("sin conexión: la píldora en cada estado, el panel, el comparador y el ed
   Doña Carmen tiene cupo de $ 250.000 (422), y «Red inestable» (encendida al entrar) da 503 con
   `Retry-After` (18 %) y respuestas perdidas tras guardar (12 %), para ver la idempotencia. Las
   pruebas e2e la apagan.
-- Varias pestañas con la misma cola podrían enviar la misma operación a la vez; la
-  `Idempotency-Key` evita el duplicado en un servidor que la respete. Un candado entre pestañas
-  (Web Locks) quedaría para después.
+- **Varias pestañas:** con IndexedDB y `navigator.locks`, una sola pestaña envía (candado
+  `nx-sync:<name>`, que se suelta al cerrarla y lo toma otra). Las demás guardan lo suyo en la misma
+  base y se enteran de los cambios por `BroadcastChannel("nx-sync:<name>")`. Antes de cada envío la
+  cola relee el registro: si otra pestaña lo descartó o ya lo envió, no sale. Sin `navigator.locks`
+  cada pestaña envía, como antes, y la relectura más la `Idempotency-Key` evitan casi todos los
+  duplicados.
+- **Durabilidad (cambio de comportamiento):** las escrituras en IndexedDB resuelven al completar la
+  transacción (un disco lleno llega como `abort` de la transacción). `enqueue()` **rechaza** si no
+  se pudo guardar, y esa operación no entra a la fila: la app decide (avisar, reintentar). La cola
+  expone `state.durable`: `false` si vive en memoria (sin IndexedDB, o no se pudo abrir) o si falló
+  la última escritura; el panel lo avisa.
+- **Sesión vencida:** un 401 (419, 440) detiene la cola con `state.auth = true`, el evento `auth`
+  de la cola y `nx-sync-auth` del elemento; la operación no gasta nada. Sigue con
+  `nxSync.configure({headers})` (cabeceras nuevas), `flush()` o `check()`.
+- **Reintentos con tope:** tras `maxAttempts` (8) respuestas 5xx, 429 o 408 la operación queda
+  «fallida» y deja pasar a las demás. La falta de red no gasta intentos. `Retry-After` se respeta
+  hasta `maxRetryAfter` (1 h) y nunca por debajo de la espera exponencial que toca (un
+  `Retry-After: 0` no martilla). Los temporizadores no pasan de 2³¹−1 ms. El evento `online` y
+  `check()` sueltan solo lo que esperaba por la red, no lo que esperaba porque el servidor lo pidió
+  (`flush()` y «Reintentar ya», que son de la persona, sí sueltan todo).
+- **El tiempo de espera cubre el cuerpo:** un servidor que manda las cabeceras y se calla ya no
+  deja la cola colgada.
+- **`clear()` al cerrar sesión** aborta lo que va en camino (lo que vuelva no se guarda ni sale con
+  la sesión siguiente) y borra también lo que otras pestañas guardaron. **La app debe llamarlo al
+  cerrar sesión**, y conviene una cola por usuario: `createSync({name: "nx-sync:" + userId})`.
+- **Lo guardado va en claro** en IndexedDB (cuerpos, versiones del servidor en un conflicto). No
+  hay cifrado: `maxOps` (tope de operaciones; más, y `enqueue()` rechaza) y `ttl` (vida máxima sin
+  enviarse; vencida, se descarta con el evento `expired`) acotan lo que queda en un equipo
+  compartido. Sin `label`, la operación se muestra como «Cambio sin nombre»: la URL, que puede
+  llevar una llave en la query, ya no se usa como nombre.
+- **Editar lo que va en camino:** `enqueue()` con el `id` de una operación que se está enviando
+  guarda la versión nueva y la envía después; si la anterior ya salió alguna vez (pudo llegar), la
+  nueva va con otra `Idempotency-Key`. Para altas, mejor `PUT` con un id propio que `POST`.
+- Lo que se lee de IndexedDB se valida (`cleanLoaded`): un registro corrupto o de una versión
+  anterior no rompe la cola.
+- `ping` (atributo o propiedad) solo del mismo origen o de uno permitido con `allowOrigins()`; si
+  no, la cola sigue sin `ping`. `ping` también se recupera si se asignó como propiedad antes de
+  definir el elemento.
 - Claves con punto dentro de un cuerpo (`{"a.b": 1}`) se confunden con rutas en el comparador.
 - `npx tsc --noEmit -p .` solo da los errores que ya había en `examples/solid/main.tsx`.

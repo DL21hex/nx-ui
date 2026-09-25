@@ -212,6 +212,21 @@ test("presencia: la pila, los campos marcados, el aviso de bloqueo y la lista", 
 
 (Lo corrí en claro y en oscuro: cero violaciones serias o críticas.)
 
+## Seguridad y robustez
+
+- **La identidad de un evento no se verifica:** `user` viene dentro del mensaje, así que cualquiera
+  que pueda escribir en el transporte puede hacerse pasar por otra persona (mandar su `leave`,
+  «bloquear» un campo a su nombre). `BroadcastChannel` es solo del mismo origen; con SSE o un
+  transporte propio, **el servidor debe sellar `user` con la sesión de quien envía** (no reenviar el
+  que manda el cliente) y descartar lo que no pase. El componente solo muestra; no toma decisiones
+  de permisos con estos datos.
+- El avatar de otra persona solo se pinta si es `https:` o del mismo origen (`safeImageSrc()`), con
+  `referrerpolicy="no-referrer"`: un `http:` o una ruta cualquiera la cargaría el navegador de todos
+  los que miran (rastreo, o un GET con cookies a la propia app).
+- `source` (SSE) solo del mismo origen o de uno de `allowOrigins()`.
+- Una clave de campo remota se limpia de caracteres de control y se escapa como cadena CSS: un
+  salto de línea hacía lanzar a `querySelector` en cada pintado mientras esa persona siguiera ahí.
+
 ## Notas
 
 - **No toqué `src/core/`.**

@@ -93,15 +93,46 @@ describe("<nx-presence>: la pila", () => {
     expect(stack(el)).toHaveLength(1);
   });
 
-  it("la foto solo si es una URL segura; si no, las iniciales", () => {
+  it("la foto solo si es https o del mismo origen, sin referrer; si no, las iniciales", () => {
     const el = mount();
     el.push({ type: "join", user: { id: "a", name: "Ana", avatar: "javascript:alert(1)" } });
     el.push({ type: "join", user: { id: "b", name: "Beto", avatar: "/fotos/beto.jpg" } });
-    const [a, b] = stack(el);
+    el.push({ type: "join", user: { id: "c", name: "Carla", avatar: "http://rastreo.example/pixel.gif" } });
+    const [a, b, c] = stack(el);
     expect(a.querySelector("img")).toBeNull();
     expect(a.textContent).toContain("An");
-    expect(b.querySelector("img")!.getAttribute("src")).toBe("/fotos/beto.jpg");
+    expect(b.querySelector("img")!.getAttribute("src")).toMatch(/^(https?:\/\/[^/]+)?\/fotos\/beto\.jpg$/);
     expect(b.querySelector("img")!.getAttribute("alt")).toBe("");
+    expect(b.querySelector("img")!.getAttribute("referrerpolicy")).toBe("no-referrer");
+    expect(c.querySelector("img")).toBeNull();
+  });
+
+  it("una clave de campo con salto de línea no rompe el pintado (antes querySelector lanzaba)", () => {
+    document.body.innerHTML = `<form id="f"><input name="monto" aria-label="Monto"></form><nx-presence for="f"></nx-presence>`;
+    const el = document.querySelector("nx-presence")!;
+    expect(() => el.push({ type: "lock", user: { id: "x", name: "Xavi" }, field: "a\nb\"]" })).not.toThrow();
+    expect(() => el.push({ type: "heartbeat", user: { id: "x", name: "Xavi" } })).not.toThrow();
+    expect(() => el.push({ type: "lock", user: { id: "y", name: "Yola" }, field: "monto" })).not.toThrow();
+    expect(el.users.map((u) => u.field)).toEqual(["ab\"]", "monto"]);
+  });
+
+  it("source: EventSource solo del mismo origen", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const opened: string[] = [];
+    vi.stubGlobal(
+      "EventSource",
+      class {
+        onmessage = null;
+        constructor(url: string) {
+          opened.push(url);
+        }
+        close() {}
+      },
+    );
+    document.body.innerHTML = `<nx-presence source="https://otro.example/sse"></nx-presence><nx-presence source="/sse/sala-1"></nx-presence>`;
+    expect(opened).toHaveLength(1);
+    expect(opened[0]).toMatch(/\/sse\/sala-1$/);
+    warn.mockRestore();
   });
 
   it("«+N» con los que no caben, y la lista completa con la persona actual primero", () => {

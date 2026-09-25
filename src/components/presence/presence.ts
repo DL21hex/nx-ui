@@ -16,7 +16,8 @@
  * su servidor. Latido cada 15 s; quien no da señales en 45 s se va solo.
  */
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeImageSrc } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { glyph, initials } from "../../core/icons";
 import { resolveLocale } from "../../core/locale";
 import { HEARTBEAT_MS, activityOf, agoText, applyEvent, cleanEvent, cleanUser, firstName, hueOf, nextTypingEnd, prune, statesOf, summarize, type PresenceNote, type PresencePeer } from "./logic";
@@ -59,7 +60,10 @@ const TYPING_EVERY_MS = 1_200;
 /** Los anuncios se agrupan: uno como mucho cada tanto. */
 const SAY_EVERY_MS = 3_000;
 const FIELD_TAGS = /^(INPUT|SELECT|TEXTAREA)$/;
-const q = (s: string) => s.replace(/["\\]/g, "\\$&");
+/** Una clave dentro de un selector entre comillas: `"` y `\` escapados, y los controles (un salto de
+ *  línea invalida la cadena CSS: `querySelector` lanzaba y el pintado se detenía) como `\a `. */
+// eslint-disable-next-line no-control-regex
+const q = (s: string) => s.replace(/["\\]/g, "\\$&").replace(/[\u0000-\u001f\u007f]/g, (c) => `\\${c.charCodeAt(0).toString(16)} `);
 
 let uid = 0;
 interface Mark {
@@ -133,7 +137,8 @@ export class NxPresence extends Base {
     if (v) this.setAttribute("channel", v);
     else this.removeAttribute("channel");
   }
-  /** URL de un `EventSource` (SSE) que manda los eventos de los demás. */
+  /** URL de un `EventSource` (SSE) que manda los eventos de los demás. Solo del mismo origen (o uno
+   *  de `allowOrigins`). */
   get source(): string | null {
     return this.getAttribute("source");
   }
@@ -169,7 +174,7 @@ export class NxPresence extends Base {
     return this.#labels;
   }
   set labels(v: Partial<PresenceLabels> | null | undefined) {
-    this.#labels = { ...PRESENCE_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(PRESENCE_LABELS, v);
     this.#paint();
   }
 
@@ -287,7 +292,7 @@ export class NxPresence extends Base {
       this.#bc = new BroadcastChannel(`nx-presence:${ch}`);
       this.#bc.onmessage = (e) => this.push(e.data);
     }
-    const src = this.source;
+    const src = safeEndpoint(this.source);
     if (src && typeof EventSource !== "undefined") {
       this.#es = new EventSource(src);
       this.#es.onmessage = (e) => this.push(e.data);
@@ -366,7 +371,12 @@ export class NxPresence extends Base {
   }
   #fieldEl(key: string): HTMLElement | null {
     const root = this.#target();
-    return root?.querySelector<HTMLElement>(`[data-presence="${q(key)}"]`) ?? root?.querySelector<HTMLElement>(`[name="${q(key)}"]`) ?? null;
+    try {
+      return root?.querySelector<HTMLElement>(`[data-presence="${q(key)}"]`) ?? root?.querySelector<HTMLElement>(`[name="${q(key)}"]`) ?? null;
+    } catch {
+      // La clave la manda otra persona: una que no se deja buscar no es de ningún campo.
+      return null;
+    }
   }
   /** Cómo se llama un campo: `data-presence-label`, `aria-label`, su `<label>`, o la clave. */
   #label(key: string): string {
@@ -531,8 +541,8 @@ export class NxPresence extends Base {
   }
 
   #avatar(u: PresenceUser): HTMLElement {
-    const src = safeHref(u.avatar);
-    return h("span", { class: "nx-presence__face", "aria-hidden": "true", style: `--h:${hueOf(u.id)}` }, src ? h("img", { src, alt: "", loading: "lazy" }) : initials(u.name));
+    const src = safeImageSrc(u.avatar);
+    return h("span", { class: "nx-presence__face", "aria-hidden": "true", style: `--h:${hueOf(u.id)}` }, src ? h("img", { src, alt: "", loading: "lazy", referrerpolicy: "no-referrer" }) : initials(u.name));
   }
 
   /** «viendo», «editando Monto», «inactivo hace 4 min». */

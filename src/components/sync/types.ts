@@ -26,7 +26,8 @@ export interface SyncInput {
   url: string;
   /** Cualquier valor JSON; se envía como `application/json`. */
   body?: SyncJson;
-  /** Lo que la persona reconoce: «Pedido · Tienda La Esquina». */
+  /** Lo que la persona reconoce: «Pedido · Tienda La Esquina». Sin él, la píldora dice «Cambio sin
+   *  nombre» (la URL no se usa: puede llevar datos o llaves en la query). */
   label: string;
   /** Las operaciones del mismo grupo no se adelantan a una en conflicto o fallida del grupo. */
   group?: string;
@@ -75,6 +76,21 @@ export interface SyncOp {
   key: string;
   /** `If-Match` para el próximo envío. */
   etag?: string;
+  /** Cuántas veces el servidor contestó 5xx, 429 o 408 (con `maxAttempts`, queda fallida). */
+  fails?: number;
+  /** Versión del registro: sube con cada escritura. Al juntar lo de otra pestaña gana la mayor. */
+  rev?: number;
+  /** La versión que llegó con `enqueue()` del mismo `id` mientras esta iba en camino: sale después,
+   *  con otra llave (la anterior pudo haber llegado). */
+  next?: SyncRevision;
+}
+
+/** Lo que cambia al encolar otra vez el mismo `id`. */
+export interface SyncRevision {
+  method: SyncMethod;
+  url: string;
+  body?: SyncJson;
+  label: string;
 }
 
 /** Lo que ve quien se suscribe. */
@@ -91,12 +107,18 @@ export interface SyncState {
   progress: { done: number; total: number } | null;
   /** La cola ya leyó lo guardado en el dispositivo. */
   ready: boolean;
+  /** Lo encolado sobrevive a cerrar la pestaña: `false` si la cola vive en memoria (sin IndexedDB,
+   *  o no se pudo abrir) o si falló la última escritura (disco lleno). */
+  durable: boolean;
+  /** El servidor pidió iniciar sesión (401): la cola se detuvo hasta `flush()`, `check()` o
+   *  `configure()` con las cabeceras nuevas. */
+  auth: boolean;
 }
 
 /** Qué acaba de pasar (el segundo argumento de quien se suscribe). */
 export type SyncEvent =
   | { type: "online" | "offline" | "idle" }
-  | { type: "enqueue" | "discard" | "conflict" | "failed" | "retry"; op: SyncOp }
+  | { type: "enqueue" | "discard" | "conflict" | "failed" | "retry" | "auth" | "expired"; op: SyncOp }
   | { type: "done"; op: SyncOp; data: unknown; status: number };
 
 export type SyncListener = (state: SyncState, event?: SyncEvent) => void;
@@ -104,8 +126,24 @@ export type SyncListener = (state: SyncState, event?: SyncEvent) => void;
 /** Dónde se guarda la cola: IndexedDB en el navegador, memoria en las pruebas o sin IndexedDB. */
 export interface SyncStore {
   load(): Promise<SyncOp[]>;
+  /** Resuelve cuando quedó escrito de verdad (en IndexedDB, al completar la transacción). */
   put(op: SyncOp): Promise<unknown>;
   del(id: string): Promise<unknown>;
+  /** Una sola, para releerla antes de enviarla (otra pestaña pudo cambiarla o descartarla). */
+  get?(id: string): Promise<SyncOp | undefined>;
+  /** `false` si lo guardado no sobrevive a cerrar la página (la de memoria). */
+  durable?: boolean;
+}
+
+/** Lo mínimo de `navigator.locks` que usa la cola (para probar con uno falso). */
+export interface SyncLocks {
+  request(name: string, fn: () => Promise<unknown>): Promise<unknown>;
+}
+
+/** Lo mínimo de `BroadcastChannel` que usa la cola. */
+export interface SyncChannel {
+  postMessage(msg: unknown): void;
+  onmessage: ((e: { data: unknown }) => void) | null;
 }
 
 /** Ajustes de la cola (`nxSync.configure()` o `createSync()`). */
@@ -120,6 +158,19 @@ export interface SyncOptions {
   timeout?: number;
   /** Cabeceras para cada envío (p. ej. `Authorization`); una función para leerlas al enviar. */
   headers?: Record<string, string> | (() => Record<string, string>);
+  /** Intentos con respuesta 5xx, 429 o 408 antes de darla por fallida (8). La falta de red no cuenta:
+   *  sin conexión se espera lo que haga falta. */
+  maxAttempts?: number;
+  /** Tope de lo que se respeta de un `Retry-After` (1 h). */
+  maxRetryAfter?: number;
+  /** Cuántas operaciones caben en la cola; más, y `enqueue()` rechaza (sin tope por defecto). */
+  maxOps?: number;
+  /** Vida máxima de una operación sin enviar (ms desde que se encoló); vencida, se descarta con el
+   *  evento `expired`. Sin tope por defecto. */
+  ttl?: number;
+  /** Nombre de la base de IndexedDB, del candado y del canal entre pestañas («nx-sync»). Una cola
+   *  por usuario: `createSync({name: "nx-sync:" + userId})`. */
+  name?: string;
   // Para pruebas y entornos sin navegador:
   fetch?: typeof fetch;
   store?: SyncStore;
@@ -127,6 +178,10 @@ export interface SyncOptions {
   random?: () => number;
   /** ¿Hay red? (por defecto `navigator.onLine`). */
   network?: () => boolean;
+  /** Candado entre pestañas (por defecto `navigator.locks` con el almacén de IndexedDB); `null`, sin. */
+  locks?: SyncLocks | null;
+  /** Canal entre pestañas (por defecto un `BroadcastChannel` con el almacén de IndexedDB); `null`, sin. */
+  channel?: SyncChannel | null;
 }
 
 export interface SyncLabels {
@@ -197,6 +252,14 @@ export interface SyncLabels {
   unavailable: string;
   /** «El servidor lo rechazó ({status})» */
   rejected: string;
+  /** La píldora cuando el servidor pidió iniciar sesión. */
+  auth: string;
+  /** Anuncio del mismo caso. */
+  liveAuth: string;
+  /** Una operación sin `label`. */
+  unnamed: string;
+  /** Aviso en el panel cuando la cola vive en memoria. */
+  notDurable: string;
 }
 
 export interface SyncChangeDetail {

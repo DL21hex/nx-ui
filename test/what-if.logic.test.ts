@@ -244,4 +244,14 @@ describe("chartPaths", () => {
     expect(p.value).toBe("M0 5L100 5");
     expect(p.zero).toBeUndefined();
   });
+
+  it("valores enormes o muchos puntos: sin NaN ni RangeError", () => {
+    const flat = chartPaths([{ x: "a", value: 1e17 }, { x: "b", value: 1e17 }], 100, 10, 0);
+    expect(flat.value).toBe("M0 5L100 5");
+    const wide = chartPaths([{ x: "a", value: -1.7e308 }, { x: "b", value: 1.7e308 }], 100, 10, 0);
+    expect(wide.value).toBe("M0 10L100 0");
+    const many = Array.from({ length: 200_000 }, (_, i) => ({ x: String(i), value: i % 7 }));
+    expect(() => chartPaths(many, 100, 10)).not.toThrow();
+    expect(chartPaths(many, 100, 10).value).not.toContain("NaN");
+  });
 });

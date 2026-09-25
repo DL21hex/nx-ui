@@ -222,6 +222,52 @@ describe("<nx-sync>", () => {
     expect(el.querySelector('.nx-sync__op[data-status="sent"] .nx-sync__tag')!.textContent).toBe("Enviado");
   });
 
+  it("401: la píldora pide iniciar sesión, lo anuncia y emite nx-sync-auth; sigue con cabeceras nuevas", async () => {
+    const el = mount();
+    const auth: string[] = [];
+    el.addEventListener("nx-sync-auth", (e) => auth.push(e.detail.op.label));
+    replies.push(() => res(401));
+    await enqueue("Pedido con sesión vencida");
+    await vi.waitFor(() => expect(el.state.auth).toBe(true));
+    expect(pill(el).textContent).toBe("Inicia sesión para enviar");
+    expect(el.dataset.state).toBe("alert");
+    expect(live(el)).toMatch(/^La sesión venció/);
+    expect(auth).toEqual(["Pedido con sesión vencida"]);
+    nxSync.configure({ headers: { Authorization: "Bearer nuevo" } });
+    await vi.waitFor(() => expect(el.pending).toBe(0));
+    expect(calls).toHaveLength(2);
+    nxSync.configure({ headers: {} });
+  });
+
+  it("sin label: «Cambio sin nombre» (nunca la URL); en memoria, el panel avisa que no es durable", async () => {
+    const el = mount();
+    net(false);
+    await nxSync.enqueue({ method: "PUT", url: "/clientes/9?token=s3cr3t", body: {} } as never);
+    el.show();
+    expect(el.querySelector(".nx-sync__label")!.textContent).toBe("Cambio sin nombre");
+    expect(el.textContent).not.toContain("s3cr3t");
+    expect(el.querySelector(".nx-sync__warn")!.textContent).toMatch(/no deja guardar en el dispositivo/);
+    net(true);
+  });
+
+  it("ping: solo del mismo origen; también asignado como propiedad antes de definir el elemento", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const conf = vi.spyOn(nxSync, "configure");
+    mount(`ping="https://otro.example/ping"`);
+    expect(conf).toHaveBeenCalledWith({ ping: null });
+    conf.mockClear();
+    document.body.innerHTML = "";
+    const pre = document.createElement("nx-sync") as NxSync & { ping: string };
+    // Una propiedad asignada a un elemento que aún no se actualizó: se recupera al conectarse.
+    Object.defineProperty(pre, "ping", { value: "/api/ping", configurable: true, writable: true });
+    document.body.append(pre);
+    expect(pre.getAttribute("ping")).toBe("/api/ping");
+    expect(conf).toHaveBeenCalledWith({ ping: expect.stringMatching(/^(https?:\/\/[^/]+)?\/api\/ping$/) });
+    conf.mockRestore();
+    warn.mockRestore();
+    nxSync.configure({ ping: null });
+  });
+
   it("labels y fields por atributo JSON", async () => {
     const el = mount(`labels='{"online":"Conectado"}' fields='[{"key":"a","label":"A"}]'`);
     await vi.waitFor(() => expect(pill(el).textContent).toBe("Conectado"));

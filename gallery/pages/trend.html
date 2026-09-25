@@ -84,7 +84,7 @@ costos.addEventListener("nx-trend-why", (e) =&gt; analitica.track("por-que", e.d
                 <tr><td><code>series</code>, <code>anomalies</code></td><td>Los datos (JSON).</td></tr>
                 <tr><td><code>kind</code>, <code>format</code>, <code>currency</code></td><td>Por defecto de las series: <code>line</code> o <code>bar</code>; <code>number</code>, <code>money</code> o <code>percent</code>; y la moneda.</td></tr>
                 <tr><td><code>detect</code></td><td>Detección automática: el atributo solo (3 desviaciones robustas) o un número.</td></tr>
-                <tr><td><code>explain-endpoint</code></td><td>URL del protocolo de IA que contesta «¿por qué?».</td></tr>
+                <tr><td><code>explain-endpoint</code></td><td>URL del protocolo de IA que contesta «¿por qué?». Del mismo origen (o de uno permitido con <code>allowOrigins()</code>).</td></tr>
                 <tr><td><code>heading</code>, <code>height</code>, <code>busy</code>, <code>locale</code>, <code>labels</code></td><td>Título (y nombre accesible), alto en px (260), cargando, formato de números y fechas, y textos.</td></tr>
                 <tr><td><code>explain(id, x, pregunta?)</code>, <code>close()</code></td><td>Preguntar por un punto desde código, y cerrar el popover. <code>summary</code> y <code>flags</code> devuelven el resumen y las anomalías que se ven.</td></tr>
                 <tr><td>Eventos</td><td><code>nx-trend-why</code> (cancelable) y <code>nx-trend-toggle</code> <code>{id, visible}</code>.</td></tr>

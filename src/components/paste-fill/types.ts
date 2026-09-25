@@ -142,6 +142,9 @@ export interface PasteFillLabels extends PasteHints {
   yours: string;
   /** Lo que el lector de pantalla oye de un campo llenado: «Llenado desde el texto pegado». */
   fromText: string;
+  /** Un texto de más de `MAX_TEXT` caracteres no se lee: «El texto es muy largo ({max} caracteres como
+   *  máximo): pega solo la parte con los datos». */
+  tooLong: string;
 }
 
 export interface PasteFillDoneDetail {

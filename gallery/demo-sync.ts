@@ -274,7 +274,13 @@ export function mountSyncDemo(root: HTMLElement): void {
       vendedor: VENDEDOR,
       tomadoEn: new Date().toISOString(),
     };
-    const op = await nxSync.enqueue({ method: "POST", url: "/demo/sync/pedidos", body: pedido as unknown as SyncJson, label: `Pedido · ${t.nombre}`, group: t.nit });
+    let op;
+    try {
+      op = await nxSync.enqueue({ method: "POST", url: "/demo/sync/pedidos", body: pedido as unknown as SyncJson, label: `Pedido · ${t.nombre}`, group: t.nit });
+    } catch (e) {
+      // No se pudo guardar en el dispositivo (disco lleno): el pedido no entró a la cola.
+      return add(`nxSync.enqueue ✗ ${(e as Error).message}`);
+    }
     add(`nxSync.enqueue → ${op.label} · ${money(totalDe(pedido))}`);
     // Siguiente tienda de la ruta, como en la calle.
     cliente.selectedIndex = (cliente.selectedIndex + 1) % TIENDAS.length;

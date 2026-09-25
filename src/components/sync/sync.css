@@ -304,6 +304,21 @@ nx-sync[data-state="alert"] .nx-sync__dot {
   color: var(--nx-muted-foreground);
   font-size: 12px;
 }
+/* La cola vive en memoria: lo pendiente no sobrevive a cerrar la página. */
+.nx-sync__warn {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0 0 !important;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  & .nx-glyph {
+    flex: none;
+    inline-size: 14px;
+    block-size: 14px;
+    margin-block-start: 2px;
+  }
+}
 .nx-sync__acts {
   grid-column: 2;
   display: flex;

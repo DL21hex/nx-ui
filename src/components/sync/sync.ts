@@ -9,8 +9,9 @@
  * Anuncia (`aria-live`) cuando se va y vuelve la conexión y cuando termina de sincronizar.
  */
 import { Base } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
+import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
 import { ago, cleanFields, countdown, diffFields, fieldLabel, midDiff, nxSync, plural, resolveBody } from "./logic";
 import type { SyncChangeDetail, SyncEvent, SyncField, SyncJson, SyncLabels, SyncOp, SyncState } from "./types";
@@ -71,6 +72,10 @@ export const SYNC_LABELS: SyncLabels = {
   noNetwork: "Sin conexión",
   unavailable: "El servidor no responde ({status})",
   rejected: "El servidor lo rechazó ({status})",
+  auth: "Inicia sesión para enviar",
+  liveAuth: "La sesión venció: los cambios esperan a que vuelvas a iniciar sesión.",
+  unnamed: "Cambio sin nombre",
+  notDurable: "Este navegador no deja guardar en el dispositivo: si cierras la página antes de sincronizar, se pierde lo pendiente.",
 };
 
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
@@ -81,7 +86,7 @@ const X = '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6"/><path d="m9 9 6 6
 const OFF = '<path d="m2 2 20 20"/><path d="M5.8 5.8A7 7 0 0 0 7 19h11a4.5 4.5 0 0 0 1.9-.4M22 14.5A4.5 4.5 0 0 0 17.5 10h-1.8A7 7 0 0 0 9.4 5.4"/>';
 const BACK = '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>';
 const ICONS: Record<string, string> = { pending: CLOCK, waiting: CLOCK, sending: UP, conflict: ALERT, failed: X, sent: CHECK };
-const PROPS = ["labels", "fields"] as const;
+const PROPS = ["labels", "fields", "ping"] as const;
 
 type View = { kind: "list" } | { kind: "resolve"; id: string; theirs: Set<string> } | { kind: "edit"; id: string };
 
@@ -93,7 +98,7 @@ export class NxSync extends Base {
   #uid = `nx-sync${++uid}`;
   #labels: SyncLabels = SYNC_LABELS;
   #fields: SyncField[] = [];
-  #state: SyncState = { online: true, ops: [], pending: 0, conflicts: 0, failed: 0, progress: null, ready: false };
+  #state: SyncState = { online: true, ops: [], pending: 0, conflicts: 0, failed: 0, progress: null, ready: false, durable: true, auth: false };
   #view: View = { kind: "list" };
   /** La vista que está pintada (para no rehacer el comparador a cada cambio de la cola). */
   #painted = "";
@@ -105,6 +110,8 @@ export class NxSync extends Base {
   #shown = new Set<string>();
   #last = "";
   #isOpen = false;
+  /** La lista del panel se rehace una vez por tanda de cambios (no una por cada aviso de la cola). */
+  #listQueued = false;
   #off?: () => void;
   #tick?: ReturnType<typeof setInterval>;
   #track?: () => void;
@@ -121,7 +128,7 @@ export class NxSync extends Base {
     return this.#labels;
   }
   set labels(v: Partial<SyncLabels> | null | undefined) {
-    this.#labels = { ...SYNC_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(SYNC_LABELS, v);
     this.#paint(true);
   }
   /** Nombres de los campos para el comparador, con comodines y hermanos entre llaves:
@@ -133,7 +140,8 @@ export class NxSync extends Base {
     this.#fields = cleanFields(v).filter((f) => f.label);
     this.#paint(true);
   }
-  /** URL para comprobar que hay conexión de verdad (ajusta la cola de la página). */
+  /** URL para comprobar que hay conexión de verdad (ajusta la cola de la página). Solo del mismo
+   *  origen (o uno de `allowOrigins`): otra, y la cola sigue sin `ping`. */
   get ping(): string | null {
     return this.getAttribute("ping");
   }
@@ -190,7 +198,7 @@ export class NxSync extends Base {
       }
     }
     if (!this.#built) this.#build();
-    if (this.ping) nxSync.configure({ ping: this.ping });
+    if (this.ping) nxSync.configure({ ping: safeEndpoint(this.ping) ?? null });
     this.#off ??= nxSync.subscribe((s, e) => this.#onState(s, e));
   }
 
@@ -211,7 +219,7 @@ export class NxSync extends Base {
       }
       return;
     }
-    if (name === "ping" && this.isConnected) nxSync.configure({ ping: value });
+    if (name === "ping" && this.isConnected) nxSync.configure({ ping: safeEndpoint(value) ?? null });
     this.#paint(true);
   }
 
@@ -234,6 +242,7 @@ export class NxSync extends Base {
       setTimeout(() => this.#sent.delete(e.op.id) && this.#paint(), 1400);
       this.dispatchEvent(new CustomEvent("nx-sync-done", { detail: { op: e.op, data: e.data }, bubbles: true, composed: true }));
     }
+    if (e?.type === "auth") this.dispatchEvent(new CustomEvent("nx-sync-auth", { detail: { op: e.op }, bubbles: true, composed: true }));
     const say =
       e?.type === "offline"
         ? L.liveOffline
@@ -241,9 +250,11 @@ export class NxSync extends Base {
           ? L.liveOnline
           : e?.type === "idle"
             ? L.liveDone
-            : e?.type === "conflict" || e?.type === "failed"
-              ? (e.type === "conflict" ? L.liveConflict : L.liveFailed).replace("{label}", e.op.label)
-              : "";
+            : e?.type === "auth"
+              ? L.liveAuth
+              : e?.type === "conflict" || e?.type === "failed"
+                ? (e.type === "conflict" ? L.liveConflict : L.liveFailed).replace("{label}", this.#name(e.op))
+                : "";
     if (say && this.#live) this.#live.textContent = say + (this.#live.textContent === say ? " " : "");
     const detail: SyncChangeDetail = { online: s.online, pending: s.pending, conflicts: s.conflicts };
     const key = JSON.stringify(detail);
@@ -320,6 +331,11 @@ export class NxSync extends Base {
       const t = e.target as HTMLTextAreaElement;
       if (t.tagName === "TEXTAREA") this.#check(t);
     });
+  }
+
+  /** Lo que se muestra de una operación: su `label`, o «Cambio sin nombre» (nunca la URL). */
+  #name(op: SyncOp): string {
+    return op.label || this.#labels.unnamed;
   }
 
   #op(id: string): SyncOp | undefined {
@@ -407,6 +423,7 @@ export class NxSync extends Base {
     const s = this.#state;
     const L = this.#labels;
     const off = s.online ? "" : `${L.offline} · `;
+    if (s.auth) return [L.auth, "alert"];
     if (s.conflicts) return [off + plural(s.conflicts, L.conflictOne, L.conflictMany), "alert"];
     if (s.failed) return [off + plural(s.failed, L.failedOne, L.failedMany), "alert"];
     const pend = plural(s.pending, L.pendingOne, L.pendingMany);
@@ -435,6 +452,15 @@ export class NxSync extends Base {
     }
     const key = v.kind === "list" ? "" : `${v.kind}|${op!.id}|${op!.key}`;
     if (key && key === this.#painted && !force) return;
+    if (!key && !force) {
+      // La lista, una vez por tanda: al vaciar una cola de miles, cada envío avisa varias veces.
+      if (this.#listQueued) return;
+      this.#listQueued = true;
+      return queueMicrotask(() => {
+        this.#listQueued = false;
+        if (this.open && this.#view.kind === "list") this.#paint(true);
+      });
+    }
     this.#painted = key;
     const k = (document.activeElement as HTMLElement | null)?.closest?.("[data-k]")?.getAttribute("data-k");
     this.#pop!.replaceChildren(...(v.kind === "list" ? this.#list() : v.kind === "resolve" ? this.#resolver(op!, v.theirs) : this.#editor(op!)));
@@ -470,6 +496,7 @@ export class NxSync extends Base {
       ops.length
         ? h("ol", { class: "nx-sync__list", "aria-label": L.heading }, ...ops.map((o) => this.#row(o)))
         : h("div", { class: "nx-sync__empty" }, glyph(CHECK), h("strong", null, L.upToDate), h("span", null, L.emptyHint)),
+      s.durable ? "" : h("p", { class: "nx-sync__warn" }, glyph(ALERT), h("span", null, L.notDurable)),
     ];
   }
 
@@ -477,7 +504,8 @@ export class NxSync extends Base {
     const L = this.#labels;
     const st = op.status as string;
     const id = op.id;
-    const btn = (act: string, label: string, cls = "") => h("button", { type: "button", class: `nx-sync__btn ${cls}`.trim(), "data-act": act, "data-id": id, "data-k": `${act}|${id}`, "aria-label": `${label} · ${op.label}` }, label);
+    const name = this.#name(op);
+    const btn = (act: string, label: string, cls = "") => h("button", { type: "button", class: `nx-sync__btn ${cls}`.trim(), "data-act": act, "data-id": id, "data-k": `${act}|${id}`, "aria-label": `${label} · ${name}` }, label);
     const acts =
       this.#confirm === id
         ? [h("span", { class: "nx-sync__ask" }, L.confirmDiscard), btn("yes", L.discard, "is-danger"), btn("no", L.cancel)]
@@ -503,7 +531,7 @@ export class NxSync extends Base {
       h(
         "div",
         { class: "nx-sync__main" },
-        h("p", { class: "nx-sync__label" }, op.label),
+        h("p", { class: "nx-sync__label" }, name),
         h("p", { class: "nx-sync__meta" }, h("span", { class: "nx-sync__tag" }, L[st as "pending"] ?? st), ...meta.flatMap((m, i) => (i ? [" · ", m] : [m]))),
         why ? h("p", { class: "nx-sync__why" }, why) : null,
       ),
@@ -532,7 +560,7 @@ export class NxSync extends Base {
     const names = [...this.#fields, ...c.fields];
     return [
       this.#head(L.resolveTitle, true),
-      h("p", { class: "nx-sync__hint" }, h("strong", null, op.label), " · ", op.error ?? L.resolveHint),
+      h("p", { class: "nx-sync__hint" }, h("strong", null, this.#name(op)), " · ", op.error ?? L.resolveHint),
       h(
         "div",
         { class: "nx-sync__all" },
@@ -571,7 +599,7 @@ export class NxSync extends Base {
     area.value = JSON.stringify(op.body ?? null, null, 2);
     return [
       this.#head(L.editTitle, true),
-      h("p", { class: "nx-sync__hint" }, h("strong", null, op.label), " · ", op.error ? `${op.error}. ` : "", L.editHint),
+      h("p", { class: "nx-sync__hint" }, h("strong", null, this.#name(op)), " · ", op.error ? `${op.error}. ` : "", L.editHint),
       h("label", { class: "nx-sync__lbl", for: ta }, L.data),
       area,
       h("p", { id: bad, class: "nx-sync__bad", "aria-live": "polite" }),

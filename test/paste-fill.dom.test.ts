@@ -256,6 +256,48 @@ describe("<nx-paste-fill>: pegar, arrastrar y deshacer", () => {
     expect(input(el, "nit").value).toBe("900.359.742-3");
   });
 
+  it("pegar en una contraseña, una casilla o un campo deshabilitado es de ese control: ni se lee ni se envía", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="/leer"');
+    for (const name of ["clave", "activo", "bloqueado", "solo"]) {
+      const ev = paste(input(el, name), "Sup3r-S3cr3ta!");
+      expect(ev.defaultPrevented).toBe(false);
+    }
+    await tick();
+    expect(el.state).toBe("idle");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(el.textContent).not.toContain("Sup3r-S3cr3ta!");
+  });
+
+  it("Ctrl+Z en una contraseña es de la contraseña, no deshace el llenado", async () => {
+    const el = mount();
+    await el.fill(EMAIL);
+    key(input(el, "clave"), "z", { ctrlKey: true });
+    expect(input(el, "nit").value).toBe("900.359.742-3");
+  });
+
+  it("un texto de más de 50 000 caracteres no se lee: la zona dice por qué", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="/leer"');
+    const start = vi.fn();
+    el.addEventListener("nx-paste-fill-start", start);
+    const zone = el.querySelector<HTMLTextAreaElement>(".nx-pf__input")!;
+    const ev = paste(zone, EMAIL + "\n" + "x".repeat(60_000));
+    expect(ev.defaultPrevented).toBe(true);
+    await tick();
+    expect(start).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(input(el, "nit").value).toBe("");
+    const hint = el.querySelector<HTMLElement>(".nx-pf__hint")!;
+    expect(hint.textContent).toBe("El texto es muy largo (50.000 caracteres como máximo): pega solo la parte con los datos");
+    expect(hint.hasAttribute("data-warn")).toBe(true);
+    expect(el.querySelector("[role=status]")!.textContent).toContain("muy largo");
+    type(zone as unknown as HTMLInputElement, "otro");
+    expect(hint.hasAttribute("data-warn")).toBe(false);
+  });
+
   it("pegar en la zona llena y la deja vacía; escribir muestra «Llenar» (y Ctrl+Enter también llena)", async () => {
     const el = mount();
     const zone = el.querySelector<HTMLTextAreaElement>(".nx-pf__input")!;
@@ -449,6 +491,39 @@ describe("<nx-paste-fill>: servidor", () => {
     expect(el.querySelector(".nx-pf__msg")!.getAttribute("data-tone")).toBe("warn");
     expect(done).toHaveBeenCalledOnce();
     expect(el.querySelector("[role=status]")!.textContent).toContain("No se pudo consultar el servidor");
+  });
+
+  it("un endpoint de otro origen no se consulta: el texto pegado no sale", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="https://otro.example/leer"');
+    await el.fill(EMAIL);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(el.state).toBe("filled");
+    warn.mockRestore();
+  });
+
+  it("otro texto mientras el servidor responde: el stream anterior se deja de leer", async () => {
+    let cancelled = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_u: string, init: RequestInit) => {
+        const body = new ReadableStream({
+          start: (c) => c.enqueue(new TextEncoder().encode(JSON.stringify({ type: "note", message: "leyendo" }) + "\n")),
+          cancel: () => void cancelled++,
+        });
+        init.signal?.addEventListener("abort", () => cancelled++);
+        return new Response(body);
+      }),
+    );
+    const el = mount('endpoint="/leer"');
+    void el.fill(EMAIL);
+    await tick();
+    void el.fill("NIT 900.359.742-3");
+    await tick();
+    expect(cancelled).toBeGreaterThan(0);
+    el.clear();
   });
 
   it("un endpoint inseguro no se consulta", async () => {
