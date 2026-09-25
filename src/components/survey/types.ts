@@ -114,8 +114,6 @@ export interface SurveyLabels {
   meta: string;
   /** «Pregunta {i} de {n}» */
   progress: string;
-  /** «Presiona Enter ↵» */
-  pressEnter: string;
   /** «Arrastra o usa ↑↓ para ordenar» */
   rankHint: string;
   thanks: string;
@@ -134,28 +132,9 @@ export interface SurveyLabels {
   /** Volver a una respuesta para cambiarla. */
   edit: string;
   skipped: string;
-  /** «{i} de {n} · ~{min} min» */
-  sheetMeta: string;
-  /** Eco: «El {pct} % respondió lo mismo». */
-  echoSame: string;
-  /** Eco: «{label} lo eligió el {pct} %». */
-  echoMulti: string;
-  /** Eco: «Eres {band}, como el {pct} %». */
-  echoNps: string;
-  /** Detractor, pasivo, promotor. */
-  bands: [string, string, string];
-  /** Eco: «Más alto que el {pct} % de las respuestas». */
-  echoAbove: string;
-  /** Eco: «El promedio de todos es {avg}». */
-  echoAvg: string;
-  /** Eco: «Para la mayoría, lo primero es {label}». */
-  echoRank: string;
-  /** Chat: el nombre de quien pregunta. */
-  host: string;
-  /** Chat: «Escribe tu respuesta…» y enviar. */
-  send: string;
+  /** El nombre de la lista de respuestas ya dadas. */
+  given: string;
+  /** «Ver {n} respuestas anteriores» */
+  earlier: string;
 }
 
-/** Cómo se ve: una pregunta a la vez (`focus`), la ficha que se arma sola (`sheet`), un mazo de
- *  tarjetas (`cards`) o una conversación (`chat`). */
-export type SurveyLayout = "focus" | "sheet" | "cards" | "chat";

@@ -1,11 +1,10 @@
 /**
- * `<nx-survey>`: una encuesta que da gusto contestar, en cuatro diseños (`layout`): una pregunta a
- * la vez (`focus`), la ficha que se arma sola (`sheet`), un mazo de tarjetas (`cards`) o una
- * conversación (`chat`). Con `echo`, cada respuesta muestra cómo respondieron los demás. Con el teclado
- * (A, B, C… para elegir, números para calificar, Enter para seguir), lógica condicional (una
- * pregunta aparece según otra respuesta) y respuestas que se insertan en las preguntas siguientes
- * («¿Qué mejorarías de {{area}}?»). Guarda el borrador para retomar donde se quedó, y al terminar
- * muestra cómo respondieron los demás, con la respuesta propia resaltada.
+ * `<nx-survey>`: una encuesta que da gusto contestar. Una pregunta a la vez y, arriba, lo que ya se
+ * respondió (un clic vuelve a esa pregunta para cambiarla). Con el teclado (letras para elegir,
+ * números para calificar, Enter para seguir), lógica condicional (una pregunta aparece según otra
+ * respuesta) y respuestas que se insertan en las preguntas siguientes («¿Qué mejorarías de
+ * {{area}}?»). Guarda el borrador para retomar donde se quedó, y al terminar muestra cómo
+ * respondieron los demás, con la respuesta propia resaltada.
  *
  * Siete tipos: `choice`, `multi`, `scale` (con NPS), `rating` (estrellas o caras), `text`, `rank`
  * (ordenar arrastrando o con el teclado) y `slider`. Todo es JSON: el backend manda las preguntas,
@@ -16,8 +15,8 @@ import { h } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { foldText } from "../../core/text";
-import { answerText, answersToSend, cleanQuestions, echoOf, estimateMinutes, interpolate, isAnswered, letterOf, rangeOf, validate, visibleQuestions } from "./logic";
-import type { SurveyAnswer, SurveyAnswers, SurveyLabels, SurveyLayout, SurveyQuestion, SurveyQuestionInput, SurveyQuestionResult, SurveyResults } from "./types";
+import { answerText, answersToSend, cleanQuestions, estimateMinutes, interpolate, isAnswered, letterOf, rangeOf, validate, visibleQuestions } from "./logic";
+import type { SurveyAnswer, SurveyAnswers, SurveyLabels, SurveyQuestion, SurveyQuestionInput, SurveyQuestionResult, SurveyResults } from "./types";
 
 export const SURVEY_LABELS: SurveyLabels = {
   start: "Empezar",
@@ -33,7 +32,6 @@ export const SURVEY_LABELS: SurveyLabels = {
   otherPlaceholder: "Escribe tu respuesta…",
   meta: "{n} preguntas · {min} min",
   progress: "Pregunta {i} de {n}",
-  pressEnter: "o presiona Enter ↵",
   rankHint: "Arrastra, o enfoca una opción y muévela con ↑ ↓",
   thanks: "¡Gracias!",
   thanksDetail: "Tu respuesta quedó registrada.",
@@ -48,27 +46,18 @@ export const SURVEY_LABELS: SurveyLabels = {
   words: "Lo que más se repite",
   edit: "Cambiar",
   skipped: "Sin respuesta",
-  sheetMeta: "{i} de {n} · ~{min} min",
-  echoSame: "El {pct} % respondió lo mismo",
-  echoMulti: "{label}: lo eligió el {pct} %",
-  echoNps: "Eres {band}, como el {pct} %",
-  bands: ["detractor", "pasivo", "promotor"],
-  echoAbove: "Más alto que el {pct} % de las respuestas",
-  echoAvg: "El promedio de todos es {avg}",
-  echoRank: "Para la mayoría, lo primero es {label}",
-  host: "Encuesta",
-  send: "Enviar respuesta",
+  given: "Tus respuestas",
+  earlier: "Ver {n} respuestas anteriores",
 };
 
 const ARROW = '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>';
-const UP = '<path d="m18 15-6-6-6 6"/>';
-const DOWN = '<path d="m6 9 6 6 6-6"/>';
+const LEFT = '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const STAR = '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>';
-const SPARK = '<path d="M9.94 14.06 5 19"/><path d="m14 4 1.27 3.73L19 9l-3.73 1.27L14 14l-1.27-3.73L9 9l3.73-1.27Z"/>';
 const GRIP = '<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>';
-const PROPS = ["questions", "answers", "results", "labels", "heading", "description", "action", "storage", "layout", "echo"] as const;
-const LAYOUTS = new Set<SurveyLayout>(["focus", "sheet", "cards", "chat"]);
+const PROPS = ["questions", "answers", "results", "labels", "heading", "description", "action", "storage"] as const;
+/** Con más respuestas que estas, las más viejas se pliegan (se ven las dos últimas). */
+const TRAIL_MAX = 3;
 /** Una elección simple pasa sola a la siguiente, tras este respiro (para ver lo que se eligió). */
 const AUTO_NEXT_MS = 420;
 
@@ -77,7 +66,7 @@ let uid = 0;
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(TEXTAREA|SELECT)$/.test(t.tagName) || (t.tagName === "INPUT" && !/^(radio|checkbox|range)$/.test((t as HTMLInputElement).type)));
 
 export class NxSurvey extends Base {
-  static observedAttributes = ["questions", "labels", "heading", "description", "locale", "layout", "echo"];
+  static observedAttributes = ["questions", "labels", "heading", "description", "locale"];
 
   #uid = `nx-survey${++uid}`;
   #questions: SurveyQuestion[] = [];
@@ -94,12 +83,9 @@ export class NxSurvey extends Base {
   #digitsAt = 0;
   #failed = false;
   #built = false;
-  /** Las preguntas que ya se pintaron en la ficha: las nuevas (lógica condicional) entran animadas. */
-  #seen = new Set<string>();
-  /** La pregunta actual acaba de llegar (en el chat, «escribiendo…» antes de aparecer). */
-  #fresh = false;
-  /** El eco de la respuesta anterior, para el mazo de tarjetas (se muestra una vez). */
-  #lastEcho = "";
+  /** Se abrieron las respuestas plegadas (siguen abiertas hasta empezar de nuevo). */
+  #trailOpen = false;
+  #head?: HTMLElement;
   #bar?: HTMLElement;
   #stage?: HTMLElement;
   #nav?: HTMLElement;
@@ -127,7 +113,7 @@ export class NxSurvey extends Base {
   }
   set results(v: SurveyResults | null | undefined) {
     this.#results = v && typeof v === "object" && typeof v.total === "number" && v.questions ? v : null;
-    if (this.#screen === "done" || (this.echo && this.#screen === "question")) this.#render();
+    if (this.#screen === "done") this.#render();
   }
   get heading(): string {
     return this.getAttribute("heading") ?? "";
@@ -163,22 +149,6 @@ export class NxSurvey extends Base {
   set labels(v: Partial<SurveyLabels> | null | undefined) {
     this.#labels = { ...SURVEY_LABELS, ...(v && typeof v === "object" ? v : {}) };
     this.#render();
-  }
-  /** Cómo se ve: `focus` (una pregunta a la vez), `sheet` (la ficha que se arma sola), `cards`
-   *  (un mazo de tarjetas) o `chat` (una conversación). */
-  get layout(): SurveyLayout {
-    const v = this.getAttribute("layout") as SurveyLayout;
-    return LAYOUTS.has(v) ? v : "focus";
-  }
-  set layout(v: SurveyLayout) {
-    this.setAttribute("layout", v);
-  }
-  /** Después de cada respuesta, cómo respondieron los demás (necesita `results` desde el inicio). */
-  get echo(): boolean {
-    return this.hasAttribute("echo") && this.getAttribute("echo") !== "false";
-  }
-  set echo(v: boolean) {
-    this.toggleAttribute("echo", !!v);
   }
   /** `intro`, `question`, `sending` o `done`. */
   get screen(): Screen {
@@ -220,7 +190,6 @@ export class NxSurvey extends Base {
       return false;
     }
     this.#error = "";
-    this.#lastEcho = this.#echoText(q);
     const vis = this.#visible();
     if (this.#step >= vis.length - 1) {
       void this.submit();
@@ -228,7 +197,6 @@ export class NxSurvey extends Base {
     }
     this.#step++;
     this.#dir = "next";
-    this.#fresh = true;
     this.#save();
     this.#render(true);
     return true;
@@ -238,14 +206,13 @@ export class NxSurvey extends Base {
     if (this.#step > 0) this.goto(this.#step - 1);
   }
 
-  /** Vuelve a una pregunta ya vista (la ficha y el chat lo hacen al tocar una respuesta). */
+  /** Vuelve a una pregunta ya vista (lo hace un clic en una respuesta de arriba). */
   goto(index: number): void {
     clearTimeout(this.#auto);
     if (this.#screen !== "question" || index === this.#step || index < 0 || index >= this.#visible().length) return;
     this.#dir = index < this.#step ? "back" : "next";
     this.#step = index;
     this.#error = "";
-    this.#lastEcho = "";
     this.#save();
     this.#render(true);
   }
@@ -281,8 +248,8 @@ export class NxSurvey extends Base {
   /** Vuelve al inicio, sin respuestas. */
   reset(): void {
     this.#answers = {};
-    if (!this.echo) this.#results = null;
-    this.#seen.clear();
+    this.#results = null;
+    this.#trailOpen = false;
     this.#step = 0;
     this.#since = 0;
     this.#error = "";
@@ -370,15 +337,15 @@ export class NxSurvey extends Base {
     this.#built = true;
     this.setAttribute("role", "region");
     this.#bar = h("div", { class: "nx-survey__bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100" }, h("span"));
+    this.#head = h("header", { class: "nx-survey__head" }, h("strong", { class: "nx-survey__name" }), h("span", { class: "nx-survey__count" }), this.#bar);
     this.#stage = h("div", { class: "nx-survey__stage" });
     this.#nav = h(
       "footer",
       { class: "nx-survey__nav" },
-      h("span", { class: "nx-survey__count", "aria-hidden": "true" }),
-      h("button", { type: "button", class: "nx-survey__arrow", "data-act": "back" }, glyph(UP)),
-      h("button", { type: "button", class: "nx-survey__arrow", "data-act": "next" }, glyph(DOWN)),
+      h("button", { type: "button", class: "nx-survey__btn nx-survey__btn--ghost", "data-act": "back" }, glyph(LEFT), h("span")),
+      h("button", { type: "button", class: "nx-survey__btn", "data-act": "next" }, h("span"), h("span", { class: "nx-survey__next-icon" })),
     );
-    this.append(this.#bar, this.#stage, this.#nav);
+    this.append(this.#head, this.#stage, this.#nav);
 
     this.addEventListener("click", (e) => {
       const act = (e.target as Element).closest<HTMLElement>("[data-act]")?.dataset.act;
@@ -386,6 +353,13 @@ export class NxSurvey extends Base {
       else if (act === "back") this.back();
       else if (act === "goto") this.goto(Number((e.target as Element).closest<HTMLElement>("[data-i]")?.dataset.i));
       else if (act === "start") this.start();
+      else if (act === "earlier") {
+        this.#trailOpen = true;
+        const trail = (e.target as Element).closest(".nx-survey__trail")!;
+        for (const li of trail.querySelectorAll<HTMLElement>("li[hidden]")) li.hidden = false;
+        (e.target as Element).closest("li")?.remove();
+        trail.querySelector<HTMLElement>(".nx-survey__trail-btn")?.focus();
+      }
       else if (act === "resume") {
         const d = this.#draft();
         if (d) {
@@ -604,15 +578,18 @@ export class NxSurvey extends Base {
     this.#bar!.style.setProperty("--p", `${pct}%`);
     const L = this.#labels;
     const q = this.#screen === "question";
-    const focusLayout = this.layout === "focus";
-    this.#nav!.hidden = !q || !focusLayout;
-    this.#bar!.hidden = this.#screen === "intro" || this.layout === "sheet" || this.layout === "chat";
-    this.#nav!.querySelector(".nx-survey__count")!.textContent = q ? `${this.#step + 1} / ${vis.length}` : "";
-    this.#bar!.setAttribute("aria-label", q ? L.progress.replace("{i}", String(this.#step + 1)).replace("{n}", String(vis.length)) : L.results);
-    const [, back, next] = this.#nav!.children as unknown as HTMLButtonElement[];
-    back.disabled = !q || this.#step === 0;
-    back.setAttribute("aria-label", L.back);
-    next.setAttribute("aria-label", L.next);
+    const count = q ? L.progress.replace("{i}", String(this.#step + 1)).replace("{n}", String(vis.length)) : "";
+    this.#head!.hidden = !q && this.#screen !== "sending";
+    this.#head!.firstElementChild!.textContent = this.heading;
+    this.#head!.children[1].textContent = count;
+    this.#bar!.setAttribute("aria-label", count || L.results);
+    this.#nav!.hidden = !q;
+    const [back, next] = this.#nav!.children as unknown as HTMLButtonElement[];
+    back.hidden = this.#step === 0;
+    back.lastElementChild!.textContent = L.back;
+    const last = this.#step >= vis.length - 1;
+    next.firstElementChild!.textContent = last ? L.submit : L.next;
+    next.lastElementChild!.replaceChildren(glyph(last ? CHECK : ARROW));
   }
 
   /** Marca lo elegido sin volver a pintar (así el foco y la animación siguen). */
@@ -658,41 +635,25 @@ export class NxSurvey extends Base {
     const stage = this.#stage!;
     this.setAttribute("aria-label", this.heading || L.results);
     stage.dataset.dir = this.#dir;
-    const layout = this.layout;
-    this.dataset.layout = layout;
     const vis = this.#visible();
     if (this.#step >= vis.length) this.#step = Math.max(0, vis.length - 1);
     const sc = this.#screen;
     let screen: HTMLElement;
+    let trail: HTMLElement | null = null;
     if (sc === "sending") screen = h("div", { class: "nx-survey__screen nx-survey__sending", role: "status" }, h("span", { class: "nx-survey__spin", "aria-hidden": "true" }), L.sending);
-    else if (layout === "chat") screen = this.#chat();
     else if (sc === "intro") screen = this.#intro();
-    else if (layout === "sheet") screen = this.#sheet();
     else if (sc === "done") screen = this.#done();
-    else if (layout === "cards") screen = this.#cards();
-    else screen = vis[this.#step] ? this.#question(vis[this.#step], this.#step === vis.length - 1) : h("div");
-    // El mazo: la tarjeta que se deja sale volando (a la izquierda al seguir, a la derecha al volver).
-    const leaving = layout === "cards" ? stage.querySelector<HTMLElement>(".nx-survey__card.is-top") : null;
-    stage.replaceChildren(screen);
-    if (leaving && focus && this.#screen === "question") {
-      leaving.classList.remove("is-top");
-      leaving.classList.add("is-leaving");
-      leaving.dataset.dir = this.#dir;
-      leaving.setAttribute("aria-hidden", "true");
-      leaving.inert = true;
-      screen.querySelector(".nx-survey__stack")?.append(leaving);
-      setTimeout(() => leaving.remove(), 450);
+    else {
+      screen = vis[this.#step] ? this.#question(vis[this.#step]) : h("div");
+      trail = this.#trail(vis, focus && this.#dir === "next");
     }
-    for (const q of this.#visible()) this.#seen.add(q.id);
-    this.#fresh = false;
+    stage.replaceChildren(...[trail, screen].filter((x): x is HTMLElement => !!x));
     this.#paintProgress();
     this.#paintChoices();
-    const log = screen.querySelector<HTMLElement>(".nx-survey__log");
-    if (log) log.scrollTop = log.scrollHeight;
     if (!focus) return;
-    // El foco va a lo que se contesta (o al título, para que el lector de pantalla lo anuncie).
-    const scope = screen.querySelector<HTMLElement>(".nx-survey__q") ?? screen;
-    const target = scope.querySelector<HTMLElement>("[data-autofocus]") ?? scope.querySelector<HTMLElement>("input:checked") ?? scope.querySelector<HTMLElement>("legend, h2");
+    // El foco va a lo que se contesta, o al grupo (el lector de pantalla anuncia la pregunta). No al
+    // <legend>: Firefox no lo enfoca recién insertado y el teclado quedaba sin destino.
+    const target = screen.querySelector<HTMLElement>("[data-autofocus]") ?? screen.querySelector<HTMLElement>("input:checked") ?? (screen.matches("fieldset") ? screen : screen.querySelector<HTMLElement>("h2"));
     if (target && !target.matches("input, textarea, button, li")) target.tabIndex = -1;
     target?.focus({ preventScroll: true });
   }
@@ -713,7 +674,7 @@ export class NxSurvey extends Base {
         draft
           ? h("button", { type: "button", class: "nx-survey__btn", "data-act": "resume", "data-autofocus": "" }, L.resume, glyph(ARROW))
           : h("button", { type: "button", class: "nx-survey__btn", "data-act": "start", "data-autofocus": "" }, L.start, glyph(ARROW)),
-        draft ? h("button", { type: "button", class: "nx-survey__link", "data-act": "restart" }, L.restart) : h("span", { class: "nx-survey__enter" }, L.pressEnter),
+        draft ? h("button", { type: "button", class: "nx-survey__link", "data-act": "restart" }, L.restart) : null,
       ),
     );
   }
@@ -737,21 +698,19 @@ export class NxSurvey extends Base {
           h(
             "label",
             { class: "nx-survey__opt" },
-            h("input", { type: multi ? "checkbox" : "radio", name, value: o.value }),
-            h("kbd", { "aria-hidden": "true" }, letterOf(i)),
+            h("input", { type: multi ? "checkbox" : "radio", name, value: o.value, "aria-keyshortcuts": letterOf(i) }),
+            glyph(CHECK, "nx-survey__mark"),
             o.emoji ? h("span", { class: "nx-survey__emoji", "aria-hidden": "true" }, o.emoji) : null,
             h("span", { class: "nx-survey__opt-text" }, o.label, o.hint ? h("small", null, o.hint) : null),
-            glyph(CHECK, "nx-survey__tick"),
           ),
         ),
         q.other
           ? h(
               "label",
               { class: "nx-survey__opt nx-survey__opt--other" },
-              h("input", { type: multi ? "checkbox" : "radio", name, value: "__other", "aria-label": L.other }),
-              h("kbd", { "aria-hidden": "true" }, letterOf(opts.length)),
+              h("input", { type: multi ? "checkbox" : "radio", name, value: "__other", "aria-label": L.other, "aria-keyshortcuts": letterOf(opts.length) }),
+              glyph(CHECK, "nx-survey__mark"),
               h("input", { type: "text", class: "nx-survey__other-text", placeholder: `${L.other}: ${L.otherPlaceholder}`, value: otherVal ?? null, "aria-label": L.other }),
-              glyph(CHECK, "nx-survey__tick"),
             )
           : null,
       );
@@ -812,26 +771,23 @@ export class NxSurvey extends Base {
     return { control, group };
   }
 
-  #question(q: SurveyQuestion, last: boolean): HTMLElement {
-    const L = this.#labels;
+  #question(q: SurveyQuestion): HTMLElement {
     const tid = `${this.#uid}-${q.id}-t`;
     const title = interpolate(q.title, this.#answers, this.#questions);
     const { control, group } = this.#control(q, tid);
     const legend = h("span", { id: tid }, title, q.required ? h("span", { class: "nx-survey__req", "aria-hidden": "true" }, " *") : null);
-    const head = [h("span", { class: "nx-survey__num", "aria-hidden": "true" }, `${this.#step + 1}`, glyph(ARROW)), legend];
     return h(
       group ? "fieldset" : "div",
       { class: "nx-survey__screen nx-survey__q", "data-type": q.type, "data-q": q.id },
-      h(group ? "legend" : "h2", { class: "nx-survey__title" }, ...head),
+      h(group ? "legend" : "h2", { class: "nx-survey__title" }, legend),
       q.description ? h("p", { class: "nx-survey__desc" }, q.description) : null,
       q.type === "multi" && q.max ? h("p", { class: "nx-survey__limit", "aria-hidden": "true" }) : null,
       control,
       h("p", { class: "nx-survey__err", role: "alert", hidden: true }),
-      h("div", { class: "nx-survey__ok" }, h("button", { type: "button", class: "nx-survey__btn", "data-act": "next" }, last ? L.submit : L.next, glyph(last ? CHECK : ARROW)), h("span", { class: "nx-survey__enter" }, L.pressEnter)),
     );
   }
 
-  // ---------------------------------------------------------------- otras disposiciones
+  // ---------------------------------------------------------------- lo ya respondido
 
   /** La respuesta en una línea: «🏭 Producción», «8 / 10», «★★★★☆», «Salario, Horario…». */
   #summary(q: SurveyQuestion): string {
@@ -853,143 +809,32 @@ export class NxSurvey extends Base {
     return answerText(q, a);
   }
 
-  /** El eco de una respuesta ya dada, en palabras (o `""`). */
-  #echoText(q: SurveyQuestion): string {
-    if (!this.echo || !this.#results) return "";
-    const e = echoOf(q, this.#results.questions[q.id], this.#answers[q.id]);
-    if (!e) return "";
+  /** Lo respondido antes de la pregunta actual, una línea por pregunta (un clic vuelve a ella). Con
+   *  muchas, las viejas se pliegan tras un botón. `grew`: la última acaba de llegar y entra animada. */
+  #trail(vis: SurveyQuestion[], grew: boolean): HTMLElement | null {
     const L = this.#labels;
-    const n = nxFormat(resolveLocale(this)).number;
-    const label = (v: string) => q.options?.find((o) => o.value === v)?.label ?? v;
-    switch (e.kind) {
-      case "same":
-        return L.echoSame.replace("{pct}", n(e.pct));
-      case "multi":
-        return L.echoMulti.replace("{label}", label(e.value)).replace("{pct}", n(e.pct));
-      case "nps":
-        return L.echoNps.replace("{band}", L.bands[e.band]).replace("{pct}", n(e.pct));
-      case "above":
-        return L.echoAbove.replace("{pct}", n(e.pct));
-      case "avg":
-        return L.echoAvg.replace("{avg}", q.type === "slider" ? this.#fmt(q, e.avg) : n(e.avg));
-      case "rank":
-        return L.echoRank.replace("{label}", label(e.top));
-    }
-  }
-
-  /** La ficha que se arma sola: lo contestado arriba (se cambia con un clic), la pregunta actual
-   *  en una tarjeta y lo que falta atenuado. Al terminar, cada línea trae su comparación. */
-  #sheet(): HTMLElement {
-    const L = this.#labels;
-    const vis = this.#visible();
-    const done = this.#screen === "done";
-    const res = this.#results;
-    const f = nxFormat(resolveLocale(this));
-    const answered = vis.filter((q) => isAnswered(this.#answers[q.id])).length;
-    const first = this.#seen.size === 0;
-    const rows = vis.map((q, i) => {
-      const state = done || i < this.#step ? "done" : i === this.#step ? "current" : "next";
-      const attrs = { class: "nx-survey__row", "data-state": state, "data-q": q.id, "data-new": !first && !this.#seen.has(q.id) ? "" : null };
-      if (state === "current") return h("li", attrs, this.#question(q, i === vis.length - 1));
-      const title = interpolate(q.title, this.#answers, this.#questions, "…");
-      if (state === "next") return h("li", attrs, h("span", { class: "nx-survey__row-n", "aria-hidden": "true" }, String(i + 1)), h("span", { class: "nx-survey__row-title" }, title));
-      const a = this.#answers[q.id];
-      const echo = this.#echoText(q);
-      const r = done && res?.questions[q.id] && isAnswered(a) ? this.#result(q, res.questions[q.id], a, f.number, false) : null;
-      return h(
+    const prior = vis.slice(0, this.#step);
+    if (!prior.length) return null;
+    const fold = !this.#trailOpen && prior.length > TRAIL_MAX ? prior.length - 2 : 0;
+    const rows = prior.map((q, i) =>
+      h(
         "li",
-        attrs,
+        { hidden: i < fold || null, "data-new": grew && i === prior.length - 1 ? "" : null },
         h(
           "button",
-          { type: "button", class: "nx-survey__row-btn", "data-act": "goto", "data-i": i, disabled: done || null, title: done ? null : L.edit },
-          h("span", { class: "nx-survey__row-n", "aria-hidden": "true" }, glyph(CHECK)),
-          h("span", { class: "nx-survey__row-title" }, title),
-          h("span", { class: "nx-survey__row-answer", "data-empty": isAnswered(a) ? null : "" }, this.#summary(q)),
-          done ? null : h("span", { class: "nx-survey__row-edit" }, L.edit),
+          { type: "button", class: "nx-survey__trail-btn", "data-act": "goto", "data-i": i },
+          h("span", { class: "nx-survey__trail-q" }, interpolate(q.title, this.#answers, this.#questions)),
+          h("span", { class: "nx-survey__trail-a", "data-empty": isAnswered(this.#answers[q.id]) ? null : "" }, this.#summary(q)),
+          h("span", { class: "nx-survey__trail-edit" }, L.edit),
         ),
-        echo && !done ? h("p", { class: "nx-survey__echo" }, glyph(SPARK), echo) : null,
-        r,
-      );
-    });
-    const meta = done ? (res ? L.responses.replace("{n}", f.number(res.total)) : L.thanksDetail) : L.sheetMeta.replace("{i}", String(answered)).replace("{n}", String(vis.length)).replace("{min}", String(estimateMinutes(vis.slice(this.#step))));
-    return h(
-      "div",
-      { class: "nx-survey__screen nx-survey__sheet", "data-done": done ? "" : null },
-      h(
-        "header",
-        { class: "nx-survey__sheet-head" },
-        done ? h("span", { class: "nx-survey__check", "aria-hidden": "true" }, glyph(CHECK)) : null,
-        h("div", null, h("h2", { class: "nx-survey__title", "data-autofocus": done ? "" : null }, done ? L.thanks : this.heading || L.results), h("p", { class: "nx-survey__meta" }, meta)),
-        h("span", { class: "nx-survey__meter", "aria-hidden": "true", style: `--p:${vis.length ? (done ? 1 : answered / vis.length) : 0}` }),
       ),
-      h("ol", { class: "nx-survey__rows" }, ...rows),
     );
-  }
-
-  /** Un mazo: la pregunta en la tarjeta de arriba y las siguientes asomándose detrás. */
-  #cards(): HTMLElement {
-    const vis = this.#visible();
-    const q = vis[this.#step];
-    const behind = vis
-      .slice(this.#step + 1, this.#step + 3)
-      .map((b, k) => h("div", { class: "nx-survey__card nx-survey__card--ghost", style: `--k:${k + 1}`, "aria-hidden": "true" }, h("p", null, interpolate(b.title, this.#answers, this.#questions, "…"))))
-      .reverse();
-    const echo = this.#lastEcho;
-    this.#lastEcho = "";
     return h(
-      "div",
-      { class: "nx-survey__screen nx-survey__deck" },
-      h("ol", { class: "nx-survey__dots", "aria-hidden": "true" }, ...vis.map((_, i) => h("li", { "data-state": i < this.#step ? "done" : i === this.#step ? "current" : null }))),
-      h("div", { class: "nx-survey__stack", "data-dir": this.#dir }, ...behind, h("div", { class: "nx-survey__card is-top" }, q ? this.#question(q, this.#step === vis.length - 1) : null)),
-      echo ? h("p", { class: "nx-survey__echo nx-survey__echo--float", role: "status" }, glyph(SPARK), echo) : null,
+      "ol",
+      { class: "nx-survey__trail", "aria-label": L.given },
+      fold ? h("li", null, h("button", { type: "button", class: "nx-survey__more", "data-act": "earlier" }, L.earlier.replace("{n}", String(fold)))) : null,
+      ...rows,
     );
-  }
-
-  /** Una conversación: la encuesta pregunta en burbujas, se responde abajo con respuestas rápidas,
-   *  y cada respuesta queda como burbuja propia (tocarla vuelve a esa pregunta). */
-  #chat(): HTMLElement {
-    const L = this.#labels;
-    const vis = this.#visible();
-    const done = this.#screen === "done";
-    const intro = this.#screen === "intro";
-    const say = (cls: string, ...kids: (Node | string | null)[]) => h("div", { class: `nx-survey__say ${cls}`.trim() }, h("span", { class: "nx-survey__avatar", "aria-hidden": "true" }, glyph(SPARK)), h("div", { class: "nx-survey__bubble" }, ...kids));
-    const log = h("div", { class: "nx-survey__log", role: "log", "aria-label": this.heading || L.host });
-    if (this.heading) log.append(say("", h("strong", null, this.heading), this.description ? h("p", null, this.description) : null));
-    const upto = intro ? -1 : done ? vis.length - 1 : Math.min(this.#step, vis.length - 1);
-    for (let i = 0; i <= upto; i++) {
-      const q = vis[i];
-      const current = !done && i === this.#step;
-      log.append(say(current && this.#fresh ? "is-new" : "", h("span", { id: current ? `${this.#uid}-${q.id}-t` : null }, interpolate(q.title, this.#answers, this.#questions)), q.description ? h("small", null, q.description) : null));
-      if (current) break;
-      log.append(h("div", { class: "nx-survey__me" }, h("button", { type: "button", class: "nx-survey__bubble", "data-act": "goto", "data-i": i, disabled: done || null, title: done ? null : L.edit }, this.#summary(q))));
-      const echo = this.#echoText(q);
-      if (echo) log.append(say("nx-survey__say--echo", echo));
-    }
-    if (done) {
-      const f = nxFormat(resolveLocale(this));
-      const res = this.#results;
-      const mine = answersToSend(this.#questions, this.#answers);
-      log.append(say("is-new", h("strong", null, L.thanks), h("p", null, L.thanksDetail)));
-      if (res) log.append(say("nx-survey__say--results", h("strong", null, `${L.results} · ${L.responses.replace("{n}", f.number(res.total))}`), ...this.#questions.filter((q) => res.questions[q.id] && isAnswered(mine[q.id])).map((q) => this.#result(q, res.questions[q.id], mine[q.id], f.number))));
-    }
-    let composer: HTMLElement | null = null;
-    if (intro) composer = h("div", { class: "nx-survey__composer" }, h("button", { type: "button", class: "nx-survey__btn", "data-act": "start", "data-autofocus": "" }, L.start, glyph(ARROW)));
-    else if (!done && vis[this.#step]) {
-      const q = vis[this.#step];
-      const tid = `${this.#uid}-${q.id}-t`;
-      const { control, group } = this.#control(q, tid);
-      const last = this.#step === vis.length - 1;
-      composer = h(
-        group ? "fieldset" : "div",
-        { class: `nx-survey__composer nx-survey__q${this.#fresh ? " is-new" : ""}`, "data-type": q.type, "data-q": q.id, "aria-labelledby": group ? null : tid },
-        group ? h("legend", { class: "nx-survey__sr" }, interpolate(q.title, this.#answers, this.#questions)) : null,
-        q.type === "multi" && q.max ? h("p", { class: "nx-survey__limit", "aria-hidden": "true" }) : null,
-        control,
-        h("p", { class: "nx-survey__err", role: "alert", hidden: true }),
-        h("div", { class: "nx-survey__ok" }, h("button", { type: "button", class: "nx-survey__btn", "data-act": "next", "aria-label": last ? L.submit : L.send }, last ? L.submit : L.next, glyph(last ? CHECK : ARROW)), h("span", { class: "nx-survey__enter" }, L.pressEnter)),
-      );
-    }
-    return h("div", { class: "nx-survey__screen nx-survey__chat" }, log, composer);
   }
 
   // ---------------------------------------------------------------- al terminar
@@ -1003,21 +848,24 @@ export class NxSurvey extends Base {
     const blocks = res
       ? this.#questions
           .filter((q) => res.questions[q.id] && isAnswered(mine[q.id]))
-          .map((q) => this.#result(q, res.questions[q.id], mine[q.id], f.number))
+          .map((q, i) => this.#result(q, res.questions[q.id], mine[q.id], f.number, i === 0))
       : [];
     return h(
       "div",
       { class: "nx-survey__screen nx-survey__done" },
-      confetti,
-      h("span", { class: "nx-survey__check", "aria-hidden": "true" }, glyph(CHECK)),
-      h("h2", { class: "nx-survey__title", "data-autofocus": "" }, L.thanks),
-      h("p", { class: "nx-survey__desc" }, L.thanksDetail),
+      h(
+        "header",
+        { class: "nx-survey__done-head" },
+        confetti,
+        h("span", { class: "nx-survey__check", "aria-hidden": "true" }, glyph(CHECK)),
+        h("div", null, h("h2", { class: "nx-survey__title", "data-autofocus": "" }, L.thanks), h("p", { class: "nx-survey__desc" }, L.thanksDetail)),
+      ),
       res ? h("section", { class: "nx-survey__results" }, h("h3", null, L.results, h("small", null, L.responses.replace("{n}", f.number(res.total)))), ...blocks) : null,
     );
   }
 
-  /** Los resultados de una pregunta. `titled`: con su enunciado (la ficha ya lo tiene en la línea). */
-  #result(q: SurveyQuestion, r: SurveyQuestionResult, a: SurveyAnswer, n: (x: number) => string, titled = true): HTMLElement {
+  /** Los resultados de una pregunta, plegados bajo su enunciado y la respuesta propia. */
+  #result(q: SurveyQuestion, r: SurveyQuestionResult, a: SurveyAnswer, n: (x: number) => string, open: boolean): HTMLElement {
     const L = this.#labels;
     const you = h("span", { class: "nx-survey__you" }, L.you);
     const bar = (label: string, count: number, total: number, on: boolean, extra?: string) => {
@@ -1101,7 +949,12 @@ export class NxSurvey extends Base {
       body.push(h("p", { class: "nx-survey__words", "aria-label": L.words }, ...r.words.map(([w, c]) => h("span", { style: `--s:${0.8 + (c / top) * 0.9}`, "data-on": said.has(foldText(w)) ? "" : null, title: String(c) }, w))));
     }
     if (!body.length) return h("span");
-    return h("article", { class: "nx-survey__result" }, titled ? h("h4", null, title) : null, ...body);
+    return h(
+      "details",
+      { class: "nx-survey__result", open },
+      h("summary", null, h("span", { class: "nx-survey__result-q" }, title), h("span", { class: "nx-survey__result-a" }, this.#summary(q))),
+      h("div", { class: "nx-survey__result-body" }, ...body),
+    );
   }
 }
 

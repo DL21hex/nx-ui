@@ -665,19 +665,11 @@ bandeja.addEventListener("nx-inbox-commit", (e) =&gt;
       <p class="eyebrow">Componentes</p>
       <h1>Encuesta <code class="tag">&lt;nx-survey&gt;</code></h1>
       <p class="lead">
-        Una encuesta que da gusto contestar: una pregunta a la vez, con el teclado, con preguntas que aparecen según lo
-        que respondes y que usan tus respuestas. Al terminar ves cómo respondieron los demás, con tu respuesta resaltada.
+        Una encuesta que da gusto contestar: una pregunta a la vez y, arriba, lo que ya respondiste (un clic para
+        cambiarlo). Se contesta también con el teclado, las preguntas aparecen según lo que respondes y usan tus
+        respuestas. Al terminar ves cómo respondieron los demás, con tu respuesta resaltada.
       </p>
-      <div class="sv-controls">
-        <div class="seg" role="group" aria-label="Diseño de la encuesta" id="survey-layouts">
-          <button type="button" data-layout="sheet" aria-pressed="true">Ficha</button>
-          <button type="button" data-layout="cards" aria-pressed="false">Tarjetas</button>
-          <button type="button" data-layout="chat" aria-pressed="false">Conversación</button>
-          <button type="button" data-layout="focus" aria-pressed="false">Una a la vez</button>
-        </div>
-        <label class="sv-echo"><input type="checkbox" id="survey-echo" checked /> Eco: ver cómo respondieron los demás al contestar</label>
-      </div>
-      <nx-survey id="survey-demo" layout="sheet" echo heading="¿Cómo va todo por aquí?" description="Encuesta de clima laboral 2026. Es anónima: nadie ve tus respuestas por separado." storage="nx-ui-demo-encuesta" locale="es-CO"></nx-survey>
+      <nx-survey id="survey-demo" heading="¿Cómo va todo por aquí?" description="Encuesta de clima laboral 2026. Es anónima: nadie ve tus respuestas por separado." storage="nx-ui-demo-encuesta" locale="es-CO"></nx-survey>
       <div class="dlg-row">
         <button type="button" class="dlg-plain" id="survey-reset">Contestar de nuevo</button>
       </div>
@@ -687,23 +679,6 @@ bandeja.addEventListener("nx-inbox-commit", (e) =&gt;
         mitad de camino: te ofrece continuar donde quedaste.
       </p>
       <ol class="stage__log btn-events" id="survey-log"></ol>
-
-      <h2>Cuatro diseños, el mismo API</h2>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th><code>layout</code></th><th>Cómo se ve</th></tr></thead>
-          <tbody>
-            <tr><td><code>sheet</code></td><td>La ficha que se arma sola: lo contestado queda arriba como líneas (un clic para cambiarlo), la pregunta actual en una tarjeta y lo que falta atenuado. Las preguntas que abre la lógica condicional entran animadas. Al terminar, cada línea trae su comparación.</td></tr>
-            <tr><td><code>cards</code></td><td>Un mazo: la tarjeta contestada sale volando y las siguientes se asoman detrás.</td></tr>
-            <tr><td><code>chat</code></td><td>Una conversación: la encuesta pregunta en burbujas («escribiendo…»), se responde abajo con respuestas rápidas y cada respuesta queda como burbuja propia (tocarla vuelve a esa pregunta).</td></tr>
-            <tr><td><code>focus</code></td><td>Una pregunta a la vez, grande y centrada.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p>
-        Con <code>echo</code>, justo después de cada respuesta se ve cómo respondieron los demás («El 40 % respondió lo
-        mismo», «Eres promotor, como el 38 %»). Necesita <code>results</code> desde el inicio (los de quienes ya contestaron).
-      </p>
 
       <h2>Tipos de pregunta</h2>
       <div class="table-wrap">
@@ -770,7 +745,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
             <tr><td><code>questions</code>, <code>answers</code>, <code>results</code></td><td>Las preguntas, las respuestas (se pueden precargar) y los resultados de todos.</td></tr>
             <tr><td><code>heading</code>, <code>description</code></td><td>La portada (sin <code>heading</code> empieza directo).</td></tr>
             <tr><td><code>action</code>, <code>storage</code>, <code>locale</code>, <code>labels</code></td><td>Dónde se envía, clave del borrador, formato de números y textos.</td></tr>
-            <tr><td><code>start()</code>, <code>next()</code>, <code>back()</code>, <code>submit()</code>, <code>reset()</code></td><td>Moverse desde código; <code>screen</code> y <code>current</code> dicen dónde va.</td></tr>
+            <tr><td><code>start()</code>, <code>next()</code>, <code>back()</code>, <code>goto(i)</code>, <code>submit()</code>, <code>reset()</code></td><td>Moverse desde código; <code>screen</code> y <code>current</code> dicen dónde va.</td></tr>
             <tr><td>Eventos</td><td><code>nx-survey-change</code> <code>{id, value, answers}</code>, <code>nx-survey-submit</code> <code>{answers, ms}</code> (cancelable).</td></tr>
           </tbody>
         </table>

@@ -18,7 +18,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-command>` + núcleo (ESM) | ≈ 6,6 KB |
 | `<nx-explain>` + núcleo (ESM) | ≈ 6,7 KB |
 | `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 8,6 KB |
-| `<nx-survey>` (4 diseños) + núcleo (ESM) | ≈ 13,2 KB |
+| `<nx-survey>` + núcleo (ESM) | ≈ 11,4 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 15,4 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 66 KB |
 
@@ -552,21 +552,14 @@ backend cuando llega `nx-inbox-commit`. Al vaciarla, dice cuántas se decidieron
 
 ## `<nx-survey>`
 
-Una encuesta que da gusto contestar, en cuatro diseños con el mismo API (`layout`):
+Una encuesta que da gusto contestar, con aspecto de formulario y no de presentación: una pregunta
+a la vez y, arriba, lo que ya respondiste en líneas compactas (un clic vuelve a esa pregunta para
+cambiarla; con más de tres, las viejas se pliegan). Un encabezado con el avance y un pie con
+«Anterior» y «Siguiente». Al terminar, los resultados van plegados por pregunta, con tu respuesta
+en el resumen.
 
-- `sheet`: **la ficha que se arma sola.** Lo contestado queda arriba como líneas (un clic para
-  cambiarlo), la pregunta actual en una tarjeta y lo que falta atenuado; las preguntas que abre la
-  lógica condicional entran animadas y al terminar cada línea trae su comparación.
-- `cards`: **un mazo.** La tarjeta contestada sale volando y las siguientes se asoman detrás.
-- `chat`: **una conversación.** La encuesta pregunta en burbujas («escribiendo…»), se responde abajo
-  con respuestas rápidas, y cada respuesta queda como burbuja propia (tocarla vuelve a esa pregunta).
-- `focus` (por defecto): una pregunta a la vez, grande y centrada.
-
-Con `echo`, justo después de cada respuesta se ve cómo respondieron los demás («El 40 % respondió
-lo mismo», «Eres promotor, como el 31 %»); necesita `results` desde el inicio.
-
-Todo con el teclado: `A`, `B`, `C`… eligen, los números califican (`1` y `0` seguidos es un 10), `Enter`
-sigue. Una elección simple pasa sola a la siguiente.
+También con el teclado, sin anunciarlo en cada pregunta: `A`, `B`, `C`… eligen, los números califican
+(`1` y `0` seguidos es un 10), `Enter` sigue. Una elección simple pasa sola a la siguiente.
 
 - **Siete tipos:** `choice` (con «Otra…» si hay `other`), `multi` (`min`/`max`), `scale` (con `nps`:
   0–10 con los colores de detractores, pasivos y promotores), `rating` (estrellas o caras),
@@ -597,7 +590,7 @@ sigue. Una elección simple pasa sola a la siguiente.
 
 | | |
 |---|---|
-| Propiedades / atributos | `layout` (`focus`, `sheet`, `cards`, `chat`), `echo`, `questions`, `answers`, `results`, `heading`, `description`, `action` (`POST {answers, ms}`; puede responder con los resultados), `storage`, `locale`, `labels` · `screen`, `current` |
+| Propiedades / atributos | `questions`, `answers`, `results`, `heading`, `description`, `action` (`POST {answers, ms}`; puede responder con los resultados), `storage`, `locale`, `labels` · `screen`, `current` |
 | Métodos | `start()`, `next()`, `back()`, `goto(i)`, `submit()`, `reset()` |
 | Eventos | `nx-survey-change` `{id, value, answers}`, `nx-survey-submit` `{answers, ms}` (cancelable) |
 

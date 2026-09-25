@@ -106,20 +106,21 @@ test("encuesta: una pregunta, la escala NPS y los resultados", async ({ page }) 
   await audit(page, ["#survey-demo"]);
 });
 
-test("encuesta en ficha, tarjetas y conversación", async ({ page }) => {
+test("encuesta: lo respondido arriba y los resultados plegados", async ({ page }) => {
   await open(page, "#/survey");
   await page.evaluate(() => localStorage.removeItem("nx-ui-demo-encuesta"));
+  await page.reload();
   const s = page.locator("#survey-demo");
-  for (const name of ["Ficha", "Tarjetas", "Conversación"]) {
-    await page.reload();
-    await page.getByRole("button", { name }).click();
-    await s.getByRole("button", { name: "Empezar" }).click();
-    await page.keyboard.press("a");
-    await expect(s.locator(".nx-survey__scale")).toBeVisible();
-    // La conversación hace aparecer la respuesta con un fundido: axe mediría colores a medias.
-    await page.waitForTimeout(900);
-    await audit(page, ["#survey-demo"]);
-  }
+  await s.getByRole("button", { name: "Empezar" }).click();
+  await page.keyboard.press("a");
+  await expect(s.locator(".nx-survey__trail")).toBeVisible();
+  // La línea nueva entra con un fundido: axe mediría colores a medias.
+  await page.waitForTimeout(700);
+  await audit(page, ["#survey-demo"]);
+  await s.evaluate((el: HTMLElement & { submit(): Promise<void> }) => el.submit());
+  await expect(s.locator("details.nx-survey__result").first()).toBeVisible();
+  await page.waitForTimeout(900);
+  await audit(page, ["#survey-demo"]);
 });
 
 test("número: factura con vista previa, error y aviso de recorte", async ({ page }) => {

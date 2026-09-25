@@ -1126,30 +1126,3 @@ td:first-child {
   font-size: 12px;
 }
 
-/* ---------------------------------------------------------------- demo de la encuesta */
-
-.sv-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 18px;
-  margin-block-end: 14px;
-  & .seg {
-    display: inline-flex;
-    gap: 2px;
-    padding: 3px;
-    border-radius: var(--nx-radius-md);
-    background: var(--nx-hover);
-    & button {
-      padding: 5px 12px;
-      font-size: 13px;
-    }
-  }
-}
-.sv-echo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--nx-muted-foreground);
-  font-size: 13px;
-}
