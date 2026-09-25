@@ -601,6 +601,88 @@ sigue. Una elección simple pasa sola a la siguiente.
 | Métodos | `start()`, `next()`, `back()`, `goto(i)`, `submit()`, `reset()` |
 | Eventos | `nx-survey-change` `{id, value, answers}`, `nx-survey-submit` `{answers, ms}` (cancelable) |
 
+## `<nx-number>`
+
+El campo numérico que se usa todos los días, bien hecho. Es un `<input>` propio (con
+`inputmode="decimal"` en el móvil) que entiende lo que se escribe en el formato del locale y lo deja
+formateado al salir.
+
+- **Entiende:** «1.234,5» (es) o «1,234.5» (en); sufijos «2,5k», «3 mil», «1,5M», «2 millones»,
+  «4 mm» (miles de millones en Colombia; en inglés «MM» es un millón, y así se lee con
+  `locale="en-US"`) y «15%».
+- **Cuentas:** con `=` («=450*3», «=1.200.000/12», «=(3+2)*1,5k») o relativas al valor anterior si
+  empiezan por un operador («+15%», «-10%», «*2», «/12»). Mientras se escribe, el resultado se ve a
+  la derecha («= 1.350») o lo que no se entendió («no entiendo "x"»). El intérprete es propio: nada
+  de `eval`.
+- **Pegar desde Excel:** «$ 1.450.000,00», «USD 1,200.50», «(1.200)» contable, «1.200-» o con
+  espacios duros quedan limpios al pegar.
+- **Teclado:** ↑/↓ suman `step` (Mayús ×10, Alt ÷10); `min`/`max` recortan al confirmar y lo
+  avisan; Esc deshace lo escrito desde el foco. La rueda del mouse **no** cambia el valor.
+- **En letras:** con `words`, debajo va el monto como en un cheque: «un millón cuatrocientos
+  cincuenta mil pesos m/cte», «veintiún dólares», «mil doscientos pesos con 50/100 m/cte».
+  `numberToWords(n, {currency})` hace lo mismo en el backend.
+- **Formulario:** `name`, `required`, validez nativa con mensaje (`valueMissing`, `badInput`,
+  `rangeUnderflow`/`rangeOverflow`), `reset` y `<fieldset disabled>`. El valor va en formato de
+  máquina («1450000.5»).
+
+```html
+<label for="precio">Precio unitario</label>
+<nx-number id="precio" name="precio" format="money" currency="COP" step="1000" min="0" required></nx-number>
+<nx-number id="total" format="money" currency="COP" readonly words></nx-number>
+<script>
+  precio.addEventListener("input", () => (total.value = cantidad.value * precio.value));
+  precio.addEventListener("nx-change", (e) => guardar(e.detail.value)); // {value, text}
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `value` (`number \| null`; en `percent`, la fracción), `format` (`number`, `money`, `percent`), `currency` (ISO o símbolo), `decimals`, `min`, `max`, `step`, `words`, `name`, `required`, `disabled`, `readonly`, `placeholder`, `align` (`end` en montos y porcentajes), `label`, `locale`, `labels` · `text` (el valor formateado) |
+| Métodos | `focus()`, `select()`, `checkValidity()`, `reportValidity()` |
+| Eventos | `input` (cada vez que cambia el número), `nx-change` `{value, text}` y `change` al confirmar |
+| Funciones | `evaluateNumber(texto, {locale, format, base})`, `numberToWords(n, {currency})`, `formatNumberText(n, {locale, format, currency, decimals})` |
+
+## `<nx-kanban>`
+
+Un tablero que se siente instantáneo. Las tarjetas se arrastran con el mouse o el dedo (manteniendo
+pulsado): el hueco se abre donde van a caer, las demás se apartan con una animación y el tablero y la
+columna se desplazan solos cerca de los bordes. También se mueven con el teclado: `Espacio` levanta,
+las flechas mueven entre posiciones y columnas, `Espacio` suelta y `Escape` cancela, con cada paso
+anunciado al lector de pantalla («Tarjeta OC-2291 levantada. Columna Aprobado, posición 2 de 5»).
+
+Nada espera al servidor: el movimiento se ve al instante y se deshace mientras corre el aviso (o con
+`Ctrl`+`Z`); la app registra en el backend cuando llega `nx-kanban-commit`. Una columna con `confirm`
+pide confirmación con impacto antes de aceptar la tarjeta (el protocolo de `nxConfirm`, que se carga
+solo cuando hace falta; si se niega, la tarjeta vuelve). Una con `wip` se marca en rojo cuando se pasa
+de su límite («6/5») y lo avisa al llevarle una tarjeta. Cada columna muestra cuántas tarjetas tiene y
+cuánto suman (por moneda), se puede plegar, y el filtro (sin tildes) atenúa lo que no coincide sin
+mover nada. En móvil, las columnas se desplazan de lado con snap.
+
+```html
+<nx-kanban id="compras" heading="Órdenes de compra"></nx-kanban>
+<script>
+  compras.columns = [
+    { id: "borrador", label: "Borrador" },
+    { id: "por-aprobar", label: "Por aprobar", tone: "warning", wip: 5 },
+    { id: "aprobado", label: "Aprobado", tone: "primary" },
+    { id: "anulado", label: "Anulado", tone: "danger",
+      confirm: { heading: "¿Anular la {title}?", impact: "/compras/oc/impacto", hold: true } },
+  ];
+  compras.cards = [{ id: "2291", column: "por-aprobar", title: "OC-2291", subtitle: "Aceros del Caribe",
+    tags: ["Producción"], assignee: "Ana María Rincón", amount: 10829000, currency: "COP", due: "2026-09-30" }];
+  compras.addEventListener("nx-kanban-commit", (e) =>
+    fetch(`/compras/oc/${e.detail.card.id}`, { method: "PATCH", keepalive: true,
+      body: JSON.stringify({ estado: e.detail.to, orden: e.detail.index }) }));
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `columns` (`{id, label, tone?, wip?, confirm?: {heading, message?, impact?, hold?, tone?, confirmLabel?}, collapsed?}`), `cards` (`{id, column, title, subtitle?, tags?, assignee?, amount?, currency?, due?, href?, data?}`; el orden de cada columna es el del arreglo, y el getter devuelve el estado actual), `heading`, `undo` (ms, 7000; 0 = sin aviso), `busy`, `locale`, `labels` |
+| Métodos | `move(id, columna, índice?)` → `"commit"`, `"undo"` o `"cancel"` (el mismo flujo que arrastrar) |
+| Eventos | `nx-kanban-move` `{card, from, fromIndex, to, index, via}` (cancelable), `nx-kanban-commit`, `nx-kanban-undo`, `nx-kanban-add` `{column}`, `nx-kanban-open` `{card}` (cancelable) |
+| Impacto | `confirm.impact` recibe `POST {card, from, to, index, data}` y transmite NDJSON o SSE: `impact`, `block`, `note`, `done` |
+
 ## Desarrollo
 
 ```bash

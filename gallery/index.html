@@ -776,6 +776,269 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
       </div>
     </template>
 
+        <!-- ================================================================ Número -->
+        <template id="page-number">
+          <p class="eyebrow">Componentes</p>
+          <h1>Número <code class="tag">&lt;nx-number&gt;</code></h1>
+          <p class="lead">
+            El campo numérico que se usa todos los días, bien hecho. Entiende «2,5M», «3 mil» y cuentas como «=450*3» o
+            «+15%»; pegar un monto de Excel funciona; las flechas suben y bajan (la rueda del mouse no), y el total sale en
+            letras para el cheque.
+          </p>
+
+          <div class="num-inv" id="num-invoice" lang="es-CO">
+            <header class="num-inv__head">
+              <div>
+                <p class="num-inv__kicker">Factura de venta</p>
+                <p class="num-inv__id">FV-2026-01873</p>
+              </div>
+              <p class="num-inv__client">Metalmecánica Los Andes S.A.S. · NIT 900.412.377-1<br />Vence el 25 oct 2026 · 30 días</p>
+            </header>
+            <div class="num-inv__item">
+              <strong>Lámina de acero HR 4×8 calibre 14</strong>
+              <span>Ref. AC-HR-414 · Bodega Itagüí · kg por lámina: 136</span>
+            </div>
+            <div class="num-inv__line">
+              <label class="num-inv__cell">
+                <span>Cantidad</span>
+                <nx-number id="num-qty" value="12" min="0" decimals="2" align="end" placeholder="0"></nx-number>
+              </label>
+              <span class="num-inv__op" aria-hidden="true">×</span>
+              <label class="num-inv__cell num-inv__cell--wide">
+                <span>Precio unitario</span>
+                <nx-number id="num-price" value="485000" min="0" step="1000" format="money" currency="COP" placeholder="0"></nx-number>
+              </label>
+              <span class="num-inv__op" aria-hidden="true">−</span>
+              <label class="num-inv__cell">
+                <span>Descuento</span>
+                <nx-number id="num-disc" value="0.05" min="0" max="1" format="percent" placeholder="0"></nx-number>
+              </label>
+              <span class="num-inv__op" aria-hidden="true">+</span>
+              <label class="num-inv__cell">
+                <span>IVA</span>
+                <nx-number id="num-iva" value="0.19" min="0" max="1" format="percent"></nx-number>
+              </label>
+            </div>
+            <dl class="num-inv__sums">
+              <div><dt>Subtotal</dt><dd id="num-sub">—</dd></div>
+              <div><dt>Descuento</dt><dd id="num-less">—</dd></div>
+              <div><dt>IVA</dt><dd id="num-tax">—</dd></div>
+            </dl>
+            <div class="num-inv__total">
+              <label for="num-total">Total a pagar</label>
+              <nx-number id="num-total" format="money" currency="COP" readonly words></nx-number>
+            </div>
+          </div>
+          <p class="sel-tip">
+            Prueba en el precio <kbd>=5.820.000/12</kbd>, <kbd>+15%</kbd> o <kbd>*2</kbd>; en la cantidad, <kbd>↑</kbd>
+            <kbd>↓</kbd> (con <kbd>Mayús</kbd> de a 10); un descuento de <kbd>150</kbd> se recorta a 100 %. <kbd>Esc</kbd>
+            deshace lo que escribiste.
+          </p>
+          <ol class="stage__log btn-events" id="number-log"></ol>
+
+          <h2>Lo que se puede escribir</h2>
+          <div class="num-try" lang="es-CO">
+            <label for="num-try">Campo de prueba</label>
+            <nx-number id="num-try" format="money" currency="COP" value="1000000" words></nx-number>
+            <button type="button" class="dlg-plain" id="num-try-reset">Volver a $ 1.000.000</button>
+          </div>
+          <div class="table-wrap">
+            <table class="num-examples">
+              <thead><tr><th>Escribes</th><th>Entiende</th><th>Por qué</th><th><span class="num-sr">Probar</span></th></tr></thead>
+              <tbody id="num-examples"></tbody>
+            </table>
+          </div>
+
+          <h2>Modos</h2>
+          <div class="sel-demos" lang="es-CO">
+            <div class="sel-demo">
+              <p class="btn-demo__title">Número <span>decimals="2" step="0.5"</span></p>
+              <nx-number id="num-hours" value="12.5" decimals="2" step="0.5" min="0" label="Horas extra del mes" placeholder="Horas"></nx-number>
+              <p class="btn-demo__desc">Horas extra del mes. <kbd>Alt</kbd> + <kbd>↑</kbd> sube de a 0,05.</p>
+            </div>
+            <div class="sel-demo">
+              <p class="btn-demo__title">Monto <span>format="money" currency="COP" words</span></p>
+              <nx-number id="num-salary" value="3850000" step="50000" format="money" currency="COP" words label="Salario básico"></nx-number>
+              <p class="btn-demo__desc">Salario básico: en letras, con «un millón de pesos», «veintiún mil» y los centavos «con 50/100».</p>
+            </div>
+            <div class="sel-demo">
+              <p class="btn-demo__title">Porcentaje <span>format="percent" max="0.3"</span></p>
+              <nx-number id="num-raise" value="0.052" min="0" max="0.3" step="0.1" format="percent" label="Incremento salarial"></nx-number>
+              <p class="btn-demo__desc">Se escribe «5,2» o «5,2 %»; el valor es la fracción (0,052).</p>
+            </div>
+            <div class="sel-demo">
+              <p class="btn-demo__title">En inglés <span>locale="en-US" currency="USD"</span></p>
+              <nx-number id="num-usd" value="12480.75" locale="en-US" format="money" currency="USD" words label="Import invoice (USD)"></nx-number>
+              <p class="btn-demo__desc">Factura de importación: «1,234.5», «2.5k», y «MM» es un millón.</p>
+            </div>
+            <form class="sel-demo" id="num-form">
+              <p class="btn-demo__title">En un &lt;form&gt; <span>name required max</span></p>
+              <nx-number id="num-advance" name="anticipo" required min="0" max="2000000" step="50000" format="money" currency="COP" label="Anticipo de viáticos" placeholder="Hasta $ 2.000.000"></nx-number>
+              <div class="dlg-row">
+                <nx-button type="submit" label="Solicitar" variant="primary" log-mode="none"></nx-button>
+                <button type="reset" class="dlg-plain">Limpiar</button>
+              </div>
+              <code class="sel-form-out" id="num-form-out">FormData: —</code>
+            </form>
+          </div>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
+              <tbody>
+                <tr><td>Escribes</td><td>Se entiende en el formato del locale («1.234,5» en español, «1,234.5» en inglés). Una cuenta o un sufijo muestran el resultado a la derecha («= 1.350»); lo que no se entiende, también («no entiendo "x"»). <code>value</code> cambia mientras escribes y sale <code>input</code>.</td></tr>
+                <tr><td>Sales o <kbd>Enter</kbd></td><td>Se formatea (número, monto o porcentaje), se recorta a <code>min</code>/<code>max</code> avisándolo, y sale <code>nx-change</code> si cambió. Si no se entiende, el texto queda, el campo se marca inválido y el formulario no se envía.</td></tr>
+                <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Suman o restan <code>step</code>; con <kbd>Mayús</kbd> ×10, con <kbd>Alt</kbd> ÷10. En porcentaje, de a un punto.</td></tr>
+                <tr><td><kbd>Esc</kbd></td><td>Deshace lo que se escribió desde que entraste al campo. Si no hay nada que deshacer, sigue su camino (cierra el diálogo, por ejemplo).</td></tr>
+                <tr><td>La rueda</td><td>No cambia nada: la página se desplaza. (Un <code>type="number"</code> cambia el monto sin que nadie lo note.)</td></tr>
+                <tr><td>Pegas</td><td>«$ 1.450.000,00», «USD 1,200.50», «(1.200)» contable, «1.200-» o con espacios duros: queda limpio al instante.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué es</th></tr></thead>
+              <tbody>
+                <tr><td><code>value</code></td><td><code>number | null</code>. En <code>percent</code> es la fracción (0,19 es 19 %). Acepta texto en formato de máquina («1450000.5») o del locale.</td></tr>
+                <tr><td>En el <code>&lt;form&gt;</code></td><td>El valor en formato de máquina («1450000.5»), con <code>name</code>. Validez nativa: <code>valueMissing</code> (<code>required</code>), <code>badInput</code> (texto sin entender), <code>rangeUnderflow</code>/<code>rangeOverflow</code>; <code>reset</code> vuelve al atributo <code>value</code>.</td></tr>
+                <tr><td><code>input</code></td><td>Evento nativo del elemento, cada vez que cambia el número (no por cada tecla).</td></tr>
+                <tr><td><code>nx-change</code></td><td><code>{value, text}</code> al confirmar: <code>{value: 1450000, text: "$ 1.450.000"}</code>. También sale un <code>change</code> nativo.</td></tr>
+                <tr><td><code>numberToWords()</code></td><td>El monto en letras, para el PDF o el backend: <code>numberToWords(1450000, {currency: "COP"})</code> → «un millón cuatrocientos cincuenta mil pesos m/cte».</td></tr>
+                <tr><td><code>evaluateNumber()</code></td><td>El mismo intérprete, sin DOM: <code>evaluateNumber("=450*3")</code> → <code>{ok: true, value: 1350, calc: true}</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;label for="precio"&gt;Precio unitario&lt;/label&gt;
+    &lt;nx-number id="precio" name="precio" format="money" currency="COP" step="1000" min="0" required&gt;&lt;/nx-number&gt;
+
+    &lt;nx-number id="total" format="money" currency="COP" readonly words&gt;&lt;/nx-number&gt;
+
+    precio.addEventListener("input", () =&gt; (total.value = cantidad.value * precio.value));
+    precio.addEventListener("nx-change", (e) =&gt; guardar(e.detail.value));   // {value, text}</code></pre>
+            <pre role="tabpanel" hidden><code>import { NumberInput } from "nx-ui/solid";
+
+    &lt;NumberInput format="money" currency="COP" name="precio" step={1000} min={0} required
+      value={precio()} onInput={(e) =&gt; setPrecio(e.currentTarget.value)}
+      onChange={(e) =&gt; guardar(e.detail.value)} /&gt;
+
+    &lt;NumberInput format="money" currency="COP" value={total()} readonly words /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>value</code></td><td><code>number | null</code>. El atributo es el valor inicial (y al que vuelve un <code>reset</code>). <code>text</code> lo da formateado.</td></tr>
+                <tr><td><code>format</code>, <code>currency</code>, <code>decimals</code></td><td><code>number</code> (por defecto), <code>money</code> (con <code>currency</code> ISO o símbolo; «$» sin ella) o <code>percent</code>. Decimales que se ven y se guardan: 6 en números, 2 en montos y porcentajes.</td></tr>
+                <tr><td><code>min</code>, <code>max</code>, <code>step</code></td><td>Límites (se recorta al confirmar y se avisa) y lo que suman las flechas, en las unidades que se ven (puntos en porcentaje).</td></tr>
+                <tr><td><code>words</code></td><td>El monto en letras debajo, en español: COP («pesos m/cte»), USD, EUR, MXN, CLP, ARS, PEN, BRL.</td></tr>
+                <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>readonly</code></td><td>Participa en un <code>&lt;form&gt;</code> nativo (también dentro de un <code>&lt;fieldset disabled&gt;</code>).</td></tr>
+                <tr><td><code>placeholder</code>, <code>align</code>, <code>label</code>, <code>locale</code>, <code>labels</code></td><td>Texto vacío, alineación (<code>end</code> en montos y porcentajes), nombre accesible si no hay <code>&lt;label&gt;</code>, formato y textos.</td></tr>
+                <tr><td>Eventos</td><td><code>input</code> (cambia el número), <code>nx-change</code> <code>{value, text}</code> y <code>change</code> al confirmar.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <template id="page-kanban">
+          <p class="eyebrow">Componentes</p>
+          <h1>Tablero <code class="tag">&lt;nx-kanban&gt;</code></h1>
+          <p class="lead">
+            Un tablero que se siente instantáneo: arrastra una orden y el hueco se abre donde va a caer; suéltala y ya está
+            en su lugar, sin esperar al servidor, con unos segundos para deshacer. También se mueve con el teclado, con cada
+            paso anunciado al lector de pantalla. Las columnas cuentan y suman, avisan cuando se pasan de su límite, y
+            «Anulado» pide confirmación mostrando qué se afecta.
+          </p>
+          <nx-kanban id="kanban-demo" heading="Órdenes de compra · septiembre" locale="es-CO"></nx-kanban>
+          <div class="dlg-row">
+            <button type="button" class="dlg-plain" id="kanban-reset">Volver a empezar</button>
+          </div>
+          <p class="sel-tip">
+            Con el teclado: <kbd>Tab</kbd> hasta una tarjeta, <kbd>Espacio</kbd> la levanta, <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>
+            la mueven, <kbd>Espacio</kbd> la suelta y <kbd>Esc</kbd> cancela; <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace. Lleva una
+            orden recibida a «Anulado»: la OC-2240 ya tiene un pago y el servidor no deja anularla.
+          </p>
+          <ol class="stage__log btn-events" id="kanban-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Paso</th><th>Qué pasa</th></tr></thead>
+              <tbody>
+                <tr><td>Mover</td><td>Arrastrando (con el dedo, manteniendo pulsado) o con el teclado. Las demás tarjetas se apartan con una animación, y el tablero y la columna se desplazan solos al acercarse a los bordes.</td></tr>
+                <tr><td><code>nx-kanban-move</code></td><td>Antes de aplicar (cancelable): <code>{card, from, fromIndex, to, index, via}</code>. Con <code>preventDefault()</code> la tarjeta vuelve.</td></tr>
+                <tr><td><code>confirm</code></td><td>Si la columna destino lo tiene, se pide confirmación con impacto (<code>nxConfirm</code>, que se carga solo la primera vez). Si se niega, la tarjeta vuelve.</td></tr>
+                <tr><td>Deshacer</td><td>El movimiento se ve al instante y se puede deshacer durante <code>undo</code> ms (7000), con el aviso o <kbd>Ctrl</kbd>+<kbd>Z</kbd> (<code>nx-kanban-undo</code>).</td></tr>
+                <tr><td><code>nx-kanban-commit</code></td><td>Cuando el tiempo termina (o la página se cierra): ahí la app llama al backend.</td></tr>
+                <tr><td><code>wip</code></td><td>Una columna por encima de su límite se marca en rojo («6/5»), y al llevarle una tarjeta lo avisa.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+              <tbody>
+                <tr><td><code>columns</code></td><td><code>{id, label, tone?, wip?, confirm?, collapsed?}</code>; <code>tone</code>: <code>neutral</code>, <code>primary</code>, <code>success</code>, <code>warning</code>, <code>danger</code>.</td></tr>
+                <tr><td><code>confirm</code></td><td><code>{heading, message?, impact?, hold?, tone?, confirmLabel?}</code>. <code>{title}</code> y <code>{column}</code> se reemplazan en el título y el mensaje.</td></tr>
+                <tr><td><code>impact</code></td><td>URL que recibe <code>POST {card, from, to, index, data}</code> y transmite NDJSON o SSE, una línea por evento: <code>{"type":"impact","label":"Factura FE-10482","detail":"queda sin orden","tone":"warning"}</code>, <code>{"type":"block","message":"…"}</code>, <code>{"type":"note","message":"…"}</code>, <code>{"type":"done"}</code>.</td></tr>
+                <tr><td><code>cards</code></td><td><code>{id, column, title, subtitle?, tags?, assignee?, amount?, currency?, due?, href?, data?}</code>. El orden dentro de cada columna es el del arreglo.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-kanban id="compras" heading="Órdenes de compra"&gt;&lt;/nx-kanban&gt;
+
+    compras.columns = [
+      { id: "borrador", label: "Borrador" },
+      { id: "por-aprobar", label: "Por aprobar", tone: "warning", wip: 5 },
+      { id: "aprobado", label: "Aprobado", tone: "primary" },
+      { id: "anulado", label: "Anulado", tone: "danger",
+        confirm: { heading: "¿Anular la {title}?", impact: "/compras/oc/impacto", hold: true } },
+    ];
+    compras.cards = await (await fetch("/compras/oc?mes=2026-09")).json();
+    compras.addEventListener("nx-kanban-commit", (e) =&gt;
+      fetch(`/compras/oc/${e.detail.card.id}`, { method: "PATCH", keepalive: true,
+        body: JSON.stringify({ estado: e.detail.to, orden: e.detail.index }) }));</code></pre>
+            <pre role="tabpanel" hidden><code>import { Kanban } from "nx-ui/solid";
+
+    &lt;Kanban heading="Órdenes de compra" columns={columnas} cards={ordenes()}
+      onCommit={(e) =&gt; guardar(e.detail)} onAdd={(e) =&gt; nuevaOrden(e.detail.column)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>columns</code>, <code>cards</code></td><td>Las columnas y las tarjetas (JSON). <code>cards</code> devuelve el estado actual, con los movimientos aplicados.</td></tr>
+                <tr><td><code>heading</code>, <code>undo</code>, <code>busy</code>, <code>locale</code>, <code>labels</code></td><td>Título, tiempo para deshacer (0 = sin aviso), cargando (tarjetas de relleno), formato de montos y fechas, y textos.</td></tr>
+                <tr><td><code>move(id, columna, índice?)</code></td><td>Mueve desde código, con el mismo flujo (evento, confirmación, aviso) → <code>"commit"</code>, <code>"undo"</code> o <code>"cancel"</code>.</td></tr>
+                <tr><td>Teclado</td><td>Flechas entre tarjetas; <kbd>Espacio</kbd> levanta y suelta, flechas mueven, <kbd>Esc</kbd> cancela; <kbd>↵</kbd> abre; <kbd>/</kbd> filtra.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-kanban-move</code> (cancelable), <code>nx-kanban-commit</code>, <code>nx-kanban-undo</code>, <code>nx-kanban-add</code> <code>{column}</code>, <code>nx-kanban-open</code> <code>{card}</code> (cancelable).</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

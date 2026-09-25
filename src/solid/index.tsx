@@ -1,7 +1,7 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
- * `<Inbox>`, `<Survey>`), y `nxToast` / `nxConfirm`.
+ * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -48,6 +48,12 @@ import type { InboxDecisionDetail, InboxItem, InboxLabels } from "../components/
 import "../components/survey/index";
 import type { NxSurvey } from "../components/survey/survey";
 import type { SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail } from "../components/survey/types";
+import "../components/number/index";
+import type { NxNumber } from "../components/number/number";
+import type { NumberAlign, NumberChangeDetail, NumberFormat, NumberLabels } from "../components/number/types";
+import "../components/kanban/index";
+import type { NxKanban } from "../components/kanban/kanban";
+import type { KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail } from "../components/kanban/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -62,6 +68,8 @@ export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, G
 export type { NxCommand, CommandItem, CommandLabels, CommandSelectDetail };
 export type { NxExplain, ExplainEvent, ExplainLabels };
 export type { NxInbox, InboxDecisionDetail, InboxItem, InboxLabels };
+export type { NxNumber, NumberAlign, NumberChangeDetail, NumberFormat, NumberLabels };
+export type { NxKanban, KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -70,16 +78,17 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
       progress: number | null | undefined;
       options: SelectOption[];
       fields: SelectField[];
-      value: string | string[] | undefined;
+      value: string | string[] | number | null | undefined;
       selection: SelectOption[] | undefined;
-      columns: GridColumn[];
+      columns: GridColumn[] | KanbanColumn[];
+      cards: KanbanCard[] | undefined;
       rows: GridRow[] | undefined;
       filters: GridFilter[] | undefined;
       sort: GridSort | null | undefined;
@@ -126,6 +135,13 @@ declare module "solid-js" {
       storage: string | undefined;
       undo: string | undefined;
       layout: string | undefined;
+      format: NumberFormat | undefined;
+      currency: string | undefined;
+      decimals: string | undefined;
+      min: string | undefined;
+      max: string | undefined;
+      step: string | undefined;
+      align: NumberAlign | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -143,6 +159,8 @@ declare module "solid-js" {
       selectable: boolean;
       "require-reason": boolean;
       echo: boolean;
+      words: boolean;
+      readonly: boolean;
     }
     interface CustomEvents {
       "nx-select": CustomEvent<SelectDetail>;
@@ -171,6 +189,11 @@ declare module "solid-js" {
       "nx-inbox-undo": CustomEvent<InboxDecisionDetail>;
       "nx-inbox-active": CustomEvent<{ id: string; item: InboxItem }>;
       "nx-survey-submit": CustomEvent<SurveySubmitDetail>;
+      "nx-kanban-move": CustomEvent<KanbanMoveDetail>;
+      "nx-kanban-commit": CustomEvent<KanbanMoveDetail>;
+      "nx-kanban-undo": CustomEvent<KanbanMoveDetail>;
+      "nx-kanban-add": CustomEvent<{ column: string }>;
+      "nx-kanban-open": CustomEvent<{ card: KanbanCard }>;
       "nx-survey-change": CustomEvent<{ id: string; value: unknown; answers: SurveyAnswers }>;
     }
     interface IntrinsicElements {
@@ -186,6 +209,8 @@ declare module "solid-js" {
       "nx-explain": HTMLAttributes<NxExplain> & { endpoint?: string };
       "nx-inbox": HTMLAttributes<NxInbox> & { heading?: string };
       "nx-survey": HTMLAttributes<NxSurvey> & { heading?: string };
+      "nx-number": HTMLAttributes<NxNumber> & { label?: string; placeholder?: string };
+      "nx-kanban": HTMLAttributes<NxKanban> & { heading?: string };
     }
   }
 }
@@ -733,6 +758,125 @@ export function Survey(props: SurveyProps): JSX.Element {
       attr:locale={local.locale}
       on:nx-survey-submit={(e) => local.onSubmit?.(e)}
       on:nx-survey-change={(e) => local.onChange?.(e)}
+    />
+  );
+}
+
+export interface NumberInputProps extends Omit<JSX.HTMLAttributes<NxNumber>, "onChange" | "onInput"> {
+  /** `number | null`. En `percent`, la fracción (0,19 es 19 %). */
+  value?: number | null;
+  format?: NumberFormat;
+  /** Con `money`: ISO («COP», «USD») o un símbolo («$»). */
+  currency?: string;
+  decimals?: number;
+  min?: number;
+  max?: number;
+  /** Lo que suman ↑/↓, en las unidades que se ven (puntos en `percent`). */
+  step?: number;
+  /** El monto en letras debajo, para cheques y documentos. */
+  words?: boolean;
+  name?: string;
+  required?: boolean;
+  disabled?: boolean;
+  readonly?: boolean;
+  placeholder?: string;
+  align?: NumberAlign;
+  /** Nombre accesible (si no hay un `<label>`). */
+  label?: string;
+  locale?: string;
+  labels?: Partial<NumberLabels>;
+  /** Mientras se escribe, cada vez que cambia el número (`e.currentTarget.value`). */
+  onInput?: (e: Event & { currentTarget: NxNumber }) => void;
+  /** Al confirmar (salir o Enter): `{value, text}`. */
+  onChange?: (e: CustomEvent<NumberChangeDetail>) => void;
+}
+
+export function NumberInput(props: NumberInputProps): JSX.Element {
+  const [local, rest] = splitProps(props, [
+    "value",
+    "format",
+    "currency",
+    "decimals",
+    "min",
+    "max",
+    "step",
+    "words",
+    "name",
+    "required",
+    "disabled",
+    "readonly",
+    "placeholder",
+    "align",
+    "label",
+    "locale",
+    "labels",
+    "onInput",
+    "onChange",
+  ]);
+  const str = (n: number | undefined) => (n === undefined ? undefined : String(n));
+  return (
+    <nx-number
+      {...rest}
+      prop:value={local.value}
+      prop:labels={local.labels}
+      attr:format={local.format}
+      attr:currency={local.currency}
+      attr:decimals={str(local.decimals)}
+      attr:min={str(local.min)}
+      attr:max={str(local.max)}
+      attr:step={str(local.step)}
+      attr:name={local.name}
+      attr:placeholder={local.placeholder}
+      attr:align={local.align}
+      attr:label={local.label}
+      attr:locale={local.locale}
+      bool:words={!!local.words}
+      bool:required={!!local.required}
+      bool:disabled={!!local.disabled}
+      bool:readonly={!!local.readonly}
+      on:input={(e) => local.onInput?.(e as unknown as Event & { currentTarget: NxNumber })}
+      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<NumberChangeDetail>)}
+    />
+  );
+}
+
+export interface KanbanProps extends JSX.HTMLAttributes<NxKanban> {
+  columns: KanbanColumn[];
+  cards: KanbanCard[];
+  heading?: string;
+  /** Milisegundos para deshacer un movimiento (7000); 0 registra al instante. */
+  undo?: number;
+  /** Cargando: columnas con tarjetas de relleno. */
+  busy?: boolean;
+  locale?: string;
+  labels?: Partial<KanbanLabels>;
+  /** Cancelable: la tarjeta vuelve a su lugar. */
+  onMove?: (e: CustomEvent<KanbanMoveDetail>) => void;
+  /** Pasó el tiempo de deshacer: aquí se registra en el backend. */
+  onCommit?: (e: CustomEvent<KanbanMoveDetail>) => void;
+  onUndo?: (e: CustomEvent<KanbanMoveDetail>) => void;
+  onAdd?: (e: CustomEvent<{ column: string }>) => void;
+  /** Cancelable: no se sigue el `href` de la tarjeta. */
+  onOpen?: (e: CustomEvent<{ card: KanbanCard }>) => void;
+}
+
+export function Kanban(props: KanbanProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["columns", "cards", "heading", "undo", "busy", "locale", "labels", "onMove", "onCommit", "onUndo", "onAdd", "onOpen"]);
+  return (
+    <nx-kanban
+      {...rest}
+      prop:columns={local.columns}
+      prop:cards={local.cards}
+      prop:labels={local.labels}
+      attr:heading={local.heading}
+      attr:undo={local.undo === undefined ? undefined : String(local.undo)}
+      attr:locale={local.locale}
+      bool:busy={!!local.busy}
+      on:nx-kanban-move={(e) => local.onMove?.(e)}
+      on:nx-kanban-commit={(e) => local.onCommit?.(e)}
+      on:nx-kanban-undo={(e) => local.onUndo?.(e)}
+      on:nx-kanban-add={(e) => local.onAdd?.(e)}
+      on:nx-kanban-open={(e) => local.onOpen?.(e)}
     />
   );
 }

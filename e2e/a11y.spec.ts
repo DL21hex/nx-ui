@@ -112,3 +112,30 @@ test("encuesta en ficha, tarjetas y conversación", async ({ page }) => {
     await audit(page, ["#survey-demo"]);
   }
 });
+
+test("número: factura con vista previa, error y aviso de recorte", async ({ page }) => {
+  await open(page, "#/number");
+  await audit(page, ["#num-invoice", ".sel-demos", ".num-try"]);
+  await page.locator("#num-price input").fill("=450*3");
+  await expect(page.locator("#num-price .nx-number__hint")).toBeVisible();
+  await page.locator("#num-qty input").fill("=2+x");
+  await page.locator("#num-qty input").press("Enter");
+  await page.locator("#num-disc input").fill("150");
+  await page.locator("#num-disc input").press("Enter");
+  await expect(page.locator("#num-disc .nx-number__note")).not.toBeEmpty();
+  await audit(page, ["#num-invoice", ".sel-demos", ".num-try"]);
+});
+
+test("tablero en reposo, filtrado, con una columna plegada y con una tarjeta levantada", async ({ page }) => {
+  await open(page, "#/kanban");
+  await audit(page, ["#kanban-demo"]);
+  await page.locator("#kanban-demo .nx-kanban__filter").fill("logistica");
+  await page.locator('#kanban-demo .nx-kanban__col[data-col="recibido"] .nx-kanban__fold').click();
+  await audit(page, ["#kanban-demo"]);
+  await page.locator("#kanban-demo .nx-kanban__filter").fill("");
+  await page.locator('#kanban-demo .nx-kanban__card[data-id="2276"]').focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.locator('#kanban-demo .nx-kanban__col[data-col="por-aprobar"] .nx-kanban__warn')).toBeVisible();
+  await audit(page, ["#kanban-demo"]);
+});

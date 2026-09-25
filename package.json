@@ -78,6 +78,14 @@
       "types": "./dist/types/components/tour/index.d.ts",
       "import": "./dist/tour.js"
     },
+    "./number": {
+      "types": "./dist/types/components/number/index.d.ts",
+      "import": "./dist/number.js"
+    },
+    "./kanban": {
+      "types": "./dist/types/components/kanban/index.d.ts",
+      "import": "./dist/kanban.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -108,7 +116,9 @@
     "./explain.css": "./dist/explain.css",
     "./inbox.css": "./dist/inbox.css",
     "./survey.css": "./dist/survey.css",
-    "./tour.css": "./dist/tour.css"
+    "./tour.css": "./dist/tour.css",
+    "./kanban.css": "./dist/kanban.css",
+    "./number.css": "./dist/number.css"
   },
   "sideEffects": [
     "*.css",

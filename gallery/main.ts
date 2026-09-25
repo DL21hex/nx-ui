@@ -8,6 +8,9 @@ import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
 import { EXPLAIN, INBOX, SURVEY, surveyResponses } from "./demo-next";
+import { mountKanbanDemo } from "./demo-kanban";
+import { mountNumberDemo } from "./demo-number";
+import "./pages/number.css";
 
 registerIcons(lucide);
 
@@ -83,6 +86,8 @@ const NAV: MenuItem[] = [
   { id: "command", label: "Paleta de comandos", href: "#/command", icon: "circle-help", section: "Componentes", badge: "Nuevo" },
   { id: "explain", label: "Explicar cifras", href: "#/explain", icon: "trending-up", section: "Componentes", badge: "Nuevo" },
   { id: "inbox", label: "Bandeja", href: "#/inbox", icon: "inbox", section: "Componentes", badge: "Nuevo" },
+  { id: "number", label: "Número", href: "#/number", icon: "receipt", section: "Componentes", badge: "Nuevo" },
+  { id: "kanban", label: "Tablero", href: "#/kanban", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -102,6 +107,8 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/explain": { template: "page-explain", mount: mountExplainDemo },
   "#/inbox": { template: "page-inbox", mount: mountInboxDemo },
   "#/survey": { template: "page-survey", mount: mountSurveyDemo },
+  "#/kanban": { template: "page-kanban", mount: mountKanbanDemo },
+  "#/number": { template: "page-number", mount: mountNumberDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 

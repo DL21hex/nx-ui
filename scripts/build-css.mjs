@@ -21,6 +21,8 @@ const entries = {
   inbox: "src/components/inbox/inbox.css",
   survey: "src/components/survey/survey.css",
   tour: "src/components/tour/tour.css",
+  "kanban": "src/components/kanban/kanban.css",
+  "number": "src/components/number/number.css",
 };
 
 await build({

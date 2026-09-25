@@ -34,6 +34,8 @@ const BUDGET = [
   ["dist/inbox.js", 9 * 1024, "inbox + toast + núcleo (ESM)"],
   ["dist/survey.js", 14 * 1024, "survey (4 diseños) + núcleo (ESM)"],
   ["dist/tour.js", 2.5 * 1024, "nxTour (ESM)"],
+  ["dist/number.js", 9 * 1024, "number + núcleo (ESM)"],
+  ["dist/kanban.js", 11 * 1024, "kanban + toast + núcleo (ESM; nxConfirm con import())"],
   ["dist/bdui.js", 1024, "adaptador BDUI"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -52,6 +54,8 @@ const BUDGET = [
   ["dist/inbox.css", 2.5 * 1024, "inbox (CSS)"],
   ["dist/survey.css", 6 * 1024, "survey (CSS, 4 diseños)"],
   ["dist/tour.css", 1.2 * 1024, "tour (CSS)"],
+  ["dist/number.css", 1.5 * 1024, "number (CSS)"],
+  ["dist/kanban.css", 3 * 1024, "kanban (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];
