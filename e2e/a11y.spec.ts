@@ -96,3 +96,19 @@ test("encuesta: una pregunta, la escala NPS y los resultados", async ({ page }) 
   await expect(s.locator(".nx-survey__scale")).toBeVisible();
   await audit(page, ["#survey-demo"]);
 });
+
+test("encuesta en ficha, tarjetas y conversación", async ({ page }) => {
+  await open(page, "#/survey");
+  await page.evaluate(() => localStorage.removeItem("nx-ui-demo-encuesta"));
+  const s = page.locator("#survey-demo");
+  for (const name of ["Ficha", "Tarjetas", "Conversación"]) {
+    await page.reload();
+    await page.getByRole("button", { name }).click();
+    await s.getByRole("button", { name: "Empezar" }).click();
+    await page.keyboard.press("a");
+    await expect(s.locator(".nx-survey__scale")).toBeVisible();
+    // La conversación hace aparecer la respuesta con un fundido: axe mediría colores a medias.
+    await page.waitForTimeout(900);
+    await audit(page, ["#survey-demo"]);
+  }
+});

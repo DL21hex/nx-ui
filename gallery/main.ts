@@ -947,10 +947,28 @@ function mountSurveyDemo(root: HTMLElement) {
   };
   // Sin servidor: los resultados salen de 240 respuestas de ejemplo más la tuya.
   const others = surveyResponses();
+  const baseline = aggregateSurvey(SURVEY, others);
+  const echo = root.querySelector<HTMLInputElement>("#survey-echo")!;
+  const layouts = [...root.querySelectorAll<HTMLButtonElement>("#survey-layouts [data-layout]")];
+  const apply = () => {
+    survey.echo = echo.checked;
+    survey.results = echo.checked ? baseline : null;
+  };
+  apply();
+  echo.addEventListener("change", apply);
+  for (const b of layouts)
+    b.addEventListener("click", () => {
+      for (const x of layouts) x.setAttribute("aria-pressed", String(x === b));
+      survey.layout = b.dataset.layout as NxSurvey["layout"];
+      add(`layout = "${survey.layout}"`);
+    });
   survey.addEventListener("nx-survey-change", (e) => add(`nx-survey-change → ${e.detail.id} = ${JSON.stringify(e.detail.value)}`));
   survey.addEventListener("nx-survey-submit", (e) => {
     add(`nx-survey-submit → ${Object.keys(e.detail.answers).length} respuestas en ${Math.round(e.detail.ms / 1000)} s`);
     queueMicrotask(() => (survey.results = aggregateSurvey(SURVEY, [...others, e.detail.answers])));
   });
-  root.querySelector("#survey-reset")!.addEventListener("click", () => survey.reset());
+  root.querySelector("#survey-reset")!.addEventListener("click", () => {
+    survey.reset();
+    apply();
+  });
 }

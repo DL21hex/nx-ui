@@ -125,6 +125,7 @@ declare module "solid-js" {
       hotkey: string | undefined;
       storage: string | undefined;
       undo: string | undefined;
+      layout: string | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -141,6 +142,7 @@ declare module "solid-js" {
       persistent: boolean;
       selectable: boolean;
       "require-reason": boolean;
+      echo: boolean;
     }
     interface CustomEvents {
       "nx-select": CustomEvent<SelectDetail>;
@@ -703,6 +705,10 @@ export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmi
   /** Clave de `localStorage` para el borrador. */
   storage?: string;
   results?: SurveyResults | null;
+  /** `focus`, `sheet`, `cards` o `chat`. */
+  layout?: "focus" | "sheet" | "cards" | "chat";
+  /** Cómo respondieron los demás, tras cada respuesta (necesita `results`). */
+  echo?: boolean;
   locale?: string;
   labels?: Partial<SurveyLabels>;
   /** Cancelable: no se envía a `action`. */
@@ -711,7 +717,7 @@ export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmi
 }
 
 export function Survey(props: SurveyProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["questions", "heading", "description", "action", "storage", "results", "locale", "labels", "onSubmit", "onChange"]);
+  const [local, rest] = splitProps(props, ["questions", "heading", "description", "action", "storage", "results", "layout", "echo", "locale", "labels", "onSubmit", "onChange"]);
   return (
     <nx-survey
       {...rest}
@@ -722,6 +728,8 @@ export function Survey(props: SurveyProps): JSX.Element {
       attr:description={local.description}
       attr:action={local.action}
       attr:storage={local.storage}
+      attr:layout={local.layout}
+      bool:echo={!!local.echo}
       attr:locale={local.locale}
       on:nx-survey-submit={(e) => local.onSubmit?.(e)}
       on:nx-survey-change={(e) => local.onChange?.(e)}

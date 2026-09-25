@@ -101,3 +101,9 @@ describe("topWords (mayúsculas)", () => {
     expect(topWords(["Mejor comunicación", "Mejor ERP"])).toEqual([["mejor", 2], ["comunicación", 1], ["ERP", 1]]);
   });
 });
+
+describe("interpolate con respuesta pendiente", () => {
+  it("una pregunta que aún no llega puede mostrar «…» en vez de quitar la respuesta", () => {
+    expect(interpolate("¿Recomendarías {{area}}?", {}, QS, "…")).toBe("¿Recomendarías …?");
+  });
+});

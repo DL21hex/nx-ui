@@ -212,3 +212,79 @@ describe("<nx-survey>", () => {
     expect(el.querySelector("img, b")).toBeNull();
   });
 });
+
+describe("<nx-survey> · diseños", () => {
+  const BASE = aggregate(cleanQuestions(QS), [
+    { area: "prod", nps: 9, tools: ["ERP"], stars: 4 },
+    { area: "adm", nps: 3, tools: ["Excel"], stars: 2 },
+    { area: "prod", nps: 10, tools: ["ERP", "Correo"], stars: 5 },
+    { area: "prod", nps: 7, tools: ["ERP"], stars: 3 },
+  ]);
+
+  it("sheet: lo contestado queda como líneas con su eco; se vuelve con un clic; lo que falta, atenuado con «…»", async () => {
+    const el = mount('layout="sheet" echo');
+    el.results = BASE;
+    el.start();
+    expect(el.dataset.layout).toBe("sheet");
+    expect(el.querySelector('.nx-survey__row[data-state="current"] legend')!.textContent).toContain("¿En qué área trabajas?");
+    expect(el.querySelector('.nx-survey__row[data-state="next"] .nx-survey__row-title')!.textContent).toBe("¿Recomendarías …?");
+    key(el, "a");
+    await sleep(500);
+    const done = el.querySelector<HTMLElement>('.nx-survey__row[data-state="done"]')!;
+    expect(done.querySelector(".nx-survey__row-answer")!.textContent).toBe("🏭 Producción");
+    expect(done.querySelector(".nx-survey__echo")!.textContent).toBe("El 75 % respondió lo mismo");
+    expect(el.querySelector('.nx-survey__row[data-state="current"] legend')!.textContent).toContain("¿Recomendarías Producción?");
+    done.querySelector<HTMLButtonElement>(".nx-survey__row-btn")!.click();
+    expect(el.current!.id).toBe("area");
+  });
+
+  it("sheet: una pregunta que abre la lógica condicional entra marcada como nueva", async () => {
+    vi.useFakeTimers();
+    const el = mount('layout="sheet"');
+    el.answers = { area: "prod" };
+    el.start();
+    el.next();
+    key(el, "3");
+    vi.advanceTimersByTime(500);
+    expect(el.querySelector('.nx-survey__row[data-q="why"]')!.hasAttribute("data-new")).toBe(true);
+  });
+
+  it("cards: un mazo con puntos de avance; la tarjeta que se deja sale volando; el eco flota una vez", async () => {
+    const el = mount('layout="cards" echo');
+    el.results = BASE;
+    el.start();
+    expect(el.querySelectorAll(".nx-survey__dots li")).toHaveLength(4);
+    expect(el.querySelectorAll(".nx-survey__card--ghost")).toHaveLength(2);
+    key(el, "a");
+    await sleep(500);
+    expect(el.querySelector(".nx-survey__card.is-leaving")).not.toBeNull();
+    expect(el.querySelector(".nx-survey__echo--float")!.textContent).toBe("El 75 % respondió lo mismo");
+    expect(el.querySelector('.nx-survey__dots li[data-state="done"]')).not.toBeNull();
+  });
+
+  it("chat: la encuesta pregunta en burbujas; la respuesta queda como burbuja propia que vuelve a esa pregunta", async () => {
+    const el = mount('layout="chat" echo heading="Clima laboral"');
+    el.results = BASE;
+    expect(el.querySelector(".nx-survey__say strong")!.textContent).toBe("Clima laboral");
+    el.querySelector<HTMLButtonElement>('[data-act="start"]')!.click();
+    expect(el.querySelector(".nx-survey__log")!.getAttribute("role")).toBe("log");
+    expect(el.querySelector(".nx-survey__composer .nx-survey__opts")).not.toBeNull();
+    key(el, "a");
+    await sleep(500);
+    const mine = el.querySelector<HTMLButtonElement>(".nx-survey__me .nx-survey__bubble")!;
+    expect(mine.textContent).toBe("🏭 Producción");
+    expect(el.querySelector(".nx-survey__say--echo")!.textContent).toBe("El 75 % respondió lo mismo");
+    expect(el.querySelector(".nx-survey__say.is-new")!.textContent).toContain("¿Recomendarías Producción?");
+    mine.click();
+    expect(el.current!.id).toBe("area");
+  });
+
+  it("sin echo (o sin resultados) no hay eco", async () => {
+    const el = mount('layout="sheet"');
+    el.results = BASE;
+    el.start();
+    key(el, "a");
+    await sleep(500);
+    expect(el.querySelector(".nx-survey__echo")).toBeNull();
+  });
+});

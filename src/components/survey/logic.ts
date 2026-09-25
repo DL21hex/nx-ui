@@ -111,10 +111,11 @@ export function answerText(q: SurveyQuestion | undefined, a: SurveyAnswer | unde
   return typeof a === "number" ? String(a) : label(String(a));
 }
 
-/** `{{id}}` en un texto → la respuesta a esa pregunta. Sin respuesta, se quita con su espacio. */
-export function interpolate(text: string, answers: SurveyAnswers, all: readonly SurveyQuestion[]): string {
+/** `{{id}}` en un texto → la respuesta a esa pregunta. Sin respuesta, `missing` (por defecto se
+ *  quita con su espacio; una pregunta que aún no llega puede mostrar «…»). */
+export function interpolate(text: string, answers: SurveyAnswers, all: readonly SurveyQuestion[], missing = ""): string {
   return text
-    .replace(/\{\{\s*([\w-]+)\s*\}\}/g, (_, id: string) => answerText(all.find((q) => q.id === id), answers[id]))
+    .replace(/\{\{\s*([\w-]+)\s*\}\}/g, (_, id: string) => answerText(all.find((q) => q.id === id), answers[id]) || missing)
     .replace(/\s{2,}/g, " ")
     .trim();
 }
@@ -210,3 +211,50 @@ export function aggregate(qs: readonly SurveyQuestion[], responses: readonly Sur
 
 /** A, B, C… para elegir con el teclado (hasta la Z). */
 export const letterOf = (i: number): string => String.fromCharCode(65 + i);
+
+/** Qué decir justo después de responder (el «eco»): cómo respondieron los demás. */
+export type SurveyEcho =
+  | { kind: "same"; pct: number }
+  | { kind: "multi"; value: string; pct: number }
+  | { kind: "nps"; band: 0 | 1 | 2; pct: number }
+  | { kind: "above"; pct: number }
+  | { kind: "avg"; avg: number }
+  | { kind: "rank"; top: string };
+
+/**
+ * El eco de una respuesta, o `null` si no hay nada que decir. Elección: cuántos respondieron lo
+ * mismo. Varias: la opción propia más elegida. NPS: el grupo (detractor, pasivo, promotor) y cuántos
+ * hay en él. Escala y calificación: por encima de cuántos quedó. Deslizador: el promedio. Ordenar:
+ * lo que la mayoría puso primero.
+ */
+export function echoOf(q: SurveyQuestion, r: SurveyQuestionResult | undefined, a: SurveyAnswer | undefined): SurveyEcho | null {
+  if (!r || !r.n || !isAnswered(a)) return null;
+  const pct = (c: number) => Math.round((c / r.n) * 100);
+  const counts = r.counts ?? {};
+  switch (q.type) {
+    case "choice":
+      return counts[String(a)] !== undefined ? { kind: "same", pct: pct(counts[String(a)]) } : null;
+    case "multi": {
+      const best = (a as string[]).filter((v) => counts[v] !== undefined).sort((x, y) => counts[y] - counts[x])[0];
+      return best ? { kind: "multi", value: best, pct: pct(counts[best]) } : null;
+    }
+    case "scale":
+    case "rating": {
+      const v = Number(a);
+      if (q.nps && r.nps) {
+        const band = v >= 9 ? 2 : v >= 7 ? 1 : 0;
+        return { kind: "nps", band, pct: pct([r.nps.detractors, r.nps.passives, r.nps.promoters][band]) };
+      }
+      const below = Object.entries(counts).reduce((s, [k, c]) => s + (Number(k) < v ? c : 0), 0);
+      return below ? { kind: "above", pct: pct(below) } : r.avg !== undefined ? { kind: "avg", avg: r.avg } : null;
+    }
+    case "slider":
+      return r.avg !== undefined ? { kind: "avg", avg: r.avg } : null;
+    case "rank": {
+      const top = Object.entries(r.ranks ?? {}).sort((x, y) => x[1] - y[1])[0];
+      return top ? { kind: "rank", top: top[0] } : null;
+    }
+    default:
+      return null;
+  }
+}

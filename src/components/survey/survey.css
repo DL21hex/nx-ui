@@ -933,6 +933,498 @@ nx-survey kbd {
   }
 }
 
+/* ---------------------------------------------------------------- común a las disposiciones */
+
+.nx-survey__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.nx-survey__echo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  color: var(--nx-primary-ink);
+  font-size: 12.5px;
+  font-weight: 550;
+  animation: nx-survey-up 0.4s var(--nx-ease-out) both;
+  & .nx-glyph {
+    inline-size: 13px;
+    block-size: 13px;
+  }
+}
+nx-survey:not([data-layout="focus"]) .nx-survey__title {
+  font-size: 17px;
+}
+nx-survey:not([data-layout="focus"]) .nx-survey__stage {
+  padding: 20px clamp(14px, 4vw, 28px);
+}
+nx-survey:not([data-layout="focus"]) .nx-survey__screen {
+  max-inline-size: var(--nx-survey-width, 720px);
+}
+nx-survey:not([data-layout="focus"]) .nx-survey__ok {
+  margin-block-start: 16px;
+}
+nx-survey:not([data-layout="focus"]) .nx-survey__btn {
+  block-size: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------------- la ficha (sheet) */
+
+nx-survey[data-layout="sheet"] {
+  min-block-size: 0;
+}
+.nx-survey__sheet {
+  align-self: start;
+  animation: none;
+}
+.nx-survey__sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block-end: 14px;
+  & > div {
+    flex: 1;
+    min-inline-size: 0;
+  }
+  & .nx-survey__title {
+    margin: 0;
+  }
+  & .nx-survey__check {
+    inline-size: 36px;
+    block-size: 36px;
+    margin: 0;
+    font-size: 18px;
+  }
+}
+.nx-survey__meter {
+  flex: none;
+  inline-size: 96px;
+  block-size: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--nx-primary-soft);
+  &::before {
+    content: "";
+    display: block;
+    inline-size: calc(var(--p) * 100%);
+    block-size: 100%;
+    border-radius: inherit;
+    background: var(--nx-primary);
+    transition: inline-size 0.5s var(--nx-ease-out);
+  }
+}
+.nx-survey__rows {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* El riel que une los pasos. */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 14px auto 14px 13px;
+    inline-size: 2px;
+    border-radius: 2px;
+    background: var(--nx-border-subtle);
+  }
+}
+.nx-survey__row {
+  position: relative;
+  &[data-new] {
+    animation: nx-survey-row-in 0.5s var(--nx-ease-out) both;
+  }
+}
+.nx-survey__row-n {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 2px solid var(--nx-border);
+  border-radius: 50%;
+  background: var(--nx-card);
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.nx-survey__row[data-state="next"] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  color: var(--nx-text-tertiary);
+  font-size: 13.5px;
+}
+.nx-survey__row-btn {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.15fr) auto;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  padding: 6px 8px 6px 0;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--nx-hover);
+    & .nx-survey__row-edit {
+      opacity: 1;
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+    & .nx-survey__row-edit {
+      opacity: 1;
+    }
+  }
+  &:disabled {
+    cursor: default;
+  }
+  & .nx-survey__row-n {
+    border-color: var(--nx-success);
+    background: var(--nx-success);
+    color: light-dark(white, oklch(0.18 0 0));
+    & .nx-glyph {
+      inline-size: 14px;
+      block-size: 14px;
+    }
+  }
+}
+.nx-survey__row-title {
+  overflow: hidden;
+  color: var(--nx-text-tertiary);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-survey__row-answer {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  &[data-empty] {
+    color: var(--nx-text-tertiary);
+    font-weight: 500;
+  }
+}
+.nx-survey__row-edit {
+  color: var(--nx-primary-ink);
+  font-size: 12.5px;
+  font-weight: 550;
+  opacity: 0;
+  transition: opacity var(--nx-motion-fast);
+}
+.nx-survey__row[data-state="done"] > .nx-survey__echo,
+.nx-survey__row[data-state="done"] > .nx-survey__result {
+  margin-inline-start: 40px;
+}
+.nx-survey__row[data-state="done"] > .nx-survey__result {
+  padding: 8px 0 12px;
+  border: 0;
+}
+.nx-survey__row[data-state="current"] {
+  margin-block: 6px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  box-shadow:
+    0 0 0 4px var(--nx-primary-soft),
+    var(--nx-shadow-popover);
+  & .nx-survey__screen {
+    animation: nx-survey-up 0.35s var(--nx-ease-out) both;
+  }
+  & .nx-survey__num {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 26px;
+    block-size: 26px;
+    border-radius: 50%;
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+    font-size: 12px;
+    & .nx-glyph {
+      display: none;
+    }
+  }
+}
+.nx-survey__sheet[data-done] .nx-survey__rows::before {
+  background: color-mix(in oklch, var(--nx-success) 40%, transparent);
+}
+
+/* ---------------------------------------------------------------- el mazo (cards) */
+
+.nx-survey__deck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: none;
+}
+.nx-survey__dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  & li {
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 999px;
+    background: var(--nx-border);
+    transition:
+      inline-size 0.3s var(--nx-ease-out),
+      background-color 0.3s;
+    &[data-state="done"] {
+      background: var(--nx-primary);
+    }
+    &[data-state="current"] {
+      inline-size: 24px;
+      background: var(--nx-primary);
+    }
+  }
+}
+.nx-survey__stack {
+  position: relative;
+  display: grid;
+  inline-size: 100%;
+  max-inline-size: 600px;
+  padding-block-end: 22px;
+}
+.nx-survey__card {
+  grid-area: 1 / 1;
+  padding: 22px 24px 20px;
+  border: 1px solid var(--nx-border);
+  border-radius: calc(var(--nx-radius-lg) + 4px);
+  background: var(--nx-card);
+  box-shadow: var(--nx-shadow-popover);
+  &.is-top {
+    position: relative;
+    z-index: 3;
+    animation: nx-survey-card-in 0.45s var(--nx-ease-out) both;
+  }
+  & .nx-survey__screen {
+    animation: none;
+  }
+}
+.nx-survey__stack[data-dir="back"] .nx-survey__card.is-top {
+  animation-name: nx-survey-card-back;
+}
+/* Las que siguen, asomándose detrás. */
+.nx-survey__card--ghost {
+  align-self: end;
+  z-index: calc(3 - var(--k));
+  block-size: 60px;
+  overflow: hidden;
+  translate: 0 calc(var(--k) * 11px);
+  scale: calc(1 - var(--k) * 0.045);
+  background: color-mix(in oklch, var(--nx-card) 92%, var(--nx-canvas));
+  box-shadow: none;
+  opacity: calc(1 - var(--k) * 0.25);
+  transition:
+    translate 0.4s var(--nx-ease-out),
+    scale 0.4s var(--nx-ease-out);
+  & p {
+    margin: 0;
+    color: transparent;
+  }
+}
+.nx-survey__card.is-leaving {
+  z-index: 4;
+  pointer-events: none;
+  animation: nx-survey-fly-left 0.42s cubic-bezier(0.4, 0, 0.8, 0.4) both;
+  &[data-dir="back"] {
+    z-index: 2;
+    animation-name: nx-survey-fly-down;
+  }
+}
+.nx-survey__echo--float {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--nx-primary-soft);
+  animation: nx-survey-echo 3.2s var(--nx-ease-out) both;
+}
+
+/* ---------------------------------------------------------------- la conversación (chat) */
+
+nx-survey[data-layout="chat"] .nx-survey__stage {
+  padding: 0;
+}
+.nx-survey__chat {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  max-inline-size: none !important;
+  animation: none;
+}
+.nx-survey__log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  max-block-size: var(--nx-survey-log-height, 440px);
+  padding: 20px clamp(14px, 4vw, 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.nx-survey__say {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-inline-size: min(560px, 88%);
+  animation: nx-survey-up 0.3s var(--nx-ease-out) both;
+  & > .nx-survey__bubble {
+    position: relative;
+    padding: 9px 13px;
+    border-radius: 16px 16px 16px 4px;
+    background: var(--nx-hover);
+    font-size: 14px;
+    & p,
+    & small {
+      display: block;
+      margin: 3px 0 0;
+      color: var(--nx-muted-foreground);
+      font-size: 13px;
+    }
+  }
+}
+.nx-survey__avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  & .nx-glyph {
+    inline-size: 15px;
+    block-size: 15px;
+  }
+}
+/* «Escribiendo…»: tres puntos y luego el texto. */
+.nx-survey__say.is-new > .nx-survey__bubble {
+  & > * {
+    animation: nx-survey-reveal 0.01s 0.55s both;
+  }
+  &::after {
+    content: "• • •";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--nx-text-tertiary);
+    letter-spacing: 2px;
+    animation: nx-survey-typing 0.55s both;
+  }
+}
+.nx-survey__say--echo > .nx-survey__bubble {
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  font-size: 13px;
+  font-weight: 550;
+}
+.nx-survey__say--results {
+  max-inline-size: 100%;
+  & > .nx-survey__bubble {
+    flex: 1;
+    background: var(--nx-card);
+    box-shadow: inset 0 0 0 1px var(--nx-border-subtle);
+  }
+  & .nx-survey__result:first-of-type {
+    border: 0;
+  }
+}
+.nx-survey__me {
+  display: flex;
+  justify-content: flex-end;
+  animation: nx-survey-up 0.3s var(--nx-ease-out) both;
+  & > .nx-survey__bubble {
+    max-inline-size: min(460px, 80%);
+    padding: 9px 13px;
+    border: 0;
+    border-radius: 16px 16px 4px 16px;
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+    font: inherit;
+    font-size: 14px;
+    text-align: start;
+    cursor: pointer;
+    &:hover:not(:disabled) {
+      background: color-mix(in oklch, var(--nx-primary) 88%, black);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--nx-ring);
+      outline-offset: 2px;
+    }
+    &:disabled {
+      cursor: default;
+    }
+  }
+}
+.nx-survey__composer {
+  margin: 0;
+  padding: 12px clamp(14px, 4vw, 24px) 14px;
+  border: 0;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  background: color-mix(in oklch, var(--nx-card) 90%, var(--nx-canvas));
+  &.is-new {
+    animation: nx-survey-up 0.35s 0.5s var(--nx-ease-out) both;
+  }
+  & .nx-survey__ok {
+    justify-content: flex-end;
+    margin-block-start: 10px;
+  }
+  & .nx-survey__enter {
+    display: none;
+  }
+  /* Respuestas rápidas: las opciones como chips. */
+  & .nx-survey__opts {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-inline-size: none;
+  }
+  & .nx-survey__opt {
+    min-block-size: 38px;
+    padding: 4px 12px 4px 6px;
+    border-radius: 999px;
+    & .nx-survey__opt-text small {
+      display: none;
+    }
+  }
+  & .nx-survey__scale label {
+    block-size: 40px;
+  }
+  & .nx-survey__text {
+    font-size: 16px;
+  }
+  & .nx-survey__out {
+    font-size: 24px;
+  }
+}
+
 /* ---------------------------------------------------------------- movimiento */
 
 @keyframes nx-survey-up {
@@ -981,6 +1473,75 @@ nx-survey kbd {
     scale: 1 0;
   }
 }
+@keyframes nx-survey-row-in {
+  0% {
+    opacity: 0;
+    translate: -8px 0;
+    background: var(--nx-primary-soft);
+  }
+  60% {
+    opacity: 1;
+    translate: 0 0;
+    background: var(--nx-primary-soft);
+  }
+}
+@keyframes nx-survey-card-in {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+    scale: 0.96;
+  }
+}
+@keyframes nx-survey-card-back {
+  from {
+    opacity: 0;
+    translate: -40% 0;
+    rotate: -6deg;
+  }
+}
+@keyframes nx-survey-fly-left {
+  to {
+    opacity: 0;
+    translate: -115% -10px;
+    rotate: -9deg;
+  }
+}
+@keyframes nx-survey-fly-down {
+  to {
+    opacity: 0;
+    translate: 0 30px;
+    scale: 0.94;
+  }
+}
+@keyframes nx-survey-echo {
+  0% {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  10%,
+  80% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes nx-survey-reveal {
+  from {
+    visibility: hidden;
+  }
+}
+@keyframes nx-survey-typing {
+  0%,
+  99% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
 @keyframes nx-survey-spin {
   to {
     rotate: 1turn;
@@ -997,6 +1558,22 @@ nx-survey kbd {
   }
 }
 @media (max-width: 560px) {
+  /* La ficha en móvil: el enunciado arriba y la respuesta debajo. */
+  .nx-survey__row-btn {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    row-gap: 0;
+    & .nx-survey__row-n {
+      grid-row: span 2;
+    }
+    & .nx-survey__row-answer {
+      grid-column: 2;
+    }
+    & .nx-survey__row-edit {
+      grid-row: 1;
+      grid-column: 3;
+    }
+  }
   .nx-survey__scale[data-nps] {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
