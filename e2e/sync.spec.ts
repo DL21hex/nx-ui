@@ -90,8 +90,13 @@ test("lo pendiente sobrevive a recargar la página (IndexedDB)", async ({ page }
   await take(page);
   await expect(pill(page)).toHaveText("Sin conexión · 1 pendiente");
   await page.reload();
+  // La demo vuelve con «Red inestable» encendida: se apaga ya. Si el primer envío alcanzó a salir
+  // con un 503, su Retry-After (hasta 4 s) no cabe en los 5 s por defecto.
+  const flaky = page.getByRole("switch", { name: /Red inestable/ });
+  await flaky.click();
+  await expect(flaky).toHaveAttribute("aria-checked", "false");
   // Con la señal de vuelta (la simulación empieza apagada), el pedido guardado sale solo.
-  await expect(confirmed(page)).toHaveCount(1);
+  await expect(confirmed(page)).toHaveCount(1, { timeout: 15_000 });
   await expect(confirmed(page).first()).toContainText("Tienda La Esquina de Rosa");
   await expect(pill(page)).toHaveText("En línea");
 });

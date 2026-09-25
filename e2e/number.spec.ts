@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { open } from "./helpers";
+import { open, paste } from "./helpers";
 
 test("entiende cuentas, relativas y flechas; el total va en vivo y en letras", async ({ page }) => {
   await open(page, "#/number");
@@ -80,14 +80,12 @@ test("un error se dice y no deja enviar; required, reset y FormData", async ({ p
   await expect(field).toHaveValue("");
 });
 
-test("pegar desde Excel queda limpio; en inglés «2.5k»", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+test("pegar desde Excel queda limpio; en inglés «2.5k»", async ({ page }) => {
   await open(page, "#/number");
   const field = page.locator("#num-try input");
   await field.click();
   await field.press("ControlOrMeta+a");
-  await page.evaluate(() => navigator.clipboard.writeText("$ (1.450.000,00)\t"));
-  await field.press("ControlOrMeta+v");
+  await paste(field, "$ (1.450.000,00)\t");
   await expect(field).toHaveValue("-1.450.000");
   await field.press("Tab");
   await expect(page.locator("#num-try .nx-number__words")).toHaveText("Menos un millón cuatrocientos cincuenta mil pesos m/cte");

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mod, open } from "./helpers";
+import { mod, open, paste } from "./helpers";
 
 const field = (page: Page, name: string) => page.locator(`#pf-demo [name="${name}"]`);
 
@@ -37,15 +37,9 @@ test("un ejemplo llena el formulario: valores, confianza, evidencia y deshacer",
 test("pegar sobre el formulario llena; pegar en un campo, no", async ({ page, browserName }) => {
   await open(page, "#/paste-fill");
   const text = "Empaques Andinos SAS · NIT 901458223-0 · cel 3007894512";
-  const paste = (selector: string) =>
-    page.locator(selector).evaluate((el, t) => {
-      const dt = new DataTransfer();
-      dt.setData("text/plain", t);
-      el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
-    }, text);
-  await paste("#pf-demo [name=contacto]");
+  await paste(page.locator("#pf-demo [name=contacto]"), text);
   await expect(field(page, "nit")).toHaveValue("");
-  await paste("#pf-demo .pf-form");
+  await paste(page.locator("#pf-demo .pf-form"), text);
   await expect(field(page, "nit")).toHaveValue("901.458.223-0");
   await expect(field(page, "celular")).toHaveValue("300 789 4512");
   await expect(field(page, "razon_social")).toHaveValue("Empaques Andinos S.A.S.");
