@@ -1,0 +1,128 @@
+    <template id="page-paste-fill">
+      <p class="eyebrow">Componentes</p>
+      <h1>Pegar y llenar <code class="tag">&lt;nx-paste-fill&gt;</code></h1>
+      <p class="lead">
+        Pegas un correo de un proveedor, un WhatsApp o una firma, y el formulario se llena solo. Cada campo trae su
+        confianza y el tramo del texto de donde salió; lo dudoso queda para revisar, lo que ya habías escrito no se pisa y
+        todo se deshace de una vez.
+      </p>
+      <p class="sel-tip">
+        Elige un ejemplo, o copia cualquier texto y presiona <kbd>Ctrl</kbd><kbd>V</kbd> sobre el formulario (o arrástralo
+        encima). Pasa el mouse por un campo o por el texto. Escribe algo en «Correo» antes de pegar: verás la sugerencia
+        con «Usar» / «Dejar el mío». <kbd>Ctrl</kbd><kbd>Z</kbd> fuera de un campo lo deshace todo.
+      </p>
+      <div class="pf-tools">
+        <div class="pf-samples" id="pf-samples" role="group" aria-label="Textos de ejemplo"></div>
+        <fieldset class="pf-mode">
+          <legend>Lectura</legend>
+          <label><input type="radio" name="pf-mode" value="local" checked /> En el navegador</label>
+          <label><input type="radio" name="pf-mode" value="server" /> Con servidor</label>
+          <label><input type="radio" name="pf-mode" value="fail" /> Servidor que falla</label>
+        </fieldset>
+      </div>
+      <nx-paste-fill id="pf-demo" locale="es-CO">
+        <form class="pf-form" id="pf-form">
+          <h2 class="pf-form__title">Nuevo proveedor</h2>
+          <label class="pf-field pf-field--wide">Razón social <input name="razon_social" autocomplete="off" /></label>
+          <label class="pf-field">NIT <input name="nit" autocomplete="off" placeholder="900.123.456-7" /></label>
+          <label class="pf-field">Ciudad
+            <select name="ciudad">
+              <option value="">Selecciona…</option>
+              <option value="08001">Barranquilla</option>
+              <option value="11001">Bogotá D.C.</option>
+              <option value="68001">Bucaramanga</option>
+              <option value="76001">Cali</option>
+              <option value="13001">Cartagena</option>
+              <option value="05360">Itagüí</option>
+              <option value="05001">Medellín</option>
+              <option value="66001">Pereira</option>
+            </select>
+          </label>
+          <label class="pf-field">Contacto <input name="contacto" autocomplete="off" /></label>
+          <label class="pf-field">Correo <input name="correo" type="email" autocomplete="off" /></label>
+          <label class="pf-field">Celular <input name="celular" type="tel" autocomplete="off" /></label>
+          <label class="pf-field">Condiciones de pago
+            <select name="pago">
+              <option value="">Selecciona…</option>
+              <option value="contado">Contado</option>
+              <option value="c30">Crédito 30 días</option>
+              <option value="c60">Crédito 60 días</option>
+              <option value="c90">Crédito 90 días</option>
+            </select>
+          </label>
+          <label class="pf-field">Monto del primer pedido <input name="monto" inputmode="numeric" autocomplete="off" /></label>
+          <label class="pf-field">Fecha de entrega <input name="entrega" type="date" /></label>
+          <div class="pf-form__foot"><button type="submit" class="pf-save">Guardar proveedor</button></div>
+        </form>
+      </nx-paste-fill>
+      <ol class="stage__log btn-events" id="paste-fill-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td>Campos</td><td>Lee los del formulario: <code>name</code>, su <code>&lt;label&gt;</code> (o <code>aria-label</code>, <code>placeholder</code>), <code>type</code> y las opciones de un <code>&lt;select&gt;</code>. <code>fields</code> los enriquece por <code>name</code>, p. ej. <code>{"name":"monto","kind":"money"}</code>.</td></tr>
+            <tr><td>Extractor local</td><td>Sin servidor: correo, celular y fijo (<code>+57</code>, <code>60X</code>, los de 7 cifras de antes), NIT con su dígito de verificación, cédula, montos (<code>$ 1.450.000</code>, <code>1,45 millones</code>, <code>USD 300</code>), fechas (<code>15/03/2026</code>, <code>15 de marzo</code>, <code>el próximo viernes</code>), direcciones, ciudades, razón social (S.A.S., Ltda.), el nombre tras «Atentamente,» y su cargo.</td></tr>
+            <tr><td>Reparto</td><td>Cada campo recibe lo más probable según su <code>kind</code> (o su <code>type</code>, <code>name</code> y etiqueta, sin tildes) y lo que dice el texto justo antes («con entrega el…» → «Fecha de entrega»). Si hay dos candidatos casi empatados, baja la confianza y lo dice.</td></tr>
+            <tr><td>Revisar</td><td>Bajo <code>review-below</code> (0,8) el campo queda marcado hasta que la persona lo corrige o lo confirma. Un NIT cuyo dígito no cuadra queda en 40 %.</td></tr>
+            <tr><td>Lo tuyo</td><td>Un campo que la persona ya había llenado no se pisa: queda la sugerencia con «Usar» / «Dejar el mío».</td></tr>
+            <tr><td>Deshacer</td><td>El botón o <kbd>Ctrl</kbd><kbd>Z</kbd> fuera de un campo devuelven los valores de antes (lo que la persona cambió después se respeta).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Protocolo</h2>
+      <p>
+        Con <code>endpoint</code>, primero se llena con lo local y a la vez se hace <code>POST {text, fields}</code>. La
+        respuesta es NDJSON o <code>data:</code> de SSE; lo que manda el servidor gana. Si falla, queda lo local y se avisa.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Evento</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td><code>field</code></td><td><code>{"type":"field","name":"nit","value":"900.359.742-3","confidence":0.98,"source":{"start":312,"end":325}}</code>. Opcional: <code>hint</code>. <code>source</code> es el tramo del texto (<code>text.slice(start, end)</code>).</td></tr>
+            <tr><td><code>note</code></td><td><code>{"type":"note","message":"El proveedor no existe todavía en el maestro de terceros."}</code>: se muestra sobre la evidencia.</td></tr>
+            <tr><td><code>error</code>, <code>done</code></td><td>Como en la IA. Cerrar el stream también termina.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-paste-fill endpoint="/proveedores/leer" fields='[{"name":"monto","kind":"money"}]'&gt;
+  &lt;form&gt;
+    &lt;label&gt;Razón social &lt;input name="razon_social"&gt;&lt;/label&gt;
+    &lt;label&gt;NIT &lt;input name="nit"&gt;&lt;/label&gt;
+    &lt;label&gt;Correo &lt;input name="correo" type="email"&gt;&lt;/label&gt;
+    &lt;label&gt;Fecha de entrega &lt;input name="entrega" type="date"&gt;&lt;/label&gt;
+  &lt;/form&gt;
+&lt;/nx-paste-fill&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import { PasteFill } from "nx-ui/solid";
+
+&lt;PasteFill fields={[{ name: "monto", kind: "money" }]} onDone={(e) =&gt; console.log(e.detail.values)}&gt;
+  &lt;form&gt;
+    &lt;label&gt;Razón social &lt;input name="razon_social" /&gt;&lt;/label&gt;
+    &lt;label&gt;NIT &lt;input name="nit" /&gt;&lt;/label&gt;
+  &lt;/form&gt;
+&lt;/PasteFill&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>fields</code></td><td>Los campos leídos del formulario (lectura), enriquecidos con los que se asignan (<code>{name, label?, type?, kind?, options?}</code>).</td></tr>
+            <tr><td><code>endpoint</code>, <code>review-below</code>, <code>for</code>, <code>locale</code>, <code>labels</code></td><td>Servidor opcional, umbral de «Revisar», el <code>id</code> de un formulario que está en otra parte, formato de montos y fechas, textos.</td></tr>
+            <tr><td><code>fill(text)</code>, <code>undo()</code>, <code>clear()</code></td><td>Llenar desde código, deshacer el último llenado, quitar las marcas. <code>state</code>, <code>text</code> y <code>pending</code> dicen cómo va.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-paste-fill-start</code> <code>{text}</code> (cancelable), <code>nx-paste-fill-done</code> <code>{values, fields}</code>, <code>nx-paste-fill-undo</code> <code>{values}</code>. Cada campo que cambia recibe <code>input</code> y <code>change</code>.</td></tr>
+            <tr><td>Funciones</td><td><code>extractPasteData(text)</code> y <code>matchPasteFields(fields, text)</code>: el mismo extractor, para un backend en JavaScript o para probarlo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
