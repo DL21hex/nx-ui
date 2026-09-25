@@ -1,0 +1,94 @@
+        <template id="page-trend">
+          <p class="eyebrow">Componentes</p>
+          <h1>Tendencias <code class="tag">&lt;nx-trend&gt;</code></h1>
+          <p class="lead">
+            Un gráfico que se explica. Las series de tiempo del ERP (ventas, costos, inventario) con ejes que se leen, una
+            línea que sigue al puntero con todas las series en ese mes, y las anomalías marcadas. Y la pregunta que importa:
+            haz clic en un punto (o <kbd>Enter</kbd>) y la IA contesta «¿por qué?» ahí mismo, con sus pasos y sus fuentes.
+          </p>
+
+          <section class="trend-card" lang="es-CO">
+            <nx-trend
+              id="trend-cost"
+              heading="Costo de producción 2026"
+              format="money"
+              currency="COP"
+              height="300"
+              explain-endpoint="/demo/trend/why"
+            ></nx-trend>
+            <label class="trend-check"><input type="checkbox" id="trend-detect" /> Detección automática de anomalías (media móvil)</label>
+          </section>
+          <p class="sel-tip">
+            Haz clic en <strong>agosto</strong> de «Materia prima». Con el teclado: <kbd>Tab</kbd> hasta el gráfico, <kbd>←</kbd><kbd>→</kbd>
+            recorren los meses, <kbd>↑</kbd><kbd>↓</kbd> cambian de serie, <kbd>Enter</kbd> pregunta y <kbd>Esc</kbd> cierra. La leyenda
+            muestra y oculta series; «Ver como tabla» da los mismos datos en una tabla.
+          </p>
+
+          <section class="trend-card" lang="es-CO">
+            <nx-trend id="trend-sales" heading="Ventas por mes · 2026 vs. 2025" kind="bar" format="money" currency="COP" explain-endpoint="/demo/trend/why"></nx-trend>
+          </section>
+          <ol class="stage__log btn-events" id="trend-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Paso</th><th>Qué pasa</th></tr></thead>
+              <tbody>
+                <tr><td>Leer</td><td>Ejes con ticks redondos («400 M») y meses cortos con <code>Intl</code>, cuadrícula de una línea, leyenda que muestra y oculta, y el último valor al final de cada línea. Cada serie tiene su color (en orden, validado para daltonismo) y su forma de marcador.</td></tr>
+                <tr><td>Recorrer</td><td>La línea vertical sigue al puntero, o a <kbd>←</kbd><kbd>→</kbd> con el foco en el gráfico, con un tooltip de todas las series en ese mes.</td></tr>
+                <tr><td>Anomalías</td><td>Las de <code>anomalies</code> y, con <code>detect</code>, las que se apartan de la media móvil: un anillo que late y una etiqueta corta.</td></tr>
+                <tr><td><code>nx-trend-why</code></td><td>Clic o <kbd>Enter</kbd> en un punto: <code>{question, series, point, previous, window, anomaly?}</code>, cancelable. Si nadie lo cancela, se abre el popover.</td></tr>
+                <tr><td>«¿Por qué?»</td><td>Un <code>&lt;nx-ai-answer&gt;</code> (se carga con <code>import()</code> la primera vez) hace <code>POST</code> a <code>explain-endpoint</code> y la respuesta llega en streaming. Se puede repreguntar desde la caja.</td></tr>
+                <tr><td>Accesible</td><td>El SVG es una imagen con un resumen generado; cada punto es un botón (un solo <kbd>Tab</kbd>) y la tabla equivalente está siempre para el lector de pantalla.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+              <tbody>
+                <tr><td><code>series</code></td><td><code>{id, label, points: {x, y}[], format?, currency?, kind?, muted?, hidden?}</code>. <code>x</code>: <code>"2026-08"</code> o <code>"2026-08-15"</code>; <code>y</code>: número o <code>null</code> (sin dato: la línea se corta).</td></tr>
+                <tr><td><code>anomalies</code></td><td><code>{series, x, label?}</code>. Sin etiqueta, se muestra cuánto se aparta de la media móvil («+19 %»).</td></tr>
+                <tr><td><code>explain-endpoint</code></td><td>Recibe <code>POST {question, context}</code> con <code>context = {series: {id, label, format, currency}, point: {x, y, label}, previous: {x, y}, window: [{x, y}…], anomaly?: {label, delta}}</code> y responde con el protocolo de IA: <code>{"type":"step",…}</code>, <code>{"type":"text","delta":"…"}</code>, <code>{"type":"source",…}</code>, <code>{"type":"action",…}</code>, <code>{"type":"done"}</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-trend id="costos" heading="Costo de producción 2026" format="money" currency="COP"
+  explain-endpoint="/ia/por-que" detect&gt;&lt;/nx-trend&gt;
+
+costos.series = await (await fetch("/costos/produccion?anio=2026")).json();
+// [{ id: "mp", label: "Materia prima", points: [{ x: "2026-01", y: 388400000 }, …] }, …]
+costos.anomalies = [{ series: "mp", x: "2026-08", label: "Acero +18 %" }];
+costos.addEventListener("nx-trend-why", (e) =&gt; analitica.track("por-que", e.detail.point));</code></pre>
+            <pre role="tabpanel" hidden><code>import { Trend } from "nx-ui/solid";
+
+&lt;Trend heading="Ventas por mes" kind="bar" format="money" currency="COP"
+  series={ventas()} explainEndpoint="/ia/por-que"
+  onWhy={(e) =&gt; console.log(e.detail.question)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>series</code>, <code>anomalies</code></td><td>Los datos (JSON).</td></tr>
+                <tr><td><code>kind</code>, <code>format</code>, <code>currency</code></td><td>Por defecto de las series: <code>line</code> o <code>bar</code>; <code>number</code>, <code>money</code> o <code>percent</code>; y la moneda.</td></tr>
+                <tr><td><code>detect</code></td><td>Detección automática: el atributo solo (3 desviaciones robustas) o un número.</td></tr>
+                <tr><td><code>explain-endpoint</code></td><td>URL del protocolo de IA que contesta «¿por qué?».</td></tr>
+                <tr><td><code>heading</code>, <code>height</code>, <code>busy</code>, <code>locale</code>, <code>labels</code></td><td>Título (y nombre accesible), alto en px (260), cargando, formato de números y fechas, y textos.</td></tr>
+                <tr><td><code>explain(id, x, pregunta?)</code>, <code>close()</code></td><td>Preguntar por un punto desde código, y cerrar el popover. <code>summary</code> y <code>flags</code> devuelven el resumen y las anomalías que se ven.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-trend-why</code> (cancelable) y <code>nx-trend-toggle</code> <code>{id, visible}</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
