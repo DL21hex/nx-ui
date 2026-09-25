@@ -45,6 +45,7 @@ export default defineConfig(({ command, mode }) => {
           inbox: "src/components/inbox/index.ts",
           survey: "src/components/survey/index.ts",
           tour: "src/components/tour/index.ts",
+          "presence": "src/components/presence/index.ts",
           "paste-fill": "src/components/paste-fill/index.ts",
           "date-range": "src/components/date-range/index.ts",
           history: "src/components/history/index.ts",

@@ -21,6 +21,7 @@ const entries = {
   inbox: "src/components/inbox/inbox.css",
   survey: "src/components/survey/survey.css",
   tour: "src/components/tour/tour.css",
+  "presence": "src/components/presence/presence.css",
   "paste-fill": "src/components/paste-fill/paste-fill.css",
   "date-range": "src/components/date-range/date-range.css",
   "history": "src/components/history/history.css",

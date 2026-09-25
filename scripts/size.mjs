@@ -39,6 +39,7 @@ const BUDGET = [
   ["dist/history.js", 10.5 * 1024, "history + toast + núcleo (ESM)"],
   ["dist/date-range.js", 11 * 1024, "date-range + núcleo (ESM)"],
   ["dist/paste-fill.js", 17.5 * 1024, "paste-fill + extractor + núcleo (ESM)"],
+  ["dist/presence.js", 7.5 * 1024, "presence + núcleo (ESM)"],
   ["dist/bdui.js", 1.25 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -62,6 +63,7 @@ const BUDGET = [
   ["dist/history.css", 3.25 * 1024, "history (CSS)"],
   ["dist/date-range.css", 2.5 * 1024, "date-range (CSS)"],
   ["dist/paste-fill.css", 3 * 1024, "paste-fill (CSS)"],
+  ["dist/presence.css", 2.25 * 1024, "presence (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

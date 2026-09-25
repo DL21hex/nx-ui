@@ -1375,6 +1375,138 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Presencia -->
+        <template id="page-presence">
+          <p class="eyebrow">Componentes</p>
+          <h1>Presencia <code class="tag">&lt;nx-presence&gt;</code></h1>
+          <p class="lead">
+            Quién más está aquí, en vivo. Los avatares de quienes tienen abierto el mismo registro, en qué campo está cada
+            quien y quién está escribiendo, con un aviso que no bloquea si vas a editar lo que otra persona está editando.
+            Sin backend: entre pestañas usa <code>BroadcastChannel</code>; con un servidor, SSE o el transporte que ya tengas.
+          </p>
+
+          <section class="prs" aria-labelledby="prs-title">
+            <header class="prs__head">
+              <div>
+                <p class="prs__kicker">Pedido de compra · Por aprobar</p>
+                <h2 class="prs__id" id="prs-title">OC-2291</h2>
+                <p class="prs__sub">Producción · Planta Malambo</p>
+              </div>
+              <nx-presence id="presence-demo" channel="oc-2291" for="presence-form" locale="es-CO"></nx-presence>
+            </header>
+            <form id="presence-form" class="prs__form" autocomplete="off">
+              <label class="prs__field">
+                <span>Proveedor</span>
+                <input name="proveedor" type="text">
+              </label>
+              <label class="prs__field">
+                <span>Monto (COP)</span>
+                <input name="monto" type="text" inputmode="decimal">
+              </label>
+              <label class="prs__field">
+                <span>Fecha de entrega</span>
+                <input name="entrega" type="date">
+              </label>
+              <label class="prs__field prs__field--wide">
+                <span>Notas</span>
+                <textarea name="notas" rows="3"></textarea>
+              </label>
+            </form>
+            <footer class="prs__foot">
+              <p class="prs__me">
+                <span class="prs__face" id="presence-me-face" aria-hidden="true"></span>
+                <span>Esta pestaña es <strong id="presence-me"></strong></span>
+              </p>
+              <div class="prs__acts">
+                <button type="button" class="prs__btn prs__btn--primary" id="presence-open">Abrir otra pestaña</button>
+                <button type="button" class="prs__btn" id="presence-sim" aria-pressed="false"><span>Simular compañeros</span></button>
+              </div>
+            </footer>
+          </section>
+
+          <ol class="prs__steps">
+            <li><strong>Abre otra pestaña</strong> con el botón (mejor aún: arrástrala a otra ventana, lado a lado). Es otra persona del equipo: cada pestaña ve a la otra entrar.</li>
+            <li><strong>Muévete entre campos</strong> en una y mira la otra: el campo se enmarca del color de esa persona, con su nombre encima.</li>
+            <li><strong>Escribe</strong>: la otra ve «está escribiendo…» (y el valor, que la demo también comparte). Si enfocas ese mismo campo en la otra pestaña, aparece el aviso de bloqueo suave.</li>
+            <li>Cierra una pestaña: la otra la ve salir al instante. Deja una oculta dos minutos y queda <em>inactiva</em>.</li>
+          </ol>
+          <p class="sel-tip">
+            ¿Sin otra pestaña a mano? «Simular compañeros» hace entrar a dos personas de mentira que recorren el formulario.
+            La pila y el botón <kbd>+N</kbd> abren la lista completa; <kbd>Esc</kbd> quita el aviso de bloqueo.
+          </p>
+          <ol class="stage__log btn-events" id="presence-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Pila de avatares</td><td>Quienes ven el mismo registro, sin la persona actual (<code>me</code>). Color estable por persona (sale de su <code>id</code>, igual en todas las pestañas), foto o iniciales, punto verde si está activa y gris si no. Los que no caben van en «+N»; la lista completa dice qué hace cada quien: «viendo», «editando Monto», «inactivo hace 4 min».</td></tr>
+                <tr><td>Campos compartidos</td><td>Con <code>for</code>, los campos con <code>data-presence</code> (o con <code>name</code>) de ese formulario muestran un contorno del color de quien los enfoca y su nombre encima, en una capa aparte que no mueve nada. El contorno se desliza al campo siguiente. «Ana está escribiendo…» mientras escribe.</td></tr>
+                <tr><td>Bloqueo suave</td><td>Si alguien está editando un campo y lo enfocas, un aviso que no bloquea: «tus cambios podrían pisar los suyos». «Seguir de todas formas» (o <kbd>Esc</kbd>) lo quita, y no vuelve por esa persona hasta que suelte el campo.</td></tr>
+                <tr><td>Latidos</td><td>Cada 15 s. Quien no da señales en 45 s se va solo; quien cierra la pestaña se despide al instante. Pestaña oculta o 2 min sin actividad (<code>idle</code>): inactivo.</td></tr>
+                <tr><td>Accesible</td><td>La pila es una lista con nombres y actividad. Las entradas, salidas y ediciones se anuncian en una región <code>aria-live</code>, agrupadas («Ana y Héctor entraron») y como mucho una frase cada 3 s.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+              <tbody>
+                <tr><td>Evento</td><td><code>{type, user: {id, name, avatar?}, field?}</code>. <code>type</code>: <code>join</code>, <code>leave</code>, <code>focus</code>, <code>blur</code>, <code>typing</code>, <code>lock</code>, <code>unlock</code>, <code>heartbeat</code>. El latido (y <code>join</code>) lleva además el estado completo: <code>field</code>, <code>editing</code>, <code>idle</code>.</td></tr>
+                <tr><td><code>channel="oc-2291"</code></td><td><code>BroadcastChannel</code> entre pestañas del mismo navegador. Nada más que configurar.</td></tr>
+                <tr><td><code>source="/url"</code></td><td>Un <code>EventSource</code>: cada <code>data:</code> es un evento en JSON. Los propios que devuelva el servidor se ignoran.</td></tr>
+                <tr><td><code>push(evento)</code></td><td>Un transporte propio (WebSocket, Supabase, Ably…): lo que llegue, se empuja.</td></tr>
+                <tr><td><code>nx-presence-local</code></td><td>Lo que hace la persona actual, con la misma forma: la app lo manda a su servidor.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-presence id="aqui" channel="oc-2291" for="orden"&gt;&lt;/nx-presence&gt;
+    &lt;form id="orden"&gt;
+      &lt;label&gt;Monto &lt;input name="monto"&gt;&lt;/label&gt;
+      &lt;div data-presence="notas" data-presence-label="Notas"&gt;…&lt;/div&gt;
+    &lt;/form&gt;
+
+    aqui.me = { id: "u-812", name: "Sofía Herrera", avatar: "/fotos/812.jpg" };
+
+    // Con un servidor: SSE para recibir, y lo propio de vuelta.
+    aqui.source = "/compras/oc-2291/presencia";
+    aqui.addEventListener("nx-presence-local", (e) =&gt;
+      fetch("/compras/oc-2291/presencia", { method: "POST", keepalive: true,
+        body: JSON.stringify(e.detail) }));</code></pre>
+            <pre role="tabpanel" hidden><code>import { Presence } from "nx-ui/solid";
+
+    &lt;Presence channel="oc-2291" for="orden" me={yo()}
+      onLocal={(e) =&gt; socket.send(JSON.stringify(e.detail))}
+      onChange={(e) =&gt; setQuienes(e.detail.users)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>me</code></td><td>La persona actual <code>{id, name, avatar?}</code>. Sin ella, el componente solo escucha.</td></tr>
+                <tr><td><code>channel</code>, <code>source</code>, <code>push(evento)</code></td><td>Los transportes: entre pestañas, SSE o uno propio. Se pueden combinar.</td></tr>
+                <tr><td><code>for</code></td><td><code>id</code> del formulario o contenedor cuyos campos se comparten (<code>data-presence="clave"</code>, o <code>name</code>; <code>data-presence-label</code> les da nombre).</td></tr>
+                <tr><td><code>users</code></td><td>Solo lectura: <code>{id, name, avatar?, field, editing, typing, idle, idleSince, joinedAt, seenAt}[]</code>.</td></tr>
+                <tr><td><code>idle</code>, <code>max</code>, <code>locale</code>, <code>labels</code></td><td>Milisegundos sin actividad para «inactivo» (120000), círculos en la pila contando «+N» (4), formato y textos.</td></tr>
+                <tr><td>Teclado</td><td>El botón «+N» (o <kbd>⌄</kbd>) abre la lista; <kbd>Esc</kbd> la cierra. <kbd>Esc</kbd> en un campo con aviso lo quita.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-presence-change</code> <code>{users}</code>, <code>nx-presence-local</code> (un evento del protocolo).</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

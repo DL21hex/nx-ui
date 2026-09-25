@@ -29,6 +29,7 @@ const registry = new Map<string, Entry>([
   ["History", { tag: "nx-history", props: ["record", "fields", "events", "source", "user", "undo", "heading", "labels"] }],
   ["DateRange", { tag: "nx-date-range", props: ["value", "start", "end", "phrase", "presets", "compare", "min", "max", "today", "fiscalStart", "weekStart", "name", "required", "disabled", "label", "placeholder", "labels"] }],
   ["PasteFill", { tag: "nx-paste-fill", props: ["fields", "endpoint", "reviewBelow", "for", "labels"] }],
+  ["Presence", { tag: "nx-presence", props: ["me", "channel", "source", "for", "idle", "max", "labels"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

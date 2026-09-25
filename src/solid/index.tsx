@@ -2,7 +2,7 @@
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
- * `<PasteFill>`), y `nxToast` / `nxConfirm`.
+ * `<PasteFill>`, `<Presence>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -61,6 +61,9 @@ import type { HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, His
 import "../components/paste-fill/index";
 import type { NxPasteFill } from "../components/paste-fill/paste-fill";
 import type { PasteFieldInput, PasteFillDoneDetail, PasteFillLabels } from "../components/paste-fill/types";
+import "../components/presence/index";
+import type { NxPresence } from "../components/presence/presence";
+import type { PresenceEvent, PresenceLabels, PresenceState, PresenceUser } from "../components/presence/types";
 import "../components/date-range/index";
 import type { NxDateRange } from "../components/date-range/date-range";
 import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
@@ -83,6 +86,7 @@ export type { NxKanban, KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail
 export type { NxHistory, HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail };
 export type { NxDateRange, DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue };
 export type { NxPasteFill, PasteFieldInput, PasteFillDoneDetail, PasteFillLabels };
+export type { NxPresence, PresenceEvent, PresenceLabels, PresenceState, PresenceUser };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -90,8 +94,9 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -117,6 +122,8 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      idle: string | undefined;
+      channel: string | undefined;
       active: string | undefined;
       label: string | undefined;
       icon: string | undefined;
@@ -187,6 +194,8 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-presence-local": CustomEvent<PresenceEvent>;
+      "nx-presence-change": CustomEvent<{ users: PresenceState[] }>;
       "nx-select": CustomEvent<SelectDetail>;
       "nx-toggle": CustomEvent<ToggleDetail>;
       "nx-open-change": CustomEvent<OpenChangeDetail>;
@@ -228,6 +237,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-presence": HTMLAttributes<NxPresence> & { channel?: string; source?: string; for?: string };
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
       "nx-button": HTMLAttributes<NxButton> & { label?: string; icon?: string; variant?: ButtonVariant };
       "nx-select": HTMLAttributes<NxSelect> & { label?: string; placeholder?: string };
@@ -1054,5 +1064,45 @@ export function PasteFill(props: PasteFillProps): JSX.Element {
     >
       {local.children}
     </nx-paste-fill>
+  );
+}
+
+export interface PresenceProps extends Omit<JSX.HTMLAttributes<NxPresence>, "onChange"> {
+  /** La persona actual `{id, name, avatar?}`. Sin ella, solo escucha. */
+  me?: PresenceUser | null;
+  /** Canal entre pestañas del mismo navegador (`BroadcastChannel`). */
+  channel?: string;
+  /** URL de un `EventSource` (SSE) con los eventos de los demás. */
+  source?: string;
+  /** `id` del formulario cuyos campos se comparten. */
+  for?: string;
+  /** Milisegundos sin actividad para «inactivo» (120000). */
+  idle?: number;
+  /** Círculos en la pila, contando «+N» (4). */
+  max?: number;
+  locale?: string;
+  labels?: Partial<PresenceLabels>;
+  /** Quiénes están, cada vez que algo cambia. */
+  onChange?: (e: CustomEvent<{ users: PresenceState[] }>) => void;
+  /** Lo que hace la persona actual: aquí se manda al servidor. */
+  onLocal?: (e: CustomEvent<PresenceEvent>) => void;
+}
+
+export function Presence(props: PresenceProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["me", "channel", "source", "for", "idle", "max", "locale", "labels", "onChange", "onLocal"]);
+  return (
+    <nx-presence
+      {...rest}
+      prop:me={local.me}
+      prop:labels={local.labels}
+      attr:channel={local.channel}
+      attr:source={local.source}
+      attr:for={local.for}
+      attr:idle={local.idle === undefined ? undefined : String(local.idle)}
+      attr:max={local.max === undefined ? undefined : String(local.max)}
+      attr:locale={local.locale}
+      on:nx-presence-change={(e) => local.onChange?.(e)}
+      on:nx-presence-local={(e) => local.onLocal?.(e)}
+    />
   );
 }

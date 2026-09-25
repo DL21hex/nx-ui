@@ -823,6 +823,58 @@ WhatsApp o una firma —con Ctrl/⌘+V sobre el formulario, en la zona «Pega aq
 | Eventos | `nx-paste-fill-start` `{text}` (cancelable), `nx-paste-fill-done` `{values, fields}`, `nx-paste-fill-undo` `{values}` |
 | Funciones | `extractPasteData(text)`, `matchPasteFields(fields, text)`, `nitCheckDigit(base)`: el mismo extractor, en el navegador o en un backend en JavaScript |
 
+## `<nx-presence>`
+
+Quién más está aquí, en vivo: los avatares de quienes tienen abierto el mismo registro, en qué
+campo está cada quien y quién escribe, sin depender de ningún backend.
+
+- **Pila de avatares** sin la persona actual (`me`): color estable por persona (sale de su `id`,
+  igual en todas las pestañas), foto (`avatar`, si pasa `safeHref()`) o iniciales, punto verde si
+  está activa y gris si no. Los que no caben van en «+N» (`max`); la lista completa dice qué hace
+  cada quien: «viendo», «editando Monto», «inactivo hace 4 min».
+- **Campos compartidos:** con `for="id-del-formulario"`, los campos con `data-presence="clave"` (o
+  con `name`) muestran un contorno del color de quien los enfoca y su nombre encima, en una capa
+  aparte que no mueve el layout; el contorno se desliza al campo siguiente. «Ana está
+  escribiendo…» mientras escribe. `data-presence-label` le da nombre a un campo (si no, su
+  `<label>`).
+- **Bloqueo suave:** si otra persona está editando un campo y la actual lo enfoca, un aviso que no
+  bloquea («Ana está editando este campo; tus cambios podrían pisar los suyos») con «Seguir de
+  todas formas» (o Esc).
+- **Latidos:** cada 15 s; quien no da señales en 45 s se va solo, quien cierra la pestaña se
+  despide al instante. Pestaña oculta o `idle` ms sin actividad (120000): inactivo.
+- **Transporte:** `channel` (`BroadcastChannel` entre pestañas), `source` (`EventSource`/SSE) o
+  `push(evento)` con el tuyo. Lo que hace la persona actual sale en `nx-presence-local`: la app lo
+  manda a su servidor.
+- **Accesible:** la pila es una lista con nombres y actividad; entradas, salidas y ediciones se
+  anuncian en una región `aria-live`, agrupadas («Ana y Héctor entraron») y como mucho una frase
+  cada 3 s.
+
+```html
+<nx-presence id="aqui" channel="oc-2291" for="orden"></nx-presence>
+<form id="orden">
+  <label>Monto <input name="monto"></label>
+  <div data-presence="notas" data-presence-label="Notas">…</div>
+</form>
+<script>
+  aqui.me = { id: "u-812", name: "Sofía Herrera", avatar: "/fotos/812.jpg" };
+  // Con un servidor: SSE para recibir, y lo propio de vuelta.
+  aqui.source = "/compras/oc-2291/presencia";
+  aqui.addEventListener("nx-presence-local", (e) =>
+    fetch("/compras/oc-2291/presencia", { method: "POST", keepalive: true, body: JSON.stringify(e.detail) }));
+</script>
+```
+
+El protocolo: `{type, user: {id, name, avatar?}, field?}`, con `type` = `join`, `leave`, `focus`,
+`blur`, `typing`, `lock`, `unlock` o `heartbeat`. El latido (y `join`) lleva además el estado
+completo (`field`, `editing`, `idle`), para que quien acaba de entrar lo vea tal cual. Los eventos
+propios que devuelva el servidor se ignoran.
+
+| | |
+|---|---|
+| Propiedades / atributos | `me` (`{id, name, avatar?}`), `channel`, `source`, `for`, `idle` (ms, 120000), `max` (4), `locale`, `labels` · `users` (solo lectura: `{id, name, avatar?, field, editing, typing, idle, idleSince, joinedAt, seenAt}[]`) |
+| Métodos | `push(evento)` → `boolean` (objeto o JSON) |
+| Eventos | `nx-presence-change` `{users}`, `nx-presence-local` (un evento del protocolo) |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos

@@ -182,3 +182,18 @@ test("pegar y llenar: en reposo, con revisar y sugerencia, y con el servidor que
   await expect(page.locator("#pf-demo .nx-pf__err")).toBeVisible({ timeout: 10_000 });
   await audit(page, ["#pf-demo"]);
 });
+
+test("presencia: la pila, los campos marcados, el aviso de bloqueo y la lista", async ({ page }) => {
+  await open(page, "#/presence");
+  const p = page.locator("#presence-demo");
+  await audit(page, ["#presence-demo", ".prs"]);
+  await page.locator("#presence-sim").click();
+  await expect(page.locator(".nx-presence__mark", { hasText: "está escribiendo…" })).toBeVisible({ timeout: 5000 });
+  await page.locator("#presence-form [name=monto]").focus();
+  await expect(page.getByRole("alert")).toContainText("está editando este campo");
+  await audit(page, ["#presence-demo", ".prs", ".nx-presence__layer"]);
+  await p.getByRole("button", { name: "Ver quién está aquí" }).click();
+  await expect(p.locator(".nx-presence__pop .nx-presence__row")).toHaveCount(3);
+  await page.waitForTimeout(250);
+  await audit(page, ["#presence-demo"]);
+});

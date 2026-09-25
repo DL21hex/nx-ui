@@ -98,6 +98,10 @@
       "types": "./dist/types/components/paste-fill/index.d.ts",
       "import": "./dist/paste-fill.js"
     },
+    "./presence": {
+      "types": "./dist/types/components/presence/index.d.ts",
+      "import": "./dist/presence.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -129,6 +133,7 @@
     "./inbox.css": "./dist/inbox.css",
     "./survey.css": "./dist/survey.css",
     "./tour.css": "./dist/tour.css",
+    "./presence.css": "./dist/presence.css",
     "./paste-fill.css": "./dist/paste-fill.css",
     "./date-range.css": "./dist/date-range.css",
     "./history.css": "./dist/history.css",
