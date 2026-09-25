@@ -197,7 +197,7 @@ export class NxExplain extends Base {
   #ensureCard(): HTMLDivElement {
     if (this.#card) return this.#card;
     // Vive en <body>: lleva el idioma de la cifra, no el de la página.
-    const card = h("div", { id: `${this.#uid}-card`, class: "nx-explain-card", popover: "auto", role: "dialog", tabindex: "-1", "aria-label": this.#labels.dialog, lang: resolveLocale(this) });
+    const card = h("div", { id: `${this.#uid}-card`, class: "nx-explain-card", popover: "auto", role: "dialog", tabindex: "-1", "aria-label": this.#labels.dialog, lang: resolveLocale(this), autofocus: true });
     this.#card = card;
     this.setAttribute("aria-controls", card.id);
     document.body.append(card);

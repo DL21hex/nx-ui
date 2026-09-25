@@ -26,6 +26,7 @@ const registry = new Map<string, Entry>([
   ["Survey", { tag: "nx-survey", props: ["questions", "answers", "results", "labels", "heading", "description", "action", "storage", "layout", "echo"] }],
   ["Number", { tag: "nx-number", props: ["value", "min", "max", "step", "format", "currency", "decimals", "words", "name", "required", "disabled", "readonly", "placeholder", "align", "label", "locale", "labels"] }],
   ["Kanban", { tag: "nx-kanban", props: ["columns", "cards", "labels", "heading", "undo", "busy"] }],
+  ["History", { tag: "nx-history", props: ["record", "fields", "events", "source", "user", "undo", "heading", "labels"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

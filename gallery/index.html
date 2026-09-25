@@ -1039,6 +1039,94 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Historial -->
+        <template id="page-history">
+          <p class="eyebrow">Componentes</p>
+          <h1>Historial <code class="tag">&lt;nx-history&gt;</code></h1>
+          <p class="lead">
+            La máquina del tiempo de un registro. Quién cambió qué y cuándo, agrupado por día, con los montos formateados y
+            las notas largas como diferencias por palabras. Mueve el deslizador y el panel muestra la orden como estaba en ese
+            momento, con lo que cambió desde entonces marcado. Un cambio que sigue vigente se revierte con un clic.
+          </p>
+          <nx-history id="history-demo" heading="OC-2291 · Aceros del Caribe" source="/demo/history/oc-2291" locale="es-CO"></nx-history>
+          <p class="sel-tip">
+            Enfoca el deslizador y usa <kbd>←</kbd> <kbd>→</kbd> para recorrer los 25 eventos (<kbd>Esc</kbd> vuelve al
+            presente), o haz clic en la hora de un evento. Filtra por persona o por campo, busca «póliza», y baja hasta el
+            final: los eventos más viejos llegan solos. Revierte el monto y deshazlo desde el aviso.
+          </p>
+          <ol class="stage__log btn-events" id="history-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Línea de tiempo</td><td>Del más nuevo al más viejo, agrupada por día («Hoy», «Ayer», «lunes 21 de septiembre»), con la hora relativa («hace 3 h») y el avatar o las iniciales de quien lo hizo. Cada cambio se lee «Estado: Por aprobar → Aprobada», con el formato de su campo (monto, fecha, estado con su tono).</td></tr>
+                <tr><td>Textos largos</td><td>Una diferencia por palabras (subsecuencia común más larga): lo quitado tachado en rojo suave, lo agregado en verde suave.</td></tr>
+                <tr><td>Viaje en el tiempo</td><td>El deslizador recorre los eventos. El registro de ese momento se reconstruye desde el de hoy, deshaciendo los cambios posteriores (<code>historyStateAt()</code>, puro). Lo que cambió desde entonces queda marcado con su valor actual; lo que tocó ese evento, resaltado.</td></tr>
+                <tr><td>Filtros</td><td>Por persona y por campo (chips con su conteo) y un buscador sin tildes ni mayúsculas, que también encuentra valores formateados («1.500»).</td></tr>
+                <tr><td>Revertir</td><td>Solo un cambio que sigue vigente. Se aplica al instante con un evento que lo cuenta, y se puede deshacer mientras corre el tiempo (<code>undo</code> ms, 7000).</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+              <tbody>
+                <tr><td><code>GET source</code></td><td><code>{events, record?, more?}</code>: los eventos más nuevos (y el registro de hoy, si no se pasó en <code>record</code>).</td></tr>
+                <tr><td><code>GET source?before=&lt;id&gt;</code></td><td>La página anterior a ese evento; se pide sola al llegar al final. Sin <code>more</code>, se sigue pidiendo hasta que llegue vacía.</td></tr>
+                <tr><td><code>nx-history-revert</code></td><td><code>{event, change}</code>, cancelable: antes de aplicar la reversión.</td></tr>
+                <tr><td><code>nx-history-commit</code></td><td><code>{event, change, revert, record}</code>: pasó el tiempo de deshacer; aquí la app guarda en el backend.</td></tr>
+                <tr><td><code>nx-history-comment</code></td><td><code>{text}</code>, cancelable: la nota aparece al instante.</td></tr>
+                <tr><td><code>nx-history-travel</code></td><td><code>{id, record}</code>: el momento que se está viendo (<code>id: null</code> es el presente).</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-history id="historia" heading="OC-2291" source="/compras/oc-2291/historial"&gt;&lt;/nx-history&gt;
+
+    historia.fields = [
+      { key: "estado", label: "Estado", type: "status",
+        options: [{ value: "aprobada", label: "Aprobada", tone: "success" }, …] },
+      { key: "monto", label: "Monto", type: "money", currency: "COP" },
+      { key: "observaciones", label: "Observaciones" },
+    ];
+    historia.user = { name: "Sofía Herrera" };
+    historia.addEventListener("nx-history-commit", (e) =&gt;
+      fetch("/compras/oc-2291", { method: "PATCH", keepalive: true,
+        body: JSON.stringify({ [e.detail.change.field]: e.detail.change.from }) }));</code></pre>
+            <pre role="tabpanel" hidden><code>import { History } from "nx-ui/solid";
+
+    &lt;History record={orden()} fields={campos} events={eventos()} user={yo}
+      onCommit={(e) =&gt; guardar(e.detail.record)}
+      onComment={(e) =&gt; comentar(e.detail.text)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>record</code>, <code>fields</code>, <code>events</code></td><td>El registro de hoy, sus campos <code>{key, label, type?, currency?, options?}</code> y los eventos <code>{id, at, actor: {name, avatar?}, action, changes?: [{field, from, to}], note?, revertOf?}</code>.</td></tr>
+                <tr><td><code>source</code></td><td>URL que devuelve los eventos y pagina hacia atrás con <code>?before=&lt;id&gt;</code>.</td></tr>
+                <tr><td><code>user</code>, <code>undo</code>, <code>heading</code>, <code>locale</code>, <code>labels</code></td><td>Quién comenta y revierte desde aquí, tiempo para deshacer (0 = sin aviso), título, formato y textos.</td></tr>
+                <tr><td><code>travel(id)</code>, <code>at</code>, <code>snapshot</code></td><td>Viajar desde código (<code>null</code> = presente), el evento que se ve y el registro de ese momento.</td></tr>
+                <tr><td><code>revert(id, field)</code>, <code>comment(text)</code>, <code>reload()</code></td><td>Revertir → <code>"commit"</code>, <code>"undo"</code> o <code>"cancel"</code>; comentar; volver a pedir <code>source</code>.</td></tr>
+                <tr><td>Teclado</td><td><kbd>←</kbd>/<kbd>→</kbd>, <kbd>Inicio</kbd>/<kbd>Fin</kbd> sobre el deslizador; <kbd>Esc</kbd> vuelve al presente. <kbd>↵</kbd> envía la nota (<kbd>Mayús</kbd>+<kbd>↵</kbd>, otra línea). <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace una reversión mientras está el aviso.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-history-revert</code> (cancelable), <code>nx-history-commit</code>, <code>nx-history-comment</code> (cancelable), <code>nx-history-travel</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

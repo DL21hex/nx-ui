@@ -86,6 +86,10 @@
       "types": "./dist/types/components/kanban/index.d.ts",
       "import": "./dist/kanban.js"
     },
+    "./history": {
+      "types": "./dist/types/components/history/index.d.ts",
+      "import": "./dist/history.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -117,6 +121,7 @@
     "./inbox.css": "./dist/inbox.css",
     "./survey.css": "./dist/survey.css",
     "./tour.css": "./dist/tour.css",
+    "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
     "./number.css": "./dist/number.css"
   },

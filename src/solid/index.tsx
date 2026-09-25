@@ -1,7 +1,7 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
- * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`), y `nxToast` / `nxConfirm`.
+ * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -54,6 +54,9 @@ import type { NumberAlign, NumberChangeDetail, NumberFormat, NumberLabels } from
 import "../components/kanban/index";
 import type { NxKanban } from "../components/kanban/kanban";
 import type { KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail } from "../components/kanban/types";
+import "../components/history/index";
+import type { NxHistory } from "../components/history/history";
+import type { HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail, HistoryValue } from "../components/history/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -70,6 +73,7 @@ export type { NxExplain, ExplainEvent, ExplainLabels };
 export type { NxInbox, InboxDecisionDetail, InboxItem, InboxLabels };
 export type { NxNumber, NumberAlign, NumberChangeDetail, NumberFormat, NumberLabels };
 export type { NxKanban, KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail };
+export type { NxHistory, HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -78,13 +82,16 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
       progress: number | null | undefined;
       options: SelectOption[];
-      fields: SelectField[];
+      fields: SelectField[] | HistoryField[] | undefined;
+      record: Record<string, unknown> | undefined;
+      events: HistoryEvent[] | undefined;
+      user: HistoryActor | null | undefined;
       value: string | string[] | number | null | undefined;
       selection: SelectOption[] | undefined;
       columns: GridColumn[] | KanbanColumn[];
@@ -189,6 +196,10 @@ declare module "solid-js" {
       "nx-inbox-undo": CustomEvent<InboxDecisionDetail>;
       "nx-inbox-active": CustomEvent<{ id: string; item: InboxItem }>;
       "nx-survey-submit": CustomEvent<SurveySubmitDetail>;
+      "nx-history-revert": CustomEvent<HistoryRevertDetail>;
+      "nx-history-commit": CustomEvent<HistoryCommitDetail>;
+      "nx-history-comment": CustomEvent<{ text: string }>;
+      "nx-history-travel": CustomEvent<{ id: string | null; record: Record<string, HistoryValue> }>;
       "nx-kanban-move": CustomEvent<KanbanMoveDetail>;
       "nx-kanban-commit": CustomEvent<KanbanMoveDetail>;
       "nx-kanban-undo": CustomEvent<KanbanMoveDetail>;
@@ -211,6 +222,7 @@ declare module "solid-js" {
       "nx-survey": HTMLAttributes<NxSurvey> & { heading?: string };
       "nx-number": HTMLAttributes<NxNumber> & { label?: string; placeholder?: string };
       "nx-kanban": HTMLAttributes<NxKanban> & { heading?: string };
+      "nx-history": HTMLAttributes<NxHistory> & { heading?: string; source?: string };
     }
   }
 }
@@ -877,6 +889,51 @@ export function Kanban(props: KanbanProps): JSX.Element {
       on:nx-kanban-undo={(e) => local.onUndo?.(e)}
       on:nx-kanban-add={(e) => local.onAdd?.(e)}
       on:nx-kanban-open={(e) => local.onOpen?.(e)}
+    />
+  );
+}
+
+export interface HistoryProps extends JSX.HTMLAttributes<NxHistory> {
+  /** El registro como está hoy. */
+  record?: Record<string, unknown>;
+  fields?: HistoryField[];
+  events?: HistoryEvent[];
+  /** URL que devuelve `{events, record?, more?}` y pagina con `?before=<id>`. */
+  source?: string;
+  /** Quién comenta y revierte desde aquí. */
+  user?: HistoryActor;
+  /** Milisegundos para deshacer una reversión (7000); 0 la registra al instante. */
+  undo?: number;
+  heading?: string;
+  locale?: string;
+  labels?: Partial<HistoryLabels>;
+  /** Cancelable: la reversión no se aplica. */
+  onRevert?: (e: CustomEvent<HistoryRevertDetail>) => void;
+  /** Pasó el tiempo de deshacer: aquí se guarda en el backend. */
+  onCommit?: (e: CustomEvent<HistoryCommitDetail>) => void;
+  /** Cancelable: la nota no se agrega. */
+  onComment?: (e: CustomEvent<{ text: string }>) => void;
+  onTravel?: (e: CustomEvent<{ id: string | null; record: Record<string, HistoryValue> }>) => void;
+}
+
+export function History(props: HistoryProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["record", "fields", "events", "source", "user", "undo", "heading", "locale", "labels", "onRevert", "onCommit", "onComment", "onTravel"]);
+  return (
+    <nx-history
+      {...rest}
+      prop:record={local.record}
+      prop:fields={local.fields}
+      prop:events={local.events}
+      prop:user={local.user}
+      prop:labels={local.labels}
+      attr:source={local.source}
+      attr:heading={local.heading}
+      attr:undo={local.undo === undefined ? undefined : String(local.undo)}
+      attr:locale={local.locale}
+      on:nx-history-revert={(e) => local.onRevert?.(e)}
+      on:nx-history-commit={(e) => local.onCommit?.(e)}
+      on:nx-history-comment={(e) => local.onComment?.(e)}
+      on:nx-history-travel={(e) => local.onTravel?.(e)}
     />
   );
 }

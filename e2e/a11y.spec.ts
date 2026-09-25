@@ -139,3 +139,17 @@ test("tablero en reposo, filtrado, con una columna plegada y con una tarjeta lev
   await expect(page.locator('#kanban-demo .nx-kanban__col[data-col="por-aprobar"] .nx-kanban__warn')).toBeVisible();
   await audit(page, ["#kanban-demo"]);
 });
+
+test("historial: la línea, viajando en el tiempo y con un filtro", async ({ page }) => {
+  await open(page, "#/history");
+  const h = page.locator("#history-demo");
+  await expect(h.locator(".nx-history__ev")).toHaveCount(15);
+  await audit(page, ["#history-demo"]);
+  await h.getByRole("slider", { name: "Viaje en el tiempo" }).focus();
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowLeft");
+  await expect(h.getByRole("button", { name: "Volver al presente" })).toBeVisible();
+  await audit(page, ["#history-demo"]);
+  await h.getByRole("button", { name: /^Andrés Ruiz/ }).click();
+  await h.locator(".nx-history__revert").first().focus();
+  await audit(page, ["#history-demo"]);
+});

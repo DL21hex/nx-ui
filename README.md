@@ -683,6 +683,50 @@ mover nada. En móvil, las columnas se desplazan de lado con snap.
 | Eventos | `nx-kanban-move` `{card, from, fromIndex, to, index, via}` (cancelable), `nx-kanban-commit`, `nx-kanban-undo`, `nx-kanban-add` `{column}`, `nx-kanban-open` `{card}` (cancelable) |
 | Impacto | `confirm.impact` recibe `POST {card, from, to, index, data}` y transmite NDJSON o SSE: `impact`, `block`, `note`, `done` |
 
+## `<nx-history>`
+
+La máquina del tiempo de un registro: quién cambió qué y cuándo, y cómo estaba en cualquier momento.
+
+- **Línea de tiempo** del más nuevo al más viejo, agrupada por día («Hoy», «Ayer», «lunes 21 de
+  septiembre»), con la hora relativa («hace 3 h») y el avatar o las iniciales de quien lo hizo.
+  Cada cambio se lee «Estado: Por aprobar → Aprobada», con el formato de su campo (`money`,
+  `number`, `date`, `status` con su tono, o la etiqueta de `options`).
+- **Textos largos como diferencia por palabras:** lo quitado tachado en rojo suave, lo agregado en
+  verde suave (subsecuencia común más larga, `wordDiff()`).
+- **Viaje en el tiempo:** un deslizador (y ←/→, Inicio/Fin sobre él) recorre los eventos; el panel
+  muestra el registro como estaba en ese momento —reconstruido desde el de hoy deshaciendo los
+  cambios posteriores (`historyStateAt()`)—, con lo que cambió desde entonces marcado y su valor
+  actual. «Así estaba el 12 sept 2026, 3:40 p. m.». Esc o «Volver al presente» regresan.
+- **Filtros** por persona y por campo (chips con su conteo) y un buscador sin tildes que también
+  encuentra valores formateados.
+- **Revertir** un cambio que sigue vigente: `nx-history-revert` (cancelable), se aplica al instante
+  con un evento que lo cuenta, se deshace desde el aviso (o Ctrl+Z) y, al acabar el tiempo,
+  `nx-history-commit`: ahí la app guarda.
+- **Notas** que aparecen al instante (`nx-history-comment`, cancelable).
+- **`source`:** una URL que devuelve `{events, record?, more?}`; al llegar al final de la línea pide
+  `?before=<id>` (la página anterior).
+
+```html
+<nx-history id="historia" heading="OC-2291" source="/compras/oc-2291/historial"></nx-history>
+<script>
+  historia.fields = [
+    { key: "estado", label: "Estado", type: "status",
+      options: [{ value: "por-aprobar", label: "Por aprobar", tone: "warning" }, { value: "aprobada", label: "Aprobada", tone: "success" }] },
+    { key: "monto", label: "Monto", type: "money", currency: "COP" },
+    { key: "observaciones", label: "Observaciones" },
+  ];
+  historia.user = { name: "Sofía Herrera" };
+  historia.addEventListener("nx-history-commit", (e) =>
+    fetch("/compras/oc-2291", { method: "PATCH", body: JSON.stringify({ [e.detail.change.field]: e.detail.change.from }) }));
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `record`, `fields` (`{key, label, type?, currency?, options?}`), `events` (`{id, at, actor: {name, avatar?}, action, changes?: [{field, from, to}], note?, revertOf?}`), `source`, `user`, `undo` (ms, 7000; 0 = sin aviso), `heading`, `locale`, `labels` · `at`, `snapshot` |
+| Métodos | `travel(id \| null)`, `revert(id, field)` → `"commit"` \| `"undo"` \| `"cancel"`, `comment(text)`, `reload()` |
+| Eventos | `nx-history-revert` `{event, change}` (cancelable), `nx-history-commit` `{event, change, revert, record}`, `nx-history-comment` `{text}` (cancelable), `nx-history-travel` `{id, record}` |
+
 ## Desarrollo
 
 ```bash

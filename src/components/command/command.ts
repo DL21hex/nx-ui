@@ -236,6 +236,9 @@ export class NxCommand extends Base {
       autocomplete: "off",
       spellcheck: "false",
       enterkeyhint: "go",
+      // La Popover API enfoca lo que tenga `autofocus` al mostrarse, también desde un
+      // `popovertarget`: lo que se escribe enseguida no se pierde.
+      autofocus: true,
     });
     this.#spin = h("span", { class: "nx-spinner nx-command__spin", hidden: true });
     this.#list = h("div", { id: listId, class: "nx-command__list", role: "listbox" });

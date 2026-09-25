@@ -6,6 +6,7 @@ import { hrEmployees, hrExitImpact } from "./gallery/demo-hr";
 import { invoiceEvents, invoiceSvg } from "./gallery/demo-invoice";
 import { searchOptions } from "./src/components/select/logic";
 import { EXPLAIN, INBOX_IMPACT, commandSearch } from "./gallery/demo-next";
+import { configureHistory } from "./gallery/server-history";
 import { configureKanban } from "./gallery/server-kanban";
 
 /**
@@ -347,7 +348,7 @@ function demoNext(): Plugin {
 // `vite build`      → librería ESM, una entrada por subruta del package
 // `vite build --mode iife` → dist/nx-ui.iife.js, todo-en-uno para <script>
 export default defineConfig(({ command, mode }) => {
-  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi(), demoCapture(), demoGrid(), demoImpact(), demoNext(), { name: "nx-demo-kanban", configureServer: configureKanban }] };
+  if (command === "serve") return { root: "gallery", server: { port: 5173 }, plugins: [demoStream(), demoAi(), demoCapture(), demoGrid(), demoImpact(), demoNext(), { name: "nx-demo-history", configureServer: configureHistory }, { name: "nx-demo-kanban", configureServer: configureKanban }] };
 
   if (mode === "iife") {
     return {
@@ -381,6 +382,7 @@ export default defineConfig(({ command, mode }) => {
           inbox: "src/components/inbox/index.ts",
           survey: "src/components/survey/index.ts",
           tour: "src/components/tour/index.ts",
+          "history": "src/components/history/index.ts",
           "kanban": "src/components/kanban/index.ts",
           "number": "src/components/number/index.ts",
           icons: "src/icons/index.ts",
