@@ -1,0 +1,146 @@
+    <!-- ================================================================ Sin conexión -->
+    <template id="page-sync">
+      <p class="eyebrow">Componentes</p>
+      <h1>Sin conexión <code class="tag">&lt;nx-sync&gt;</code></h1>
+      <p class="lead">
+        Para vendedores en ruta, bodegas y plantas con señal intermitente. Lo que se hace sin conexión se guarda en el
+        dispositivo y se envía solo, en orden, cuando vuelve la señal, sin duplicar nada. Si otra persona cambió lo
+        mismo, un comparador campo por campo deja elegir qué queda. La píldora dice en qué va todo.
+      </p>
+      <div class="sync-demo">
+        <div class="sync-app">
+          <header class="sync-app__bar">
+            <div class="sync-app__who">
+              <strong>Pedidos en ruta</strong>
+              <small>Camilo Ríos · Ruta BAQ-07</small>
+            </div>
+            <nx-sync id="sync-demo" ping="/demo/sync/ping" locale="es-CO"></nx-sync>
+          </header>
+          <form id="sync-form" class="sync-form">
+            <label class="sync-field">
+              <span>Cliente</span>
+              <select name="cliente"></select>
+            </label>
+            <fieldset class="sync-field">
+              <legend>Productos</legend>
+              <ol class="sync-lines"></ol>
+              <button type="button" class="sync-add" data-add>+ Agregar producto</button>
+            </fieldset>
+            <label class="sync-field">
+              <span>Observaciones</span>
+              <textarea name="observaciones" rows="2" placeholder="Entregar por la puerta de atrás…"></textarea>
+            </label>
+            <footer class="sync-form__foot">
+              <p class="sync-total">Total <strong>$ 0</strong></p>
+              <button type="submit" class="sync-submit">Tomar pedido</button>
+            </footer>
+          </form>
+        </div>
+        <aside class="sync-side">
+          <div class="sync-switches">
+            <button type="button" role="switch" aria-checked="false" class="sync-switch sync-switch--big" data-sim="offline">
+              <span class="sync-switch__track" aria-hidden="true"></span>
+              <span class="sync-switch__text"><strong>Simular sin conexión</strong><small>Se cae la señal del teléfono.</small></span>
+            </button>
+            <button type="button" role="switch" aria-checked="false" class="sync-switch" data-sim="conflict">
+              <span class="sync-switch__track" aria-hidden="true"></span>
+              <span class="sync-switch__text"><strong>El servidor responde con conflicto</strong><small>Televentas ya cambió cada pedido.</small></span>
+            </button>
+            <button type="button" role="switch" aria-checked="true" class="sync-switch" data-sim="flaky">
+              <span class="sync-switch__track" aria-hidden="true"></span>
+              <span class="sync-switch__text"><strong>Red inestable</strong><small>503 y respuestas perdidas, al azar.</small></span>
+            </button>
+          </div>
+          <section class="sync-conf-box" aria-labelledby="sync-conf-h">
+            <h3 id="sync-conf-h">Pedidos confirmados <span id="sync-count" class="sync-count">0</span></h3>
+            <ol id="sync-confirmed" class="sync-conf-list"></ol>
+          </section>
+        </aside>
+      </div>
+      <p class="sel-tip">
+        Toma un pedido con «Simular sin conexión» encendido: queda en la píldora, ámbar. Toma otro y apaga el
+        interruptor: salen los dos, en orden. Un pedido para <strong>Minimercado El Progreso</strong> choca con uno de
+        televentas: abre la píldora y resuélvelo campo por campo. <strong>Tienda Doña Carmen</strong> tiene cupo de
+        $ 250.000: un pedido mayor se rechaza y se corrige desde el panel. Recarga la página sin conexión: los
+        pendientes siguen ahí.
+      </p>
+      <ol class="stage__log btn-events" id="sync-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td>La cola</td><td><code>nxSync.enqueue()</code> guarda la operación en IndexedDB (en memoria si no hay) antes de intentar nada: cerrar la pestaña no la pierde. Se envían de a una, en el orden en que llegaron.</td></tr>
+            <tr><td>Reintentos</td><td>Sin respuesta, 5xx, 429 o 408: toda la cola espera 1 s, 2 s, 4 s… hasta 60 s, con ±20 % al azar para que los teléfonos que recuperan la señal a la vez no lleguen juntos. Si el servidor manda <code>Retry-After</code>, se respeta.</td></tr>
+            <tr><td>Conexión real</td><td><code>navigator.onLine</code> y los eventos <code>online</code>/<code>offline</code>, más un <code>ping</code> opcional: con red «arriba» pero sin llegar a ningún lado, se sigue probando antes de gastar intentos.</td></tr>
+            <tr><td>Sin duplicados</td><td>Cada envío lleva <code>Idempotency-Key</code> con el id de la operación: si el servidor guardó el pedido pero la respuesta se perdió, el reintento no crea otro.</td></tr>
+            <tr><td>Conflictos</td><td>Un 409 con la versión del servidor deja la operación «en conflicto». El comparador muestra, campo por campo, lo mío y lo del servidor con lo distinto resaltado; se elige por campo o «todo lo mío / todo lo del servidor», y la versión resuelta sale con <code>If-Match</code>.</td></tr>
+            <tr><td>Rechazos</td><td>Otro 4xx queda «rechazado» con el mensaje del servidor; se corrige el cuerpo (JSON) y se reintenta, o se descarta. Ni conflictos ni rechazos frenan la cola: solo a las siguientes de su mismo <code>group</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Protocolo</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+          <tbody>
+            <tr><td>Cada envío</td><td><code>method url</code> con <code>Idempotency-Key: &lt;id&gt;</code>, <code>Content-Type: application/json</code> y, al resolver un conflicto, <code>If-Match: &lt;etag&gt;</code>.</td></tr>
+            <tr><td><code>2xx</code></td><td>Listo: sale de la cola y llega <code>nx-sync-done</code> <code>{op, data}</code> con la respuesta.</td></tr>
+            <tr><td><code>503</code>, <code>429</code>…</td><td>Se reintenta con la misma llave; <code>Retry-After</code> (segundos o fecha) manda.</td></tr>
+            <tr><td><code>409</code></td><td><code>{server, local?, fields?, etag?, message?}</code>: la versión del servidor, la que recibió, los campos en disputa (<code>["cantidad"]</code> o <code>[{key, label}]</code>, con rutas «productos.0.cantidad») y su versión (o la cabecera <code>ETag</code>).</td></tr>
+            <tr><td>Otro <code>4xx</code></td><td><code>{message}</code> (o <code>error</code>, <code>detail</code>, <code>title</code>): se muestra tal cual.</td></tr>
+            <tr><td><code>GET ping</code></td><td>Cualquier respuesta: hay conexión.</td></tr>
+            <tr><td><code>nx-sync-change</code></td><td><code>{online, pending, conflicts}</code> cada vez que cambia algo de eso.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-sync ping="/api/ping"&gt;&lt;/nx-sync&gt;
+
+import { nxSync } from "nx-ui/sync";
+
+// Sin conexión también: se guarda y se envía cuando se pueda.
+await nxSync.enqueue({
+  method: "POST", url: "/api/pedidos", body: pedido,
+  label: `Pedido · ${tienda.nombre}`, group: tienda.nit,
+});
+
+nxSync.subscribe((state, event) =&gt; {
+  if (event?.type === "done") pintarConfirmado(event.data);
+});</code></pre>
+        <pre role="tabpanel" hidden><code>import { Sync } from "nx-ui/solid";
+import { nxSync } from "nx-ui/sync";
+
+&lt;Sync ping="/api/ping"
+  fields={[{ key: "productos.*.cantidad", label: "Cantidad · {nombre}" }]}
+  onChange={(e) =&gt; setPendientes(e.detail.pending)}
+  onDone={(e) =&gt; agregar(e.detail.data)} /&gt;
+
+const tomar = (p) =&gt; nxSync.enqueue({ method: "POST", url: "/api/pedidos", body: p, label: p.cliente.nombre });</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>nxSync.enqueue({id?, method, url, body?, label, group?})</code></td><td>Guarda y envía cuando se pueda. Devuelve la operación. El mismo <code>id</code> otra vez reemplaza el cuerpo de la que aún no sale.</td></tr>
+            <tr><td><code>pending()</code>, <code>retry(id, body?)</code>, <code>resolve(id, body)</code>, <code>discard(id)</code></td><td>Lo que falta (en orden), reintentar ya (con otro cuerpo, si se corrigió), reenviar un conflicto resuelto, sacar de la cola.</td></tr>
+            <tr><td><code>flush()</code>, <code>check()</code>, <code>clear()</code></td><td>Intentar todo ya; comprobar la conexión con <code>ping</code>; vaciar la cola (al cerrar sesión).</td></tr>
+            <tr><td><code>subscribe(fn)</code>, <code>state</code>, <code>configure({ping, base, max, timeout, headers})</code></td><td><code>fn(state, event)</code> con <code>{online, ops, pending, conflicts, failed, progress}</code>; los ajustes de la cola. <code>createSync()</code> crea otra (otra base, o para pruebas).</td></tr>
+            <tr><td><code>&lt;nx-sync&gt;</code>: <code>ping</code>, <code>fields</code>, <code>labels</code>, <code>locale</code></td><td>URL de comprobación (ajusta la cola de la página), nombres de los campos para el comparador (con <code>*</code> y <code>{hermano}</code>), textos y formato.</td></tr>
+            <tr><td><code>show()</code>, <code>hide()</code>, <code>toggle()</code>, <code>resolve(id)</code></td><td>El panel, y el comparador de un conflicto directamente.</td></tr>
+            <tr><td>Teclado</td><td><kbd>Enter</kbd> o <kbd>Espacio</kbd> en la píldora abre el panel; <kbd>Tab</kbd> recorre las acciones; <kbd>↑</kbd>/<kbd>↓</kbd> eligen lado en el comparador; <kbd>Esc</kbd> cancela un descarte, vuelve a la lista y cierra.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-sync-change</code> <code>{online, pending, conflicts}</code>, <code>nx-sync-done</code> <code>{op, data}</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
