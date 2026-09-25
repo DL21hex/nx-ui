@@ -277,6 +277,8 @@ test("escáner: sin cámara, contando con faltantes y sobrantes, y con la cámar
 });
 
 test("sin conexión: la píldora en cada estado, el panel, el comparador y el editor", async ({ page }) => {
+  // Recorre muchos estados con axe en cada uno: ~23 s en reposo, y con la máquina cargada pasaba de 30.
+  test.slow();
   const settle = () => page.waitForFunction(() => document.getAnimations().every((a) => a.effect?.getTiming().iterations === Infinity || a.playState !== "running"));
   await open(page, "#/sync");
   const sync = page.locator("#sync-demo");
