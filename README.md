@@ -1025,6 +1025,55 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
 | `source` | `GET` → `{code, name, unit?, expected?}`; 404 si no existe («Código sin registrar»). Una vez por código |
 | Funciones | `wedgeKey(estado, tecla, ms)` (la detección de la pistola, sin DOM), `gtinValid(código)`, `scanTotals(items)`, `scanItemStatus(item)`, `parseScanEntry(texto)` |
 
+## `<nx-sync>` y `nxSync`
+
+Trabajar sin conexión, y que nada se pierda: para vendedores en ruta, bodegas y plantas con señal
+intermitente.
+
+- **La cola (`nxSync`)** guarda cada escritura en IndexedDB (en memoria si no hay) antes de
+  intentar nada, y la envía cuando hay conexión, **en orden**, de a una. Cerrar la pestaña o
+  recargar no la pierde: lo que iba en camino vuelve a la fila.
+- **Reintentos** sin respuesta, 5xx, 429 o 408: toda la cola espera 1 s, 2 s, 4 s… (tope 60 s, ±20 %
+  al azar), o lo que diga `Retry-After` (segundos o fecha).
+- **Conexión real:** `navigator.onLine`, los eventos `online`/`offline` y un `ping` opcional; con
+  red «arriba» pero sin llegar al servidor, se sigue probando sin gastar intentos.
+- **Sin duplicados:** cada envío lleva `Idempotency-Key` con el id de la operación; si la respuesta
+  se perdió, el reintento no crea otro registro. Al corregir o resolver, la llave cambia (ya es otra
+  petición).
+- **Conflictos:** un 409 con `{server, local?, fields?, etag?}` deja la operación «en conflicto». El
+  panel muestra un comparador campo por campo (lo mío / lo del servidor, lo distinto resaltado), se
+  elige por campo o «todo lo mío / todo lo del servidor», y la versión resuelta sale con `If-Match`.
+- **Rechazos:** otro 4xx queda «rechazado» con el mensaje del servidor; se corrige el cuerpo (JSON,
+  validado) y se reintenta, o se descarta. Ni conflictos ni rechazos frenan la cola: solo a las
+  siguientes de su mismo `group`.
+- **La píldora `<nx-sync>`:** «En línea» (verde, discreta), «Sin conexión · 3 pendientes» (ámbar),
+  «Sincronizando 2 de 5…» (con su avance), «Reintento en 12 s», «1 conflicto» (roja, se nota). Al
+  pulsarla, el panel con cada operación (hace cuánto, intentos, cuenta regresiva) y sus acciones:
+  reintentar ya, descartar (con confirmación), resolver, corregir. Anuncia con `aria-live` cuando se
+  va y vuelve la conexión y cuando termina de sincronizar.
+
+```html
+<nx-sync id="sync" ping="/api/ping"></nx-sync>
+<script type="module">
+  import { nxSync } from "nx-ui/sync";
+
+  sync.fields = [{ key: "productos.*.cantidad", label: "Cantidad · {nombre}" }];
+  await nxSync.enqueue({
+    method: "POST", url: "/api/pedidos", body: pedido,
+    label: `Pedido · ${tienda.nombre}`, group: tienda.nit,
+  });
+  sync.addEventListener("nx-sync-done", (e) => pintarConfirmado(e.detail.data));
+</script>
+```
+
+| | |
+|---|---|
+| `nxSync` | `enqueue({id?, method, url, body?, label, group?})` → la operación guardada · `pending()` · `retry(id, body?)` · `resolve(id, body)` · `discard(id)` · `flush()` · `check()` · `clear()` · `subscribe(fn)` → dejar de escuchar (`fn(state, event)`) · `state` `{online, ops, pending, conflicts, failed, progress}` · `configure({ping, base, max, timeout, headers})` · `createSync()` para otra cola |
+| Propiedades / atributos | `ping`, `fields` (`[{key, label}]`, con `*` y `{hermano}`), `labels`, `locale` · `online`, `pending`, `conflicts`, `state`, `open` |
+| Métodos | `show()`, `hide()`, `toggle()`, `resolve(id)` |
+| Eventos | `nx-sync-change` `{online, pending, conflicts}`, `nx-sync-done` `{op, data}` |
+| Protocolo | cada envío con `Idempotency-Key`, `Content-Type: application/json` e `If-Match` al resolver · 409 `{server, local?, fields?, etag?, message?}` · otro 4xx `{message}` · `GET ping`: cualquier respuesta es conexión |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos

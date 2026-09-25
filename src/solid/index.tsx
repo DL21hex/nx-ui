@@ -2,7 +2,7 @@
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
- * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`), y `nxToast` / `nxConfirm`.
+ * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -34,6 +34,7 @@ import type { NxDialog } from "../components/dialog/dialog";
 import type { CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize } from "../components/dialog/types";
 export { nxConfirm } from "../components/confirm/index";
 export { nxToast } from "../components/toast/index";
+export { nxSync } from "../components/sync/logic";
 import "../components/agent/index";
 import type { NxAgent } from "../components/agent/agent";
 import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool } from "../components/agent/types";
@@ -73,6 +74,9 @@ import type { TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, Tr
 import "../components/scan/index";
 import type { NxScan } from "../components/scan/scan";
 import type { ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMode, ScanProblem, ScanWedge } from "../components/scan/types";
+import "../components/sync/index";
+import type { NxSync } from "../components/sync/sync";
+import type { SyncChangeDetail, SyncField, SyncLabels, SyncOp } from "../components/sync/types";
 import "../components/date-range/index";
 import type { NxDateRange } from "../components/date-range/date-range";
 import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
@@ -99,6 +103,7 @@ export type { NxPresence, PresenceEvent, PresenceLabels, PresenceState, Presence
 export type { NxWhatIf, WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfSaveDetail, WhatIfScenario, WhatIfSeries, WhatIfValues };
 export type { NxTrend, TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, TrendWhyDetail };
 export type { NxScan, ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMode, ScanProblem, ScanWedge };
+export type { NxSync, SyncChangeDetail, SyncField, SyncLabels, SyncOp };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -115,13 +120,13 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
       progress: number | null | undefined;
       options: SelectOption[];
-      fields: SelectField[] | HistoryField[] | PasteFieldInput[] | undefined;
+      fields: SelectField[] | HistoryField[] | PasteFieldInput[] | SyncField[] | undefined;
       record: Record<string, unknown> | undefined;
       events: HistoryEvent[] | undefined;
       user: HistoryActor | null | undefined;
@@ -141,6 +146,7 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      ping: string | undefined;
       wedge: ScanWedge | undefined;
       "explain-endpoint": string | undefined;
       detect: string | undefined;
@@ -220,6 +226,8 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-sync-done": CustomEvent<{ op: SyncOp; data: unknown }>;
+      "nx-sync-change": CustomEvent<SyncChangeDetail>;
       "nx-scan-error": CustomEvent<{ problem: ScanProblem }>;
       "nx-scan-count": CustomEvent<ScanCountDetail>;
       "nx-scan": CustomEvent<ScanDetail>;
@@ -271,6 +279,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-sync": HTMLAttributes<NxSync> & { ping?: string };
       "nx-scan": HTMLAttributes<NxScan> & { source?: string };
       "nx-trend": HTMLAttributes<NxTrend> & { heading?: string };
       "nx-what-if": HTMLAttributes<NxWhatIf> & { heading?: string; endpoint?: string };
@@ -1282,6 +1291,34 @@ export function Scan(props: ScanProps): JSX.Element {
       on:nx-scan={(e) => local.onScan?.(e)}
       on:nx-scan-count={(e) => local.onCount?.(e)}
       on:nx-scan-error={(e) => local.onError?.(e)}
+    />
+  );
+}
+
+export interface SyncProps extends Omit<JSX.HTMLAttributes<NxSync>, "onChange"> {
+  /** URL que responde rápido para comprobar que hay conexión de verdad (ajusta la cola de la página). */
+  ping?: string;
+  /** Nombres de los campos para el comparador: `[{key: "productos.*.cantidad", label: "Cantidad · {nombre}"}]`. */
+  fields?: SyncField[];
+  locale?: string;
+  labels?: Partial<SyncLabels>;
+  /** `{online, pending, conflicts}` cada vez que cambia algo de eso. */
+  onChange?: (e: CustomEvent<SyncChangeDetail>) => void;
+  /** Una operación llegó al servidor: `{op, data}` con la respuesta. */
+  onDone?: (e: CustomEvent<{ op: SyncOp; data: unknown }>) => void;
+}
+
+export function Sync(props: SyncProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["ping", "fields", "locale", "labels", "onChange", "onDone"]);
+  return (
+    <nx-sync
+      {...rest}
+      prop:fields={local.fields}
+      prop:labels={local.labels}
+      attr:ping={local.ping}
+      attr:locale={local.locale}
+      on:nx-sync-change={(e) => local.onChange?.(e)}
+      on:nx-sync-done={(e) => local.onDone?.(e)}
     />
   );
 }

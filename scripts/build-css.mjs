@@ -21,6 +21,7 @@ const entries = {
   inbox: "src/components/inbox/inbox.css",
   survey: "src/components/survey/survey.css",
   tour: "src/components/tour/tour.css",
+  "sync": "src/components/sync/sync.css",
   "scan": "src/components/scan/scan.css",
   "trend": "src/components/trend/trend.css",
   "what-if": "src/components/what-if/what-if.css",

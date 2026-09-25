@@ -114,6 +114,10 @@
       "types": "./dist/types/components/scan/index.d.ts",
       "import": "./dist/scan.js"
     },
+    "./sync": {
+      "types": "./dist/types/components/sync/index.d.ts",
+      "import": "./dist/sync.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -145,6 +149,7 @@
     "./inbox.css": "./dist/inbox.css",
     "./survey.css": "./dist/survey.css",
     "./tour.css": "./dist/tour.css",
+    "./sync.css": "./dist/sync.css",
     "./scan.css": "./dist/scan.css",
     "./trend.css": "./dist/trend.css",
     "./what-if.css": "./dist/what-if.css",
