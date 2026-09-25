@@ -3,6 +3,7 @@ import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
 import { lucide } from "../src/icons/index";
+import { installDemoApi } from "./demo-api";
 import { registerIcons, type CaptureSchemaItem, type CommandItem, type MenuItem, type NxAiAnswer, type NxButton, type NxCommand, type NxDialog, type NxDocCapture, type GridRow, type NxAgent, type NxExplain, type NxGrid, type NxInbox, type NxSelect, type NxSurvey, aggregateSurvey, applyFilters, nxConfirm, nxToast, type NxSidemenu, type RunContext } from "../src/index";
 import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
@@ -16,6 +17,8 @@ import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
 
 registerIcons(lucide);
+// Los ejemplos piden a `/demo/*`: aquí mismo se responde (también publicada como archivos estáticos).
+installDemoApi();
 
 // ---------------------------------------------------------------- tema de la galería
 

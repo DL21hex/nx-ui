@@ -772,9 +772,15 @@ debajo, atajos y un calendario de dos meses.
 
 ## Desarrollo
 
+**Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos
+funcionando. Se publica sola en cada push a `main` (`.github/workflows/pages.yml`). Los ejemplos que
+«hablan con un servidor» (la IA, la captura, el agente, el impacto…) usan una API de mentira que
+corre en el navegador (`gallery/demo-api.ts`), así que no hace falta backend ni en local ni en Pages.
+
 ```bash
 npm install
 npm run dev            # galería en http://localhost:5173
+npm run build:gallery  # dist-gallery/: la galería como archivos estáticos (la publica GitHub Pages)
 npm run build          # dist/: ESM, IIFE, CSS, adaptador Solid, tipos y chequeo de tamaño
 npm test               # vitest: lógica (node), render/ARIA (happy-dom) y dist/ si existe
 npm run typecheck

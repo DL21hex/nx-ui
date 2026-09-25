@@ -141,6 +141,7 @@
   "scripts": {
     "dev": "vite",
     "build": "rm -rf dist && vite build && vite build --mode iife && node scripts/build-css.mjs && node scripts/build-solid.mjs && tsc -p tsconfig.build.json && node scripts/size.mjs",
+    "build:gallery": "vite build --mode gallery",
     "size": "node scripts/size.mjs",
     "bench": "node scripts/bench.mjs",
     "test": "vitest run",

@@ -83,7 +83,7 @@ const EXTRA: Record<string, object> = {
 
 /** Lo que «lee» el backend, en orden, como eventos del protocolo. */
 export function invoiceEvents(): object[] {
-  const events: object[] = [{ type: "page", n: 1, src: "/demo/capture/factura.svg", width: W, height: H }];
+  const events: object[] = [{ type: "page", n: 1, src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(invoiceSvg())}`, width: W, height: H }];
   for (const t of TEXTS) {
     if (!t.key) continue;
     const conf = CONF[t.key] ?? (t.key.endsWith(".desc") ? 0.94 : 0.96);
