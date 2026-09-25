@@ -120,6 +120,10 @@ export class NxWhatIf extends Base {
   #renaming: string | null = null;
   /** Lo escrito al renombrar (sobrevive a un repintado de la tabla). */
   #renameText = "";
+  /** Lo que muestra la cabecera de la tabla la última vez que se pintó (ver `#paintTable`). */
+  #headSig = "";
+  /** Dónde estaba el cursor al renombrar (`null`: recién empieza, se selecciona todo). */
+  #renameCaret: number | null = null;
   #isBusy = false;
   #rows = new Map<string, Row>();
   #cards = new Map<string, Card>();
@@ -746,7 +750,13 @@ export class NxWhatIf extends Base {
       b.addEventListener("click", run);
       return b;
     };
-    const head = cols.map((c, i) => {
+    // La cabecera (nombres, botones, el input de renombrar) solo se recrea si cambia lo que muestra.
+    // Un cálculo que llega cambia los números, no la cabecera: recrearla le quitaba el botón a un
+    // clic a medias (el `mouseup` caía en otro nodo) o el input a quien estaba escribiendo.
+    const sig = JSON.stringify([this.#renaming, match?.id, L, cols.map((c) => [c.s?.id, c.name])]);
+    const keepHead = sig === this.#headSig && !!this.#wrap!.querySelector("thead");
+    this.#headSig = sig;
+    const head = keepHead ? [] : cols.map((c, i) => {
       const s = c.s;
       if (!s) return h("th", { scope: "col", class: i ? "is-current" : null }, c.name);
       if (this.#renaming === s.id) {
@@ -770,8 +780,17 @@ export class NxWhatIf extends Base {
           }
         });
         inp.addEventListener("input", () => (this.#renameText = inp.value));
-        inp.addEventListener("blur", () => done(true));
-        queueMicrotask(() => (inp.focus(), inp.select()));
+        // Un repintado mientras se escribe (llegó un cálculo) quita este input: ese `blur` no es
+        // la persona saliendo del campo, y el nuevo sigue con lo escrito y el cursor donde estaba.
+        inp.addEventListener("blur", () => inp.isConnected && done(true));
+        const caret = this.#renameCaret;
+        queueMicrotask(() => {
+          inp.focus();
+          if (caret === null) inp.select();
+          else inp.setSelectionRange(caret, caret);
+        });
+        inp.addEventListener("keyup", () => (this.#renameCaret = inp.selectionStart));
+        inp.addEventListener("input", () => (this.#renameCaret = inp.selectionStart));
         return h("th", { scope: "col" }, inp);
       }
       return h(
@@ -785,6 +804,7 @@ export class NxWhatIf extends Base {
           act(s, "ren", L.rename, PEN, () => {
             this.#renaming = s.id;
             this.#renameText = s.name;
+            this.#renameCaret = null;
             this.#paintTable();
           }),
           act(s, "del", L.remove, TRASH, () => {
@@ -813,6 +833,7 @@ export class NxWhatIf extends Base {
         );
       }),
     ];
+    if (keepHead) return void this.#wrap!.querySelector("tbody")!.replaceWith(h("tbody", null, ...rows));
     this.#wrap!.replaceChildren(h("table", { class: "nx-what-if__table" }, h("thead", null, h("tr", null, h("td"), ...head)), h("tbody", null, ...rows)));
     if (key) this.#focusF(key);
   }

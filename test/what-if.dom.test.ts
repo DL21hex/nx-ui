@@ -414,3 +414,47 @@ describe("<nx-what-if>", () => {
     expect(el.querySelector(".nx-what-if__title")!.textContent).toBe("Plan 2027");
   });
 });
+
+describe("renombrar mientras llega un cálculo", () => {
+  it("un cálculo que llega no recrea los botones de la cabecera (un clic a medias no se pierde)", async () => {
+    const { el } = mount();
+    await tick();
+    el.scenarios = [{ id: "a", name: "Acero caro", inputs: { acero: 900, volumen: 100 }, outputs: {} }];
+    await tick();
+    const load = el.querySelector('[aria-label="Cargar Acero caro"]');
+    el.series = [];
+    await tick();
+    expect(el.querySelector('[aria-label="Cargar Acero caro"]')).toBe(load);
+    // Un nombre nuevo sí la recrea.
+    el.scenarios = [{ id: "a", name: "Acero +", inputs: { acero: 900, volumen: 100 }, outputs: {} }];
+    await tick();
+    expect(el.querySelector('[aria-label="Cargar Acero +"]')).not.toBeNull();
+  });
+
+  it("el repintado no confirma el nombre a medias ni selecciona todo lo escrito", async () => {
+    const { el } = mount();
+    await tick();
+    el.scenarios = [{ id: "a", name: "Acero caro", inputs: { acero: 900, volumen: 100 }, outputs: {} }];
+    await tick();
+    const saves: WhatIfSaveDetail[] = [];
+    el.addEventListener("nx-what-if-save", (e) => saves.push(e.detail));
+    el.querySelector<HTMLButtonElement>('[aria-label="Renombrar Acero caro"]')!.click();
+    await tick();
+    const first = el.querySelector<HTMLInputElement>(".nx-what-if__table .nx-what-if__name")!;
+    first.value = "Acero +";
+    first.setSelectionRange(7, 7);
+    first.dispatchEvent(new Event("input"));
+    // Llega un cálculo: la tabla se repinta.
+    el.series = [];
+    await tick();
+    expect(saves).toHaveLength(0);
+    // El mismo input sigue ahí (solo se repintó el cuerpo), con lo escrito y el cursor donde estaba.
+    const now = el.querySelector<HTMLInputElement>(".nx-what-if__table .nx-what-if__name")!;
+    expect(now).toBe(first);
+    expect(now.value).toBe("Acero +");
+    expect(document.activeElement).toBe(now);
+    expect([now.selectionStart, now.selectionEnd]).toEqual([7, 7]);
+    key(now, "Enter");
+    expect(saves[0]).toMatchObject({ action: "rename", scenario: { name: "Acero +" } });
+  });
+});
