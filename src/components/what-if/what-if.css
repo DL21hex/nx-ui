@@ -1,0 +1,577 @@
+/*
+ * <nx-what-if>. Variables propias:
+ *   --nx-what-if-chart-height (132px): alto del gráfico de líneas
+ */
+
+nx-what-if {
+  container-type: inline-size;
+  display: block;
+  border: 1px solid var(--nx-border);
+  border-radius: calc(var(--nx-radius-lg) + 4px);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: 14px/1.45 var(--nx-font-sans);
+}
+nx-what-if * {
+  box-sizing: border-box;
+}
+nx-what-if [hidden] {
+  display: none !important;
+}
+nx-what-if button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+nx-what-if :focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+nx-what-if .nx-glyph {
+  display: inline-flex;
+  flex: none;
+  inline-size: 1em;
+  block-size: 1em;
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+.nx-what-if__vh {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- encabezado */
+
+.nx-what-if__head,
+.nx-what-if__bar,
+.nx-what-if__form,
+.nx-what-if__top,
+.nx-what-if__val,
+.nx-what-if__foot,
+.nx-what-if__cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.nx-what-if__head {
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-what-if__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+.nx-what-if__bar {
+  margin-inline-start: auto;
+}
+.nx-what-if__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-background);
+  font-size: 13px;
+  font-weight: 550;
+  &:hover {
+    background: var(--nx-hover);
+  }
+}
+.nx-what-if__btn--primary {
+  border-color: var(--nx-primary);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground) !important;
+  &:hover {
+    background: var(--nx-primary);
+    filter: brightness(1.08);
+  }
+}
+.nx-what-if__name,
+.nx-what-if__type {
+  min-inline-size: 0;
+  block-size: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-background);
+  color: var(--nx-foreground);
+  font: inherit;
+  &:focus {
+    border-color: var(--nx-primary);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+    outline: none;
+  }
+}
+.nx-what-if__h {
+  margin: 0 0 12px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- cuerpo */
+
+.nx-what-if__body {
+  display: grid;
+}
+.nx-what-if__inputs,
+.nx-what-if__results,
+.nx-what-if__cmp {
+  min-inline-size: 0;
+  padding: 16px 18px;
+}
+.nx-what-if__inputs {
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+@container (min-width: 760px) {
+  .nx-what-if__body {
+    grid-template-columns: minmax(280px, 5fr) 7fr;
+  }
+  .nx-what-if__inputs {
+    border-block-end: 0;
+    border-inline-end: 1px solid var(--nx-border-subtle);
+  }
+}
+
+/* ---------------------------------------------------------------- supuestos */
+
+.nx-what-if__list {
+  display: grid;
+  gap: 18px;
+}
+.nx-what-if__top {
+  justify-content: space-between;
+  min-block-size: 24px;
+}
+.nx-what-if__label {
+  font-weight: 550;
+}
+.nx-what-if__reset,
+.nx-what-if__act {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-text-tertiary) !important;
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground) !important;
+  }
+}
+.nx-what-if__val {
+  column-gap: 10px;
+}
+.nx-what-if__big {
+  padding: 0 2px;
+  border: 0;
+  border-block-end: 1px dashed var(--nx-border-strong);
+  background: none;
+  font-size: 22px !important;
+  font-weight: 650 !important;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25 !important;
+  &:hover {
+    border-color: var(--nx-primary);
+  }
+}
+.nx-what-if__type {
+  inline-size: 11em;
+  font-size: 18px;
+}
+.nx-what-if__delta {
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+[data-moved] .nx-what-if__delta {
+  color: var(--nx-primary-ink);
+  font-weight: 600;
+}
+.nx-what-if__track {
+  position: relative;
+  margin-block: 6px 2px;
+}
+.nx-what-if__rail {
+  position: absolute;
+  inset: 8px 9px auto;
+  block-size: 4px;
+  border-radius: 4px;
+  background: var(--nx-border);
+}
+.nx-what-if__fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--lo) * 100%);
+  inline-size: calc((var(--hi) - var(--lo)) * 100%);
+  border-radius: inherit;
+  background: var(--nx-primary);
+}
+.nx-what-if__mark {
+  position: absolute;
+  inset-block: -5px;
+  inset-inline-start: calc(var(--b) * 100%);
+  inline-size: 2px;
+  margin-inline-start: -1px;
+  border-radius: 2px;
+  background: var(--nx-text-tertiary);
+}
+.nx-what-if__range {
+  position: relative;
+  display: block;
+  inline-size: 100%;
+  block-size: 20px;
+  margin: 0;
+  background: none;
+  appearance: none;
+  cursor: pointer;
+  &:focus-visible {
+    outline: 0;
+  }
+  &::-webkit-slider-thumb {
+    box-sizing: border-box;
+    appearance: none;
+    inline-size: 18px;
+    block-size: 18px;
+    border: 2px solid var(--nx-primary);
+    border-radius: 50%;
+    background: var(--nx-card);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+    transition: transform var(--nx-motion-fast);
+  }
+  &::-moz-range-thumb {
+    inline-size: 14px;
+    block-size: 14px;
+    border: 2px solid var(--nx-primary);
+    border-radius: 50%;
+    background: var(--nx-card);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  }
+  &::-moz-range-track {
+    background: none;
+  }
+  &:active::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+  &:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px var(--nx-ring);
+  }
+  &:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 4px var(--nx-ring);
+  }
+}
+.nx-what-if__scale {
+  display: flex;
+  justify-content: space-between;
+}
+.nx-what-if__scale,
+.nx-what-if__hint,
+.nx-what-if__base,
+.nx-what-if__y,
+.nx-what-if__x,
+.nx-what-if__empty {
+  margin: 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------- resultados */
+
+.nx-what-if__cards,
+.nx-what-if__notes,
+.nx-what-if__charts {
+  transition: opacity var(--nx-motion-base) 120ms;
+}
+[data-busy] :is(.nx-what-if__cards, .nx-what-if__charts) {
+  opacity: 0.55;
+}
+.nx-what-if__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 175px), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-what-if__card {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-background);
+  & p {
+    margin: 0;
+  }
+}
+.nx-what-if__mlabel {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.nx-what-if__num {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.nx-what-if__foot {
+  gap: 4px 8px;
+}
+.nx-what-if__chip {
+  padding: 1px 7px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+[data-tone="good"] .nx-what-if__chip {
+  background: var(--nx-success-soft);
+  color: var(--nx-success);
+}
+[data-tone="bad"] .nx-what-if__chip {
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+}
+.nx-what-if__note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-hover);
+  animation: nx-what-if-in var(--nx-motion-base) var(--nx-ease-out);
+  &[data-tone="warning"] {
+    background: light-dark(oklch(0.96 0.05 80), oklch(0.3 0.05 80));
+  }
+  &[data-tone="danger"] {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+  &[data-tone="success"] {
+    background: var(--nx-success-soft);
+  }
+  & > :nth-child(2) {
+    flex: 1;
+  }
+}
+.nx-what-if__retry {
+  border: 0;
+  background: none;
+  font-weight: 600 !important;
+  text-decoration: underline;
+}
+@keyframes nx-what-if-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ---------------------------------------------------------------- gráfico */
+
+.nx-what-if__chart {
+  margin: 14px 0 0;
+}
+.nx-what-if__cap {
+  justify-content: space-between;
+  margin-block-end: 6px;
+  font-weight: 550;
+}
+.nx-what-if__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+  & i {
+    inline-size: 16px;
+    border-block-start: 2px solid var(--nx-primary);
+  }
+  & .is-base {
+    border-block-start: 2px dashed var(--nx-text-tertiary);
+  }
+}
+.nx-what-if__plot {
+  display: grid;
+  grid-template: var(--nx-what-if-chart-height, 132px) auto / auto 1fr;
+  gap: 4px 10px;
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+  }
+}
+.nx-what-if__y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: end;
+}
+.nx-what-if__x {
+  display: flex;
+  justify-content: space-between;
+  margin-inline: -6px;
+  font-size: 11px;
+}
+.nx-what-if__chart path,
+.nx-what-if__zero {
+  fill: none;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  transition: d 420ms var(--nx-ease-out);
+}
+.nx-what-if__lvalue {
+  stroke: var(--nx-primary);
+  stroke-width: 2.5px !important;
+}
+.nx-what-if__lbase {
+  stroke: var(--nx-text-tertiary);
+  stroke-dasharray: 4 4;
+}
+.nx-what-if__chart .nx-what-if__gap {
+  fill: var(--nx-primary-soft);
+  stroke: none;
+}
+.nx-what-if__zero {
+  stroke: var(--nx-border-strong);
+  stroke-width: 1px;
+}
+
+/* ---------------------------------------------------------------- escenarios */
+
+.nx-what-if__cmp {
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+.nx-what-if__scroll {
+  overflow-x: auto;
+  border-radius: var(--nx-radius-md);
+}
+.nx-what-if__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  & :is(th, td) {
+    padding: 7px 12px;
+    border-block-end: 1px solid var(--nx-border-subtle);
+    text-align: end;
+    white-space: nowrap;
+  }
+  & tbody th,
+  & thead td {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background: var(--nx-card);
+    font-weight: 450;
+    text-align: start;
+  }
+  & thead th {
+    vertical-align: bottom;
+    font-weight: 650;
+  }
+  & .is-current {
+    color: var(--nx-primary-ink);
+  }
+  & .is-active {
+    box-shadow: inset 0 3px var(--nx-primary);
+  }
+  & .is-moved {
+    color: var(--nx-primary-ink);
+    font-weight: 600;
+  }
+  & .is-best {
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+    font-weight: 650;
+  }
+  & .nx-what-if__name {
+    inline-size: 11em;
+  }
+}
+.nx-what-if__group th {
+  padding-block-start: 14px !important;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 650 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.nx-what-if__sname {
+  display: block;
+}
+.nx-what-if__acts {
+  display: inline-flex;
+  margin-inline-end: -6px;
+}
+.nx-what-if__act {
+  inline-size: 24px;
+  block-size: 24px;
+  font-size: 13px;
+}
+
+@container (max-width: 520px) {
+  .nx-what-if__cards {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 135px), 1fr));
+  }
+  .nx-what-if__num {
+    font-size: 20px;
+  }
+  .nx-what-if__x span:nth-child(even) {
+    visibility: hidden;
+  }
+  .nx-what-if__table tbody th {
+    min-inline-size: 8.5em;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-what-if *,
+  nx-what-if ::-webkit-slider-thumb {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-what-if__range:focus-visible {
+    outline: 2px solid Highlight;
+  }
+  .nx-what-if__fill,
+  .nx-what-if__mark {
+    background: CanvasText;
+    forced-color-adjust: none;
+  }
+  .nx-what-if__lvalue {
+    stroke: Highlight;
+  }
+  .nx-what-if__lbase {
+    stroke: CanvasText;
+  }
+
+  .nx-what-if__table .is-best {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
