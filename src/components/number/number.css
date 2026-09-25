@@ -1,0 +1,209 @@
+/*
+ * <nx-number>. Variables propias:
+ *   --nx-number-width (220px) · --nx-number-height (36px) · --nx-number-font-size (14px)
+ */
+
+nx-number {
+  position: relative;
+  display: inline-block;
+  inline-size: var(--nx-number-width, 220px);
+  max-inline-size: 100%;
+  vertical-align: middle;
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+nx-number *,
+nx-number *::before {
+  box-sizing: border-box;
+}
+nx-number [hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- el campo */
+
+.nx-number__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  block-size: var(--nx-number-height, 36px);
+  padding-inline: 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  cursor: text;
+  container-type: inline-size;
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast);
+}
+.nx-number__field:hover {
+  border-color: var(--nx-border-strong);
+}
+.nx-number__field:focus-within {
+  border-color: var(--nx-primary-border);
+  box-shadow: 0 0 0 3px var(--nx-primary-soft);
+}
+.nx-number__field[data-invalid] {
+  border-color: var(--nx-danger);
+}
+.nx-number__field[data-invalid]:focus-within {
+  box-shadow: 0 0 0 3px var(--nx-danger-soft);
+}
+.nx-number__field[data-readonly] {
+  border-style: dashed;
+  background: transparent;
+}
+.nx-number__field[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.nx-number__input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--nx-number-font-size, 14px);
+  font-variant-numeric: tabular-nums;
+  text-align: start;
+}
+.nx-number__input::placeholder {
+  color: var(--nx-text-tertiary);
+  opacity: 1;
+}
+.nx-number__input:disabled {
+  cursor: not-allowed;
+}
+[data-align="end"] > .nx-number__input {
+  text-align: end;
+}
+[data-align="center"] > .nx-number__input {
+  text-align: center;
+}
+.nx-number__affix {
+  flex: none;
+  color: var(--nx-text-tertiary);
+  font-size: var(--nx-number-font-size, 14px);
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* ---------------------------------------------------------------- vista previa y error */
+
+.nx-number__hint {
+  flex: none;
+  max-inline-size: 60%;
+  overflow: hidden;
+  padding: 2px 7px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  animation: nx-number-in var(--nx-motion-fast) var(--nx-ease-out);
+}
+.nx-number__hint[data-error] {
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+}
+/* En un campo angosto (una celda de tabla), la vista previa flota debajo y no le quita espacio al número. */
+@container (max-width: 190px) {
+  .nx-number__hint {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: calc(100% + 4px);
+    inset-inline-end: -1px;
+    max-inline-size: none;
+    border: 1px solid var(--nx-border);
+    background: var(--nx-popover);
+    box-shadow: var(--nx-shadow-popover);
+  }
+  .nx-number__hint[data-error] {
+    border-color: var(--nx-danger);
+    background: var(--nx-popover);
+  }
+}
+
+/* ---------------------------------------------------------------- en letras y avisos */
+
+.nx-number__words {
+  margin: 6px 2px 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+/* El aviso de «se recortó» flota debajo del campo un momento: no mueve lo que hay alrededor. */
+.nx-number__note {
+  position: absolute;
+  z-index: 3;
+  inset-block-start: calc(var(--nx-number-height, 36px) + 4px);
+  inset-inline-start: 0;
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-popover);
+  box-shadow: var(--nx-shadow-popover);
+  color: var(--nx-foreground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* Vacío sigue en el árbol (es la región viva que anuncia el aviso), pero no se ve. */
+.nx-number__note:empty {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+.nx-number__note[data-on] {
+  animation: nx-number-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-number__note[data-on]::before {
+  content: "↕ ";
+  color: var(--nx-primary-ink);
+}
+.nx-number__field.is-bump {
+  animation: nx-number-bump 260ms var(--nx-ease-out);
+}
+
+@keyframes nx-number-in {
+  from {
+    opacity: 0;
+    translate: 0 -2px;
+  }
+}
+@keyframes nx-number-bump {
+  30% {
+    translate: 3px 0;
+  }
+  60% {
+    translate: -2px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-number * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-number__field:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+  .nx-number__field[data-invalid],
+  .nx-number__hint[data-error] {
+    border: 1px solid Mark;
+  }
+}

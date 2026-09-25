@@ -1,0 +1,87 @@
+    <template id="page-kanban">
+      <p class="eyebrow">Componentes</p>
+      <h1>Tablero <code class="tag">&lt;nx-kanban&gt;</code></h1>
+      <p class="lead">
+        Un tablero que se siente instantáneo: arrastra una orden y el hueco se abre donde va a caer; suéltala y ya está
+        en su lugar, sin esperar al servidor, con unos segundos para deshacer. También se mueve con el teclado, con cada
+        paso anunciado al lector de pantalla. Las columnas cuentan y suman, avisan cuando se pasan de su límite, y
+        «Anulado» pide confirmación mostrando qué se afecta.
+      </p>
+      <nx-kanban id="kanban-demo" heading="Órdenes de compra · septiembre" locale="es-CO"></nx-kanban>
+      <div class="dlg-row">
+        <button type="button" class="dlg-plain" id="kanban-reset">Volver a empezar</button>
+      </div>
+      <p class="sel-tip">
+        Con el teclado: <kbd>Tab</kbd> hasta una tarjeta, <kbd>Espacio</kbd> la levanta, <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>
+        la mueven, <kbd>Espacio</kbd> la suelta y <kbd>Esc</kbd> cancela; <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace. Lleva una
+        orden recibida a «Anulado»: la OC-2240 ya tiene un pago y el servidor no deja anularla.
+      </p>
+      <ol class="stage__log btn-events" id="kanban-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Paso</th><th>Qué pasa</th></tr></thead>
+          <tbody>
+            <tr><td>Mover</td><td>Arrastrando (con el dedo, manteniendo pulsado) o con el teclado. Las demás tarjetas se apartan con una animación, y el tablero y la columna se desplazan solos al acercarse a los bordes.</td></tr>
+            <tr><td><code>nx-kanban-move</code></td><td>Antes de aplicar (cancelable): <code>{card, from, fromIndex, to, index, via}</code>. Con <code>preventDefault()</code> la tarjeta vuelve.</td></tr>
+            <tr><td><code>confirm</code></td><td>Si la columna destino lo tiene, se pide confirmación con impacto (<code>nxConfirm</code>, que se carga solo la primera vez). Si se niega, la tarjeta vuelve.</td></tr>
+            <tr><td>Deshacer</td><td>El movimiento se ve al instante y se puede deshacer durante <code>undo</code> ms (7000), con el aviso o <kbd>Ctrl</kbd>+<kbd>Z</kbd> (<code>nx-kanban-undo</code>).</td></tr>
+            <tr><td><code>nx-kanban-commit</code></td><td>Cuando el tiempo termina (o la página se cierra): ahí la app llama al backend.</td></tr>
+            <tr><td><code>wip</code></td><td>Una columna por encima de su límite se marca en rojo («6/5»), y al llevarle una tarjeta lo avisa.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Protocolo</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+          <tbody>
+            <tr><td><code>columns</code></td><td><code>{id, label, tone?, wip?, confirm?, collapsed?}</code>; <code>tone</code>: <code>neutral</code>, <code>primary</code>, <code>success</code>, <code>warning</code>, <code>danger</code>.</td></tr>
+            <tr><td><code>confirm</code></td><td><code>{heading, message?, impact?, hold?, tone?, confirmLabel?}</code>. <code>{title}</code> y <code>{column}</code> se reemplazan en el título y el mensaje.</td></tr>
+            <tr><td><code>impact</code></td><td>URL que recibe <code>POST {card, from, to, index, data}</code> y transmite NDJSON o SSE, una línea por evento: <code>{"type":"impact","label":"Factura FE-10482","detail":"queda sin orden","tone":"warning"}</code>, <code>{"type":"block","message":"…"}</code>, <code>{"type":"note","message":"…"}</code>, <code>{"type":"done"}</code>.</td></tr>
+            <tr><td><code>cards</code></td><td><code>{id, column, title, subtitle?, tags?, assignee?, amount?, currency?, due?, href?, data?}</code>. El orden dentro de cada columna es el del arreglo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-kanban id="compras" heading="Órdenes de compra"&gt;&lt;/nx-kanban&gt;
+
+compras.columns = [
+  { id: "borrador", label: "Borrador" },
+  { id: "por-aprobar", label: "Por aprobar", tone: "warning", wip: 5 },
+  { id: "aprobado", label: "Aprobado", tone: "primary" },
+  { id: "anulado", label: "Anulado", tone: "danger",
+    confirm: { heading: "¿Anular la {title}?", impact: "/compras/oc/impacto", hold: true } },
+];
+compras.cards = await (await fetch("/compras/oc?mes=2026-09")).json();
+compras.addEventListener("nx-kanban-commit", (e) =&gt;
+  fetch(`/compras/oc/${e.detail.card.id}`, { method: "PATCH", keepalive: true,
+    body: JSON.stringify({ estado: e.detail.to, orden: e.detail.index }) }));</code></pre>
+        <pre role="tabpanel" hidden><code>import { Kanban } from "nx-ui/solid";
+
+&lt;Kanban heading="Órdenes de compra" columns={columnas} cards={ordenes()}
+  onCommit={(e) =&gt; guardar(e.detail)} onAdd={(e) =&gt; nuevaOrden(e.detail.column)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>columns</code>, <code>cards</code></td><td>Las columnas y las tarjetas (JSON). <code>cards</code> devuelve el estado actual, con los movimientos aplicados.</td></tr>
+            <tr><td><code>heading</code>, <code>undo</code>, <code>busy</code>, <code>locale</code>, <code>labels</code></td><td>Título, tiempo para deshacer (0 = sin aviso), cargando (tarjetas de relleno), formato de montos y fechas, y textos.</td></tr>
+            <tr><td><code>move(id, columna, índice?)</code></td><td>Mueve desde código, con el mismo flujo (evento, confirmación, aviso) → <code>"commit"</code>, <code>"undo"</code> o <code>"cancel"</code>.</td></tr>
+            <tr><td>Teclado</td><td>Flechas entre tarjetas; <kbd>Espacio</kbd> levanta y suelta, flechas mueven, <kbd>Esc</kbd> cancela; <kbd>↵</kbd> abre; <kbd>/</kbd> filtra.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-kanban-move</code> (cancelable), <code>nx-kanban-commit</code>, <code>nx-kanban-undo</code>, <code>nx-kanban-add</code> <code>{column}</code>, <code>nx-kanban-open</code> <code>{card}</code> (cancelable).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
