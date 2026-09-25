@@ -119,8 +119,13 @@ function build(locale: string): NxFormat {
       if (decimal === ",") {
         if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
         else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
-      } else {
-        t = t.replace(/,/g, "");
+      } else if (t.includes(",")) {
+        // Las comas solo son de miles si agrupan de verdad (grupos de tres, o de dos antes del
+        // último en la India: «12,34,567»). «0,5» o «12,5» no pueden serlo: una sola coma sin
+        // punto es el decimal de quien escribe a la europea; lo demás no se entiende.
+        if (/^-?\d{1,3}(,\d{2,3})*,\d{3}(\.\d*)?$/.test(t)) t = t.replace(/,/g, "");
+        else if (!t.includes(".") && t.split(",").length === 2) t = t.replace(",", ".");
+        else return null;
       }
       const n = Number(t);
       return Number.isFinite(n) ? n : null;

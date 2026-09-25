@@ -32,4 +32,14 @@ describe.skipIf(!hasDist)("dist/", () => {
     expect(jsx).toContain('from "../sync.js"');
     expect(jsx).not.toMatch(/customElements\.define|extends Base/);
   });
+
+  it("cada nombre que el adaptador Solid importa de dist/ existe en ese módulo", async () => {
+    const jsx = readFileSync("dist/solid/index.jsx", "utf8");
+    for (const [, names, file] of jsx.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\.\/([\w-]+\.js)"/g)) {
+      const src = readFileSync(`dist/${file}`, "utf8");
+      for (const n of names.split(",").map((x) => x.trim().split(/\s+as\s+/)[0])) {
+        expect(src, `${n} en dist/${file}`).toMatch(new RegExp(`export\\s*\\{[^}]*\\b${n}\\b`));
+      }
+    }
+  });
 });

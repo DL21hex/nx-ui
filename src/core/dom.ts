@@ -59,7 +59,7 @@ export function allowOrigins(...origins: string[]): void {
 /**
  * La URL de un `fetch` si es segura, o `undefined`: http(s) del mismo origen que la página (o de
  * uno permitido con `allowOrigins`). Las rutas relativas pasan; `//otro.com` no, porque resuelve a
- * otro origen. Devuelve la URL resuelta y absoluta.
+ * otro origen. Devuelve la URL tal como vino (sin espacios alrededor).
  */
 export function safeEndpoint(url: unknown): string | undefined {
   const href = safeHref(url);
@@ -75,7 +75,8 @@ export function safeEndpoint(url: unknown): string | undefined {
     console.warn(`[nx-ui] endpoint de otro origen bloqueado: ${u.origin} (ver allowOrigins)`);
     return undefined;
   }
-  return u.href;
+  // Tal como vino (recortada): `URL` codificaría las plantillas (`/items/{code}` → `%7Bcode%7D`).
+  return href;
 }
 
 /** Una imagen de datos remotos (el avatar de otra persona): `https:` o del mismo origen; nunca

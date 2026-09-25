@@ -38,7 +38,10 @@ const registry = new Map<string, Entry>([
 ]);
 
 /** Props que nunca se aceptan, ni en un componente propio: HTML crudo, manejadores y prototipos. */
-const FORBIDDEN = /^(on.*|innerHTML|outerHTML|srcdoc|__proto__|constructor|prototype)$/i;
+const FORBIDDEN = /^(innerHTML|outerHTML|srcdoc|__proto__|constructor|prototype)$/i;
+/** Un manejador de evento de verdad (`onclick`), no una prop que empieza igual (`online`). */
+const isHandler = (k: string) => /^on/i.test(k) && (typeof HTMLElement === "undefined" || k.toLowerCase() in HTMLElement.prototype);
+const forbidden = (k: string) => FORBIDDEN.test(k) || isHandler(k);
 
 /** Props que llevan una URL a la que el componente pide datos o envía algo. El agente las quita de
  *  lo que muestra el modelo (`nx_show`): una respuesta del modelo no elige a dónde van los datos. */
@@ -48,7 +51,7 @@ export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "so
  *  guion): un `<a>` o un `<iframe>` con props de un payload se saltarían el saneo de URLs. */
 export function registerComponent(name: string, tag: string, props: readonly string[]): void {
   if (!/^[a-z][a-z0-9._]*-[a-z0-9._-]*$/.test(tag)) throw new Error(`[nx-ui] BDUI: "${tag}" no es un elemento personalizado`);
-  const bad = props.filter((p) => FORBIDDEN.test(p));
+  const bad = props.filter(forbidden);
   if (bad.length) throw new Error(`[nx-ui] BDUI: props no permitidas: ${bad.join(", ")}`);
   registry.set(name, { tag, props });
 }
@@ -72,7 +75,7 @@ export function render(node: BduiNode | BduiNode[], target: Element): Element[] 
     }
     const el = document.createElement(entry.tag) as unknown as Record<string, unknown> & Element;
     for (const [k, v] of Object.entries(n.props ?? {})) {
-      if (entry.props.includes(k) && !FORBIDDEN.test(k)) el[k] = v;
+      if (entry.props.includes(k) && !forbidden(k)) el[k] = v;
       else console.warn(`[nx-ui] ${n.component}: prop ignorada "${k}"`);
     }
     out.push(el);

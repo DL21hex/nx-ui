@@ -75,18 +75,38 @@ describe("readLines", () => {
     expect(lines).toEqual(['data: {"a":\n1}', 'data: {"b":2}']);
   });
 
-  it("SSE sin líneas vacías entre eventos: cada data: con JSON completo es un evento", async () => {
-    const { res } = chunked(['data: {"a":1}\ndata: {"b":2}\n'], "text/event-stream");
+  it("SSE sin líneas vacías entre eventos: cada data: con JSON completo sale ya (y [DONE] corta)", async () => {
+    const { res, state } = chunked(['data: {"a":1}\ndata: {"b":2}\ndata: [DONE]\n'], "text/event-stream", true);
+    const lines: string[] = [];
+    await readLines(res, (l) => (lines.push(l), l !== "data: [DONE]"));
+    expect(lines).toEqual(['data: {"a":1}', 'data: {"b":2}', "data: [DONE]"]);
+    expect(state.cancelled).toBe(true);
+  });
+
+  it("SSE: un comentario a mitad de evento no lo corta; U+2028 no parte la línea", async () => {
+    const { res } = chunked(['data: {"a":\n: ping\ndata: "x\u2028y"}\n\n'], "text/event-stream");
     const lines: string[] = [];
     await readLines(res, (l) => void lines.push(l));
-    expect(lines).toEqual(['data: {"a":1}', 'data: {"b":2}']);
+    expect(lines).toEqual(['data: {"a":\n"x\u2028y"}']);
+  });
+
+  it("SSE: un evento de miles de líneas no es cuadrático", async () => {
+    const body = ["data: [", ...Array.from({ length: 5000 }, (_, i) => `data: ${i},`), "data: 0]", "", ""].join("\n");
+    const { res } = chunked([body], "text/event-stream");
+    const t0 = performance.now();
+    let n = 0;
+    await readLines(res, (l) => void (n = JSON.parse(l.slice(6)).length));
+    expect(n).toBe(5001);
+    expect(performance.now() - t0).toBeLessThan(500);
   });
 });
 
 describe("safeEndpoint", () => {
   it("rutas relativas y el mismo origen pasan, resueltas", () => {
-    expect(safeEndpoint("/api/x?q=1")).toBe(`${location.origin}/api/x?q=1`);
+    expect(safeEndpoint(" /api/x?q=1 ")).toBe("/api/x?q=1");
     expect(safeEndpoint(`${location.origin}/y`)).toBe(`${location.origin}/y`);
+    // Las plantillas no se codifican.
+    expect(safeEndpoint("/items/{code}")).toBe("/items/{code}");
   });
 
   it("otro origen, //otro y esquemas raros no pasan", () => {
@@ -159,7 +179,7 @@ describe("glyph y BDUI", () => {
     expect(() => registerComponent("Link", "a", ["href"])).toThrow();
     expect(() => registerComponent("X", "x-foo", ["innerHTML"])).toThrow();
     expect(() => registerComponent("Y", "x-foo", ["onclick"])).toThrow();
-    expect(() => registerComponent("Z", "x-foo", ["value"])).not.toThrow();
+    expect(() => registerComponent("Z", "x-foo", ["value", "online", "once"])).not.toThrow();
   });
 
   it("render avisa si el elemento no está definido", () => {

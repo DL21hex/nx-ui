@@ -45,16 +45,17 @@ export async function readLines(res: Response, onLine: (line: string) => boolean
   const emit = (raw: string): void => {
     const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
     if (sse) {
-      const m = /^data:\s?(.*)$/.exec(line);
-      if (m) {
-        // Un servidor que no separa los eventos con línea vacía: cada `data:` completo es un evento.
-        if (data && isJson(data.join("\n"))) flush();
-        if (stopped) return;
-        (data ??= []).push(m[1]);
+      // La línea vacía cierra el evento; un comentario (`: ping`) o `event:`/`id:` no lo cortan.
+      if (!line) return flush();
+      if (line.startsWith(":")) return;
+      if (line.startsWith("data:")) {
+        const d = line.slice(line.startsWith("data: ") ? 6 : 5);
+        (data ??= []).push(d);
+        // Un servidor que no separa los eventos con línea vacía: una primera línea que ya es JSON
+        // completo (o `[DONE]`) no puede ser el comienzo de uno de varias líneas, y sale ya.
+        if (data.length === 1 && (d.trim() === "[DONE]" || isJson(d))) flush();
         return;
       }
-      flush();
-      if (stopped || !line) return;
     }
     if (onLine(line) === false) stopped = true;
   };

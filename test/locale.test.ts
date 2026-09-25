@@ -28,6 +28,21 @@ describe("locale de la librería", () => {
     expect(b.querySelector('[role="status"]')!.textContent).toMatch(/· \d\.\d s$/);
   });
 
+  it("parse en inglés: la coma solo es de miles si agrupa de verdad", () => {
+    const en = nxFormat("en-US");
+    expect(en.parse("1,234")).toBe(1234);
+    expect(en.parse("1,234,567.5")).toBe(1234567.5);
+    expect(en.parse("12,34,567.5")).toBe(1234567.5); // agrupación de la India
+    // Una sola coma que no agrupa es el decimal de quien escribe a la europea, no ×10.
+    expect(en.parse("0,5")).toBe(0.5);
+    expect(en.parse("1,50")).toBe(1.5);
+    expect(en.parse("12,5")).toBe(12.5);
+    // Comas que no agrupan con un punto, o varias sueltas: no se entiende.
+    expect(en.parse("1,5.3")).toBeNull();
+    expect(en.parse("1,2,3")).toBeNull();
+    expect(nxFormat("es-CO").parse("1.234,5")).toBe(1234.5);
+  });
+
   it("nxFormat se cachea por locale", () => {
     expect(nxFormat("en-US")).toBe(nxFormat("en-US"));
     expect(nxFormat().locale).toBe("es-CO");
