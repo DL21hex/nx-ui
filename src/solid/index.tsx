@@ -2,7 +2,7 @@
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
- * `<PasteFill>`, `<Presence>`, `<WhatIf>`), y `nxToast` / `nxConfirm`.
+ * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -67,6 +67,9 @@ import type { PresenceEvent, PresenceLabels, PresenceState, PresenceUser } from 
 import "../components/what-if/index";
 import type { NxWhatIf } from "../components/what-if/what-if";
 import type { WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfSaveDetail, WhatIfScenario, WhatIfSeries, WhatIfValues } from "../components/what-if/types";
+import "../components/trend/index";
+import type { NxTrend } from "../components/trend/trend";
+import type { TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, TrendWhyDetail } from "../components/trend/types";
 import "../components/date-range/index";
 import type { NxDateRange } from "../components/date-range/date-range";
 import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
@@ -91,6 +94,7 @@ export type { NxDateRange, DateRangeChangeDetail, DateRangeCompare, DateRangeLab
 export type { NxPasteFill, PasteFieldInput, PasteFillDoneDetail, PasteFillLabels };
 export type { NxPresence, PresenceEvent, PresenceLabels, PresenceState, PresenceUser };
 export type { NxWhatIf, WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfSaveDetail, WhatIfScenario, WhatIfSeries, WhatIfValues };
+export type { NxTrend, TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, TrendWhyDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -98,14 +102,15 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      anomalies: TrendAnomaly[] | undefined;
       values: WhatIfValues | undefined;
       scenarios: WhatIfScenario[] | undefined;
-      series: WhatIfSeries[] | undefined;
+      series: WhatIfSeries[] | TrendSeries[] | undefined;
       outputs: WhatIfMetric[] | undefined;
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -131,6 +136,9 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      "explain-endpoint": string | undefined;
+      detect: string | undefined;
+      kind: TrendKind | undefined;
       debounce: string | undefined;
       idle: string | undefined;
       channel: string | undefined;
@@ -204,6 +212,8 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-trend-toggle": CustomEvent<{ id: string; visible: boolean }>;
+      "nx-trend-why": CustomEvent<TrendWhyDetail>;
       "nx-what-if-change": CustomEvent<WhatIfChangeDetail>;
       "nx-what-if-save": CustomEvent<WhatIfSaveDetail>;
       "nx-what-if-compute": CustomEvent<WhatIfComputeDetail>;
@@ -250,6 +260,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-trend": HTMLAttributes<NxTrend> & { heading?: string };
       "nx-what-if": HTMLAttributes<NxWhatIf> & { heading?: string; endpoint?: string };
       "nx-presence": HTMLAttributes<NxPresence> & { channel?: string; source?: string; for?: string };
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
@@ -1164,6 +1175,55 @@ export function WhatIf(props: WhatIfProps): JSX.Element {
       on:nx-what-if-compute={(e) => local.onCompute?.(e)}
       on:nx-what-if-save={(e) => local.onSave?.(e)}
       on:nx-what-if-change={(e) => local.onChange?.(e)}
+    />
+  );
+}
+
+export interface TrendProps extends Omit<JSX.HTMLAttributes<NxTrend>, "onToggle"> {
+  /** `{id, label, points: {x, y}[], format?, currency?, kind?, muted?, hidden?}`. */
+  series: TrendSeries[];
+  /** `{series, x, label?}`: anillo que late y etiqueta corta. */
+  anomalies?: TrendAnomaly[];
+  heading?: string;
+  /** Por defecto de las series: `line` (por defecto) o `bar`. */
+  kind?: TrendKind;
+  format?: TrendFormat;
+  /** Con `money`: ISO («COP») o un símbolo. */
+  currency?: string;
+  /** Alto en px, con el eje x (260). */
+  height?: number;
+  /** Detección automática: `true` (3 desviaciones robustas) o un número. */
+  detect?: boolean | number;
+  /** Protocolo de IA que contesta «¿por qué?» (POST `{question, context}`). */
+  explainEndpoint?: string;
+  busy?: boolean;
+  locale?: string;
+  labels?: Partial<TrendLabels>;
+  /** Clic o Enter en un punto (cancelable: no se abre el popover). */
+  onWhy?: (e: CustomEvent<TrendWhyDetail>) => void;
+  /** La leyenda mostró u ocultó una serie. */
+  onToggle?: (e: CustomEvent<{ id: string; visible: boolean }>) => void;
+}
+
+export function Trend(props: TrendProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["series", "anomalies", "heading", "kind", "format", "currency", "height", "detect", "explainEndpoint", "busy", "locale", "labels", "onWhy", "onToggle"]);
+  return (
+    <nx-trend
+      {...rest}
+      prop:series={local.series}
+      prop:anomalies={local.anomalies}
+      prop:labels={local.labels}
+      attr:heading={local.heading}
+      attr:kind={local.kind}
+      attr:format={local.format}
+      attr:currency={local.currency}
+      attr:height={local.height === undefined ? undefined : String(local.height)}
+      attr:detect={local.detect === true ? "" : local.detect ? String(local.detect) : undefined}
+      attr:explain-endpoint={local.explainEndpoint}
+      attr:locale={local.locale}
+      bool:busy={!!local.busy}
+      on:nx-trend-why={(e) => local.onWhy?.(e)}
+      on:nx-trend-toggle={(e) => local.onToggle?.(e)}
     />
   );
 }

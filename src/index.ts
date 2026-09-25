@@ -13,6 +13,7 @@ export * from "./components/explain/index";
 export * from "./components/inbox/index";
 export * from "./components/survey/index";
 export * from "./components/tour/index";
+export * from "./components/trend/index";
 export * from "./components/what-if/index";
 export * from "./components/presence/index";
 export * from "./components/paste-fill/index";

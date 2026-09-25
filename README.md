@@ -932,6 +932,52 @@ El backend recibe `POST {inputs: {acero: 842, volumen: 136800}}` y responde una 
 | Eventos | `nx-what-if-compute` `{inputs, respond(events)}`, `nx-what-if-save` `{action, scenario, scenarios}` (cancelable), `nx-what-if-change` `{id, inputs}` |
 | Protocolo | NDJSON o SSE: `metric`, `series`, `note` (`tone`), `error`, `done` |
 
+## `<nx-trend>`
+
+Un gráfico que se explica. Series de tiempo del ERP (ventas, costos, inventario) en líneas o barras,
+en SVG propio y sin librerías, con la pregunta que importa a un clic: **«¿por qué?»**.
+
+- **Se lee:** ticks redondos en el eje y («400 M», con `Intl`), meses cortos en el x (con el año bajo
+  enero), cuadrícula de una línea, el último valor al final de cada línea, y una leyenda que muestra
+  y oculta series (el color sigue a la serie, no a su posición). Se adapta al ancho (ResizeObserver).
+- **Se recorre:** una línea vertical sigue al puntero, o a ←/→ con el foco en el gráfico, con un
+  tooltip de todas las series en ese periodo; ↑/↓ cambian de serie.
+- **Anomalías:** las que manda el backend (`anomalies`) y, con `detect`, las que se apartan de la
+  media móvil (desviación robusta, así una serie que crece parejo no se marca entera): un anillo que
+  late y una etiqueta corta («Acero +18 %»).
+- **«¿Por qué?»:** clic o Enter en un punto abre, anclado a él, un `<nx-ai-answer>` que pregunta a
+  `explain-endpoint` «¿Por qué sube Materia prima en agosto?» con `context: {series, point, previous,
+  window, anomaly?}` y muestra la respuesta en streaming con sus pasos y citas (el protocolo de IA de
+  la librería). Se puede repreguntar desde la caja. `<nx-ai-answer>` se carga con `import()` la
+  primera vez.
+- **Accesible:** el SVG es una imagen con un resumen generado («Ventas: sube 11 % de julio a agosto;
+  máximo en agosto»), que también se ve debajo; cada punto es un botón (un solo Tab); la tabla
+  equivalente está siempre para el lector de pantalla y a la vista con «Ver como tabla»; cada serie
+  tiene además su forma de marcador. Los colores (`--nx-trend-1…8`) son una paleta categórica
+  validada para daltonismo en claro y en oscuro; `muted` pinta una serie de referencia en gris.
+- **Movimiento:** la línea se dibuja y las barras crecen al llegar los datos (nada con
+  `prefers-reduced-motion`).
+
+```html
+<nx-trend id="costos" heading="Costo de producción 2026" format="money" currency="COP"
+  explain-endpoint="/ia/por-que" detect></nx-trend>
+<script>
+  costos.series = [
+    { id: "mp", label: "Materia prima", points: [{ x: "2026-01", y: 388400000 }, /* … */] },
+    { id: "mo", label: "Mano de obra", points: [/* … */] },
+  ];
+  costos.anomalies = [{ series: "mp", x: "2026-08", label: "Acero +18 %" }];
+  costos.addEventListener("nx-trend-why", (e) => console.log(e.detail.question, e.detail.point));
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `series` (`{id, label, points: {x, y}[], format?, currency?, kind?, muted?, hidden?}`; `x` «2026-08» o «2026-08-15»; `y` `null` corta la línea), `anomalies` (`{series, x, label?}`), `heading`, `kind` (`line`, `bar`), `format` (`number`, `money`, `percent`), `currency`, `height` (260), `detect` (sin valor: 3), `explain-endpoint`, `busy`, `locale`, `labels` · `flags`, `summary` |
+| Métodos | `explain(id, x, pregunta?)`, `close()` |
+| Eventos | `nx-trend-why` `{question, series, point, previous, window, anomaly?}` (cancelable: no se abre el popover), `nx-trend-toggle` `{id, visible}` |
+| Funciones | `detectAnomalies(serie, umbral?, ventana?)`, `niceTicks(min, max)`, `periodLabel(x, locale, estilo)`, `summarizeTrend(series, anomalías, labels, locale)`, `trendQuestion(…)`, `trendContext(…)` |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos

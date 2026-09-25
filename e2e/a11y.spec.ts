@@ -4,6 +4,15 @@ import { open } from "./helpers";
 
 /** axe sobre los componentes (no sobre el texto de la galería): WCAG 2.1 A y AA. */
 async function audit(page: Page, include: string[]) {
+  // Lo que entra con un fundido tiene poco contraste mientras anima: se mide cuando termina (las
+  // animaciones infinitas, como un anillo que late o un spinner, no se esperan).
+  await page.evaluate(async (sels) => {
+    const running = sels
+      .flatMap((sel) => [...document.querySelectorAll(sel)])
+      .flatMap((el) => el.getAnimations({ subtree: true }))
+      .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity);
+    await Promise.race([Promise.allSettled(running.map((a) => a.finished)), new Promise((r) => setTimeout(r, 3000))]);
+  }, include);
   const result = await new AxeBuilder({ page }).include(include).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const serious = result.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
   const report = serious
@@ -202,6 +211,12 @@ test("simulador: en la base, con notas de advertencia y peligro, escribiendo y r
   await open(page, "#/what-if");
   const demo = page.locator("#what-if-demo");
   await expect(demo.locator(".nx-what-if__card").first()).toBeVisible();
+  // Mientras calcula, los resultados se atenúan (y el contraste baja a propósito): se mide al terminar.
+  const settled = async () => {
+    await expect(demo.locator(".nx-what-if__results")).not.toHaveAttribute("data-busy", "");
+    await expect(demo.locator(".nx-what-if__cards")).toHaveCSS("opacity", "1");
+  };
+  await settled();
   await audit(page, ["#what-if-demo"]);
   await demo.getByRole("slider", { name: "Precio del acero" }).focus();
   await page.keyboard.press("End");
@@ -210,10 +225,25 @@ test("simulador: en la base, con notas de advertencia y peligro, escribiendo y r
   await demo.getByRole("slider", { name: "Volumen de ventas" }).focus();
   await page.keyboard.press("Home");
   await expect(demo.locator('.nx-what-if__note[data-tone="danger"]')).toBeVisible();
-  await expect(demo.locator(".nx-what-if__results")).not.toHaveAttribute("data-busy", "");
+  await settled();
   await audit(page, ["#what-if-demo"]);
   await demo.locator(".nx-what-if__big").first().click();
   await demo.getByRole("button", { name: "Guardar como…" }).click();
   await demo.getByRole("button", { name: "Renombrar Plan agresivo de ventas" }).click();
   await audit(page, ["#what-if-demo"]);
+});
+
+test("tendencias: gráfico, tooltip, popover con la respuesta y tabla", async ({ page }) => {
+  await open(page, "#/trend");
+  await audit(page, ["#trend-cost", "#trend-sales"]);
+  await page.locator("#trend-cost").getByRole("button", { name: /^Materia prima, agosto 2026/ }).focus();
+  await expect(page.locator("#trend-cost .nx-trend__tip")).toBeVisible();
+  await audit(page, ["#trend-cost"]);
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".nx-trend-why .nx-ai__answer")).toContainText("Aceros del Caribe", { timeout: 10_000 });
+  await expect(page.locator(".nx-trend-why .nx-ai__summary")).toBeVisible({ timeout: 10_000 });
+  await audit(page, [".nx-trend-why"]);
+  await page.keyboard.press("Escape");
+  await page.locator("#trend-cost").getByRole("button", { name: "Ver como tabla" }).click();
+  await audit(page, ["#trend-cost"]);
 });
