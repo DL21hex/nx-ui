@@ -271,8 +271,8 @@ describe("exportar", () => {
   });
 
   it("si el servidor falla, el botón no deja una promesa rechazada sin atender", async () => {
-    const el = mount('source="/datos"');
     vi.stubGlobal("fetch", vi.fn(async () => new Response("x", { status: 500 })));
+    const el = mount('source="/datos"');
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await expect(el.exportXlsx()).rejects.toThrow("HTTP 500");
     el.querySelector<HTMLButtonElement>(".nx-grid__bar > button:last-child")!.click();
