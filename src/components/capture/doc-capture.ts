@@ -13,14 +13,15 @@
  * repintar por evento reiniciaría sus animaciones y robaría el foco a quien está corrigiendo.
  */
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { formatElapsed } from "../../core/format";
 import { resolveLocale } from "../../core/locale";
 import { glyph } from "../../core/icons";
 import { lineData, readLines } from "../../core/stream";
 import "../button/index";
 import type { NxButton } from "../button/button";
-import { buildValues, confidenceTier, parseCaptureEvent } from "./logic";
+import { acceptsFile, buildValues, confidenceTier, formatBytes, parseCaptureEvent } from "./logic";
 import type { CaptureBox, CaptureEvent, CaptureField, CaptureLabels, CaptureSchemaItem, CaptureTable, CaptureValues, CheckStatus } from "./types";
 
 export const CAPTURE_LABELS: CaptureLabels = {
@@ -41,6 +42,8 @@ export const CAPTURE_LABELS: CaptureLabels = {
   again: "Leer otro",
   zoomIn: "Acercar",
   zoomOut: "Alejar",
+  tooBig: "El archivo pasa de {max}",
+  badType: "Ese tipo de archivo no se admite",
 };
 
 const UPLOAD = '<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>';
@@ -51,7 +54,9 @@ const CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const MINUS = '<path d="M5 12h14"/>';
 const PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
 const ZOOMS = [1, 1.5, 2, 3];
-const PROPS = ["schema", "endpoint", "action", "reviewBelow", "labels", "accept"] as const;
+const PROPS = ["schema", "endpoint", "action", "reviewBelow", "labels", "accept", "maxSize"] as const;
+/** Tamaño máximo por defecto de un documento (20 MB). */
+const MAX_SIZE = 20 * 1024 * 1024;
 
 type State = "idle" | "reading" | "review" | "error";
 type FieldState = { value: string; confidence: number; box?: CaptureBox; detail?: string; hint?: string; suggest?: string; confirmed: boolean };
@@ -65,7 +70,7 @@ function safeSrc(src: string): string | undefined {
 }
 
 export class NxDocCapture extends Base {
-  static observedAttributes = ["endpoint", "action", "review-below", "labels", "accept", "schema"];
+  static observedAttributes = ["endpoint", "action", "review-below", "labels", "accept", "schema", "max-size"];
 
   #schema: CaptureSchemaItem[] = [];
   #labels: CaptureLabels = CAPTURE_LABELS;
@@ -96,6 +101,9 @@ export class NxDocCapture extends Base {
   #footMsg?: HTMLSpanElement;
   #submit?: NxButton;
   #live?: HTMLSpanElement;
+  #dropError?: HTMLParagraphElement;
+  #statusIcon?: HTMLSpanElement;
+  #statusText?: HTMLSpanElement;
 
   // ---------------------------------------------------------------- propiedades
 
@@ -136,11 +144,19 @@ export class NxDocCapture extends Base {
   set accept(v: string) {
     this.#attr("accept", v);
   }
+  /** Tamaño máximo del archivo, en bytes (por defecto 20 MB). */
+  get maxSize(): number {
+    const n = Number(this.getAttribute("max-size"));
+    return this.hasAttribute("max-size") && Number.isFinite(n) && n > 0 ? n : MAX_SIZE;
+  }
+  set maxSize(v: number) {
+    this.#attr("max-size", v ? String(v) : null);
+  }
   get labels(): CaptureLabels {
     return this.#labels;
   }
   set labels(v: Partial<CaptureLabels> | null | undefined) {
-    this.#labels = { ...CAPTURE_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(CAPTURE_LABELS, v);
     if (this.#built) this.#paint();
   }
   get state(): State {
@@ -153,31 +169,41 @@ export class NxDocCapture extends Base {
   /** Campos que todavía exigen revisión. */
   get pending(): string[] {
     const t = this.reviewBelow;
-    return [...this.#fields].filter(([, f]) => f.confidence < t && !f.confirmed).map(([k]) => k);
+    // Solo lo que se ve (un campo o una celda del schema): una clave que el schema no tiene no
+    // tiene fila donde confirmarla, y bloqueaba el registro para siempre.
+    return [...this.#fields].filter(([k, f]) => f.confidence < t && !f.confirmed && this.#shown(k)).map(([k]) => k);
   }
 
   // ---------------------------------------------------------------- API
 
   /** Lee un archivo con `endpoint`. `nx-capture-file` (cancelable) deja a la app usar su transporte. */
   async extract(file: File): Promise<void> {
+    // El tipo y el tamaño se comprueban siempre: al soltar un archivo el navegador no mira `accept`.
+    const bad = !acceptsFile(this.accept, file.name, file.type) ? this.#labels.badType : file.size > this.maxSize ? this.#fmt(this.#labels.tooBig, { max: formatBytes(this.maxSize, resolveLocale(this)) }) : "";
+    this.#showDropError(bad);
+    if (bad) return;
     const go = this.dispatchEvent(new CustomEvent("nx-capture-file", { detail: { file }, bubbles: true, composed: true, cancelable: true }));
     if (!go) return;
-    const url = safeHref(this.endpoint);
+    const url = safeEndpoint(this.endpoint);
     if (!url) return;
     this.begin(file.name);
     const ctrl = (this.#abort = new AbortController());
+    const live = () => this.#abort === ctrl && !ctrl.signal.aborted;
     try {
       const body = new FormData();
       body.append("file", file);
       const res = await fetch(url, { method: "POST", body, signal: ctrl.signal, credentials: "same-origin", headers: { Accept: "application/x-ndjson, text/event-stream" } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await readLines(res, (line) => {
+        if (!live()) return false;
         const ev = parseCaptureEvent(lineData(line));
         if (ev) this.push(ev);
+        // `done` o `error`: la lectura terminó; lo que el servidor mande después ya no entra.
+        return live() && this.#state === "reading";
       });
-      this.end();
+      if (live()) this.end();
     } catch (err) {
-      if (!ctrl.signal.aborted) this.push({ type: "error", message: err instanceof Error ? err.message : String(err) });
+      if (live()) this.push({ type: "error", message: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -211,7 +237,10 @@ export class NxDocCapture extends Base {
         break;
       case "field": {
         const prev = this.#fields.get(ev.key);
-        this.#fields.set(ev.key, { value: ev.value, confidence: ev.confidence, box: ev.box, detail: ev.detail, hint: ev.hint, suggest: ev.suggest, confirmed: prev?.confirmed ?? false });
+        // Lo que una persona corrigió o confirmó no lo pisa un evento que llegue después (una
+        // segunda pasada del OCR, un reenvío): se enviaba el valor del modelo como «confirmado».
+        const value = prev?.confirmed ? prev.value : ev.value;
+        this.#fields.set(ev.key, { value, confidence: ev.confidence, box: ev.box, detail: ev.detail, hint: ev.hint, suggest: ev.suggest, confirmed: prev?.confirmed ?? false });
         this.#paintField(ev.key);
         break;
       }
@@ -288,6 +317,25 @@ export class NxDocCapture extends Base {
     if (v === null || v === undefined || v === "") this.removeAttribute(name);
     else this.setAttribute(name, v);
   }
+  /** Si una clave tiene dónde verse: un campo del schema o una celda de una de sus tablas. */
+  #shown(key: string): boolean {
+    if (this.#schema.some((s) => s.type !== "table" && s.key === key)) return true;
+    const m = /^(.*)\.(\d+)\.([^.]+)$/.exec(key);
+    const table = m && (this.#schema.find((s) => s.type === "table" && s.key === m[1]) as CaptureTable | undefined);
+    return !!table && table.columns.some((c) => c.key === m![3]);
+  }
+
+  /** El aviso de un archivo que no se acepta (tipo o tamaño), en la zona para soltar. */
+  #showDropError(msg: string): void {
+    if (!this.#dropError) return;
+    this.#dropError.textContent = msg;
+    this.#dropError.hidden = !msg;
+    if (msg && this.#state !== "idle" && this.#footMsg) {
+      this.#footMsg.dataset.tone = "warn";
+      this.#footMsg.textContent = msg;
+    }
+  }
+
   #fmt(template: string, vars: Record<string, string | number>): string {
     return template.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
   }
@@ -296,7 +344,8 @@ export class NxDocCapture extends Base {
     this.#built = true;
     const input = h("input", { type: "file", class: "nx-sr-only", tabindex: "-1", "aria-label": this.#labels.choose });
     const chooseBtn = h("button", { type: "button", class: "nx-cap__choose" });
-    this.#drop = h("div", { class: "nx-cap__drop" }, glyph(UPLOAD, "nx-cap__drop-icon"), h("p", { class: "nx-cap__drop-title" }), h("p", { class: "nx-cap__drop-hint" }), chooseBtn, input);
+    this.#dropError = h("p", { class: "nx-cap__drop-error", role: "alert", hidden: true });
+    this.#drop = h("div", { class: "nx-cap__drop" }, glyph(UPLOAD, "nx-cap__drop-icon"), h("p", { class: "nx-cap__drop-title" }), h("p", { class: "nx-cap__drop-hint" }), chooseBtn, this.#dropError, input);
     chooseBtn.addEventListener("click", () => {
       input.accept = this.accept;
       input.click();
@@ -335,7 +384,11 @@ export class NxDocCapture extends Base {
     });
 
     // Formulario.
-    this.#statusEl = h("div", { class: "nx-cap__status" });
+    // El ícono (el spinner mientras lee) y el texto son nodos fijos: con cada campo que llega solo
+    // cambia el texto, y el spinner no reinicia su giro.
+    this.#statusIcon = h("span", { class: "nx-cap__status-icon" });
+    this.#statusText = h("span", null);
+    this.#statusEl = h("div", { class: "nx-cap__status" }, this.#statusIcon, this.#statusText);
     this.#formEl = h("div", { class: "nx-cap__form" });
     this.#checksEl = h("ul", { class: "nx-cap__checks" });
     this.#footMsg = h("span", { class: "nx-cap__foot-msg" });
@@ -602,14 +655,11 @@ export class NxDocCapture extends Base {
     const errors = [...this.#checks.values()].filter((c) => c.status === "error");
     const warns = [...this.#checks.values()].filter((c) => c.status === "warn").length;
     const n = this.#fields.size;
-    this.#statusEl!.replaceChildren(
-      st === "reading" ? h("span", { class: "nx-spinner" }) : glyph(st === "error" ? ERR : OK),
-      h(
-        "span",
-        null,
-        st === "reading" ? `${L.reading} ${n}` : st === "error" ? (this.#errorMsg ? `${L.error}: ${this.#errorMsg}` : L.error) : this.#fmt(L.read, { n, t: formatElapsed(this.#elapsed, resolveLocale(this)) }),
-      ),
-    );
+    if (this.#statusIcon!.dataset.state !== st) {
+      this.#statusIcon!.dataset.state = st;
+      this.#statusIcon!.replaceChildren(st === "reading" ? h("span", { class: "nx-spinner" }) : glyph(st === "error" ? ERR : OK));
+    }
+    this.#statusText!.textContent = st === "reading" ? `${L.reading} ${n}` : st === "error" ? (this.#errorMsg ? `${L.error}: ${this.#errorMsg}` : L.error) : this.#fmt(L.read, { n, t: formatElapsed(this.#elapsed, resolveLocale(this)) });
     this.#statusEl!.dataset.state = st;
 
     const blocked = st !== "review" || pending.length > 0 || errors.length > 0;
@@ -633,7 +683,7 @@ export class NxDocCapture extends Base {
       checks: [...this.#checks.values()].map(({ id, status, message }) => ({ id, status, message })),
     };
     const go = this.dispatchEvent(new CustomEvent("nx-capture-submit", { detail, bubbles: true, composed: true, cancelable: true }));
-    const url = safeHref(this.action);
+    const url = safeEndpoint(this.action);
     if (!go || !url) return;
     await this.#submit!.run(async () => {
       const res = await fetch(url, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ values: detail.values, confirmed: detail.confirmed }) });

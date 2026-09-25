@@ -15,12 +15,13 @@
  * El elemento es la capa superior (Popover API): `<button popovertarget="id">` lo abre sin JS.
  */
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { glyph, icon } from "../../core/icons";
 import { listKeyStep } from "../../core/keys";
 import { matchRanges } from "../select/logic";
 import type { MenuItem } from "../sidemenu/types";
-import { cleanItems, flattenMenu, groupItems, itemKey, matchesHotkey, recentItems, recordUse, searchCommands } from "./logic";
+import { cleanItems, flattenItems, flattenMenu, groupItems, hotkeyHasModifier, itemKey, matchesHotkey, parseUsage, recentItems, recordUse, searchCommands } from "./logic";
 import type { CommandItem, CommandLabels, CommandUsage } from "./types";
 
 export const COMMAND_LABELS: CommandLabels = {
@@ -50,6 +51,7 @@ type Row = { kind: "item"; item: CommandItem; recent?: boolean } | { kind: "ask"
 
 let uid = 0;
 const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 export class NxCommand extends Base {
   static observedAttributes = ["items", "labels", "placeholder", "hotkey"];
@@ -74,6 +76,8 @@ export class NxCommand extends Base {
   #returnTo: HTMLElement | null = null;
   #onKey = (e: KeyboardEvent) => {
     if (e.defaultPrevented || !matchesHotkey(e, this.hotkey)) return;
+    // Un atajo sin modificador («/») es una letra más mientras se escribe en un campo de la página.
+    if (!hotkeyHasModifier(this.hotkey) && typing(e.target) && !this.contains(e.target as Node)) return;
     e.preventDefault();
     if (this.#open) this.hide();
     else this.show();
@@ -129,7 +133,11 @@ export class NxCommand extends Base {
   set placeholder(v: string) {
     this.#attr("placeholder", v);
   }
-  /** Clave de `localStorage` para lo reciente (`"nx-command"`); `"none"`: solo mientras dura la página. */
+  /**
+   * Clave de `localStorage` para lo reciente (`"nx-command"`); `"none"`: solo mientras dura la
+   * página. En un equipo compartido, que incluya al usuario (`"nx-command:ana"`): lo reciente de uno
+   * no debe verlo otro. Se guarda solo `{id, label, href, icon, group}`.
+   */
   get storage(): string {
     return this.getAttribute("storage") || "nx-command";
   }
@@ -149,7 +157,7 @@ export class NxCommand extends Base {
     return this.#labels;
   }
   set labels(v: Partial<CommandLabels> | null | undefined) {
-    this.#labels = { ...COMMAND_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(COMMAND_LABELS, v);
     this.#paint();
   }
   get open(): boolean {
@@ -381,15 +389,10 @@ export class NxCommand extends Base {
 
   #usageMap(): CommandUsage {
     if (this.#usage) return this.#usage;
-    this.#usage = {};
+    this.#usage = parseUsage(null);
     if (this.storage !== "none") {
       try {
-        const raw = JSON.parse(localStorage.getItem(this.storage) ?? "{}") as unknown;
-        if (raw && typeof raw === "object") {
-          for (const [k, u] of Object.entries(raw as Record<string, { n?: unknown; t?: unknown; item?: unknown }>)) {
-            if (u && typeof u.n === "number" && typeof u.t === "number" && u.item && typeof u.item === "object") this.#usage[k] = { n: u.n, t: u.t, item: u.item as CommandItem };
-          }
-        }
+        this.#usage = parseUsage(JSON.parse(localStorage.getItem(this.storage) ?? "{}"));
       } catch {
         /* sin almacenamiento, o dañado: se empieza de cero */
       }
@@ -398,8 +401,10 @@ export class NxCommand extends Base {
   }
 
   #remember(item: CommandItem): void {
-    // Los submenús cuentan por la entrada que se eligió al final, no por el camino.
-    this.#usage = recordUse(this.#usageMap(), this.#pages.length ? { ...item, hint: this.#pages.map((p) => p.label).join(" › ") } : item, Date.now());
+    // Un registro del servidor (`source`) no se anota: es un dato de negocio (un cliente, una
+    // factura) que no debe quedar en el navegador, y no volvería a aparecer en «Recientes».
+    if (this.#remote.includes(item)) return;
+    this.#usage = recordUse(this.#usageMap(), item, Date.now());
     if (this.storage === "none") return;
     try {
       localStorage.setItem(this.storage, JSON.stringify(this.#usage));
@@ -447,7 +452,9 @@ export class NxCommand extends Base {
   async #fetch(src: string, q: string): Promise<void> {
     const ctrl = (this.#abort = new AbortController());
     try {
-      const url = new URL(src, location.href);
+      const safe = safeEndpoint(src);
+      if (!safe) throw new Error("source");
+      const url = new URL(safe, location.href);
       url.searchParams.set("q", q);
       const res = await fetch(url, { signal: ctrl.signal, credentials: "same-origin", headers: { Accept: "application/json" } });
       if (!res.ok) throw new Error(String(res.status));
@@ -475,7 +482,8 @@ export class NxCommand extends Base {
     };
 
     if (!q) {
-      const recent = atRoot ? recentItems(this.#usageMap(), pool) : [];
+      // Lo reciente, solo si sigue en la paleta (también dentro de un submenú de `items`).
+      const recent = atRoot ? recentItems(this.#usageMap(), [...flattenItems(this.#items), ...pool.slice(this.#items.length)]) : [];
       const seen = new Set(recent.map(itemKey));
       if (recent.length) sections.push({ group: L.recent, rows: take(recent, true), icon: RECENT });
       for (const g of groupItems(pool.filter((i) => !seen.has(itemKey(i))), L.commands)) sections.push({ group: g.group, rows: take(g.items) });

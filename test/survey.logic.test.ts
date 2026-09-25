@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregate, answerText, answersToSend, cleanQuestions, estimateMinutes, interpolate, isVisible, npsOf, rangeOf, topWords, validate, visibleQuestions } from "../src/components/survey/logic";
+import { aggregate, answerText, answersToSend, cleanAnswers, cleanQuestions, isAnswered, estimateMinutes, interpolate, isVisible, npsOf, rangeOf, topWords, validate, visibleQuestions } from "../src/components/survey/logic";
 import type { SurveyQuestion } from "../src/components/survey/types";
 
 const QS = cleanQuestions([
@@ -105,5 +105,24 @@ describe("topWords (mayúsculas)", () => {
 describe("interpolate con respuesta pendiente", () => {
   it("una pregunta que aún no llega puede mostrar «…» en vez de quitar la respuesta", () => {
     expect(interpolate("¿Recomendarías {{area}}?", {}, QS, "…")).toBe("¿Recomendarías …?");
+  });
+});
+
+describe("cleanAnswers", () => {
+  const qs = cleanQuestions([
+    { id: "c", type: "choice", title: "c", options: ["a", "b"], other: true },
+    { id: "m", type: "multi", title: "m", options: ["a", "b"] },
+    { id: "s", type: "scale", title: "s" },
+    { id: "r", type: "rank", title: "r", options: ["x", "y", "z"] },
+  ]);
+  it("cada respuesta con la forma de su pregunta; lo demás se descarta", () => {
+    expect(cleanAnswers(qs, { c: "otra cosa", m: ["a", 1], s: 3, r: ["z"], libre: ["t"], mal: { a: 1 } })).toEqual({ c: "otra cosa", s: 3, r: ["z", "x", "y"], libre: ["t"] });
+    expect(cleanAnswers(qs, { s: 9, c: 2, m: "a" })).toEqual({});
+    expect(cleanAnswers(qs, null)).toEqual({});
+    expect(cleanAnswers(qs, ["a"])).toEqual({});
+  });
+  it("isAnswered no lanza con lo que no es respuesta", () => {
+    expect(isAnswered({} as never)).toBe(false);
+    expect(isAnswered(true as never)).toBe(false);
   });
 });

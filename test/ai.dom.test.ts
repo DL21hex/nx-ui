@@ -143,6 +143,128 @@ describe("<nx-ai-answer>", () => {
     expect(el.text).toBe("parcial");
   });
 
+  it("tras `done` deja de leer: lo que el servidor siga mandando no entra en la pregunta siguiente", async () => {
+    const enc = new TextEncoder();
+    let cancelled = false;
+    let push!: (s: string) => void;
+    const first = new ReadableStream<Uint8Array>({
+      start(c) {
+        push = (s) => c.enqueue(enc.encode(s));
+        push('{"type":"text","delta":"uno"}\n{"type":"done"}\n');
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const second = new ReadableStream<Uint8Array>({ start() {} });
+    const bodies = [first, second];
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(bodies.shift())));
+    const el = mount('endpoint="/ai"');
+    await el.ask("primera");
+    expect(el.state).toBe("done");
+    expect(cancelled).toBe(true);
+    void el.ask("segunda");
+    await frame();
+    // El stream viejo ya se soltó: ni su texto ni su cierre tocan la respuesta nueva.
+    expect(() => push('{"type":"text","delta":"intruso"}\n')).toThrow();
+    expect(el.state).toBe("working");
+    expect(el.text).toBe("");
+  });
+
+  it("un `error` del protocolo también suelta la conexión", async () => {
+    const enc = new TextEncoder();
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(enc.encode('{"type":"error","message":"sin cupo"}\n'));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(body)));
+    const el = mount('endpoint="/ai"');
+    await el.ask("q");
+    expect(el.state).toBe("error");
+    expect(cancelled).toBe(true);
+  });
+
+  it("method GET: la pregunta va en ?q= y el contexto en ?context= (JSON)", async () => {
+    const fetchMock = vi.fn(async () => new Response('{"type":"done"}\n'));
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="/ai/buscar?modo=x" method="get"');
+    el.context = { registro: 7 };
+    await el.ask("¿Qué pasó?");
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const u = new URL(url);
+    expect(u.pathname).toBe("/ai/buscar");
+    expect(u.searchParams.get("modo")).toBe("x");
+    expect(u.searchParams.get("q")).toBe("¿Qué pasó?");
+    expect(JSON.parse(u.searchParams.get("context")!)).toEqual({ registro: 7 });
+    expect(init.method).toBe("GET");
+    expect(init.body).toBeUndefined();
+  });
+
+  it("un endpoint de otro origen no se llama", async () => {
+    const fetchMock = vi.fn(async () => new Response(""));
+    vi.stubGlobal("fetch", fetchMock);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const el = mount('endpoint="https://evil.example/ai"');
+    await el.ask("q");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(el.state).toBe("idle");
+    warn.mockRestore();
+  });
+
+  it("acciones del modelo: solo enlaces del mismo origen; las fuentes externas llevan rel=noopener", () => {
+    const el = mount();
+    el.begin("q");
+    el.push({ type: "action", label: "Afuera", href: "https://evil.example/login" });
+    el.push({ type: "action", label: "Adentro", href: `${location.origin}/ok` });
+    el.push({ type: "source", id: "n", title: "Norma", href: "https://normas.example/1" });
+    el.push({ type: "source", id: "l", title: "Libro", href: "/libro" });
+    el.end();
+    const links = [...el.querySelectorAll<HTMLAnchorElement>("a.nx-ai__action")].map((a) => a.textContent);
+    expect(links).toEqual(["Adentro"]);
+    expect(el.querySelector('button[data-action="0"]')!.textContent).toBe("Afuera");
+    const [ext, own] = el.querySelectorAll<HTMLAnchorElement>("a.nx-ai__source");
+    expect(ext.rel).toBe("noopener noreferrer");
+    expect(own.hasAttribute("rel")).toBe(false);
+  });
+
+  it("streaming en su lugar: los párrafos ya escritos y el cursor son los mismos nodos", async () => {
+    const el = mount();
+    el.begin("q");
+    el.push({ type: "text", delta: "Primer párrafo.\n\nSegundo" });
+    await frame();
+    const [p1] = el.querySelectorAll(".nx-ai__answer p");
+    const cursor = el.querySelector(".nx-ai__cursor");
+    const send = el.querySelector(".nx-ai__send svg");
+    el.push({ type: "text", delta: " sigue" });
+    await frame();
+    el.push({ type: "text", delta: " y sigue." });
+    await frame();
+    const ps = el.querySelectorAll(".nx-ai__answer p");
+    expect(ps[0]).toBe(p1);
+    expect(ps[1].textContent).toBe("Segundo sigue y sigue.");
+    expect(el.querySelector(".nx-ai__cursor")).toBe(cursor);
+    expect(ps[1].lastChild).toBe(cursor);
+    expect(el.querySelector(".nx-ai__send svg")).toBe(send);
+    el.end();
+    expect(el.querySelector(".nx-ai__cursor")).toBeNull();
+    expect(el.querySelectorAll(".nx-ai__answer p")[0]).toBe(p1);
+  });
+
+  it("sacar el elemento del DOM a mitad de ask() lo deja detenido (no «escribiendo» para siempre)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, i: RequestInit) => new Promise<Response>((_, rej) => i.signal?.addEventListener("abort", () => rej(new Error("abort"))))));
+    const el = mount('endpoint="/ai"');
+    const asked = el.ask("q");
+    expect(el.state).toBe("working");
+    el.remove();
+    await asked;
+    expect(el.state).toBe("stopped");
+  });
+
   it("render BDUI crea el componente con endpoint y sugerencias", () => {
     const host = document.createElement("div");
     document.body.replaceChildren(host);

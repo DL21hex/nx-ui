@@ -190,4 +190,72 @@ describe("<nx-explain>", () => {
     el.remove();
     expect(document.querySelector(".nx-explain-card")).toBeNull();
   });
+
+  it("un desglose (`explain`) de otro origen no se pide: el contexto no sale de la app", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn(async (_url: string) => ndjson([TOTAL[0], { ...TOTAL[1], explain: "https://evil.example/robar" }, { type: "done" }]));
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="/explicar/total" method="post"');
+    el.context = { cliente: "Ana" };
+    el.show();
+    await sleep(20);
+    card().querySelector<HTMLButtonElement>("[data-drill]")!.click();
+    await sleep(20);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(card().querySelector(".nx-explain__error")!.textContent).toBe("No se pudo desglosar la cifra");
+    warn.mockRestore();
+  });
+
+  it("streaming en su lugar: el spinner y los botones son los mismos nodos mientras llega el texto", async () => {
+    const enc = new TextEncoder();
+    let push!: (o: object) => void;
+    let cancelled = false;
+    vi.stubGlobal("fetch", async () =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            push = (o) => c.enqueue(enc.encode(`${JSON.stringify(o)}\n`));
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+      ),
+    );
+    const el = mount();
+    el.show();
+    await sleep(10);
+    push(TOTAL[0]);
+    push(TOTAL[1]);
+    await sleep(10);
+    const spin = card().querySelector(".nx-explain__spin");
+    const drill = card().querySelector<HTMLButtonElement>("[data-drill]")!;
+    drill.focus();
+    for (const w of ["Subió ", "por ", "el ", "IVA."]) {
+      push({ type: "text", delta: w });
+      await sleep(5);
+    }
+    expect(card().querySelector(".nx-explain__text")!.textContent).toBe("Subió por el IVA.");
+    expect(card().querySelector(".nx-explain__spin")).toBe(spin);
+    expect(card().querySelector("[data-drill]")).toBe(drill);
+    expect(document.activeElement).toBe(drill);
+    // Al llegar un término nuevo, la lista se rehace pero el foco vuelve al mismo término.
+    push(TOTAL[2]);
+    await sleep(10);
+    expect(document.activeElement).toBe(card().querySelector("[data-drill]"));
+    push({ type: "done" });
+    await sleep(10);
+    expect(card().querySelector(".nx-explain__spin")).toBeNull();
+    // `done` suelta la conexión aunque el servidor no la cierre.
+    expect(cancelled).toBe(true);
+  });
+
+  it("las fuentes de otro sitio llevan rel=noopener noreferrer", () => {
+    const el = mount("");
+    el.explanation = [{ type: "value", value: 1 }, { type: "source", id: "n", title: "Norma", href: "https://normas.example/1" }, { type: "source", id: "m", title: "Mayor", href: "/mayor" }] as never;
+    el.show();
+    const [ext, own] = card().querySelectorAll<HTMLAnchorElement>(".nx-explain__source a");
+    expect(ext.rel).toBe("noopener noreferrer");
+    expect(own.hasAttribute("rel")).toBe(false);
+  });
 });

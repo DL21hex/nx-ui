@@ -1,4 +1,5 @@
 /** Lógica pura del componente de IA: validar eventos y el Markdown mínimo. Sin DOM. */
+import { safeHref } from "../../core/dom";
 import type { AiEvent, AiTone } from "./types";
 
 const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v : undefined);
@@ -88,6 +89,31 @@ export function parseBlocks(text: string): Block[] {
   }
   flush();
   return blocks;
+}
+
+/**
+ * El `href` de un enlace que manda el modelo, solo si es del mismo origen que la página (ruta
+ * relativa o URL propia). Una acción es un botón de la app: no puede llevar a otro sitio.
+ */
+export function sameOriginHref(href: unknown): string | undefined {
+  const safe = safeHref(href);
+  if (!safe || typeof location === "undefined") return safe;
+  try {
+    const u = new URL(safe, location.href);
+    return u.origin === location.origin && (u.protocol === "http:" || u.protocol === "https:") ? safe : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Si un `href` (ya saneado) lleva a otro origen: se le pone `rel="noopener noreferrer"`. */
+export function isExternal(href: string): boolean {
+  if (typeof location === "undefined") return false;
+  try {
+    return new URL(href, location.href).origin !== location.origin;
+  } catch {
+    return false;
+  }
 }
 
 /** El texto sin marcas, para `nx-ai-done` y el portapapeles. */

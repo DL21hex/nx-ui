@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanItems, flattenMenu, frecency, groupItems, matchesHotkey, recentItems, recordUse, scoreItem, searchCommands } from "../src/components/command/logic";
+import { cleanItems, flattenItems, flattenMenu, frecency, groupItems, hotkeyHasModifier, matchesHotkey, parseUsage, recentItems, recordUse, scoreItem, searchCommands } from "../src/components/command/logic";
 import type { CommandItem } from "../src/components/command/types";
 import type { MenuItem } from "../src/components/sidemenu/types";
 
@@ -70,11 +70,35 @@ describe("uso y recientes", () => {
     expect(Object.keys(many).sort()).toEqual(["x0", "x1", "x2"]);
   });
 
-  it("recentItems: de lo que más a lo que menos pesa, con la versión actual si sigue existiendo", () => {
+  it("recentItems: de lo que más a lo que menos pesa, con la versión actual; lo que ya no está no aparece", () => {
     let u = recordUse({}, ITEMS[2], NOW - 20 * DAY);
     u = recordUse(u, { id: "oc-2291", label: "OC-2291 · Aceros del Caribe", href: "/oc/2291" }, NOW);
     const renamed = { ...ITEMS[2], label: "Pedidos de venta" };
-    expect(recentItems(u, [renamed], NOW).map((i) => i.label)).toEqual(["OC-2291 · Aceros del Caribe", "Pedidos de venta"]);
+    expect(recentItems(u, [renamed], NOW).map((i) => i.label)).toEqual(["Pedidos de venta"]);
+  });
+
+  it("recordUse guarda solo {id, label, href, icon, group}: nunca `data` ni `hint`", () => {
+    const u = recordUse({}, { id: "c", label: "Ana Pérez", href: "/c/1", hint: "CC 1.234.567", group: "Clientes", icon: "user", keywords: ["ana"], data: { cedula: "1234567" } }, NOW);
+    expect(u.c.item).toEqual({ id: "c", label: "Ana Pérez", href: "/c/1", icon: "user", group: "Clientes" });
+    expect(JSON.stringify(u)).not.toContain("1234567");
+  });
+
+  it("parseUsage valida y reduce lo guardado por versiones viejas", () => {
+    const u = parseUsage({ a: { n: 2, t: NOW, item: { label: "A", data: { secreto: 1 }, hint: "x" } }, b: { n: "2", t: NOW, item: { label: "B" } }, c: null, __proto__: { n: 1, t: 1, item: { label: "P" } } });
+    expect(Object.keys(u)).toEqual(["a"]);
+    expect(u.a.item).toEqual({ label: "A" });
+    expect(parseUsage("basura")).toEqual({});
+  });
+
+  it("flattenItems: también los submenús, con su camino como pista", () => {
+    expect(flattenItems([{ label: "Paleta", children: [{ label: "Océano" }, { label: "Bosque", hint: "verde" }] }]).map((i) => `${i.label}|${i.hint ?? ""}`)).toEqual(["Paleta|", "Océano|Paleta", "Bosque|verde"]);
+  });
+
+  it("hotkeyHasModifier: «mod+k» sí, «/» no", () => {
+    expect(hotkeyHasModifier("mod+k")).toBe(true);
+    expect(hotkeyHasModifier("alt+p")).toBe(true);
+    expect(hotkeyHasModifier("shift+/")).toBe(false);
+    expect(hotkeyHasModifier("/")).toBe(false);
   });
 });
 
@@ -115,11 +139,12 @@ describe("menú, grupos y datos", () => {
 
 describe("recientes empatados", () => {
   it("dos usos en el mismo milisegundo: primero el último que se anotó", () => {
+    const both = [{ label: "Primero" }, { label: "Segundo" }];
     let u = recordUse({}, { label: "Primero" }, NOW);
     u = recordUse(u, { label: "Segundo" }, NOW);
-    expect(recentItems(u, [], NOW).map((i) => i.label)).toEqual(["Segundo", "Primero"]);
+    expect(recentItems(u, both, NOW).map((i) => i.label)).toEqual(["Segundo", "Primero"]);
     u = recordUse(u, { label: "Primero" }, NOW);
     u = recordUse(u, { label: "Segundo" }, NOW);
-    expect(recentItems(u, [], NOW).map((i) => i.label)).toEqual(["Segundo", "Primero"]);
+    expect(recentItems(u, both, NOW).map((i) => i.label)).toEqual(["Segundo", "Primero"]);
   });
 });

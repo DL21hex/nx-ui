@@ -9,12 +9,13 @@
  * otro (WebSocket, SDK propio).
  */
 import { Base, boolAttr } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { formatElapsed } from "../../core/format";
+import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
 import { glyph } from "../../core/icons";
 import { lineData, readLines } from "../../core/stream";
-import { parseAiEvent, parseBlocks, plainText, type Inline } from "./logic";
+import { isExternal, parseAiEvent, parseBlocks, plainText, sameOriginHref, type Block, type Inline } from "./logic";
 import type { AiEvent, AiLabels, AiStep, AiTone } from "./types";
 
 export const AI_LABELS: AiLabels = {
@@ -85,6 +86,9 @@ export class NxAiAnswer extends Base {
   #actionsEl?: HTMLDivElement;
   #paintedSources = -1;
   #paintedActions = false;
+  /** Los bloques ya pintados de la respuesta y el cursor (un solo nodo). */
+  #blockEls: HTMLElement[] = [];
+  #cursor?: HTMLSpanElement;
 
   // ---------------------------------------------------------------- propiedades
 
@@ -133,7 +137,7 @@ export class NxAiAnswer extends Base {
     return this.#labels;
   }
   set labels(v: Partial<AiLabels> | null | undefined) {
-    this.#labels = { ...AI_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(AI_LABELS, v);
     this.#paint();
   }
   /** Muestra 👍/👎 al terminar (emite `nx-ai-feedback`). */
@@ -157,28 +161,48 @@ export class NxAiAnswer extends Base {
   /** Pregunta al `endpoint`. Devuelve cuando termina (bien, con error o detenida). */
   async ask(question?: string): Promise<void> {
     const q = (question ?? this.#input?.value ?? "").trim();
-    const url = safeHref(this.endpoint);
-    if (!q || !url) return;
+    const endpoint = safeEndpoint(this.endpoint);
+    if (!q || !endpoint) return;
     this.begin(q);
     const ctrl = (this.#abort = new AbortController());
+    // Solo la pregunta vigente toca el componente: una respuesta anterior que siga llegando (el
+    // servidor mandó `done` y no cerró) no se mezcla con la nueva.
+    const live = () => this.#abort === ctrl && !ctrl.signal.aborted;
+    const get = this.method === "GET";
+    let url = endpoint;
+    if (get) {
+      // Con GET la pregunta viaja en la URL: `?q=…&context=<JSON>`.
+      const u = new URL(endpoint, location.href);
+      u.searchParams.set("q", q);
+      if (this.#context !== null && this.#context !== undefined) u.searchParams.set("context", JSON.stringify(this.#context));
+      url = u.href;
+    }
     try {
       const res = await fetch(url, {
         method: this.method,
         signal: ctrl.signal,
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json", Accept: "application/x-ndjson, text/event-stream" },
-        body: this.method === "GET" ? undefined : JSON.stringify({ question: q, context: this.#context }),
+        headers: { Accept: "application/x-ndjson, text/event-stream", ...(get ? {} : { "Content-Type": "application/json" }) },
+        body: get ? undefined : JSON.stringify({ question: q, context: this.#context }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await readLines(res, (line) => {
+        if (!live()) return false;
         const ev = parseAiEvent(lineData(line));
         if (ev) this.push(ev);
+        // `done` o `error`: la respuesta terminó; se deja de leer y se suelta la conexión.
+        return live() && this.busy;
       });
-      this.end();
+      if (live()) this.end();
     } catch (err) {
-      if (ctrl.signal.aborted) return;
+      if (!live()) return;
       this.push({ type: "error", message: err instanceof Error ? err.message : String(err) });
     }
+  }
+
+  /** Trabajando o escribiendo la respuesta. */
+  get busy(): boolean {
+    return this.#state === "working" || this.#state === "streaming";
   }
 
   /** Detiene la respuesta en curso; lo recibido hasta ahí se queda. */
@@ -204,6 +228,8 @@ export class NxAiAnswer extends Base {
     this.#state = "working";
     this.#stepEls.clear();
     this.#traceEl?.replaceChildren();
+    this.#blockEls = [];
+    this.#answerEl?.replaceChildren();
     this.#paintedSources = -1;
     this.#paintedActions = false;
     if (this.#input) this.#input.value = question;
@@ -275,8 +301,14 @@ export class NxAiAnswer extends Base {
   }
 
   disconnectedCallback(): void {
-    this.#abort?.abort();
     cancelAnimationFrame(this.#raf);
+    this.#raf = 0;
+    // Una pregunta propia (`ask`) en curso se detiene: sin esto quedaba «escribiendo» para siempre.
+    // Con transporte de la app (`begin`/`push`) no hay conexión que cortar y la respuesta sigue.
+    if (this.#abort) {
+      this.#abort.abort();
+      this.#finish("stopped");
+    }
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
@@ -300,7 +332,11 @@ export class NxAiAnswer extends Base {
   }
 
   #finish(status: "done" | "error" | "stopped"): void {
+    // La conexión se suelta también al terminar por el protocolo (`done`, `error`): si el servidor
+    // la deja abierta, lo que siga mandando no puede entrar en la próxima respuesta.
+    const ctrl = this.#abort;
     this.#abort = undefined;
+    ctrl?.abort();
     this.#elapsed = performance.now() - this.#start;
     this.#state = status;
     // Un paso que seguía corriendo cuando todo terminó: terminó con la respuesta (o con el error).
@@ -352,7 +388,9 @@ export class NxAiAnswer extends Base {
       this.#sourcesEl,
       this.#actionsEl,
     );
-    this.#status = h("span", { class: "nx-sr-only", role: "status" });
+    // `bare` (un tramo dentro de `<nx-agent>`): quien lo contiene anuncia; varios «Respuesta lista»
+    // por turno solo serían ruido.
+    this.#status = h("span", { class: "nx-sr-only", role: this.hasAttribute("bare") ? null : "status" });
     this.append(this.#form, this.#suggest, this.#body, this.#status);
     const q = this.getAttribute("question");
     if (q) this.#input.value = q;
@@ -424,7 +462,11 @@ export class NxAiAnswer extends Base {
     this.dataset.state = st;
     this.#input!.placeholder = this.placeholder;
     this.#input!.setAttribute("aria-label", this.placeholder);
-    this.#send!.replaceChildren(glyph(busy ? STOP : SEND));
+    // El ícono solo cambia al empezar o terminar (no en cada frame del streaming).
+    if (this.#send!.dataset.busy !== String(busy)) {
+      this.#send!.dataset.busy = String(busy);
+      this.#send!.replaceChildren(glyph(busy ? STOP : SEND));
+    }
     this.#send!.setAttribute("aria-label", busy ? this.#labels.stop : this.#labels.ask);
     this.#send!.title = busy ? this.#labels.stop : this.#labels.ask;
 
@@ -457,16 +499,7 @@ export class NxAiAnswer extends Base {
     this.#skeletonEl!.hidden = !(busy && !this.#text);
     this.#answerEl!.hidden = !this.#text;
     this.#answerEl!.setAttribute("aria-busy", String(busy));
-    if (this.#text) {
-      const blocks = parseBlocks(this.#text);
-      this.#answerEl!.replaceChildren(
-        ...blocks.map((b, i) => {
-          const el = b.kind === "p" ? h("p", null, ...this.#inline(b.inl)) : h("ul", null, ...b.items.map((it) => h("li", null, ...this.#inline(it))));
-          if (busy && i === blocks.length - 1) (b.kind === "p" ? el : el.lastElementChild!).append(h("span", { class: "nx-ai__cursor", "aria-hidden": "true" }));
-          return el;
-        }),
-      );
-    }
+    if (this.#text) this.#paintAnswer(busy);
 
     this.#errorEl!.hidden = st !== "error";
     this.#errorEl!.textContent = this.#errorMsg ? `${this.#labels.error}: ${this.#errorMsg}` : this.#labels.error;
@@ -481,7 +514,9 @@ export class NxAiAnswer extends Base {
         ...this.#sources.map((s, i) => {
           const href = safeHref(s.href);
           const inner = [h("span", { class: "nx-ai__source-n" }, String(i + 1)), h("span", { class: "nx-ai__source-title" }, s.title), s.detail ? h("span", { class: "nx-ai__source-detail" }, s.detail) : null];
-          return h("li", null, href ? h("a", { class: "nx-ai__source", href, "data-cite": s.id }, ...inner) : h("span", { class: "nx-ai__source", tabindex: "0", "data-cite": s.id }, ...inner));
+          // Una fuente puede ser de otro sitio (la norma, el proveedor): sin `opener` ni `Referer`.
+          const rel = href && isExternal(href) ? "noopener noreferrer" : null;
+          return h("li", null, href ? h("a", { class: "nx-ai__source", href, rel, "data-cite": s.id }, ...inner) : h("span", { class: "nx-ai__source", tabindex: "0", "data-cite": s.id }, ...inner));
         }),
       );
     }
@@ -493,7 +528,9 @@ export class NxAiAnswer extends Base {
       this.#paintedActions = true;
       this.#actionsEl!.replaceChildren(
         ...this.#actions.map((a, i) => {
-          const href = safeHref(a.href);
+          // Una acción es un botón de la app: su enlace solo si es del mismo origen. Uno de afuera
+          // (o `javascript:`) queda como botón que emite `nx-ai-action`, sin llevar a ningún lado.
+          const href = sameOriginHref(a.href);
           return href ? h("a", { class: "nx-ai__action", href }, a.label) : h("button", { type: "button", class: "nx-ai__action", "data-action": i }, a.label);
         }),
         this.feedback && st === "done"
@@ -506,6 +543,61 @@ export class NxAiAnswer extends Base {
           : "",
       );
     }
+  }
+
+  /**
+   * La respuesta, en su lugar: cada bloque (párrafo o lista) es un nodo que se reusa y solo se
+   * vuelve a llenar si su contenido cambió; en el streaming, eso es el último. El cursor es un solo
+   * nodo que no se mueve mientras se escribe el mismo bloque (su parpadeo no se reinicia) y la
+   * selección de lo ya escrito no se pierde.
+   */
+  #paintAnswer(busy: boolean): void {
+    const answer = this.#answerEl!;
+    const blocks = parseBlocks(this.#text);
+    const cursor = (this.#cursor ??= h("span", { class: "nx-ai__cursor", "aria-hidden": "true" }));
+    const cites = this.#sources.map((s) => `${s.id}:${s.title}`).join("|");
+    blocks.forEach((b, i) => {
+      const sig = `${cites}\u0000${JSON.stringify(b)}`;
+      let el = this.#blockEls[i];
+      const tag = b.kind === "p" ? "P" : "UL";
+      if (el && el.tagName !== tag) {
+        const fresh = h(b.kind === "p" ? "p" : "ul", null);
+        el.replaceWith(fresh);
+        el = this.#blockEls[i] = fresh;
+      } else if (!el) {
+        el = this.#blockEls[i] = h(b.kind === "p" ? "p" : "ul", null);
+        answer.append(el);
+      }
+      if (el.dataset.sig === sig) return;
+      el.dataset.sig = sig;
+      this.#fillBlock(el, b);
+    });
+    for (const extra of this.#blockEls.splice(blocks.length)) extra.remove();
+    const last = this.#blockEls[this.#blockEls.length - 1];
+    const host = last && (last.tagName === "UL" ? last.lastElementChild : last);
+    if (busy && host) {
+      if (cursor.parentNode !== host || host.lastChild !== cursor) host.append(cursor);
+    } else cursor.remove();
+  }
+
+  /** Llena un bloque sin sacar el cursor si está adentro (se inserta antes de él). */
+  #fillBlock(el: HTMLElement, b: Block): void {
+    const put = (host: Element, parts: Inline[]) => {
+      for (const n of [...host.childNodes]) if (n !== this.#cursor) n.remove();
+      const nodes = this.#inline(parts);
+      if (this.#cursor?.parentNode === host) this.#cursor.before(...nodes);
+      else host.append(...nodes);
+    };
+    if (b.kind === "p") return put(el, b.inl);
+    const lis = [...el.children];
+    b.items.forEach((it, i) => {
+      const li = lis[i] ?? el.appendChild(h("li", null));
+      const sig = JSON.stringify(it);
+      if ((li as HTMLElement).dataset.sig === sig) return;
+      (li as HTMLElement).dataset.sig = sig;
+      put(li, it);
+    });
+    for (const extra of lis.slice(b.items.length)) extra.remove();
   }
 
   /** Cada paso es un <li> estable: se crea una vez (su animación de entrada corre una vez) y solo

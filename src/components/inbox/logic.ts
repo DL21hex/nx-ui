@@ -65,11 +65,13 @@ export function rangeIds(ids: readonly string[], from: string, to: string): stri
 }
 
 /** El texto del aviso: «Aprobado: OC-2291» o «5 aprobados», y los que no se aprobaron por bloqueo. */
-export function decisionMessage(L: InboxLabels, decision: InboxDecision, items: readonly InboxItem[], skipped = 0): string {
+export function decisionMessage(L: InboxLabels, decision: InboxDecision, items: readonly InboxItem[], skipped = 0, unverified = 0): string {
   const one = decision === "approve" ? L.approvedOne : L.rejectedOne;
   const many = decision === "approve" ? L.approvedMany : L.rejectedMany;
-  const base = items.length === 1 ? one.replace("{title}", items[0].title) : many.replace("{n}", String(items.length));
-  return skipped ? `${base} ${skipped === 1 ? L.skippedOne : L.skipped.replace("{n}", String(skipped))}` : base;
+  let out = items.length === 1 ? one.replace("{title}", items[0].title) : many.replace("{n}", String(items.length));
+  if (skipped) out += ` ${skipped === 1 ? L.skippedOne : L.skipped.replace("{n}", String(skipped))}`;
+  if (unverified) out += ` ${unverified === 1 ? L.unverifiedOne : L.unverified.replace("{n}", String(unverified))}`;
+  return out;
 }
 
 export const emptyImpact = (): InboxImpact => ({ items: [], notes: [], block: null, error: null, done: false });

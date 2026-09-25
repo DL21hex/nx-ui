@@ -11,11 +11,11 @@
  * recibe las respuestas en `action` y puede devolver los resultados (`aggregate()` los arma).
  */
 import { Base } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { foldText } from "../../core/text";
-import { answerText, answersToSend, cleanQuestions, estimateMinutes, interpolate, isAnswered, letterOf, rangeOf, validate, visibleQuestions } from "./logic";
+import { answerText, answersToSend, cleanAnswers, cleanQuestions, estimateMinutes, interpolate, isAnswered, letterOf, rangeOf, validate, visibleQuestions } from "./logic";
 import type { SurveyAnswer, SurveyAnswers, SurveyLabels, SurveyQuestion, SurveyQuestionInput, SurveyQuestionResult, SurveyResults } from "./types";
 
 export const SURVEY_LABELS: SurveyLabels = {
@@ -97,6 +97,7 @@ export class NxSurvey extends Base {
   }
   set questions(v: SurveyQuestionInput[] | null | undefined) {
     this.#questions = cleanQuestions(v);
+    this.#answers = cleanAnswers(this.#questions, this.#answers);
     this.#render();
   }
   /** Las respuestas hasta ahora (se pueden precargar). */
@@ -104,7 +105,7 @@ export class NxSurvey extends Base {
     return { ...this.#answers };
   }
   set answers(v: SurveyAnswers | null | undefined) {
-    this.#answers = v && typeof v === "object" ? { ...v } : {};
+    this.#answers = cleanAnswers(this.#questions, v);
     this.#render();
   }
   /** Los resultados de todos (la forma de `aggregate()`): se muestran al terminar. */
@@ -135,7 +136,11 @@ export class NxSurvey extends Base {
     if (v) this.setAttribute("action", v);
     else this.removeAttribute("action");
   }
-  /** Clave de `localStorage` para el borrador (sin ella no se guarda nada). */
+  /**
+   * Clave de `localStorage` para el borrador (sin ella no se guarda nada). Las respuestas abiertas
+   * pueden ser sensibles: en un equipo compartido, que la clave incluya al usuario
+   * (`"clima-2026:ana"`). El borrador se borra al enviar o al empezar de nuevo.
+   */
   get storage(): string | null {
     return this.getAttribute("storage");
   }
@@ -219,11 +224,18 @@ export class NxSurvey extends Base {
 
   /** Envía: `nx-survey-submit` (cancelable) y, si hay `action`, el `POST`. */
   async submit(): Promise<void> {
+    if (this.#screen === "sending") return;
     const answers = answersToSend(this.#questions, this.#answers);
     const ms = Math.round(performance.now() - (this.#since || performance.now()));
     const go = this.dispatchEvent(new CustomEvent("nx-survey-submit", { detail: { answers, ms }, bubbles: true, composed: true, cancelable: true }));
     if (!go) return;
-    const url = this.action;
+    // Solo del mismo origen (o permitido con `allowOrigins`): un payload no manda las respuestas afuera.
+    const url = safeEndpoint(this.action);
+    if (this.action && !url) {
+      this.#failed = true;
+      this.#render();
+      return;
+    }
     if (url) {
       this.#screen = "sending";
       this.#failed = false;
@@ -232,7 +244,9 @@ export class NxSurvey extends Base {
         const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, credentials: "same-origin", body: JSON.stringify({ answers, ms }) });
         if (!res.ok) throw new Error(String(res.status));
         const data = (await res.json().catch(() => null)) as { results?: SurveyResults } | SurveyResults | null;
-        this.results = data && "total" in data ? data : (data?.results ?? null);
+        // Un `"ok"`, `true` o `1` (JSON válido, pero no un objeto) no es un error: el envío se guardó.
+        const obj = data && typeof data === "object" ? data : null;
+        this.results = obj && "total" in obj ? obj : ((obj as { results?: SurveyResults } | null)?.results ?? null);
       } catch {
         this.#failed = true;
         this.#screen = "question";
@@ -320,7 +334,9 @@ export class NxSurvey extends Base {
     if (!key) return null;
     try {
       const d = JSON.parse(localStorage.getItem(key) ?? "null") as { answers?: unknown; step?: unknown } | null;
-      return d && d.answers && typeof d.answers === "object" && Object.keys(d.answers).length ? { answers: d.answers as SurveyAnswers, step: Number(d.step) || 0 } : null;
+      // Validado contra las preguntas de ahora: el borrador puede ser de otra versión del cuestionario.
+      const answers = d && typeof d === "object" ? cleanAnswers(this.#questions, d.answers) : {};
+      return Object.keys(answers).length ? { answers, step: Math.max(0, Math.floor(Number(d!.step) || 0)) } : null;
     } catch {
       return null;
     }

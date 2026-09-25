@@ -109,3 +109,31 @@ export function tableRowCount(tableKey: string, keys: Iterable<string>): number 
   }
   return max + 1;
 }
+
+/** Tipos que el navegador a veces no informa (`file.type === ""`), por su extensión. */
+const BY_EXT: Record<string, string> = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif", tif: "image/tiff", tiff: "image/tiff", heic: "image/heic" };
+
+/**
+ * Si un archivo cumple `accept` (la misma sintaxis del `<input type=file>`: `.pdf`, `image/*`,
+ * `application/pdf`). Al soltar un archivo el navegador no lo comprueba; aquí sí.
+ */
+export function acceptsFile(accept: string, name: string, type: string): boolean {
+  const tokens = accept.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+  if (!tokens.length) return true;
+  const lower = name.toLowerCase();
+  const ext = lower.includes(".") ? lower.slice(lower.lastIndexOf(".") + 1) : "";
+  const mime = (type || BY_EXT[ext] || "").toLowerCase();
+  return tokens.some((t) => (t.startsWith(".") ? lower.endsWith(t) : t.endsWith("/*") ? !!mime && mime.startsWith(t.slice(0, -1)) : mime === t));
+}
+
+/** 20971520 → «20 MB» (con el separador decimal del locale). */
+export function formatBytes(n: number, locale = "es-CO"): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let v = n;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toLocaleString(locale, { maximumFractionDigits: v < 10 && i > 0 ? 1 : 0 })} ${units[i]}`;
+}

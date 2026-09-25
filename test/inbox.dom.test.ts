@@ -23,6 +23,13 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const until = async (fn: () => unknown, ms = 1000) => {
+  const t0 = Date.now();
+  while (!fn()) {
+    if (Date.now() - t0 > ms) throw new Error("timeout");
+    await sleep(5);
+  }
+};
 
 const ITEMS: InboxItem[] = [
   { id: "2291", title: "OC-2291 · Aceros del Caribe", subtitle: "Lámina HR 3 mm × 40", requester: "Ana María Rincón", amount: 10829000, currency: "COP", date: "2026-09-22", tags: [{ label: "Sobre presupuesto", tone: "danger" }], facts: [{ label: "Centro de costo", value: "Producción" }], impact: [{ label: "Presupuesto de Producción", detail: "− $ 10.829.000", tone: "warning" }], href: "/oc/2291" },
@@ -42,6 +49,8 @@ const rows = (el: NxInbox) => [...el.querySelectorAll<HTMLElement>(".nx-inbox__i
 const ids = (el: NxInbox) => rows(el).map((r) => r.dataset.id);
 const key = (el: NxInbox, k: string, o: KeyboardEventInit = {}, target: HTMLElement = list(el)) => target.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true, ...o }));
 const title = (el: NxInbox) => el.querySelector(".nx-inbox__d-title")?.textContent;
+/** Un backend de impacto sin consecuencias: aprobar OC-2310 (impacto por URL) lo espera. */
+const noImpact = () => vi.stubGlobal("fetch", vi.fn(async () => new Response('{"type":"done"}\n')));
 
 describe("<nx-inbox>", () => {
   it("una lista con selección múltiple y el detail del activo (el primero)", () => {
@@ -96,8 +105,10 @@ describe("<nx-inbox>", () => {
     const log: string[] = [];
     el.addEventListener("nx-inbox-commit", () => log.push("commit"));
     el.addEventListener("nx-inbox-undo", (e) => log.push(`undo ${e.detail.ids}`));
+    noImpact();
     key(el, "j");
     const p = el.decide("approve");
+    await until(() => ids(el).length === 3);
     expect(ids(el)).toEqual(["2291", "2318", "2322"]);
     document.querySelector<HTMLButtonElement>('.nx-toast__btn[data-r="undo"]')!.click();
     await expect(p).resolves.toBe("undo");
@@ -116,7 +127,11 @@ describe("<nx-inbox>", () => {
     expect(el.selected.sort()).toEqual(["2291", "2310", "2318"]);
     expect(el.querySelector<HTMLElement>(".nx-inbox__bulk")!.hidden).toBe(false);
     expect(el.querySelector(".nx-inbox__nsel")!.textContent).toBe("3 seleccionados");
+    noImpact();
     key(el, "a");
+    // OC-2310 trae su impacto por URL: la aprobación lo espera antes de decidir.
+    expect(ids(el)).toHaveLength(4);
+    await until(() => ids(el).length === 1);
     expect(ids(el)).toEqual(["2322"]);
     expect(el.active).toBe("2322");
     expect(document.querySelector(".nx-toast:last-child .nx-toast__msg")!.textContent).toBe("3 aprobados");
@@ -184,8 +199,11 @@ describe("<nx-inbox>", () => {
 
   it("al quedar vacía celebra y dice cuánto se decidió", async () => {
     const el = mount('undo="0"');
-    for (let i = 0; i < 4; i++) key(el, "a");
-    await sleep(0);
+    noImpact();
+    for (let i = 0; i < 4; i++) {
+      key(el, "a");
+      await sleep(5);
+    }
     expect(rows(el)).toHaveLength(0);
     expect(el.hasAttribute("data-empty")).toBe(true);
     expect(el.querySelector(".nx-inbox__empty")!.textContent).toMatch(/^Todo al díaDecidiste 4 en \d/);
@@ -235,5 +253,96 @@ describe("<nx-inbox> y el impacto que llega tarde", () => {
     expect(now.value).toBe("Sin papeles");
     expect(document.activeElement).toBe(now);
     expect(now.selectionStart).toBe(3);
+  });
+});
+
+describe("<nx-inbox>: aprobar exige conocer el impacto", () => {
+  const blocking = () => vi.fn(async (_url: string, _init?: RequestInit) => new Response('{"type":"impact","label":"1 pago"}\n{"type":"block","message":"Ya tiene un pago"}\n{"type":"done"}\n'));
+
+  it("A justo al activar un ítem cuyo impacto bloquea: espera el impacto y no lo aprueba", async () => {
+    const fetchMock = blocking();
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount();
+    const decided: string[] = [];
+    el.addEventListener("nx-inbox-decide", (e) => decided.push(...e.detail.ids));
+    key(el, "j");
+    const outcome = el.decide("approve"); // antes de los 150 ms del impacto
+    await expect(outcome).resolves.toBe("cancel");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(decided).toEqual([]);
+    expect(ids(el)).toContain("2310");
+    expect(el.querySelector(".nx-inbox__block")!.textContent).toBe("Ya tiene un pago");
+  });
+
+  it("en lote (Ctrl+A, A): pide los impactos que faltan y omite los bloqueados", async () => {
+    vi.stubGlobal("fetch", blocking());
+    const el = mount();
+    key(el, "a", { ctrlKey: true });
+    key(el, "a");
+    await until(() => ids(el).length === 1);
+    expect(ids(el)).toEqual(["2310"]);
+    expect(document.querySelector(".nx-toast:last-child .nx-toast__msg")!.textContent).toBe("3 aprobados · 1 bloqueado no se aprobó");
+  });
+
+  it("un impacto que no se pudo calcular (o de otro origen) no se aprueba: queda «sin verificar»", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () => new Response("", { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount();
+    el.items = [...ITEMS.slice(0, 2), { id: "x", title: "OC-X", impact: "https://evil.example/impacto" }];
+    el.selected = ["2291", "2310", "x"];
+    void el.decide("approve");
+    await until(() => ids(el).length === 2);
+    expect(ids(el)).toEqual(["2310", "x"]);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // el de otro origen ni se pide
+    expect(document.querySelector(".nx-toast:last-child .nx-toast__msg")!.textContent).toBe("Aprobado: OC-2291 · Aceros del Caribe · 2 sin verificar no se aprobaron");
+    warn.mockRestore();
+  });
+
+  it("dos A seguidas mientras se espera el impacto no deciden dos veces", async () => {
+    noImpact();
+    const el = mount();
+    const decided: string[] = [];
+    el.addEventListener("nx-inbox-decide", (e) => decided.push(...e.detail.ids));
+    key(el, "j");
+    key(el, "a");
+    key(el, "a");
+    await until(() => decided.length > 0);
+    await sleep(20);
+    expect(decided).toEqual(["2310"]);
+  });
+
+  it("el impacto se pinta en su lugar: el detalle no es región viva y el bloqueo se crea una vez", async () => {
+    const enc = new TextEncoder();
+    let push!: (s: string) => void;
+    vi.stubGlobal("fetch", async () => new Response(new ReadableStream({ start: (c) => void (push = (t) => c.enqueue(enc.encode(t))) })));
+    const el = mount();
+    expect(el.querySelector(".nx-inbox__detail")!.hasAttribute("aria-live")).toBe(false);
+    key(el, "j");
+    await sleep(200);
+    const box = el.querySelector(".nx-inbox__impact");
+    push('{"type":"block","message":"Ya tiene un pago"}\n');
+    await sleep(5);
+    const block = el.querySelector(".nx-inbox__block");
+    push('{"type":"impact","label":"1 recepción"}\n{"type":"note","message":"nota"}\n');
+    await sleep(5);
+    expect(el.querySelector(".nx-inbox__impact")).toBe(box);
+    expect(el.querySelector(".nx-inbox__block")).toBe(block);
+    expect(el.querySelectorAll(".nx-inbox__impact-item")).toHaveLength(1);
+    expect(box!.getAttribute("aria-busy")).toBe("true");
+    push('{"type":"done"}\n');
+    await sleep(5);
+    expect(box!.getAttribute("aria-busy")).toBe("false");
+    expect(el.querySelector<HTMLElement>(".nx-inbox__impact .is-loading")!.hidden).toBe(true);
+  });
+
+  it("moverse a otro ítem cancela el impacto que se pedía para el anterior", async () => {
+    let aborted = false;
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, i: RequestInit) => new Promise<Response>((_, rej) => i.signal!.addEventListener("abort", () => ((aborted = true), rej(new Error("abort")))))));
+    const el = mount();
+    key(el, "j");
+    await sleep(200);
+    key(el, "j");
+    expect(aborted).toBe(true);
   });
 });

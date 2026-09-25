@@ -62,7 +62,52 @@ export function rangeOf(q: SurveyQuestion): { min: number; max: number; step: nu
 export function isAnswered(a: SurveyAnswer | undefined): boolean {
   if (a === undefined || a === null) return false;
   if (Array.isArray(a)) return a.length > 0;
-  return typeof a === "number" ? Number.isFinite(a) : a.trim() !== "";
+  if (typeof a === "number") return Number.isFinite(a);
+  return typeof a === "string" && a.trim() !== "";
+}
+
+/** Una respuesta con la forma que su tipo de pregunta espera, o `undefined`. */
+function answerFor(q: SurveyQuestion | undefined, a: unknown): SurveyAnswer | undefined {
+  const texts = (v: unknown) => (Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : undefined);
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+  if (!q) return typeof a === "string" ? a : (num(a) ?? texts(a));
+  switch (q.type) {
+    case "choice":
+    case "text":
+      return typeof a === "string" ? a : undefined;
+    case "multi":
+      return texts(a);
+    case "rank": {
+      // Solo las opciones de la pregunta, sin repetir; las que falten van al final en su orden.
+      const list = texts(a);
+      if (!list) return undefined;
+      const values = (q.options ?? []).map((o) => o.value);
+      const kept = [...new Set(list.filter((v) => values.includes(v)))];
+      return kept.length ? [...kept, ...values.filter((v) => !kept.includes(v))] : undefined;
+    }
+    default: {
+      const n = num(a);
+      if (n === undefined) return undefined;
+      const { min, max } = rangeOf(q);
+      return n >= min && n <= max ? n : undefined;
+    }
+  }
+}
+
+/**
+ * Las respuestas con la forma de su pregunta: lo que no cuadra se descarta. Un borrador de otra
+ * versión del cuestionario (la pregunta cambió de tipo) o un payload con un objeto donde iba un
+ * texto ya no rompen el pintado. Las de preguntas que no existen se guardan si son texto, número o
+ * lista de textos (las preguntas pueden llegar después).
+ */
+export function cleanAnswers(questions: readonly SurveyQuestion[], answers: unknown): SurveyAnswers {
+  const out: SurveyAnswers = {};
+  if (!answers || typeof answers !== "object" || Array.isArray(answers)) return out;
+  for (const [id, a] of Object.entries(answers as Record<string, unknown>)) {
+    const v = answerFor(questions.find((q) => q.id === id), a);
+    if (v !== undefined && isAnswered(v)) out[id] = v;
+  }
+  return out;
 }
 
 function holds(c: SurveyCondition, a: SurveyAnswer | undefined): boolean {

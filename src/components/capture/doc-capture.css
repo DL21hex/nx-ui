@@ -61,6 +61,11 @@ nx-doc-capture [hidden] {
   color: var(--nx-text-tertiary);
   font-size: 12.5px;
 }
+.nx-cap__drop-error {
+  color: var(--nx-danger);
+  font-size: 12.5px;
+  font-weight: 500;
+}
 .nx-cap__choose,
 .nx-cap__again {
   margin-block-start: 8px;
@@ -233,6 +238,9 @@ nx-doc-capture [hidden] {
   color: var(--nx-muted-foreground);
   font-size: 12.5px;
 
+  & .nx-cap__status-icon {
+    display: inline-flex;
+  }
   & .nx-glyph {
     inline-size: 15px;
     block-size: 15px;

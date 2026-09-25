@@ -161,6 +161,105 @@ describe("<nx-doc-capture>", () => {
     expect(el.state).toBe("idle");
   });
 
+  it("una corrección de la persona no la pisa un evento que llega después", () => {
+    const el = mount();
+    el.begin("f.pdf");
+    el.push({ type: "field", key: "nit", value: "900.123.456-7", confidence: 0.6, box });
+    const input = el.querySelector<HTMLInputElement>('.nx-cap__field[data-key="nit"] input')!;
+    input.value = "900.123.456-8";
+    input.dispatchEvent(new Event("change"));
+    el.push({ type: "field", key: "nit", value: "900.123.456-7", confidence: 0.9, box });
+    el.end();
+    expect(el.values.nit).toBe("900.123.456-8");
+    expect(input.value).toBe("900.123.456-8");
+  });
+
+  it("una clave que el schema no tiene no queda «por revisar» (no hay dónde confirmarla)", () => {
+    const el = mount();
+    read(el);
+    for (const k of ["vence", "items.0.cant"]) {
+      el.querySelector<HTMLInputElement>(`input[data-key="${k}"]`)!.dispatchEvent(new Event("change"));
+    }
+    expect(el.pending).toEqual([]);
+    el.push({ type: "field", key: "oculto", value: "x", confidence: 0.1 });
+    el.push({ type: "field", key: "otra.0.x", value: "x", confidence: 0.1 });
+    el.push({ type: "field", key: "items.1.nada", value: "x", confidence: 0.1 });
+    expect(el.pending).toEqual([]);
+    expect(submitDisabled(el)).toBe(false);
+  });
+
+  it("valida el archivo: tipo según `accept` y tamaño según `max-size` (20 MB por defecto)", async () => {
+    const fetchMock = vi.fn(async () => new Response('{"type":"done"}\n'));
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="/leer"');
+    const error = () => el.querySelector<HTMLElement>(".nx-cap__drop-error")!;
+    await el.extract(new File(["x"], "virus.exe", { type: "application/x-msdownload" }));
+    expect(error().hidden).toBe(false);
+    expect(error().textContent).toBe(CAPTURE_LABELS.badType);
+    expect(error().getAttribute("role")).toBe("alert");
+    const big = new File(["x"], "grande.pdf", { type: "application/pdf" });
+    Object.defineProperty(big, "size", { value: 21 * 1024 * 1024 });
+    await el.extract(big);
+    expect(error().textContent).toBe("El archivo pasa de 20 MB");
+    expect(fetchMock).not.toHaveBeenCalled();
+    el.setAttribute("max-size", "10");
+    await el.extract(new File(["0123456789ab"], "f.png", { type: "image/png" }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    el.maxSize = 1000;
+    await el.extract(new File(["x"], "f.png", { type: "image/png" }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Al soltar: el mismo control (el navegador no mira `accept` en un drop).
+    el.reset();
+    const drop = new Event("drop", { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperty(drop, "dataTransfer", { value: { files: [new File(["x"], "nota.txt", { type: "text/plain" })] } });
+    el.dispatchEvent(drop);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(error().textContent).toBe(CAPTURE_LABELS.badType);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("el spinner del estado es el mismo nodo durante toda la lectura; `done` suelta la conexión", async () => {
+    const enc = new TextEncoder();
+    let push!: (o: object) => void;
+    let cancelled = false;
+    vi.stubGlobal("fetch", async () =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            push = (o) => c.enqueue(enc.encode(`${JSON.stringify(o)}\n`));
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+      ),
+    );
+    const el = mount('endpoint="/leer"');
+    const reading = el.extract(new File(["x"], "f.pdf", { type: "application/pdf" }));
+    await new Promise((r) => setTimeout(r, 5));
+    const spin = el.querySelector(".nx-cap__status .nx-spinner");
+    expect(spin).not.toBeNull();
+    push({ type: "field", key: "nit", value: "900", confidence: 0.99 });
+    push({ type: "field", key: "total", value: "1", confidence: 0.99 });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(el.querySelector(".nx-cap__status .nx-spinner")).toBe(spin);
+    expect(el.querySelector(".nx-cap__status")!.textContent).toContain("2");
+    push({ type: "done" });
+    await reading;
+    expect(el.state).toBe("review");
+    expect(cancelled).toBe(true);
+  });
+
+  it("endpoint y action de otro origen no se llaman", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () => new Response('{"type":"done"}\n'));
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="https://evil.example/leer"');
+    await el.extract(new File(["x"], "f.pdf", { type: "application/pdf" }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("render BDUI crea el componente con su schema", () => {
     const host = document.createElement("div");
     document.body.replaceChildren(host);

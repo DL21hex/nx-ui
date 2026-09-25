@@ -71,6 +71,11 @@ describe("lógica AG-UI", () => {
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 
+  it("applyPatch: copy/move sin `from` se saltan sin cortar nada", () => {
+    const ops = [{ op: "move", path: "/a" }, { op: "copy", from: 5, path: "/b" }, null, { op: "add", path: "/c", value: 1 }] as unknown as Parameters<typeof applyPatch>[1];
+    expect(applyPatch({ a: 1 }, ops)).toEqual({ a: 1, c: 1 });
+  });
+
   it("parseArgs: JSON de argumentos o {}", () => {
     expect(parseArgs('{"a":1}')).toEqual({ a: 1 });
     expect(parseArgs("[1]")).toEqual({});
@@ -217,5 +222,141 @@ describe("<nx-agent>", () => {
     expect(a.threadId).not.toBe(before);
     expect(a.messages).toEqual([]);
     expect(a.querySelector(".nx-agent__thread")!.children).toHaveLength(0);
+  });
+
+  it("detener con una aprobación pendiente: la llamada recibe `cancelled` y la tarjeta ya no se puede aprobar", async () => {
+    const inputs = backend((_i, n) => (n === 1 ? run(call("c1", "nx_confirm", { title: "Borrar 3 facturas" })) : run(text("ok"))));
+    const a = mount();
+    a.send("Borra las facturas");
+    await until(() => a.querySelector(".nx-agent__card nx-button"));
+    await until(() => a.messages.length === 2);
+    a.stop();
+    const card = a.querySelector(".nx-agent__card")!;
+    expect(card.querySelector("nx-button")).toBeNull();
+    expect(card.textContent).toContain("Cancelado");
+    a.send("Mejor no");
+    await until(() => inputs.length === 2 && !a.running);
+    // Cada llamada del asistente tiene su respuesta: el modelo no rechaza el historial.
+    expect(inputs[1].messages.map((m) => m.role)).toEqual(["user", "assistant", "tool", "user"]);
+    expect(inputs[1].messages[2]).toMatchObject({ toolCallId: "c1", content: '{"cancelled":true}' });
+  });
+
+  it("nx_show: nunca pasan props con URL; `show` limita los componentes", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const inputs = backend((_i, n) =>
+      n === 1
+        ? run(call("c1", "nx_show", { component: "AIAnswer", props: { endpoint: "https://evil.example/x", question: "hola", suggestions: ["a"] } }), call("c2", "nx_show", { component: "Survey", props: { action: "https://evil.example/y" } }))
+        : run(text("ok")),
+    );
+    const a = mount();
+    a.show = ["AIAnswer", "Trend"];
+    a.send("muestra");
+    await until(() => inputs.length === 2 && !a.running);
+    expect(a.getAttribute("show")).toBe("AIAnswer,Trend");
+    expect(inputs[0].tools.find((t) => t.name === "nx_show")!.description).toContain("Componentes: AIAnswer, Trend.");
+    const shown = a.querySelector<HTMLElement & { endpoint: string | null; suggestions: string[] }>(".nx-agent__show nx-ai-answer")!;
+    expect(shown.endpoint).toBeNull();
+    expect(shown.suggestions).toEqual(["a"]);
+    // Survey no está en `show`: no se pinta y el modelo sabe que no está disponible.
+    expect(a.querySelector("nx-survey")).toBeNull();
+    const tools = inputs[1].messages.filter((m) => m.role === "tool");
+    expect(tools.map((m) => m.content)).toEqual(['{"shown":true}', '{"shown":false}']);
+    warn.mockRestore();
+  });
+
+  it("herramienta con `confirm`: el componente pide aprobación antes de despacharla", async () => {
+    const inputs = backend((_i, n) => (n === 1 ? run(call("c1", "borrar", { id: 4 })) : n === 2 ? run(call("c2", "borrar", { id: 5 })) : run(text("ok"))));
+    const a = mount();
+    a.tools = [{ name: "borrar", description: "Borra un pedido", parameters: { type: "object" }, confirm: { title: "¿Borrar el pedido?", tone: "danger" } }];
+    const ran: unknown[] = [];
+    a.addEventListener("nx-agent-tool", (e) => {
+      e.preventDefault();
+      ran.push(e.detail.args.id);
+      e.detail.respond({ ok: true });
+    });
+    a.send("borra");
+    await until(() => a.querySelector(".nx-agent__card nx-button"));
+    expect(ran).toEqual([]);
+    expect(a.querySelector(".nx-agent__card")!.textContent).toContain("¿Borrar el pedido?");
+    // `confirm` no viaja al backend.
+    expect("confirm" in inputs[0].tools.find((t) => t.name === "borrar")!).toBe(false);
+    a.querySelectorAll(".nx-agent__card nx-button")[0].querySelector("button")!.click();
+    await until(() => inputs.length === 2);
+    expect(ran).toEqual([]);
+    expect(inputs[1].messages.at(-1)).toMatchObject({ toolCallId: "c1", content: '{"declined":true}' });
+    await until(() => a.querySelectorAll(".nx-agent__card nx-button").length === 2);
+    const yes = [...a.querySelectorAll(".nx-agent__card:not(.is-done) nx-button")][1] as HTMLElement & { hold?: number };
+    yes.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await until(() => inputs.length === 3 && !a.running);
+    expect(ran).toEqual([5]);
+    expect(inputs[2].messages.at(-1)).toMatchObject({ toolCallId: "c2", content: '{"ok":true}' });
+  });
+
+  it("RUN_FINISHED suelta la conexión aunque el servidor no la cierre", async () => {
+    let cancelled = false;
+    const enc = new TextEncoder();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        const body = new ReadableStream<Uint8Array>({
+          start(c) {
+            c.enqueue(enc.encode(run(text("hola")).map((e) => `data: ${JSON.stringify(e)}\n\n`).join("")));
+          },
+          cancel() {
+            cancelled = true;
+          },
+        });
+        return new Response(body);
+      }),
+    );
+    const a = mount();
+    a.send("x");
+    await until(() => !a.running);
+    expect(cancelled).toBe(true);
+  });
+
+  it("accesibilidad: el hilo no es una región viva; aria-busy mientras corre y la respuesta se anuncia una vez", async () => {
+    backend(() => run(text("Hay **3** pendientes[^1].")));
+    const a = mount();
+    const thread = a.querySelector(".nx-agent__thread")!;
+    expect(thread.hasAttribute("aria-live")).toBe(false);
+    expect(thread.getAttribute("role")).toBeNull();
+    a.send("x");
+    expect(thread.getAttribute("aria-busy")).toBe("true");
+    await until(() => !a.running);
+    expect(thread.getAttribute("aria-busy")).toBe("false");
+    const status = [...a.querySelectorAll('[role="status"]')];
+    expect(status).toHaveLength(1);
+    expect(status[0].textContent).toBe("Hay 3 pendientes.");
+  });
+
+  it("sacarlo de la página detiene la corrida", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, i: RequestInit) => new Promise<Response>((_, rej) => i.signal?.addEventListener("abort", () => rej(new Error("abort"))))));
+    const a = mount();
+    a.send("x");
+    expect(a.running).toBe(true);
+    a.remove();
+    expect(a.running).toBe(false);
+  });
+
+  it("la tabla de `for`: un agente que se vuelve a montar la sigue escuchando; cambiar `for` suelta la anterior", async () => {
+    const a = mount('<nx-grid id="g1"></nx-grid><nx-grid id="g2"></nx-grid>');
+    const g1 = document.querySelector<NxGrid>("#g1")!;
+    g1.columns = [{ key: "estado", label: "Estado", type: "status", options: [{ value: "a" }, { value: "b" }] }];
+    g1.rows = [{ id: "1", estado: "a" }, { id: "2", estado: "b" }];
+    a.setAttribute("for", "g1");
+    const ctx = () => a.querySelector(".nx-agent__ctx")!.textContent;
+    a.remove();
+    const b = document.createElement("nx-agent");
+    b.setAttribute("for", "g1");
+    document.body.append(b);
+    g1.filters = [{ key: "estado", op: "in", values: ["a"] }];
+    g1.dispatchEvent(new CustomEvent("nx-grid-filter"));
+    expect(b.querySelector(".nx-agent__ctx")!.textContent).toContain("1 filtro");
+    document.body.append(a);
+    a.setAttribute("for", "g2");
+    const before = ctx();
+    g1.dispatchEvent(new CustomEvent("nx-grid-filter"));
+    expect(ctx()).toBe(before);
   });
 });

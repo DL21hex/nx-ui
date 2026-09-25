@@ -14,11 +14,12 @@
  * La tarjeta es un popover (capa superior) que se crea al abrirse la primera vez.
  */
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { lineData, readLines } from "../../core/stream";
-import { parseBlocks, type Inline } from "../ai/logic";
+import { isExternal, parseBlocks, type Inline } from "../ai/logic";
 import { applyEvent, balance, change, changeTone, emptyState, parseExplainEvent, toEvent } from "./logic";
 import type { ExplainEvent, ExplainLabels, ExplainNumber, ExplainState, ExplainTerm } from "./types";
 
@@ -63,6 +64,9 @@ export class NxExplain extends Base {
   #queued = false;
   #track?: () => void;
   #card?: HTMLDivElement;
+  /** Las secciones pintadas de la tarjeta, con la firma de lo que muestran: solo se rehace la que
+   *  cambió (en el streaming, casi siempre el texto). El spinner no se recrea en cada trozo. */
+  #slots = new Map<string, { sig: string; el: HTMLElement | null }>();
   #mark?: HTMLSpanElement;
 
   // ---------------------------------------------------------------- propiedades
@@ -100,7 +104,8 @@ export class NxExplain extends Base {
     return this.#labels;
   }
   set labels(v: Partial<ExplainLabels> | null | undefined) {
-    this.#labels = { ...EXPLAIN_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(EXPLAIN_LABELS, v);
+    this.#slots.clear();
     this.#paint();
   }
   get open(): boolean {
@@ -147,6 +152,7 @@ export class NxExplain extends Base {
     for (const l of this.#levels) l.ctrl?.abort();
     this.#card?.remove();
     this.#card = undefined;
+    this.#slots.clear();
     this.#open = false;
   }
 
@@ -296,7 +302,9 @@ export class NxExplain extends Base {
     this.#levels.push(level);
     this.#render();
     if (cached) return;
-    const safe = safeHref(url);
+    // El desglose de un término (`explain`) viene en la respuesta: solo del mismo origen (o de uno
+    // permitido con `allowOrigins`), para que el contexto de la app no viaje a otro sitio.
+    const safe = safeEndpoint(url);
     if (!safe) {
       level.state.error = this.#labels.error;
       level.state.done = true;
@@ -315,10 +323,13 @@ export class NxExplain extends Base {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await readLines(res, (line) => {
+          if (ctrl.signal.aborted) return false;
           const ev = parseExplainEvent(lineData(line));
-          if (!ev || ctrl.signal.aborted) return;
+          if (!ev) return;
           applyEvent(level.state, ev);
           this.#schedule();
+          // `done` o `error`: el desglose terminó; se suelta la conexión aunque siga abierta.
+          return !level.state.done;
         });
         if (ctrl.signal.aborted) return;
         level.state.done = true;
@@ -368,99 +379,151 @@ export class NxExplain extends Base {
       return n >= 0 ? h("sup", { class: "nx-explain__cite", "data-cite": id }, String(n + 1)) : null;
     };
     const parent = this.#levels[this.#levels.length - 2];
+    const depth = this.#levels.length;
+    const j = (v: unknown) => JSON.stringify(v);
+    const rel = (href: string) => (isExternal(href) ? "noopener noreferrer" : null);
 
-    // Cabecera: de dónde se viene, qué cifra es, y cómo cambió.
-    const nav = h(
-      "div",
-      { class: "nx-explain__nav" },
-      parent ? h("button", { type: "button", class: "nx-explain__back" }, glyph(BACK), parent.state.head?.label ?? parent.title) : h("span", { class: "nx-explain__label" }, head?.label ?? level.title),
-      h("button", { type: "button", class: "nx-explain__close", "aria-label": L.close }, glyph(X)),
-    );
-    const numeric = typeof head?.value === "number" ? head.value : null;
-    const changes = s.compare.map((c) => {
-      const d = numeric === null ? null : change(numeric, c.value);
-      const vs = L.versus.replace("{label}", c.label);
-      if (d === null) return h("span", { class: "nx-explain__delta" }, `${vs} · ${this.#fmt({ value: c.value }, head)}`);
-      const pct = f.number(Math.round(Math.abs(d) * 1000) / 10);
-      return h("span", { class: "nx-explain__delta", "data-tone": changeTone(d, c.better), title: this.#fmt({ value: c.value }, head) }, `${d > 0 ? "▲" : d < 0 ? "▼" : "="} ${pct} % ${vs}`);
-    });
-    const header = h(
-      "header",
-      { class: "nx-explain__head" },
-      parent ? h("span", { class: "nx-explain__label" }, head?.label ?? level.title) : null,
-      head ? h("p", { class: "nx-explain__value" }, this.#fmt(head)) : null,
-      head?.detail ? h("p", { class: "nx-explain__detail" }, head.detail) : null,
-      changes.length ? h("p", { class: "nx-explain__deltas" }, ...changes) : null,
-    );
-
-    // La fórmula, término a término, y si cuadra.
-    const bal = s.done ? balance(s) : null;
-    const terms = s.terms.length
-      ? h(
-          "ol",
-          { class: "nx-explain__terms" },
-          ...s.terms.map((t, i) => {
-            const body = [
-              h("span", { class: "nx-explain__op", "aria-hidden": "true" }, i === 0 && (t.op ?? "+") === "+" ? "" : OP_SIGN[t.op ?? "+"]),
-              h("span", { class: "nx-explain__term-text" }, h("span", null, t.label, cite(t.source)), t.detail ? h("small", null, t.detail) : null),
-              h("span", { class: "nx-explain__num" }, this.#fmt(t.op === "-" && typeof t.value === "number" ? { ...t, value: Math.abs(t.value) } : t, head)),
-            ];
-            const href = safeHref(t.href);
-            const attrs = { class: "nx-explain__term", "data-op": t.op ?? "+", "data-cite": t.source ?? null };
-            if (t.explain) return h("li", attrs, h("button", { type: "button", class: "nx-explain__row", "data-drill": i, "aria-label": `${L.drill.replace("{label}", t.label)}: ${this.#fmt(t, head)}` }, ...body, glyph("chevron", "nx-explain__more")));
-            if (href) return h("li", attrs, h("a", { class: "nx-explain__row", href }, ...body, glyph("chevron", "nx-explain__more")));
-            return h("li", attrs, h("div", { class: "nx-explain__row" }, ...body));
-          }),
-          bal
+    // Cada sección: su firma (lo que muestra) y cómo pintarla. Solo se rehace si la firma cambió.
+    const sections: [string, string, () => HTMLElement | null][] = [
+      [
+        "nav",
+        j([depth, parent ? (parent.state.head?.label ?? parent.title) : null, head?.label ?? level.title, L.close]),
+        () =>
+          h(
+            "div",
+            { class: "nx-explain__nav" },
+            parent ? h("button", { type: "button", class: "nx-explain__back", "data-fk": "back" }, glyph(BACK), parent.state.head?.label ?? parent.title) : h("span", { class: "nx-explain__label" }, head?.label ?? level.title),
+            h("button", { type: "button", class: "nx-explain__close", "aria-label": L.close, "data-fk": "close" }, glyph(X)),
+          ),
+      ],
+      [
+        "header",
+        j([depth, !!parent, head, s.compare, level.title, f.locale, L.versus]),
+        () => {
+          const numeric = typeof head?.value === "number" ? head.value : null;
+          const changes = s.compare.map((c) => {
+            const d = numeric === null ? null : change(numeric, c.value);
+            const vs = L.versus.replace("{label}", c.label);
+            if (d === null) return h("span", { class: "nx-explain__delta" }, `${vs} · ${this.#fmt({ value: c.value }, head)}`);
+            const pct = f.number(Math.round(Math.abs(d) * 1000) / 10);
+            return h("span", { class: "nx-explain__delta", "data-tone": changeTone(d, c.better), title: this.#fmt({ value: c.value }, head) }, `${d > 0 ? "▲" : d < 0 ? "▼" : "="} ${pct} % ${vs}`);
+          });
+          return h(
+            "header",
+            { class: "nx-explain__head" },
+            parent ? h("span", { class: "nx-explain__label" }, head?.label ?? level.title) : null,
+            head ? h("p", { class: "nx-explain__value" }, this.#fmt(head)) : null,
+            head?.detail ? h("p", { class: "nx-explain__detail" }, head.detail) : null,
+            changes.length ? h("p", { class: "nx-explain__deltas" }, ...changes) : null,
+          );
+        },
+      ],
+      [
+        "terms",
+        j([depth, s.terms, s.done, s.total, head?.value, head?.format, head?.currency, cites, f.locale, L.balanced, L.unbalanced, L.drill]),
+        () => {
+          if (!s.terms.length) return null;
+          // La fórmula, término a término, y si cuadra.
+          const bal = s.done ? balance(s) : null;
+          return h(
+            "ol",
+            { class: "nx-explain__terms" },
+            ...s.terms.map((t, i) => {
+              const body = [
+                h("span", { class: "nx-explain__op", "aria-hidden": "true" }, i === 0 && (t.op ?? "+") === "+" ? "" : OP_SIGN[t.op ?? "+"]),
+                h("span", { class: "nx-explain__term-text" }, h("span", null, t.label, cite(t.source)), t.detail ? h("small", null, t.detail) : null),
+                h("span", { class: "nx-explain__num" }, this.#fmt(t.op === "-" && typeof t.value === "number" ? { ...t, value: Math.abs(t.value) } : t, head)),
+              ];
+              const href = safeHref(t.href);
+              const attrs = { class: "nx-explain__term", "data-op": t.op ?? "+", "data-cite": t.source ?? null };
+              if (t.explain) return h("li", attrs, h("button", { type: "button", class: "nx-explain__row", "data-drill": i, "data-fk": `drill:${i}`, "aria-label": `${L.drill.replace("{label}", t.label)}: ${this.#fmt(t, head)}` }, ...body, glyph("chevron", "nx-explain__more")));
+              if (href) return h("li", attrs, h("a", { class: "nx-explain__row", href, rel: rel(href), "data-fk": `term:${i}` }, ...body, glyph("chevron", "nx-explain__more")));
+              return h("li", attrs, h("div", { class: "nx-explain__row" }, ...body));
+            }),
+            bal
+              ? h(
+                  "li",
+                  { class: "nx-explain__term nx-explain__term--total", "data-ok": String(bal.ok) },
+                  h(
+                    "div",
+                    { class: "nx-explain__row" },
+                    h("span", { class: "nx-explain__op", "aria-hidden": "true" }, "="),
+                    h("span", { class: "nx-explain__term-text" }, bal.ok ? h("span", { class: "nx-explain__ok" }, glyph(CHECK), L.balanced) : h("span", { class: "nx-explain__bad", role: "alert" }, glyph(WARN), L.unbalanced.replace("{sum}", this.#fmt({ value: bal.sum }, head)).replace("{total}", this.#fmt({ value: bal.total }, head)))),
+                    h("span", { class: "nx-explain__num" }, this.#fmt({ value: bal.sum }, head)),
+                  ),
+                )
+              : null,
+          );
+        },
+      ],
+      [
+        "text",
+        j([depth, s.text, cites]),
+        () => {
+          // La explicación (Markdown mínimo, citas a las fuentes).
+          if (!s.text) return null;
+          const inline = (parts: Inline[]) => parts.map((p) => (p.t === "b" ? h("strong", null, p.v) : p.t === "code" ? h("code", null, p.v) : p.t === "cite" ? cite(p.v) : p.v));
+          return h("div", { class: "nx-explain__text" }, ...parseBlocks(s.text).map((b) => (b.kind === "p" ? h("p", null, ...inline(b.inl)) : h("ul", null, ...b.items.map((it) => h("li", null, ...inline(it)))))));
+        },
+      ],
+      [
+        "sources",
+        j([depth, s.sources, L.sources]),
+        () =>
+          s.sources.length
             ? h(
-                "li",
-                { class: "nx-explain__term nx-explain__term--total", "data-ok": String(bal.ok) },
+                "section",
+                { class: "nx-explain__sources" },
+                h("h3", null, L.sources),
                 h(
-                  "div",
-                  { class: "nx-explain__row" },
-                  h("span", { class: "nx-explain__op", "aria-hidden": "true" }, "="),
-                  h("span", { class: "nx-explain__term-text" }, bal.ok ? h("span", { class: "nx-explain__ok" }, glyph(CHECK), L.balanced) : h("span", { class: "nx-explain__bad", role: "alert" }, glyph(WARN), L.unbalanced.replace("{sum}", this.#fmt({ value: bal.sum }, head)).replace("{total}", this.#fmt({ value: bal.total }, head)))),
-                  h("span", { class: "nx-explain__num" }, this.#fmt({ value: bal.sum }, head)),
+                  "ol",
+                  null,
+                  ...s.sources.map((x) => {
+                    const href = safeHref(x.href);
+                    const inner = [h("span", null, x.title), x.detail ? h("small", null, x.detail) : null];
+                    return h("li", { class: "nx-explain__source", "data-cite": x.id }, href ? h("a", { href, rel: rel(href), "data-fk": `src:${x.id}` }, ...inner) : h("span", null, ...inner));
+                  }),
                 ),
               )
             : null,
-        )
-      : null;
+      ],
+      ["notes", j([depth, s.notes]), () => (s.notes.length ? h("p", { class: "nx-explain__notes" }, ...s.notes.map((n) => h("span", { class: "nx-explain__note", "data-tone": n.tone }, n.label))) : null)],
+      [
+        "status",
+        // Mientras carga la firma no cambia: el mismo spinner gira de principio a fin.
+        j(!s.done ? ["loading", L.loading] : [depth, s.error, L.error]),
+        () =>
+          !s.done
+            ? h("p", { class: "nx-explain__status" }, h("span", { class: "nx-explain__spin", "aria-hidden": "true" }), L.loading)
+            : s.error !== null
+              ? h("p", { class: "nx-explain__error", role: "alert" }, s.error || L.error)
+              : null,
+      ],
+    ];
 
-    // La explicación (Markdown mínimo, citas a las fuentes) y las fuentes.
-    const inline = (parts: Inline[]) => parts.map((p) => (p.t === "b" ? h("strong", null, p.v) : p.t === "code" ? h("code", null, p.v) : p.t === "cite" ? cite(p.v) : p.v));
-    const text = s.text
-      ? h(
-          "div",
-          { class: "nx-explain__text" },
-          ...parseBlocks(s.text).map((b) => (b.kind === "p" ? h("p", null, ...inline(b.inl)) : h("ul", null, ...b.items.map((it) => h("li", null, ...inline(it)))))),
-        )
-      : null;
-    const sources = s.sources.length
-      ? h(
-          "section",
-          { class: "nx-explain__sources" },
-          h("h3", null, L.sources),
-          h(
-            "ol",
-            null,
-            ...s.sources.map((x) => {
-              const href = safeHref(x.href);
-              const inner = [h("span", null, x.title), x.detail ? h("small", null, x.detail) : null];
-              return h("li", { class: "nx-explain__source", "data-cite": x.id }, href ? h("a", { href }, ...inner) : h("span", null, ...inner));
-            }),
-          ),
-        )
-      : null;
-    const notes = s.notes.length ? h("p", { class: "nx-explain__notes" }, ...s.notes.map((n) => h("span", { class: "nx-explain__note", "data-tone": n.tone }, n.label))) : null;
-    const status = !s.done ? h("p", { class: "nx-explain__status" }, h("span", { class: "nx-explain__spin", "aria-hidden": "true" }), L.loading) : s.error !== null ? h("p", { class: "nx-explain__error", role: "alert" }, s.error || L.error) : null;
-
-    // Volver a pintar no le quita el foco a quien navega con teclado mientras llega el desglose.
-    const focusables = () => [...card.querySelectorAll<HTMLElement>("button, a[href]")];
-    const had = card.contains(document.activeElement) ? focusables().indexOf(document.activeElement as HTMLElement) : -1;
     card.setAttribute("aria-busy", String(!s.done));
-    card.replaceChildren(...[nav, header, terms, text, sources, notes, status].filter((n): n is HTMLElement => !!n));
-    if (had >= 0) (focusables()[had] ?? card).focus({ preventScroll: true });
+    // Volver a pintar no le quita el foco a quien navega con teclado mientras llega el desglose.
+    const active = card.contains(document.activeElement) ? (document.activeElement as HTMLElement) : null;
+    let refocus: string | null = null;
+    const els: HTMLElement[] = [];
+    for (const [name, sig, build] of sections) {
+      let slot = this.#slots.get(name);
+      if (!slot || slot.sig !== sig) {
+        if (active && slot?.el?.contains(active)) refocus = active.dataset.fk ?? "";
+        const el = build();
+        if (slot?.el && el) slot.el.replaceWith(el);
+        else slot?.el?.remove();
+        slot = { sig, el };
+        this.#slots.set(name, slot);
+      }
+      if (slot.el) els.push(slot.el);
+    }
+    // En orden, sin mover lo que ya está en su lugar (moverlo reiniciaría su animación).
+    els.forEach((el, i) => {
+      if (card.children[i] !== el) card.insertBefore(el, card.children[i] ?? null);
+    });
+    for (const extra of [...card.children].slice(els.length)) extra.remove();
+    if (refocus !== null) (card.querySelector<HTMLElement>(`[data-fk="${CSS.escape(refocus)}"]`) ?? card).focus({ preventScroll: true });
     if (this.#open) this.#place();
   }
 

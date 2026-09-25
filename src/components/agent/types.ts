@@ -22,7 +22,17 @@ export interface AguiTool {
   name: string;
   description: string;
   parameters: unknown;
+  /**
+   * Solo para las herramientas de la app (`tools`): antes de despachar `nx-agent-tool`, el
+   * componente pide aprobación con su propia tarjeta (no depende de que el modelo llame a
+   * `nx_confirm`). Si se rechaza, el modelo recibe `{declined: true}`. No viaja al backend. El
+   * backend igual debe revalidar: el historial lo arma el navegador.
+   */
+  confirm?: ToolConfirm;
 }
+
+/** `true`, o el título y el tono de la tarjeta (`danger`: hay que mantener pulsado para aprobar). */
+export type ToolConfirm = boolean | { title?: string; detail?: string; tone?: "primary" | "danger" };
 
 export interface AguiContext {
   description: string;
@@ -88,6 +98,10 @@ export interface AgentLabels {
   touring: string;
   /** Textos del recorrido guiado (`nx_tour`). */
   tour: Partial<import("../tour/types").TourLabels>;
+  /** Una tarjeta que quedó sin respuesta porque se detuvo la corrida. */
+  cancelled: string;
+  /** Título de la aprobación de una herramienta con `confirm: true` («¿Ejecutar «{name}»?»). */
+  confirmTool: string;
 }
 
 /** `nx-agent-tool`: una herramienta de la app. Responder con `respond(contenido, error?)`. */

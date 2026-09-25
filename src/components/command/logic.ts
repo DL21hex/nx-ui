@@ -61,13 +61,27 @@ export function frecency(use: { n: number; t: number } | undefined, now: number)
  *  queda al final del objeto, y se recorre al revés). */
 const byWeight = (a: { n: number; t: number }, b: { n: number; t: number }, now: number) => frecency(b, now) - frecency(a, now) || b.t - a.t;
 
-/** Anota un uso. Se guardan las `max` entradas que más pesan (sin sus submenús: se vuelven a leer). */
+/**
+ * Lo que se guarda de una entrada en `localStorage`: solo con qué reconocerla. Nunca `data`, `hint`
+ * ni palabras clave (pueden ser datos de un registro: un nombre, un documento, un monto), ni el
+ * submenú (se vuelve a leer).
+ */
+export function storedItem(item: CommandItem): CommandItem {
+  const out: CommandItem = { label: item.label };
+  if (item.id !== undefined) out.id = item.id;
+  if (item.href !== undefined) out.href = item.href;
+  if (item.icon !== undefined) out.icon = item.icon;
+  if (item.group !== undefined) out.group = item.group;
+  return out;
+}
+
+/** Anota un uso. Se guardan las `max` entradas que más pesan, reducidas a `storedItem`. */
 export function recordUse(usage: CommandUsage, item: CommandItem, now: number, max = 30): CommandUsage {
   const key = itemKey(item);
   const prev = usage[key];
-  const next: CommandUsage = { ...usage };
-  delete next[key];
-  next[key] = { n: (prev ? frecency(prev, now) : 0) + 1, t: now, item: { ...item, children: undefined } };
+  const next: CommandUsage = Object.create(null);
+  for (const [k, u] of Object.entries(usage)) if (k !== key) next[k] = u;
+  next[key] = { n: (prev ? frecency(prev, now) : 0) + 1, t: now, item: storedItem(item) };
   const keys = Object.keys(next).reverse();
   if (keys.length <= max) return next;
   keys.sort((a, b) => byWeight(next[a], next[b], now));
@@ -141,15 +155,48 @@ export function searchCommands(items: readonly CommandItem[], query: string, usa
   return out.sort((a, b) => b.score - a.score);
 }
 
-/** Lo usado, de lo que más a lo que menos pesa; con la versión actual de cada entrada si sigue existiendo. */
+/**
+ * Lo usado, de lo que más a lo que menos pesa, en su versión actual: solo lo que sigue existiendo en
+ * `items` (lo que la paleta tiene ahora). Un registro del servidor, o una entrada que otra persona
+ * usó en este navegador y ya no está, no vuelve a aparecer.
+ */
 export function recentItems(usage: CommandUsage, items: readonly CommandItem[], now = Date.now(), max = 5): CommandItem[] {
   const current = new Map(items.map((i) => [itemKey(i), i]));
   return Object.entries(usage)
+    .filter(([k]) => current.has(k))
     .reverse()
     .sort((a, b) => byWeight(a[1], b[1], now))
     .slice(0, max)
-    .map(([k, u]) => current.get(k) ?? cleanItem(u.item))
-    .filter((i): i is CommandItem => !!i);
+    .map(([k]) => current.get(k)!);
+}
+
+/** Todas las entradas, también las de los submenús, con su camino como pista («Cambiar paleta»). */
+export function flattenItems(items: readonly CommandItem[], trail: string[] = []): CommandItem[] {
+  const out: CommandItem[] = [];
+  for (const it of items) {
+    out.push(trail.length && !it.hint ? { ...it, hint: trail.join(" › ") } : it);
+    if (it.children?.length) out.push(...flattenItems(it.children, [...trail, it.label]));
+  }
+  return out;
+}
+
+/** El uso guardado en `localStorage`, validado y reducido a `storedItem` (lo de versiones viejas
+ *  que guardaban la entrada entera, con `data`, se descarta al leerlo). */
+export function parseUsage(raw: unknown): CommandUsage {
+  const out: CommandUsage = Object.create(null);
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, u] of Object.entries(raw as Record<string, { n?: unknown; t?: unknown; item?: unknown }>)) {
+    const item = u && typeof u === "object" ? cleanItem(u.item) : null;
+    if (item && typeof u.n === "number" && Number.isFinite(u.n) && typeof u.t === "number" && Number.isFinite(u.t)) out[k] = { n: u.n, t: u.t, item: storedItem(item) };
+  }
+  return out;
+}
+
+/** Si el atajo lleva ⌘/Ctrl/Alt. Uno sin modificador («/») no se atiende mientras se escribe. */
+export function hotkeyHasModifier(hotkey: string): boolean {
+  const parts = hotkey.toLowerCase().split("+").map((p) => p.trim());
+  parts.pop();
+  return parts.some((p) => p === "mod" || p === "ctrl" || p === "meta" || p === "cmd" || p === "alt");
 }
 
 /** Agrupa conservando el orden: cada grupo aparece donde está su mejor entrada. */
@@ -171,5 +218,5 @@ export function matchesHotkey(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKe
   if (!key || key === "none") return false;
   const want = new Set(parts);
   const mod = want.has("mod") || want.has("ctrl") || want.has("meta") || want.has("cmd");
-  return e.key.toLowerCase() === key && (e.ctrlKey || e.metaKey) === mod && e.altKey === want.has("alt") && e.shiftKey === want.has("shift");
+  return typeof e.key === "string" && e.key.toLowerCase() === key && (e.ctrlKey || e.metaKey) === mod && e.altKey === want.has("alt") && e.shiftKey === want.has("shift");
 }

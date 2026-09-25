@@ -182,6 +182,50 @@ describe("<nx-survey>", () => {
     expect(el.current!.id).toBe("area");
   });
 
+  it("una respuesta JSON que no es un objeto («ok», true, 1) no es un error: el envío se guardó", async () => {
+    for (const body of ['"ok"', "true", "1"]) {
+      const fetchMock = vi.fn(async () => new Response(body));
+      vi.stubGlobal("fetch", fetchMock);
+      const el = mount('action="/encuesta"', [QS[0]]);
+      el.start();
+      el.answers = { area: "adm" };
+      el.next();
+      el.next(); // un segundo envío mientras el primero viaja no hace otro POST
+      await sleep(10);
+      expect(el.screen).toBe("done");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("action de otro origen: no se envía nada y se muestra el error", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () => new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('action="https://evil.example/encuesta"', [QS[0]]);
+    el.start();
+    el.answers = { area: "adm" };
+    el.next();
+    await sleep(10);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(el.screen).toBe("question");
+    expect(el.querySelector(".nx-survey__err")!.textContent).toBe("No se pudo enviar. Inténtalo de nuevo.");
+    warn.mockRestore();
+  });
+
+  it("un borrador de otra versión del cuestionario (o respuestas con otra forma) no rompe el pintado", () => {
+    const qs: SurveyQuestionInput[] = [QS[0], { id: "orden", type: "rank", title: "Ordena", options: ["A", "B", "C"] }, QS[4]];
+    localStorage.setItem("enc-2", JSON.stringify({ answers: { area: { raro: 1 }, orden: "texto de otra versión", stars: 99, extra: "se queda" }, step: 2 }));
+    const el = mount('heading="Clima" storage="enc-2"', qs);
+    // Nada utilizable salvo «extra» (una pregunta que no está): se ofrece continuar.
+    el.querySelector<HTMLButtonElement>('[data-act="resume"]')!.click();
+    expect(el.screen).toBe("question");
+    expect(el.answers).toEqual({ extra: "se queda" });
+    el.answers = { area: "prod", orden: ["C", "X", "C"], stars: 3 } as never;
+    expect(el.answers).toEqual({ area: "prod", orden: ["C", "A", "B"], stars: 3 });
+    el.answers = { area: ["no", "es", "texto"], stars: "4" } as never;
+    expect(el.answers).toEqual({});
+  });
+
   it("estrellas: se encienden hasta la elegida", () => {
     const el = mount("", [QS[4]]);
     key(el, "4");

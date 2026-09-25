@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildValues, confidenceTier, normalizeBox, normalizeConfidence, parseCaptureEvent, tableRowCount } from "../src/components/capture/logic";
+import { acceptsFile, buildValues, confidenceTier, formatBytes, normalizeBox, normalizeConfidence, parseCaptureEvent, tableRowCount } from "../src/components/capture/logic";
 import type { CaptureSchemaItem } from "../src/components/capture/types";
 import { lineData } from "../src/core/stream";
 
@@ -75,5 +75,24 @@ describe("buildValues", () => {
   it("tableRowCount", () => {
     expect(tableRowCount("items", ["items.0.a", "items.3.b", "itemsx.9.a"])).toBe(4);
     expect(tableRowCount("items", [])).toBe(0);
+  });
+});
+
+describe("archivos", () => {
+  it("acceptsFile: extensiones, comodines y tipos exactos; sin tipo, por la extensión", () => {
+    const a = "application/pdf,image/*";
+    expect(acceptsFile(a, "f.pdf", "application/pdf")).toBe(true);
+    expect(acceptsFile(a, "foto.JPG", "")).toBe(true);
+    expect(acceptsFile(a, "f.pdf", "")).toBe(true);
+    expect(acceptsFile(a, "x.exe", "application/x-msdownload")).toBe(false);
+    expect(acceptsFile(a, "sin-extension", "")).toBe(false);
+    expect(acceptsFile(".xml, .pdf", "Factura.XML", "")).toBe(true);
+    expect(acceptsFile("", "lo-que-sea.bin", "")).toBe(true);
+  });
+
+  it("formatBytes", () => {
+    expect(formatBytes(20 * 1024 * 1024)).toBe("20 MB");
+    expect(formatBytes(1536, "en-US")).toBe("1.5 KB");
+    expect(formatBytes(512)).toBe("512 B");
   });
 });

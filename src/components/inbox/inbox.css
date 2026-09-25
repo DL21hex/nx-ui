@@ -133,6 +133,10 @@ nx-inbox kbd {
   &[aria-selected="true"][data-active] {
     background: var(--nx-primary-soft);
   }
+  /* Su aprobación espera el impacto del servidor. */
+  &[data-checking] {
+    opacity: 0.6;
+  }
 }
 .nx-inbox__list:focus-visible .nx-inbox__item[data-active] {
   outline: 2px solid var(--nx-ring);

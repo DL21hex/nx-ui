@@ -173,6 +173,52 @@ describe("<nx-command>", () => {
     expect(groups(el)[0]).toBe("Acciones");
   });
 
+  it("un registro del servidor no se guarda en localStorage ni vuelve a «Recientes»", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([{ id: "cli-1", label: "Ana Pérez · CC 1234567", data: { cedula: "1234567" } }]))));
+    let el = mount('source="/buscar"');
+    const chosen: string[] = [];
+    el.addEventListener("nx-command-select", (e) => chosen.push(e.detail.item.label));
+    el.show("ana");
+    await sleep(10);
+    opts(el).find((o) => o.textContent!.includes("Ana"))!.click();
+    expect(chosen).toEqual(["Ana Pérez · CC 1234567"]);
+    el = mount();
+    el.show();
+    expect(localStorage.getItem("nx-command") ?? "").not.toContain("1234567");
+    expect(texts(el)).not.toContain("Ana Pérez · CC 1234567");
+  });
+
+  it("lo guardado de una entrada que ya no está (otra sesión, otro usuario) no aparece", () => {
+    localStorage.setItem("nx-command", JSON.stringify({ viejo: { n: 3, t: Date.now(), item: { id: "viejo", label: "Factura de Ana", href: "/f/9", data: { x: 1 } } } }));
+    const el = mount();
+    el.show();
+    expect(groups(el)[0]).toBe("Acciones");
+    expect(texts(el)).not.toContain("Factura de Ana");
+  });
+
+  it("un atajo sin modificador («/») no se atiende mientras se escribe en un campo", () => {
+    document.body.innerHTML = '<input id="campo"><nx-command hotkey="/"></nx-command>';
+    const el = document.querySelector("nx-command")!;
+    const campo = document.querySelector<HTMLInputElement>("#campo")!;
+    const slash = new KeyboardEvent("keydown", { key: "/", bubbles: true, cancelable: true });
+    campo.dispatchEvent(slash);
+    expect(slash.defaultPrevented).toBe(false);
+    expect(el.open).toBe(false);
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "/", bubbles: true, cancelable: true }));
+    expect(el.open).toBe(true);
+  });
+
+  it("source de otro origen no se llama", async () => {
+    const fetchMock = vi.fn(async () => new Response("[]"));
+    vi.stubGlobal("fetch", fetchMock);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const el = mount('source="https://evil.example/buscar"');
+    el.show("pedidos");
+    await sleep(10);
+    expect(fetchMock).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("menu='id' suma las pantallas de un <nx-sidemenu> con su ruta como pista", () => {
     document.body.innerHTML = '<nx-sidemenu id="nav"></nx-sidemenu><nx-command menu="nav"></nx-command>';
     const nav = document.querySelector<NxSidemenu>("#nav")!;

@@ -12,9 +12,10 @@
  *
  * Cada tramo de respuesta (pasos y texto) es un `<nx-ai-answer bare>`: el mismo pintado de la IA.
  */
-import { render, type BduiNode } from "../../bdui";
+import { URL_PROPS, hasComponent, render, type BduiNode } from "../../bdui";
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
 import { lineData, readLines } from "../../core/stream";
 import type { NxAiAnswer } from "../ai/ai-answer";
@@ -23,7 +24,7 @@ import type { NxButton } from "../button/button";
 import "../button/index";
 import type { GridFilter } from "../grid/types";
 import { nxTour } from "../tour/tour";
-import { GRID_TOOLS, UI_TOOLS, applyPatch, parseAguiEvent, parseArgs } from "./logic";
+import { GRID_TOOLS, UI_TOOLS, applyPatch, parseAguiEvent, parseArgs, parseShow, showProps, toolConfirm } from "./logic";
 import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiMessage, AguiTool, AguiToolCall, RunAgentInput } from "./types";
 
 export const AGENT_LABELS: AgentLabels = {
@@ -46,6 +47,8 @@ export const AGENT_LABELS: AgentLabels = {
   empty: "Pídele algo sobre lo que tienes en pantalla.",
   touring: "Te muestro en la pantalla",
   tour: {},
+  cancelled: "Cancelado",
+  confirmTool: "¿Ejecutar «{name}»?",
 };
 
 const SPARK = '<path d="M9.94 14.06 5 19"/><path d="m14 4 1.27 3.73L19 9l-3.73 1.27L14 14l-1.27-3.73L9 9l3.73-1.27Z"/><path d="M5 3v4"/><path d="M3 5h4"/>';
@@ -53,7 +56,7 @@ const SEND = '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>';
 const STOP = '<rect x="7" y="7" width="10" height="10" rx="1.5"/>';
 const PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
-const PROPS = ["endpoint", "tools", "context", "suggestions", "labels", "state"] as const;
+const PROPS = ["endpoint", "tools", "context", "suggestions", "labels", "state", "show"] as const;
 /** Cuánto espera un aviso con deshacer antes de dar la acción por buena. */
 const UNDO_MS = 7000;
 
@@ -63,7 +66,7 @@ let uid = 0;
 const id = (p: string) => `${p}-${Date.now().toString(36)}-${++uid}`;
 
 export class NxAgent extends Base {
-  static observedAttributes = ["endpoint", "for", "heading", "placeholder", "labels", "suggestions"];
+  static observedAttributes = ["endpoint", "for", "heading", "placeholder", "labels", "suggestions", "show"];
 
   #labels: AgentLabels = AGENT_LABELS;
   #tools: AguiTool[] = [];
@@ -84,6 +87,12 @@ export class NxAgent extends Base {
   /** La corrida vigente: los eventos y el cierre de una corrida anterior no la tocan. */
   #current = "";
   #built = false;
+  /** Tarjetas que esperan a la persona (por id de la llamada): `stop()` las cancela. */
+  #pending = new Map<string, () => void>();
+  /** El texto del asistente en este turno: se anuncia una vez, al terminar. */
+  #turnText = "";
+  /** La tabla de `for` que se está escuchando, y cómo dejar de hacerlo. */
+  #watched: { grid: HTMLElement; off: () => void } | null = null;
   // Nodos.
   #title?: HTMLElement;
   #ctx?: HTMLElement;
@@ -112,6 +121,17 @@ export class NxAgent extends Base {
   }
   set tools(v: AguiTool[] | null | undefined) {
     this.#tools = Array.isArray(v) ? v.filter((t) => t && typeof t.name === "string") : [];
+  }
+  /**
+   * Qué componentes BDUI puede mostrar el agente con `nx_show` («Trend, Grid»). Sin él, todos los
+   * registrados. Las props con URL (`endpoint`, `action`, `source`…) nunca pasan.
+   */
+  get show(): string[] | null {
+    return parseShow(this.getAttribute("show"));
+  }
+  set show(v: string[] | string | null | undefined) {
+    const list = parseShow(v);
+    this.#attr("show", list ? list.join(",") : null);
   }
   /** Contexto que viaja con cada corrida (`{description, value}`); la tabla de `for` se agrega sola. */
   get context(): AguiContext[] {
@@ -147,7 +167,10 @@ export class NxAgent extends Base {
     return this.#labels;
   }
   set labels(v: Partial<AgentLabels> | null | undefined) {
-    this.#labels = { ...AGENT_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    const merged = mergeLabels(AGENT_LABELS, v);
+    // `tour` es un objeto (los textos del recorrido): se toma aparte.
+    const tour = v && typeof v === "object" && (v as { tour?: unknown }).tour;
+    this.#labels = { ...merged, tour: tour && typeof tour === "object" ? (tour as AgentLabels["tour"]) : {} };
     this.#paint();
   }
 
@@ -159,6 +182,7 @@ export class NxAgent extends Base {
     if (!t || this.#running) return;
     this.#messages.push({ id: id("msg"), role: "user", content: t });
     this.#thread!.append(h("div", { class: "nx-agent__user" }, t));
+    this.#turnText = "";
     this.#turn = h("div", { class: "nx-agent__turn" });
     this.#thread!.append(this.#turn);
     this.#scroll(true);
@@ -167,7 +191,18 @@ export class NxAgent extends Base {
 
   stop(): void {
     this.#abort?.abort();
+    this.#current = "";
+    // El mensaje del asistente ya entró al historial con sus llamadas: cada una necesita su
+    // respuesta `tool`, o el modelo rechaza todo lo que siga en la conversación (HTTP 400).
+    if (this.#finished && (this.#waiting.size || this.#results.length)) {
+      this.#messages.push(...this.#results);
+      for (const callId of this.#waiting) this.#messages.push({ id: id("tool"), role: "tool", toolCallId: callId, content: JSON.stringify({ cancelled: true }), error: "cancelled" });
+    }
+    this.#results = [];
     this.#waiting.clear();
+    // Las tarjetas que esperaban quedan cerradas: ya no se puede aprobar algo que no se enviará.
+    for (const cancel of this.#pending.values()) cancel();
+    this.#pending.clear();
     this.#turn?.querySelectorAll<HTMLElement>(".nx-agent__card:not(.is-done)").forEach((c) => c.classList.add("is-done", "is-stopped"));
     this.#endSeg();
     this.#setRunning(false);
@@ -199,11 +234,17 @@ export class NxAgent extends Base {
     this.#paint();
   }
 
+
   disconnectedCallback(): void {
-    this.#abort?.abort();
+    // Sacarlo de la página detiene la corrida (sin esto quedaba «Trabajando…» para siempre).
+    if (this.#running) this.stop();
+    else this.#abort?.abort();
+    this.#watched?.off();
+    this.#watched = null;
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
+    if (name === "show") return;
     if ((name === "labels" || name === "suggestions") && value !== null) {
       try {
         (this as unknown as Record<string, unknown>)[name] = JSON.parse(value);
@@ -219,8 +260,10 @@ export class NxAgent extends Base {
   // ---------------------------------------------------------------- corrida AG-UI
 
   async #run(): Promise<void> {
-    const url = safeHref(this.endpoint);
+    const url = safeEndpoint(this.endpoint);
     if (!url) return;
+    // La corrida anterior (la que pidió las herramientas) suelta su conexión.
+    this.#abort?.abort();
     this.#asst = null;
     this.#calls.clear();
     this.#waiting.clear();
@@ -235,7 +278,7 @@ export class NxAgent extends Base {
       runId,
       state: this.#state,
       messages: this.#messages,
-      tools: [...UI_TOOLS, ...(grid ? GRID_TOOLS : []), ...this.#tools],
+      tools: [...this.#uiTools(), ...(grid ? GRID_TOOLS : []), ...this.#tools.map(({ name, description, parameters }) => ({ name, description, parameters }))],
       context: [...(grid ? [this.#gridContext(grid)] : []), ...this.#tourContext(), ...this.#context],
       forwardedProps: {},
     };
@@ -253,12 +296,16 @@ export class NxAgent extends Base {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const live = () => !ctrl.signal.aborted && this.#current === runId;
       await readLines(res, (line) => {
+        if (!live()) return false;
         const ev = parseAguiEvent(lineData(line));
-        if (ev && live()) this.#on(ev);
+        if (ev) this.#on(ev);
+        // `RUN_FINISHED`: la corrida terminó aunque el servidor no cierre; se suelta la conexión.
+        return live() && !this.#finished;
       });
       if (live()) this.#finishRun();
     } catch (err) {
       if (ctrl.signal.aborted || this.#current !== runId) return;
+      ctrl.abort();
       this.#seg ?? this.#segment();
       this.#seg!.push({ type: "error", message: `${this.#labels.error}: ${err instanceof Error ? err.message : String(err)}` });
       this.#seg = null;
@@ -287,6 +334,7 @@ export class NxAgent extends Base {
       case "TEXT_MESSAGE_CHUNK":
         if (!ev.delta) break;
         this.#assistant().content += ev.delta;
+        this.#turnText += ev.delta;
         this.#segment().push({ type: "text", delta: ev.delta });
         this.#scroll();
         break;
@@ -371,6 +419,19 @@ export class NxAgent extends Base {
     return [...UI_TOOLS, ...(this.#grid() ? GRID_TOOLS : []), ...this.#tools].some((t) => t.name === name);
   }
 
+  /** Las herramientas de la cabina; `nx_show` dice qué componentes puede mostrar (si `show` los limita). */
+  #uiTools(): AguiTool[] {
+    const allowed = this.show;
+    if (!allowed) return UI_TOOLS;
+    return UI_TOOLS.flatMap((t) => (t.name !== "nx_show" ? [t] : allowed.length ? [{ ...t, description: `${t.description} Componentes: ${allowed.join(", ")}.` }] : []));
+  }
+
+  /** Si el modelo puede mostrar ese componente: registrado y, con `show`, en la lista. */
+  #canShow(component: string): boolean {
+    const allowed = this.show;
+    return hasComponent(component) && (!allowed || allowed.includes(component));
+  }
+
   /** Lo que se puede señalar con `nx_tour`: los `[data-tour]` visibles de la página, con su nombre. */
   #tourContext(): AguiContext[] {
     const marks = [...document.querySelectorAll<HTMLElement>("[data-tour]")].filter((el) => el.getClientRects().length);
@@ -387,11 +448,11 @@ export class NxAgent extends Base {
     const grid = this.#grid();
     switch (name) {
       case "nx_confirm":
-        return this.#confirmCard(args, reply);
+        return this.#confirmCard(callId, args, reply);
       case "nx_ask":
-        return this.#askCard(args, reply);
+        return this.#askCard(callId, args, reply);
       case "nx_notify":
-        return this.#notify(args, reply);
+        return this.#notify(callId, args, reply);
       case "nx_tour": {
         const steps = Array.isArray(args.steps) ? (args.steps as { title?: unknown }[]) : [];
         if (!steps.length) return reply(null, L.unavailable);
@@ -400,9 +461,12 @@ export class NxAgent extends Base {
         return;
       }
       case "nx_show": {
+        const component = s(args.component);
+        if (!this.#canShow(component)) return reply({ shown: false }, L.unavailable);
         const box = h("div", { class: "nx-agent__card nx-agent__show is-done" });
         this.#turn!.append(box);
-        const out = render({ component: s(args.component), props: args.props && typeof args.props === "object" ? (args.props as Record<string, unknown>) : {} } as BduiNode, box);
+        const out = render({ component, props: showProps(args.props, URL_PROPS) } as BduiNode, box);
+        if (!out.length) box.remove();
         this.#scroll();
         return reply(out.length ? { shown: true } : { shown: false }, out.length ? undefined : L.unavailable);
       }
@@ -420,9 +484,21 @@ export class NxAgent extends Base {
         return reply({ selected: grid.selected.length });
     }
     // Herramienta de la app: la atiende quien escuche `nx-agent-tool` (y llame a `respond`).
-    const detail: AgentToolDetail = { id: callId, name, args, respond: reply };
-    const handled = !this.dispatchEvent(new CustomEvent("nx-agent-tool", { detail, bubbles: true, composed: true, cancelable: true }));
-    if (!handled) reply(null, L.unavailable);
+    const dispatch = () => {
+      const detail: AgentToolDetail = { id: callId, name, args, respond: reply };
+      const handled = !this.dispatchEvent(new CustomEvent("nx-agent-tool", { detail, bubbles: true, composed: true, cancelable: true }));
+      if (!handled) reply(null, L.unavailable);
+    };
+    // Con `confirm`, la aprobación la pide el componente, no el modelo: una instrucción inyectada
+    // no puede saltársela. Rechazada, el modelo recibe `{declined: true}`.
+    const tool = this.#tools.find((t) => t.name === name);
+    const confirm = tool ? toolConfirm(tool.confirm) : null;
+    if (!confirm) return dispatch();
+    this.#confirmCard(
+      callId,
+      { title: confirm.title ?? L.confirmTool.replace("{name}", name), detail: confirm.detail ?? tool!.description, tone: confirm.tone },
+      (r) => (r.approved ? dispatch() : reply({ declined: true })),
+    );
   }
 
   /** Una línea de lo que el agente hizo en la pantalla («Filtré la tabla · 5 filas»). */
@@ -438,7 +514,14 @@ export class NxAgent extends Base {
     return card;
   }
 
-  #confirmCard(args: Record<string, unknown>, reply: (c: unknown) => void): void {
+  /** Cierra una tarjeta que ya no espera respuesta (se detuvo la corrida): sin botones, «Cancelado». */
+  #cancelCard(card: HTMLElement, ...controls: (Element | null | undefined)[]): void {
+    for (const c of controls) c?.remove();
+    card.append(h("p", { class: "nx-agent__verdict" }, this.#labels.cancelled));
+    card.classList.add("is-done", "is-stopped");
+  }
+
+  #confirmCard(callId: string, args: Record<string, unknown>, reply: (c: { approved: boolean }) => void): void {
     const L = this.#labels;
     const danger = args.tone === "danger";
     const card = this.#card(String(args.title ?? ""), typeof args.detail === "string" ? args.detail : undefined);
@@ -457,20 +540,24 @@ export class NxAgent extends Base {
     const bar = h("div", { class: "nx-agent__card-actions" }, no, yes);
     card.append(bar);
     const decide = (approved: boolean) => {
+      if (!this.#pending.delete(callId)) return;
       bar.replaceChildren(h("span", { class: `nx-agent__verdict${approved ? " is-yes" : ""}` }, approved ? L.approved : L.rejected));
       card.classList.add("is-done");
       reply({ approved });
     };
+    this.#pending.set(callId, () => this.#cancelCard(card, bar));
     no.addEventListener("click", () => decide(false));
     yes.addEventListener("click", () => decide(true));
     requestAnimationFrame(() => (danger ? no : yes).querySelector("button")?.focus({ preventScroll: true }));
   }
 
-  #askCard(args: Record<string, unknown>, reply: (c: unknown) => void): void {
+  #askCard(callId: string, args: Record<string, unknown>, reply: (c: unknown) => void): void {
     const L = this.#labels;
     const card = this.#card(String(args.question ?? ""));
     const options = Array.isArray(args.options) ? (args.options as unknown[]).filter((o): o is string => typeof o === "string") : [];
+    this.#pending.set(callId, () => this.#cancelCard(card, card.querySelector(".nx-agent__options"), card.querySelector("form")));
     const done = (answer: string) => {
+      if (!this.#pending.delete(callId)) return;
       card.querySelector(".nx-agent__options")?.remove();
       card.querySelector("form")?.remove();
       card.append(h("p", { class: "nx-agent__reply" }, answer));
@@ -498,7 +585,7 @@ export class NxAgent extends Base {
   }
 
   /** Un resultado; con `undo`, se da por bueno solo si nadie lo deshace a tiempo. */
-  #notify(args: Record<string, unknown>, reply: (c: unknown) => void): void {
+  #notify(callId: string, args: Record<string, unknown>, reply: (c: unknown) => void): void {
     const L = this.#labels;
     const tone = typeof args.tone === "string" ? args.tone : "success";
     const el = h("div", { class: "nx-agent__notice", "data-tone": tone }, h("span", null, String(args.message ?? "")));
@@ -513,6 +600,7 @@ export class NxAgent extends Base {
     const end = (undone: boolean) => {
       if (over) return;
       over = true;
+      this.#pending.delete(callId);
       clearTimeout(timer);
       btn.remove();
       ring.remove();
@@ -524,6 +612,13 @@ export class NxAgent extends Base {
     };
     const timer = setTimeout(() => end(false), UNDO_MS);
     btn.addEventListener("click", () => end(true));
+    // Detenida la corrida, el aviso se cierra sin dar la acción por buena (se responde `cancelled`).
+    this.#pending.set(callId, () => {
+      over = true;
+      clearTimeout(timer);
+      btn.remove();
+      ring.remove();
+    });
   }
 
   // ---------------------------------------------------------------- la tabla de `for`
@@ -540,11 +635,18 @@ export class NxAgent extends Base {
     return { description: "La tabla que la persona está viendo (nx-grid). Se maneja con nx_grid_filter y nx_grid_select.", value: JSON.stringify({ columns, filters: g.filters, selected: g.selected.slice(0, 200), rows: g.count }) };
   }
 
+  /** Escucha la tabla de `for` (y deja de escuchar la anterior): un agente que se vuelve a montar,
+   *  o que cambia de tabla, sigue al día. */
   #watchTarget(): void {
     const g = this.#grid();
-    if (!g || g.dataset.nxAgent === "1") return;
-    g.dataset.nxAgent = "1";
-    for (const t of ["nx-grid-filter", "nx-grid-selection"]) g.addEventListener(t, () => this.#paintContext());
+    if (this.#watched?.grid === g) return;
+    this.#watched?.off();
+    this.#watched = null;
+    if (!g) return;
+    const on = () => this.#paintContext();
+    const types = ["nx-grid-filter", "nx-grid-selection"];
+    for (const t of types) g.addEventListener(t, on);
+    this.#watched = { grid: g, off: () => types.forEach((t) => g.removeEventListener(t, on)) };
   }
 
   // ---------------------------------------------------------------- pintar
@@ -566,7 +668,10 @@ export class NxAgent extends Base {
       const b = (e.target as Element).closest<HTMLElement>("[data-q]");
       if (b) this.send(b.dataset.q!);
     });
-    this.#thread = h("div", { class: "nx-agent__thread", role: "log", "aria-live": "polite" });
+    // Sin `role="log"` ni `aria-live`: la respuesta se escribe token a token y el lector de pantalla
+    // la releía entera en cada frame. Mientras corre, `aria-busy`; al terminar, el texto se anuncia
+    // una vez por `#live`.
+    this.#thread = h("div", { class: "nx-agent__thread" });
     this.#input = h("textarea", { class: "nx-agent__input", rows: 1 });
     this.#sendBtn = h("button", { type: "submit", class: "nx-agent__send" });
     this.#form = h("form", { class: "nx-agent__composer" }, this.#input, this.#sendBtn);
@@ -597,11 +702,15 @@ export class NxAgent extends Base {
   }
 
   #setRunning(on: boolean): void {
+    const was = this.#running;
     this.#running = on;
     this.toggleAttribute("data-running", on);
+    this.#thread?.setAttribute("aria-busy", String(on));
     if (!on) this.#abort = undefined;
     this.#paint();
-    if (!on && this.#live) this.#live.textContent = "";
+    if (!this.#live) return;
+    if (on) this.#live.textContent = "";
+    else if (was) this.#live.textContent = this.#turnText.replace(/\[\^[\w-]+\]/g, "").replace(/\*\*|`/g, "").trim();
   }
 
   #segment(): NxAiAnswer {

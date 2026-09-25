@@ -10,7 +10,8 @@
  * en el backend cuando llega `nx-inbox-commit`.
  */
 import { Base, boolAttr } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { mergeLabels } from "../../core/labels";
 import { formatElapsed } from "../../core/format";
 import { glyph, hasIcon, icon, initials } from "../../core/icons";
 import { parseImpactEvent } from "../../core/impact";
@@ -35,6 +36,8 @@ export const INBOX_LABELS: InboxLabels = {
   rejectedMany: "{n} rechazados",
   skippedOne: "· 1 bloqueado no se aprobó",
   skipped: "· {n} bloqueados no se aprobaron",
+  unverifiedOne: "· 1 sin verificar no se aprobó",
+  unverified: "· {n} sin verificar no se aprobaron",
   blocked: "Bloqueado",
   impact: "Si se aprueba:",
   loading: "Calculando el impacto…",
@@ -61,6 +64,8 @@ const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
 const PROPS = ["items", "labels", "undo", "requireReason", "heading"] as const;
 /** Espera antes de pedir el impacto del ítem activo: moverse rápido no dispara una petición por tecla. */
 const IMPACT_DELAY = 150;
+/** Cuántos impactos se piden a la vez al aprobar en lote. */
+const IMPACT_PARALLEL = 4;
 
 let uid = 0;
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -78,7 +83,15 @@ export class NxInbox extends Base {
   #anchor: string | null = null;
   #impacts = new Map<string, InboxImpact>();
   #impactTimer = 0;
-  #aborts = new Set<AbortController>();
+  /**
+   * Los impactos que se están pidiendo. `pinned`: lo espera una aprobación y no se cancela al
+   * moverse; los demás (el del ítem activo) se cancelan cuando el activo cambia.
+   */
+  #fetches = new Map<string, { ctrl: AbortController; pinned: boolean; done: Promise<void> }>();
+  /** Ítems cuya aprobación espera su impacto: otra tecla A no los vuelve a decidir. */
+  #checking = new Set<string>();
+  /** El bloque de impacto del detalle, que se actualiza en su lugar mientras llega. */
+  #impactEl: { item: string; root: HTMLElement; list: HTMLUListElement; loading: HTMLElement; block?: HTMLElement; error?: HTMLElement; items: number; notes: number } | null = null;
   #rejecting = false;
   #decided = 0;
   #since = 0;
@@ -147,7 +160,7 @@ export class NxInbox extends Base {
     return this.#labels;
   }
   set labels(v: Partial<InboxLabels> | null | undefined) {
-    this.#labels = { ...INBOX_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(INBOX_LABELS, v);
     this.#paint();
   }
 
@@ -156,13 +169,38 @@ export class NxInbox extends Base {
    * bloqueó. La promesa dice cómo terminó: `commit` (se registró), `undo` o `cancel`.
    */
   async decide(decision: InboxDecision, ids?: string[], reason?: string): Promise<InboxOutcome> {
-    const vis = this.#visible();
     const want = ids ?? (this.#selected.size ? [...this.#selected] : this.#active ? [this.#active] : []);
-    let items = vis.filter((i) => want.includes(i.id));
-    const skipped = decision === "approve" ? items.filter((i) => this.#impacts.get(i.id)?.block).length : 0;
-    if (decision === "approve") items = items.filter((i) => !this.#impacts.get(i.id)?.block);
+    let items = this.#visible().filter((i) => want.includes(i.id) && !this.#checking.has(i.id));
+    let skipped = 0;
+    let unverified = 0;
+    if (decision === "approve") {
+      // Aprobar exige conocer el impacto: el que viene por URL y aún no llegó (el ítem recién
+      // activado, o los de una selección que nunca se abrieron) se pide y se espera. Sin esto, un
+      // ítem que el backend bloquea se aprobaba con solo pulsar A a tiempo.
+      const unknown = items.filter((i) => typeof i.impact === "string" && !this.#impacts.get(i.id)?.done);
+      if (unknown.length) {
+        for (const i of items) this.#checking.add(i.id);
+        this.#paintState();
+        try {
+          await this.#loadImpacts(unknown);
+        } finally {
+          for (const i of items) this.#checking.delete(i.id);
+        }
+        // Mientras tanto pudo decidirse otra cosa (o cambiar la lista).
+        const still = new Set(this.#visible().map((i) => i.id));
+        items = items.filter((i) => still.has(i.id));
+        this.#paintState();
+        if (this.#active && items.some((i) => i.id === this.#active)) this.#paintImpact();
+      }
+      const blocked = (i: InboxItem) => !!this.#impacts.get(i.id)?.block;
+      const failed = (i: InboxItem) => typeof i.impact === "string" && !blocked(i) && (!this.#impacts.get(i.id)?.done || !!this.#impacts.get(i.id)?.error);
+      skipped = items.filter(blocked).length;
+      unverified = items.filter(failed).length;
+      items = items.filter((i) => !blocked(i) && !failed(i));
+    }
+    const vis = this.#visible();
     if (!items.length) {
-      if (skipped) this.#nudge();
+      if (skipped || unverified) this.#nudge();
       return "cancel";
     }
     const detail = { decision, ids: items.map((i) => i.id), items, ...(reason ? { reason } : {}) };
@@ -182,7 +220,7 @@ export class NxInbox extends Base {
     this.#renderDetail();
     this.#focusList();
 
-    const result = this.undo ? await nxToast({ message: decisionMessage(this.#labels, decision, items, skipped), undo: true, duration: this.undo, tone: decision === "approve" ? "success" : "neutral" }) : "timeout";
+    const result = this.undo ? await nxToast({ message: decisionMessage(this.#labels, decision, items, skipped, unverified), undo: true, duration: this.undo, tone: decision === "approve" ? "success" : "neutral" }) : "timeout";
     for (const id of gone) this.#hidden.delete(id);
     if (result === "undo") {
       this.#decided -= items.length;
@@ -216,8 +254,8 @@ export class NxInbox extends Base {
 
   disconnectedCallback(): void {
     clearTimeout(this.#impactTimer);
-    for (const c of this.#aborts) c.abort();
-    this.#aborts.clear();
+    for (const f of this.#fetches.values()) f.ctrl.abort();
+    this.#fetches.clear();
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
@@ -253,7 +291,9 @@ export class NxInbox extends Base {
       h("button", { type: "button", class: "nx-inbox__x", "data-act": "clear" }, glyph(X)),
     );
     this.#list = h("div", { class: "nx-inbox__list", role: "listbox", tabindex: "0", "aria-multiselectable": "true", "aria-labelledby": `${this.#uid}-h` });
-    this.#detail = h("section", { class: "nx-inbox__detail", "aria-live": "polite" });
+    // Sin `aria-live`: el detalle se rehace al moverse y el impacto llega línea a línea; el lector ya
+    // anuncia el ítem activo (`aria-activedescendant`) y el bloqueo (`role="alert"`, una vez).
+    this.#detail = h("section", { class: "nx-inbox__detail" });
     this.#keys = h("footer", { class: "nx-inbox__keys", "aria-hidden": "true" });
     this.append(h("div", { class: "nx-inbox__main" }, h("header", { class: "nx-inbox__bar" }, this.#count, this.#bulk), this.#list), this.#detail, this.#keys);
 
@@ -344,7 +384,13 @@ export class NxInbox extends Base {
     this.#active = id;
     if (!id) this.#anchor = null;
     else if (!this.#selected.size) this.#anchor = id;
-    if (changed) this.#rejecting = false;
+    if (changed) {
+      this.#rejecting = false;
+      // El impacto que se pedía para el activo anterior ya no hace falta (salvo que lo espere una
+      // aprobación): moverse por la lista no deja streams abiertos.
+      clearTimeout(this.#impactTimer);
+      for (const [fid, f] of this.#fetches) if (!f.pinned && fid !== id) f.ctrl.abort();
+    }
     this.#paintState();
     if (scroll && id) this.#list!.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" });
     if (changed) {
@@ -412,19 +458,46 @@ export class NxInbox extends Base {
       return s;
     }
     clearTimeout(this.#impactTimer);
-    const url = safeHref(item.impact);
-    this.#impactTimer = window.setTimeout(() => url && this.#active === item.id && void this.#fetchImpact(item, url), IMPACT_DELAY);
+    this.#impactTimer = window.setTimeout(() => this.#active === item.id && void this.#loadImpact(item, false), IMPACT_DELAY);
     return emptyImpact();
   }
 
-  async #fetchImpact(item: InboxItem, url: string): Promise<void> {
-    if (this.#impacts.has(item.id)) return;
+  /** Los impactos de varios ítems (una aprobación en lote), de a `IMPACT_PARALLEL`. */
+  async #loadImpacts(items: InboxItem[]): Promise<void> {
+    const queue = [...items];
+    const worker = async () => {
+      for (let it = queue.shift(); it; it = queue.shift()) await this.#loadImpact(it, true);
+    };
+    await Promise.all(Array.from({ length: Math.min(IMPACT_PARALLEL, queue.length) }, worker));
+  }
+
+  /** Trae el impacto de un ítem (o espera el que ya se está pidiendo). `pinned`: no se cancela al moverse. */
+  async #loadImpact(item: InboxItem, pinned: boolean): Promise<void> {
+    if (typeof item.impact !== "string" || this.#impacts.get(item.id)?.done) return;
+    const running = this.#fetches.get(item.id);
+    if (running) {
+      running.pinned ||= pinned;
+      await running.done;
+      // Se canceló (el activo cambió antes de fijarlo): se pide otra vez.
+      if (pinned && !this.#impacts.get(item.id)?.done) return this.#loadImpact(item, pinned);
+      return;
+    }
+    const url = safeEndpoint(item.impact);
+    if (!url) {
+      this.#impacts.set(item.id, { ...emptyImpact(), error: this.#labels.error, done: true });
+      return;
+    }
+    const ctrl = new AbortController();
+    const done = this.#fetchImpact(item, url, ctrl);
+    this.#fetches.set(item.id, { ctrl, pinned, done });
+    await done;
+  }
+
+  async #fetchImpact(item: InboxItem, url: string, ctrl: AbortController): Promise<void> {
     const s = emptyImpact();
     this.#impacts.set(item.id, s);
-    const ctrl = new AbortController();
-    this.#aborts.add(ctrl);
     const repaint = () => {
-      if (this.#active === item.id) this.#renderDetail();
+      if (this.#active === item.id) this.#paintImpact();
       this.#paintState();
     };
     try {
@@ -437,18 +510,25 @@ export class NxInbox extends Base {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await readLines(res, (line) => {
+        if (ctrl.signal.aborted) return false;
         const ev = parseImpactEvent(lineData(line));
         if (!ev) return;
         applyImpact(s, ev);
         repaint();
+        // `done`: se suelta la conexión aunque el servidor no la cierre.
+        return !s.done;
       });
+      if (ctrl.signal.aborted) throw new Error("abort");
       s.done = true;
     } catch {
-      if (ctrl.signal.aborted) return void this.#impacts.delete(item.id);
+      if (ctrl.signal.aborted) {
+        if (this.#impacts.get(item.id) === s) this.#impacts.delete(item.id);
+        return;
+      }
       s.error = this.#labels.error;
       s.done = true;
     } finally {
-      this.#aborts.delete(ctrl);
+      if (this.#fetches.get(item.id)?.ctrl === ctrl) this.#fetches.delete(item.id);
     }
     repaint();
   }
@@ -501,6 +581,7 @@ export class NxInbox extends Base {
       const id = row.dataset.id!;
       row.setAttribute("aria-selected", String(this.#selected.has(id)));
       row.toggleAttribute("data-active", id === this.#active);
+      row.toggleAttribute("data-checking", this.#checking.has(id));
       row.querySelector<HTMLElement>(".nx-inbox__lock")!.hidden = !this.#impacts.get(id)?.block;
     }
     const active = this.#active ? this.#list!.querySelector(`[data-id="${CSS.escape(this.#active)}"]`) : null;
@@ -525,26 +606,14 @@ export class NxInbox extends Base {
     const imp = this.#impact(it);
     const many = this.#selected.size > 1;
     const href = safeHref(it.href);
-    const item = (x: ImpactItem) =>
-      h(
-        "li",
-        { class: "nx-inbox__impact-item", "data-tone": x.tone ?? "neutral" },
-        x.icon && hasIcon(x.icon) ? icon(x.icon) : h("span", { class: "nx-inbox__dot", "aria-hidden": "true" }),
-        h("span", null, x.label),
-        x.detail ? h("span", { class: "nx-inbox__impact-detail" }, x.detail) : null,
-      );
-    const impact = imp
-      ? h(
-          "div",
-          { class: "nx-inbox__impact", "aria-busy": String(!imp.done) },
-          h("p", { class: "nx-inbox__h" }, L.impact),
-          h("ul", null, ...imp.items.map(item)),
-          !imp.done ? h("p", { class: "nx-inbox__muted is-loading" }, L.loading) : null,
-          imp.block ? h("p", { class: "nx-inbox__block", role: "alert" }, glyph(LOCK), imp.block) : null,
-          ...imp.notes.map((n) => h("p", { class: "nx-inbox__muted" }, n)),
-          imp.error ? h("p", { class: "nx-inbox__muted" }, imp.error) : null,
-        )
-      : null;
+    this.#impactEl = null;
+    let impact: HTMLElement | null = null;
+    if (imp) {
+      const list = h("ul", null);
+      const loading = h("p", { class: "nx-inbox__muted is-loading" }, L.loading);
+      impact = h("div", { class: "nx-inbox__impact" }, h("p", { class: "nx-inbox__h" }, L.impact), list, loading);
+      this.#impactEl = { item: it.id, root: impact, list, loading, items: 0, notes: 0 };
+    }
     const kbd = (k: string) => h("kbd", null, k);
     const reject = this.#rejecting
       ? h(
@@ -578,6 +647,7 @@ export class NxInbox extends Base {
     const old = d.querySelector("textarea");
     const typing = old && document.activeElement === old;
     d.replaceChildren(...parts.filter((n): n is HTMLElement => n !== null));
+    if (imp) this.#paintImpact(imp);
     const ta = d.querySelector("textarea");
     if (old && ta) {
       ta.value = old.value;
@@ -586,6 +656,40 @@ export class NxInbox extends Base {
         ta.setSelectionRange(old.selectionStart, old.selectionEnd);
       }
     }
+  }
+
+  /**
+   * El impacto del activo, en su lugar: cada línea que llega se agrega, sin rehacer el detalle (el
+   * bloqueo, con `role="alert"`, se crea una sola vez y se anuncia una sola vez).
+   */
+  #paintImpact(given?: InboxImpact): void {
+    const box = this.#impactEl;
+    if (!box || box.item !== this.#active) return;
+    const imp = given ?? this.#impacts.get(box.item);
+    if (!imp) return;
+    box.root.setAttribute("aria-busy", String(!imp.done));
+    for (const x of imp.items.slice(box.items))
+      box.list.append(
+        h(
+          "li",
+          { class: "nx-inbox__impact-item", "data-tone": x.tone ?? "neutral" },
+          x.icon && hasIcon(x.icon) ? icon(x.icon) : h("span", { class: "nx-inbox__dot", "aria-hidden": "true" }),
+          h("span", null, x.label),
+          x.detail ? h("span", { class: "nx-inbox__impact-detail" }, x.detail) : null,
+        ),
+      );
+    box.items = imp.items.length;
+    box.loading.hidden = imp.done;
+    if (imp.block && !box.block) {
+      box.block = h("p", { class: "nx-inbox__block", role: "alert" }, glyph(LOCK), imp.block);
+      box.loading.after(box.block);
+    }
+    const tail = box.error ?? null;
+    for (const n of imp.notes.slice(box.notes)) box.root.insertBefore(h("p", { class: "nx-inbox__muted" }, n), tail);
+    box.notes = imp.notes.length;
+    if (imp.error && !box.error) box.root.append((box.error = h("p", { class: "nx-inbox__muted" }, imp.error)));
+    const approve = this.#detail!.querySelector<HTMLButtonElement>('.nx-inbox__actions [data-act="approve"]');
+    if (approve) approve.disabled = this.#selected.size <= 1 && !!imp.block;
   }
 
   #paint(): void {

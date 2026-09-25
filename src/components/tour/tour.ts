@@ -48,6 +48,7 @@ export function findTarget(target: string | undefined, root: ParentNode = docume
 }
 
 let active: (() => void) | null = null;
+const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 /** Muestra el recorrido. La promesa dice si se llegó al final y cuál fue el último paso visto. */
 export function nxTour(steps: TourStep[], labels: Partial<TourLabels> = {}): Promise<TourResult> {
@@ -80,6 +81,7 @@ export function nxTour(steps: TourStep[], labels: Partial<TourLabels> = {}): Pro
   let seen = 0;
   let target: HTMLElement | null = null;
   let raf = 0;
+  let settle = 0;
 
   /** La luz sobre el elemento y la tarjeta a su lado (o centrada, si no hay elemento). */
   const place = () => {
@@ -123,7 +125,8 @@ export function nxTour(steps: TourStep[], labels: Partial<TourLabels> = {}): Pro
     target?.scrollIntoView({ block: "center", inline: "nearest", behavior: reduced ? "auto" : "smooth" });
     place();
     // Tras el desplazamiento suave, otra vez en su lugar.
-    setTimeout(place, reduced ? 0 : 350);
+    clearTimeout(settle);
+    settle = window.setTimeout(place, reduced ? 0 : 350);
     card.focus({ preventScroll: true });
   };
 
@@ -133,6 +136,7 @@ export function nxTour(steps: TourStep[], labels: Partial<TourLabels> = {}): Pro
       removeEventListener("resize", onMove);
       document.removeEventListener("keydown", onKey, true);
       cancelAnimationFrame(raf);
+      clearTimeout(settle);
       root.hidePopover?.();
       root.remove();
       active = null;
@@ -140,6 +144,9 @@ export function nxTour(steps: TourStep[], labels: Partial<TourLabels> = {}): Pro
       resolve({ completed, step: seen });
     };
     const onKey = (e: KeyboardEvent) => {
+      // Escribiendo en un campo de la página (quizá el que el paso señala), las flechas y Enter son
+      // del campo; Escape sigue terminando el recorrido.
+      if (e.key !== "Escape" && typing(e.target) && !card.contains(e.target as Node)) return;
       if (e.key === "Escape") end(false);
       else if (e.key === "ArrowRight" || (e.key === "Enter" && !(e.target as Element).closest?.("button"))) {
         if (i === list.length - 1) end(true);

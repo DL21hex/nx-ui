@@ -75,7 +75,7 @@ export function applyPatch<T>(doc: T, ops: readonly PatchOp[]): T {
   };
   const get = (path: string): unknown => {
     let cur: unknown = root;
-    for (const k of path.split("/").slice(1).map(unescape)) cur = cur && typeof cur === "object" ? (cur as Record<string, unknown>)[k] : undefined;
+    for (const k of path.split("/").slice(1).map(unescape)) cur = cur && typeof cur === "object" && !BLOCKED.has(k) ? (cur as Record<string, unknown>)[k] : undefined;
     return cur;
   };
   const put = (path: string, value: unknown, insert: boolean) => {
@@ -94,15 +94,22 @@ export function applyPatch<T>(doc: T, ops: readonly PatchOp[]): T {
       else delete p[k];
     });
   for (const op of ops) {
-    if (!op || typeof op.path !== "string") continue;
-    if (op.op === "add") put(op.path, structuredClone(op.value), true);
-    else if (op.op === "replace") put(op.path, structuredClone(op.value), false);
-    else if (op.op === "remove") del(op.path);
-    else if (op.op === "copy") put(op.path, structuredClone(get(op.from)), true);
-    else if (op.op === "move") {
-      const v = get(op.from);
-      del(op.from);
-      put(op.path, v, true);
+    if (!op || typeof op !== "object" || typeof op.path !== "string") continue;
+    // `copy` y `move` sin `from` (o con uno que no es texto) se saltan: antes lanzaban y cortaban
+    // toda la corrida del agente.
+    if ((op.op === "copy" || op.op === "move") && typeof (op as { from?: unknown }).from !== "string") continue;
+    try {
+      if (op.op === "add") put(op.path, structuredClone(op.value), true);
+      else if (op.op === "replace") put(op.path, structuredClone(op.value), false);
+      else if (op.op === "remove") del(op.path);
+      else if (op.op === "copy") put(op.path, structuredClone(get(op.from)), true);
+      else if (op.op === "move") {
+        const v = get(op.from);
+        del(op.from);
+        put(op.path, v, true);
+      }
+    } catch {
+      /* un valor que no se puede clonar: la operación se salta */
     }
   }
   return root as T;
@@ -172,3 +179,34 @@ export const GRID_TOOLS: AguiTool[] = [
     parameters: { type: "object", properties: { ids: { type: "array", items: str } }, required: ["ids"] },
   },
 ];
+
+/**
+ * Las props que el modelo manda a `nx_show`, sin ninguna URL: un payload del modelo (quizá guiado
+ * por un texto inyectado en los datos) no puede hacer que un componente pida o envíe datos a otro
+ * lado (`endpoint`, `action`, `source`, `*Endpoint`…).
+ */
+export function showProps(props: unknown, urlProps: ReadonlySet<string>): Record<string, unknown> {
+  if (!props || typeof props !== "object" || Array.isArray(props)) return {};
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(props as Record<string, unknown>)) {
+    if (urlProps.has(k) || /endpoint$/i.test(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/** La lista de `show` («Trend, Grid») → nombres; `null` si no hay (todos los registrados). */
+export function parseShow(v: unknown): string[] | null {
+  const list = Array.isArray(v) ? v : typeof v === "string" ? v.split(",") : null;
+  if (!list) return null;
+  return list.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean);
+}
+
+/** `confirm` de una herramienta, validado: `null` si no pide aprobación. */
+export function toolConfirm(v: unknown): { title?: string; detail?: string; tone: "primary" | "danger" } | null {
+  if (v === true) return { tone: "primary" };
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const str = (x: unknown) => (typeof x === "string" && x.trim() ? x : undefined);
+  return { title: str(o.title), detail: str(o.detail), tone: o.tone === "danger" ? "danger" : "primary" };
+}

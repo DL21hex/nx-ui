@@ -74,4 +74,19 @@ describe("nxTour()", () => {
     expect(document.querySelector(".nx-tour img, .nx-tour b")).toBeNull();
     key("Escape");
   });
+
+  it("escribiendo en un campo de la página, las flechas y Enter son del campo; Escape termina", async () => {
+    document.body.innerHTML = '<input id="nombre">';
+    const done = nxTour([{ target: "#nombre", title: "Escribe tu nombre" }, { title: "Después" }]);
+    const input = document.querySelector<HTMLInputElement>("#nombre")!;
+    input.focus();
+    for (const k of ["ArrowLeft", "ArrowRight", "Enter"]) {
+      const e = new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true });
+      input.dispatchEvent(e);
+      expect(e.defaultPrevented).toBe(false);
+    }
+    expect(card()!.textContent).toContain("Escribe tu nombre");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await expect(done).resolves.toEqual({ completed: false, step: 0 });
+  });
 });

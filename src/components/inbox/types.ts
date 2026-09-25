@@ -67,6 +67,10 @@ export interface InboxLabels {
   skippedOne: string;
   /** «· {n} bloqueados no se aprobaron» */
   skipped: string;
+  /** «· 1 sin verificar no se aprobó» (su impacto no se pudo calcular). */
+  unverifiedOne: string;
+  /** «· {n} sin verificar no se aprobaron» */
+  unverified: string;
   blocked: string;
   impact: string;
   loading: string;

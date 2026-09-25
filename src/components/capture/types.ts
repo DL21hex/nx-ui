@@ -81,6 +81,10 @@ export interface CaptureLabels {
   again: string;
   zoomIn: string;
   zoomOut: string;
+  /** «El archivo pasa de {max}» (atributo `max-size`). */
+  tooBig: string;
+  /** Un archivo que no cumple `accept`. */
+  badType: string;
 }
 
 export type CaptureValues = Record<string, string | Record<string, string>[]>;

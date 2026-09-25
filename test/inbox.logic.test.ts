@@ -49,6 +49,7 @@ describe("decisionMessage", () => {
     expect(decisionMessage(INBOX_LABELS, "reject", [it1, it1, it1])).toBe("3 rechazados");
     expect(decisionMessage(INBOX_LABELS, "approve", [it1, it1], 1)).toBe("2 aprobados · 1 bloqueado no se aprobó");
     expect(decisionMessage(INBOX_LABELS, "approve", [it1], 3)).toBe("Aprobado: OC-2291 · 3 bloqueados no se aprobaron");
+    expect(decisionMessage(INBOX_LABELS, "approve", [it1], 1, 2)).toBe("Aprobado: OC-2291 · 1 bloqueado no se aprobó · 2 sin verificar no se aprobaron");
   });
 });
 
