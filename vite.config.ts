@@ -382,6 +382,7 @@ export default defineConfig(({ command, mode }) => {
           inbox: "src/components/inbox/index.ts",
           survey: "src/components/survey/index.ts",
           tour: "src/components/tour/index.ts",
+          "date-range": "src/components/date-range/index.ts",
           "history": "src/components/history/index.ts",
           "kanban": "src/components/kanban/index.ts",
           "number": "src/components/number/index.ts",

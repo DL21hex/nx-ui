@@ -37,6 +37,7 @@ const BUDGET = [
   ["dist/number.js", 9 * 1024, "number + núcleo (ESM)"],
   ["dist/kanban.js", 11 * 1024, "kanban + toast + núcleo (ESM; nxConfirm con import())"],
   ["dist/history.js", 10.5 * 1024, "history + toast + núcleo (ESM)"],
+  ["dist/date-range.js", 11 * 1024, "date-range + núcleo (ESM)"],
   ["dist/bdui.js", 1024, "adaptador BDUI"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -58,6 +59,7 @@ const BUDGET = [
   ["dist/number.css", 1.5 * 1024, "number (CSS)"],
   ["dist/kanban.css", 3 * 1024, "kanban (CSS)"],
   ["dist/history.css", 3.25 * 1024, "history (CSS)"],
+  ["dist/date-range.css", 2.5 * 1024, "date-range (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

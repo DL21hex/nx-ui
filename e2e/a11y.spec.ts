@@ -153,3 +153,17 @@ test("historial: la línea, viajando en el tiempo y con un filtro", async ({ pag
   await h.locator(".nx-history__revert").first().focus();
   await audit(page, ["#history-demo"]);
 });
+
+test("rango de fechas cerrado, abierto, eligiendo y con una frase que no entiende", async ({ page }) => {
+  await open(page, "#/date-range");
+  await audit(page, ["#dr-sales", "#dr-fiscal"]);
+  await page.locator("#dr-sales .nx-date-range__field").click();
+  await expect(page.locator("#dr-sales").getByRole("dialog")).toBeVisible();
+  await audit(page, ["#dr-sales"]);
+  await page.locator("#dr-sales [data-day]").nth(12).click();
+  await page.locator("#dr-sales [data-day]").nth(20).hover();
+  await audit(page, ["#dr-sales"]);
+  await page.keyboard.press("Escape");
+  await page.locator("#dr-sales").getByRole("textbox").fill("cuando pueda");
+  await audit(page, ["#dr-sales"]);
+});

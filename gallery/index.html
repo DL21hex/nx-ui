@@ -1127,6 +1127,124 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <template id="page-date-range">
+          <p class="eyebrow">Componentes</p>
+          <h1>Rango de fechas <code class="tag">&lt;nx-date-range&gt;</code></h1>
+          <p class="lead">
+            Un rango de fechas que se escribe como se dice: «Q3», «el mes pasado», «de marzo a junio», «año fiscal». Mientras
+            escribes ves cómo lo entendió; <kbd>Enter</kbd> lo aplica. También hay atajos, un calendario de dos meses que se
+            maneja entero con el teclado, y la comparación contra el período anterior o el año anterior.
+          </p>
+
+          <section class="drg-board" aria-labelledby="dr-board-title">
+            <header class="drg-board__head">
+              <div>
+                <h2 class="drg-board__title" id="dr-board-title">Ventas</h2>
+                <p class="drg-board__sub">Empaques del Valle S.A.S. · facturación nacional</p>
+              </div>
+              <nx-date-range id="dr-sales" label="Período" today="2026-09-25" phrase="este trimestre" compare="previous" min="2024-01-01" max="2026-12-31" locale="es-CO"></nx-date-range>
+            </header>
+            <div class="drg-tiles" id="dr-tiles"></div>
+            <figure class="drg-figure">
+              <figcaption id="dr-caption"></figcaption>
+              <div class="drg-plot">
+                <div class="drg-chart" id="dr-chart" role="img"></div>
+                <p class="drg-tip" id="dr-tip" hidden></p>
+              </div>
+              <details class="drg-details">
+                <summary>Ver como tabla</summary>
+                <div class="table-wrap">
+                  <table id="dr-table"><thead><tr><th>Período</th><th>Ventas netas</th></tr></thead><tbody></tbody></table>
+                </div>
+              </details>
+            </figure>
+          </section>
+
+          <p class="sel-tip">
+            En esta demo hoy es el 25 de septiembre de 2026. Haz clic en una frase: se escribe en la caja y ves cómo se
+            entiende antes de aplicarla. O enfoca el campo y empieza a escribir.
+          </p>
+          <div class="drg-phrases" id="dr-phrases"></div>
+
+          <form class="sel-demo drg-form" id="dr-form">
+            <p class="btn-demo__title">Año fiscal de abril a marzo <span>fiscal-start="4" name required</span></p>
+            <nx-date-range id="dr-fiscal" name="periodo" required label="Período fiscal" fiscal-start="4" phrase="año fiscal" compare="year" today="2026-09-25" locale="es-CO"></nx-date-range>
+            <nx-button type="submit" label="Enviar" variant="primary" log-mode="none"></nx-button>
+            <code class="sel-form-out" id="dr-form-out">FormData: —</code>
+          </form>
+          <ol class="stage__log btn-events" id="date-range-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Escribes</th><th>Entiende (hoy: 25 sept 2026)</th></tr></thead>
+              <tbody>
+                <tr><td>«hoy», «ayer», «hace 3 días»</td><td>Ese día.</td></tr>
+                <tr><td>«esta semana», «la semana pasada», «semana 12 de 2026»</td><td>Semanas del calendario (<code>week-start</code> o la del locale); «semana N» es la ISO.</td></tr>
+                <tr><td>«este mes», «el mes pasado», «este trimestre», «último trimestre», «este año»</td><td>El período completo. «Último» sin número es el anterior completo.</td></tr>
+                <tr><td>«últimos 7/30/90 días», «últimas 2 semanas», «últimos 12 meses»</td><td>Hacia atrás desde hoy, hoy incluido. «Próximos 15 días», hacia adelante.</td></tr>
+                <tr><td>«Q3», «Q3 2025», «tercer trimestre de 2025», «primer semestre», «H2 2025»</td><td>Trimestres y semestres. Sin año: el más reciente que ya empezó («Q4» → 2025).</td></tr>
+                <tr><td>«marzo», «marzo 2025», «15 de marzo», «15/03/2026», «2025»</td><td>Meses, días (día/mes/año) y años.</td></tr>
+                <tr><td>«de marzo a junio», «del 1 al 15», «15/03/2026 - 20/04/2026», «de noviembre a febrero»</td><td>Rangos: el extremo que no dice su año (o su mes) lo toma del otro.</td></tr>
+                <tr><td>«desde el 15 de marzo», «hasta el 10 de abril», «en lo que va del año»</td><td>Hasta hoy; desde <code>min</code> (o el 1 de enero); lo corrido del período.</td></tr>
+                <tr><td>«año fiscal», «año fiscal pasado», «AF 2025»</td><td>Con <code>fiscal-start="4"</code>: 1 abr – 31 mar; «AF 2025» es el que empieza en 2025.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+              <tbody>
+                <tr><td><code>value</code></td><td><code>{start: "2026-07-01", end: "2026-09-30", compare?: {start, end}, label?: "Este trimestre"}</code>. Acepta también <code>"2026-07-01/2026-09-30"</code>.</td></tr>
+                <tr><td><code>&lt;form&gt;</code></td><td>Con <code>name="periodo"</code> envía <code>periodo[start]</code> y <code>periodo[end]</code> (y <code>periodo[compare][start|end]</code> al comparar): dos fechas ISO listas, sin partir nada en el servidor. <code>required</code> y <code>reset</code> nativos.</td></tr>
+                <tr><td><code>compare</code></td><td><code>previous</code>: el mismo largo, justo antes (meses completos → los meses anteriores: Q3 → Q2). <code>year</code>: las mismas fechas un año antes (29 feb → 28 feb). <code>none</code>: la opción visible, sin comparar.</td></tr>
+                <tr><td><code>presets</code></td><td>Frases (<code>"Últimos 30 días"</code>, se interpretan al abrir) o <code>{label, phrase}</code> / <code>{label, start, end}</code>.</td></tr>
+                <tr><td><code>nx-change</code></td><td><code>{value}</code> al aplicar una frase, un atajo, un rango del calendario o al cambiar la comparación.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-date-range id="periodo" name="periodo" phrase="últimos 30 días" compare="previous"
+      min="2024-01-01" label="Período"&gt;&lt;/nx-date-range&gt;
+
+    periodo.addEventListener("nx-change", (e) =&gt; {
+      const { start, end, compare } = e.detail.value;   // "2026-08-27", "2026-09-25", {start, end}
+      cargarVentas(start, end, compare);
+    });</code></pre>
+            <pre role="tabpanel" hidden><code>import { DateRange } from "nx-ui/solid";
+
+    &lt;DateRange phrase="este trimestre" compare="previous" fiscalStart={4}
+      onChange={(e) =&gt; setPeriodo(e.detail.value)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>value</code>, <code>start</code>, <code>end</code></td><td>El rango (y su comparación y cómo se eligió). Los atributos <code>start</code>/<code>end</code> fijan el valor inicial.</td></tr>
+                <tr><td><code>phrase</code></td><td>Valor inicial como frase: el backend manda «este trimestre» y no calcula fechas.</td></tr>
+                <tr><td><code>presets</code></td><td>Atajos (JSON). Por defecto: hoy, ayer, últimos 7 y 30 días, este mes, el mes pasado, este trimestre, el último, este año, el pasado (y el año fiscal si hay <code>fiscal-start</code>).</td></tr>
+                <tr><td><code>compare</code></td><td><code>previous</code>, <code>year</code> o <code>none</code>; sin él no se ofrece comparar.</td></tr>
+                <tr><td><code>min</code>, <code>max</code></td><td>Fechas permitidas: lo de afuera se deshabilita y lo escrito se recorta.</td></tr>
+                <tr><td><code>fiscal-start</code>, <code>week-start</code>, <code>today</code></td><td>Mes en que empieza el año fiscal (1–12), primer día de la semana (1 lunes … 7 domingo; por defecto el del locale) y «hoy» (ISO).</td></tr>
+                <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>placeholder</code>, <code>label</code>, <code>locale</code>, <code>labels</code></td><td>Formulario, textos y formato (<code>Intl</code>).</td></tr>
+                <tr><td><code>show(texto?)</code>, <code>hide()</code>, <code>open</code></td><td>Abre (con una frase ya escrita) y cierra.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-change</code> <code>{value}</code>, <code>nx-open-change</code> <code>{open}</code>.</td></tr>
+                <tr><td>Lógica</td><td><code>parseDateRange(frase, {today, fiscalStart, weekStart, min})</code>, <code>compareRange()</code>, <code>formatDateRange()</code>: las mismas funciones, sin DOM, para el backend.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

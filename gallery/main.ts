@@ -8,6 +8,8 @@ import { DEMO_ITEMS, EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
 import { PURCHASE_COLUMNS, purchaseRows } from "./demo-grid";
 import { HR_COLUMNS, HR_INBOX, TODAY, hrEmployees } from "./demo-hr";
 import { EXPLAIN, INBOX, SURVEY, surveyResponses } from "./demo-next";
+import { mountDateRangeDemo } from "./demo-date-range";
+import "./pages/date-range.css";
 import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
@@ -90,6 +92,7 @@ const NAV: MenuItem[] = [
   { id: "number", label: "Número", href: "#/number", icon: "receipt", section: "Componentes", badge: "Nuevo" },
   { id: "kanban", label: "Tablero", href: "#/kanban", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
   { id: "history", label: "Historial", href: "#/history", icon: "calendar", section: "Componentes", badge: "Nuevo" },
+  { id: "date-range", label: "Rango de fechas", href: "#/date-range", icon: "calendar", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -109,6 +112,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/explain": { template: "page-explain", mount: mountExplainDemo },
   "#/inbox": { template: "page-inbox", mount: mountInboxDemo },
   "#/survey": { template: "page-survey", mount: mountSurveyDemo },
+  "#/date-range": { template: "page-date-range", mount: mountDateRangeDemo },
   "#/history": { template: "page-history", mount: mountHistoryDemo },
   "#/kanban": { template: "page-kanban", mount: mountKanbanDemo },
   "#/number": { template: "page-number", mount: mountNumberDemo },

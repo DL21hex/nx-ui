@@ -727,6 +727,49 @@ La máquina del tiempo de un registro: quién cambió qué y cuándo, y cómo es
 | Métodos | `travel(id \| null)`, `revert(id, field)` → `"commit"` \| `"undo"` \| `"cancel"`, `comment(text)`, `reload()` |
 | Eventos | `nx-history-revert` `{event, change}` (cancelable), `nx-history-commit` `{event, change, revert, record}`, `nx-history-comment` `{text}` (cancelable), `nx-history-travel` `{id, record}` |
 
+## `<nx-date-range>`
+
+Un rango de fechas que se escribe como se dice. Cerrado es un campo compacto
+(«1 jul – 30 sept 2026 · 92 días»); abierto, una caja donde se escribe en español, que muestra en
+vivo cómo lo entendió («1 jul – 30 sept 2026 · 92 días» o «No entendí…») y `Enter` lo aplica;
+debajo, atajos y un calendario de dos meses.
+
+- **Frases** (sin tildes ni mayúsculas): «hoy», «ayer», «esta semana», «la semana pasada», «este
+  mes», «el mes pasado», «últimos 7/30/90 días», «este trimestre», «último trimestre», «Q3», «Q3
+  2025», «este año», «2025», «marzo», «marzo 2025», «de marzo a junio», «desde el 15 de marzo»,
+  «hasta el 10 de abril», «15/03/2026 - 20/04/2026», «primer semestre», «semana 12», «en lo que va
+  del año», «año fiscal» (con `fiscal-start`). Sin año, la más reciente que ya empezó (en
+  septiembre, «Q4» es el del año pasado); en un rango, el extremo que no dice su año o su mes lo
+  toma del otro («15 al 20 de abril», «de noviembre a febrero»). «Último trimestre» es el anterior
+  completo; «últimos N días» cuenta hoy.
+- **Calendario** de dos meses (uno en móvil): clic en el inicio y en el fin con vista previa al
+  pasar; teclado completo (flechas, `PageUp`/`PageDown`, con `Shift` un año, `Home`/`End`, `Enter`,
+  `Escape` suelta un inicio a medias y luego cierra); `min`/`max` deshabilitan días; hoy marcado.
+  La semana empieza según `Intl.Locale` (weekInfo), o lunes; `week-start` la fija.
+- **Comparar:** `compare="previous"` (el mismo largo justo antes; meses completos → los meses
+  anteriores: Q3 → Q2) o `"year"` (las mismas fechas un año antes; 29 feb → 28 feb). Se pinta en el
+  calendario y va en el valor.
+- **Formulario:** con `name="periodo"` envía `periodo[start]` y `periodo[end]` (y
+  `periodo[compare][start|end]`): dos fechas ISO que el servidor lee sin partir nada. `required` y
+  `reset` nativos.
+- La misma lógica, sin DOM, para el backend: `parseDateRange("Q3 2025", {today, fiscalStart})`,
+  `compareRange()`, `formatDateRange()`.
+
+```html
+<nx-date-range id="periodo" name="periodo" phrase="últimos 30 días" compare="previous" min="2024-01-01" label="Período"></nx-date-range>
+<script>
+  periodo.addEventListener("nx-change", (e) => {
+    const { start, end, compare, label } = e.detail.value; // "2026-08-27", "2026-09-25", {start, end}, "Últimos 30 días"
+  });
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `value` (`{start, end, compare?, label?}` o «start/end»), `start`, `end`, `phrase`, `presets`, `compare` (`previous` \| `year` \| `none`), `min`, `max`, `today`, `fiscal-start`, `week-start`, `name`, `required`, `disabled`, `placeholder`, `label`, `locale`, `labels` |
+| Métodos | `show(frase?)`, `hide()`, `open` |
+| Eventos | `nx-change` `{value}`, `nx-open-change` `{open}` |
+
 ## Desarrollo
 
 ```bash

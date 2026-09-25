@@ -1,7 +1,7 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
- * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`), y `nxToast` / `nxConfirm`.
+ * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -57,6 +57,9 @@ import type { KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail } from ".
 import "../components/history/index";
 import type { NxHistory } from "../components/history/history";
 import type { HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail, HistoryValue } from "../components/history/types";
+import "../components/date-range/index";
+import type { NxDateRange } from "../components/date-range/date-range";
+import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -74,6 +77,7 @@ export type { NxInbox, InboxDecisionDetail, InboxItem, InboxLabels };
 export type { NxNumber, NumberAlign, NumberChangeDetail, NumberFormat, NumberLabels };
 export type { NxKanban, KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail };
 export type { NxHistory, HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail };
+export type { NxDateRange, DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -82,7 +86,7 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -92,7 +96,8 @@ declare module "solid-js" {
       record: Record<string, unknown> | undefined;
       events: HistoryEvent[] | undefined;
       user: HistoryActor | null | undefined;
-      value: string | string[] | number | null | undefined;
+      value: string | string[] | number | DateRangeValue | null | undefined;
+      presets: DateRangePresetInput[] | undefined;
       selection: SelectOption[] | undefined;
       columns: GridColumn[] | KanbanColumn[];
       cards: KanbanCard[] | undefined;
@@ -149,6 +154,13 @@ declare module "solid-js" {
       max: string | undefined;
       step: string | undefined;
       align: NumberAlign | undefined;
+      start: string | undefined;
+      end: string | undefined;
+      phrase: string | undefined;
+      compare: string | undefined;
+      today: string | undefined;
+      "fiscal-start": string | undefined;
+      "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
       collapsed: boolean;
@@ -174,7 +186,7 @@ declare module "solid-js" {
       "nx-toggle": CustomEvent<ToggleDetail>;
       "nx-open-change": CustomEvent<OpenChangeDetail>;
       "nx-done": CustomEvent<DoneDetail>;
-      "nx-change": CustomEvent<SelectChangeDetail>;
+      "nx-change": CustomEvent<SelectChangeDetail | DateRangeChangeDetail>;
       "nx-ai-done": CustomEvent<AiDoneDetail>;
       "nx-ai-action": CustomEvent<AiActionDetail>;
       "nx-ai-feedback": CustomEvent<AiFeedbackDetail>;
@@ -222,6 +234,7 @@ declare module "solid-js" {
       "nx-survey": HTMLAttributes<NxSurvey> & { heading?: string };
       "nx-number": HTMLAttributes<NxNumber> & { label?: string; placeholder?: string };
       "nx-kanban": HTMLAttributes<NxKanban> & { heading?: string };
+      "nx-date-range": HTMLAttributes<NxDateRange> & { label?: string; placeholder?: string };
       "nx-history": HTMLAttributes<NxHistory> & { heading?: string; source?: string };
     }
   }
@@ -391,7 +404,7 @@ export function Select(props: SelectProps): JSX.Element {
       bool:disabled={!!local.disabled}
       bool:clearable={!!local.clearable}
       bool:avatar={!!local.avatar}
-      on:nx-change={(e) => local.onChange?.(e)}
+      on:nx-change={(e) => local.onChange?.(e as CustomEvent<SelectChangeDetail>)}
     />
   );
 }
@@ -934,6 +947,65 @@ export function History(props: HistoryProps): JSX.Element {
       on:nx-history-commit={(e) => local.onCommit?.(e)}
       on:nx-history-comment={(e) => local.onComment?.(e)}
       on:nx-history-travel={(e) => local.onTravel?.(e)}
+    />
+  );
+}
+
+export interface DateRangeProps extends Omit<JSX.HTMLAttributes<NxDateRange>, "onChange"> {
+  /** `{start, end}` (ISO) o «2026-07-01/2026-09-30». Sin él, `start`/`end` o `phrase` dan el inicial. */
+  value?: DateRangeValue | string | null;
+  start?: string;
+  end?: string;
+  /** Valor inicial como frase: «este trimestre», «últimos 30 días». */
+  phrase?: string;
+  /** Atajos: frases o `{label, phrase | start + end}`. */
+  presets?: DateRangePresetInput[];
+  /** `previous`, `year` o `none` (la opción visible sin comparar). Sin él no se ofrece comparar. */
+  compare?: DateRangeCompare | "none";
+  min?: string;
+  max?: string;
+  today?: string;
+  /** Mes en que empieza el año fiscal (1–12). */
+  fiscalStart?: number;
+  /** Primer día de la semana, 1 (lunes) … 7 (domingo). */
+  weekStart?: number;
+  name?: string;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  /** Nombre accesible del campo. */
+  label?: string;
+  locale?: string;
+  labels?: Partial<DateRangeLabels>;
+  onChange?: (e: CustomEvent<DateRangeChangeDetail>) => void;
+  onOpenChange?: (e: CustomEvent<OpenChangeDetail>) => void;
+}
+
+export function DateRange(props: DateRangeProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["value", "start", "end", "phrase", "presets", "compare", "min", "max", "today", "fiscalStart", "weekStart", "name", "required", "disabled", "placeholder", "label", "locale", "labels", "onChange", "onOpenChange"]);
+  return (
+    <nx-date-range
+      {...rest}
+      prop:value={local.value}
+      prop:presets={local.presets}
+      prop:labels={local.labels}
+      attr:start={local.start}
+      attr:end={local.end}
+      attr:phrase={local.phrase}
+      attr:compare={local.compare}
+      attr:min={local.min}
+      attr:max={local.max}
+      attr:today={local.today}
+      attr:fiscal-start={local.fiscalStart === undefined ? undefined : String(local.fiscalStart)}
+      attr:week-start={local.weekStart === undefined ? undefined : String(local.weekStart)}
+      attr:name={local.name}
+      attr:placeholder={local.placeholder}
+      attr:label={local.label}
+      attr:locale={local.locale}
+      bool:required={!!local.required}
+      bool:disabled={!!local.disabled}
+      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<DateRangeChangeDetail>)}
+      on:nx-open-change={(e) => local.onOpenChange?.(e)}
     />
   );
 }
