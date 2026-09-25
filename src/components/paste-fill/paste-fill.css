@@ -1,0 +1,630 @@
+/*
+ * <nx-paste-fill>. Variables propias:
+ *   --nx-paste-warn: color de «Revisar» (confianza baja)
+ *   --nx-paste-panel (clamp(260px, 36%, 380px)): ancho de la evidencia al lado del formulario
+ *
+ * El formulario es del autor: aquí solo se pintan las piezas propias (`.nx-pf__*`). Lo único que
+ * se le pone a un campo es `data-nx-fill="high|mid|low|suggest|same|you"`, por si el autor quiere
+ * usarlo en su CSS.
+ */
+
+nx-paste-fill {
+  --nx-paste-warn: light-dark(oklch(0.68 0.15 70), oklch(0.8 0.14 75));
+  --_warn-ink: light-dark(oklch(0.5 0.12 65), var(--nx-paste-warn));
+  position: relative;
+  display: block;
+  outline: none;
+}
+:where(.nx-pf__bar, .nx-pf__panel, .nx-pf__layer),
+:where(.nx-pf__bar, .nx-pf__panel, .nx-pf__layer) * {
+  box-sizing: border-box;
+}
+:is(.nx-pf__zone, .nx-pf__status, .nx-pf__panel, .nx-pf__ring, .nx-pf__btn, .nx-pf__pill, .nx-pf__err)[hidden] {
+  display: none !important;
+}
+/* El color de cada campo: se declara en el elemento que trae su `--_h`. */
+.nx-pf__ring,
+.nx-pf__text mark,
+.nx-pf__list li {
+  --_hue: oklch(0.62 0.16 var(--_h, 262));
+}
+.nx-pf__bar,
+.nx-pf__panel {
+  font-family: var(--nx-font-sans);
+  color: var(--nx-foreground);
+}
+.nx-pf__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Con ancho, la evidencia va al lado del formulario y lo acompaña al hacer scroll. */
+nx-paste-fill[data-wide][data-open] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--nx-paste-panel, clamp(260px, 36%, 380px));
+  column-gap: 20px;
+  align-items: start;
+
+  & > * {
+    grid-column: 1;
+  }
+  & > .nx-pf__bar {
+    grid-column: 1 / -1;
+  }
+  & > .nx-pf__panel {
+    position: sticky;
+    inset-block-start: 12px;
+    grid-column: 2;
+    grid-row: 2 / span 40;
+    max-block-size: calc(100vh - 24px);
+    margin: 0;
+    overflow: auto;
+  }
+}
+
+/* ---------------------------------------------------------------- zona para pegar */
+
+.nx-pf__bar {
+  margin-block-end: 14px;
+  container-type: inline-size;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.nx-pf__zone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 14px;
+  border: 1.5px dashed var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  transition:
+    border-color var(--nx-motion-fast),
+    background-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast);
+
+  &:focus-within,
+  nx-paste-fill:focus > .nx-pf__bar > &,
+  nx-paste-fill[data-drag] & {
+    border-color: var(--nx-primary);
+    background: var(--nx-primary-soft);
+  }
+  /* Un clic en un hueco del formulario: el borde late para decir «ya puedes pegar». */
+  nx-paste-fill:focus > .nx-pf__bar > & {
+    animation: nx-pf-ready 1.4s var(--nx-ease-out) 2;
+  }
+}
+.nx-pf__zone-icon {
+  flex: none;
+  inline-size: 22px;
+  block-size: 22px;
+  color: var(--nx-primary-ink);
+}
+.nx-pf__zone-body {
+  flex: 1;
+  min-inline-size: 0;
+}
+.nx-pf__input {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 22px;
+  max-block-size: 9lh;
+  padding: 1px 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--nx-foreground);
+  font: 500 14px/1.45 var(--nx-font-sans);
+  resize: none;
+  field-sizing: content;
+
+  &::placeholder {
+    color: var(--nx-muted-foreground);
+    opacity: 1;
+  }
+}
+.nx-pf__hint {
+  margin: 1px 0 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+
+  /* En una pantalla táctil no hay Ctrl+V: basta el botón «Pegar». */
+  @media (pointer: coarse) {
+    display: none;
+  }
+}
+.nx-pf__btn,
+.nx-pf__act {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid var(--nx-primary);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font: 600 13px var(--nx-font-sans);
+  cursor: pointer;
+  transition:
+    filter var(--nx-motion-fast),
+    background-color var(--nx-motion-fast);
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+}
+.nx-pf__btn--soft,
+.nx-pf__act--soft {
+  border-color: var(--nx-border);
+  background: var(--nx-background);
+  color: var(--nx-foreground);
+
+  &:hover {
+    filter: none;
+    background: var(--nx-hover);
+  }
+}
+:is(.nx-pf__btn, .nx-pf__act, .nx-pf__tool, .nx-pf__pill, .nx-pf__text, .nx-pf__chip button):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- estado tras llenar */
+
+.nx-pf__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  animation: nx-pf-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-pf__msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+
+  & .nx-glyph {
+    inline-size: 16px;
+    block-size: 16px;
+    color: var(--nx-success);
+  }
+  &[data-tone="warn"] .nx-glyph {
+    color: var(--_warn-ink);
+  }
+}
+.nx-pf__busy {
+  color: var(--nx-text-tertiary);
+  font-weight: 400;
+}
+.nx-pf__spin {
+  inline-size: 14px;
+  block-size: 14px;
+  border: 2px solid var(--nx-border);
+  border-block-start-color: var(--nx-primary);
+  border-radius: 50%;
+  animation: nx-pf-spin 0.8s linear infinite;
+}
+.nx-pf__pill {
+  padding: 2px 10px;
+  border: 1px solid color-mix(in oklch, var(--nx-paste-warn) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--nx-paste-warn) 14%, var(--nx-card));
+  color: var(--_warn-ink);
+  font: 600 12px var(--nx-font-sans);
+  cursor: pointer;
+}
+.nx-pf__err {
+  flex-basis: 100%;
+  color: var(--_warn-ink);
+  font-size: 12.5px;
+}
+.nx-pf__tools {
+  display: flex;
+  gap: 2px;
+  margin-inline-start: auto;
+}
+.nx-pf__tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-muted-foreground);
+  font: 500 12.5px var(--nx-font-sans);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &[aria-expanded="true"] {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  & .nx-glyph {
+    inline-size: 14px;
+    block-size: 14px;
+  }
+}
+.nx-pf__tool--icon {
+  padding: 4px 6px;
+}
+/* En angosto, las herramientas quedan en ícono (su nombre sigue ahí para el lector). */
+@container (width < 460px) {
+  .nx-pf__tool > span:not(.nx-glyph) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+/* ---------------------------------------------------------------- evidencia */
+
+.nx-pf__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-block-size: 0;
+  margin-block: 0 14px;
+  padding: 10px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-sidebar);
+  font-size: 12.5px;
+  line-height: 1.45;
+  animation: nx-pf-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-pf__notes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  & li {
+    padding: 6px 9px;
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+    animation: nx-pf-in var(--nx-motion-base) var(--nx-ease-out);
+  }
+}
+.nx-pf__text {
+  flex: 0 1 auto;
+  min-block-size: 64px;
+  max-block-size: 240px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-muted-foreground);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+
+  & mark {
+    padding: 1px 1px;
+    border-radius: 3px;
+    background: light-dark(oklch(0.93 0.06 var(--_h)), oklch(0.34 0.07 var(--_h)));
+    box-shadow: inset 0 -2px 0 light-dark(oklch(0.68 0.14 var(--_h)), oklch(0.62 0.13 var(--_h)));
+    color: var(--nx-foreground);
+    cursor: pointer;
+    animation: nx-pf-mark 0.5s var(--_d, 0ms) var(--nx-ease-out) both;
+    transition: box-shadow var(--nx-motion-fast);
+
+    &.is-lit {
+      box-shadow: 0 0 0 2px var(--_hue);
+    }
+  }
+}
+[data-wide] .nx-pf__text {
+  flex: none;
+  max-block-size: 55vh;
+}
+.nx-pf__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  & li {
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 9px;
+    padding: 5px 7px;
+    border-radius: var(--nx-radius-md);
+    cursor: pointer;
+    transition: background-color var(--nx-motion-fast);
+
+    &:hover,
+    &.is-lit {
+      background: var(--nx-hover);
+    }
+    &:is([data-tier="low"], [data-tier="suggest"]) {
+      background: color-mix(in oklch, var(--nx-paste-warn) 10%, transparent);
+    }
+  }
+}
+.nx-pf__dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--_hue);
+}
+.nx-pf__row {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+
+  & small {
+    color: var(--nx-text-tertiary);
+    font-size: 11.5px;
+  }
+  [data-tier="low"] > & small,
+  [data-tier="suggest"] > & small {
+    color: var(--_warn-ink);
+  }
+}
+.nx-pf__row-label {
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+}
+.nx-pf__row-val {
+  overflow: hidden;
+  color: var(--nx-foreground);
+  font-weight: 550;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-pf__conf {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  [data-tier="high"] > & {
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+  }
+  [data-tier="mid"] > &,
+  [data-tier="suggest"] > & {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  [data-tier="low"] > & {
+    background: color-mix(in oklch, var(--nx-paste-warn) 20%, transparent);
+    color: var(--_warn-ink);
+  }
+  :is([data-tier="you"], [data-tier="same"]) > & {
+    color: var(--nx-success);
+  }
+}
+.nx-pf__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  grid-column: 2 / -1;
+  margin-block: 3px 1px;
+}
+.nx-pf__act {
+  padding: 3px 11px;
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------- anillos sobre los campos */
+
+.nx-pf__layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.nx-pf__ring {
+  position: absolute;
+  border-radius: var(--nx-radius-md);
+  transition: box-shadow var(--nx-motion-fast);
+
+  &[data-tier="low"] {
+    background: color-mix(in oklch, var(--nx-paste-warn) 7%, transparent);
+    box-shadow: 0 0 0 2px var(--nx-paste-warn);
+  }
+  &[data-tier="suggest"] {
+    outline: 2px dashed var(--nx-primary);
+    outline-offset: 2px;
+  }
+  &.is-lit {
+    box-shadow:
+      0 0 0 2px var(--_hue),
+      0 0 0 5px color-mix(in oklch, var(--_hue) 22%, transparent);
+  }
+  /* Al llenarse: un resplandor del acento, uno tras otro. */
+  &.is-new {
+    animation: nx-pf-glow 1.2s var(--_d, 0ms) var(--nx-ease-out) both;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(100deg, transparent 25%, color-mix(in oklch, var(--nx-primary) 30%, transparent) 50%, transparent 75%) no-repeat;
+      background-size: 250% 100%;
+      animation: nx-pf-sweep 0.9s var(--_d, 0ms) ease-out both;
+    }
+  }
+}
+.nx-pf__chip {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-inline-size: calc(100% - 16px);
+  padding: 0 7px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-success);
+  font: 600 10.5px/17px var(--nx-font-sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px light-dark(rgb(15 20 30 / 0.08), rgb(0 0 0 / 0.3));
+  translate: 0 -55%;
+  pointer-events: auto;
+  animation: nx-pf-pop 0.35s var(--_d, 0ms) var(--nx-ease-out) both;
+
+  [data-tier="mid"] > & {
+    color: var(--nx-primary-ink);
+  }
+  [data-tier="low"] > & {
+    border-color: color-mix(in oklch, var(--nx-paste-warn) 55%, transparent);
+    color: var(--_warn-ink);
+  }
+  [data-tier="suggest"] > & {
+    border-color: var(--nx-primary-border);
+    color: var(--nx-primary-ink);
+  }
+  & .nx-glyph {
+    inline-size: 11px;
+    block-size: 11px;
+  }
+  & button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--nx-hover);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--nx-primary-soft);
+    }
+    &[data-act="use"] {
+      background: var(--nx-primary);
+      color: var(--nx-primary-foreground);
+    }
+  }
+}
+.nx-pf__chip-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Arrastrando texto encima: todo el formulario es la zona. */
+nx-paste-fill[data-drag]::after {
+  content: attr(data-drop);
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--nx-primary);
+  border-radius: var(--nx-radius-lg);
+  background: color-mix(in oklch, var(--nx-background) 82%, transparent);
+  color: var(--nx-primary-ink);
+  font: 600 15px var(--nx-font-sans);
+  pointer-events: none;
+}
+
+@keyframes nx-pf-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+@keyframes nx-pf-pop {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+@keyframes nx-pf-mark {
+  from {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+@keyframes nx-pf-glow {
+  0% {
+    background: color-mix(in oklch, var(--nx-primary) 16%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--nx-primary) 60%, transparent);
+  }
+  30% {
+    background: color-mix(in oklch, var(--nx-primary) 10%, transparent);
+    box-shadow:
+      0 0 0 3px color-mix(in oklch, var(--nx-primary) 45%, transparent),
+      0 0 22px 2px color-mix(in oklch, var(--nx-primary) 35%, transparent);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 9px transparent;
+  }
+}
+@keyframes nx-pf-sweep {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -30% 0;
+    opacity: 0;
+  }
+}
+@keyframes nx-pf-ready {
+  50% {
+    box-shadow: 0 0 0 4px var(--nx-primary-soft);
+  }
+}
+@keyframes nx-pf-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.nx-pf__bar, .nx-pf__panel, .nx-pf__layer),
+  :is(.nx-pf__bar, .nx-pf__panel, .nx-pf__layer) *,
+  .nx-pf__ring::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+  }
+  .nx-pf__spin {
+    animation-duration: 1.6s !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-pf__ring[data-tier="low"],
+  .nx-pf__ring[data-tier="suggest"] {
+    outline: 2px dashed Highlight;
+  }
+  .nx-pf__ring.is-lit,
+  .nx-pf__text mark.is-lit {
+    outline: 2px solid Highlight;
+  }
+  .nx-pf__text mark {
+    outline: 1px solid CanvasText;
+  }
+  .nx-pf__chip,
+  .nx-pf__dot {
+    border: 1px solid CanvasText;
+  }
+}

@@ -1,0 +1,117 @@
+/* Demo de <nx-paste-fill>: el formulario «Nuevo proveedor» y los controles de la página. */
+
+.pf-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-block: 4px 14px;
+}
+.pf-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-sample {
+  padding: 6px 12px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-primary-ink);
+  font: 550 13px var(--nx-font-sans);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-primary-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.pf-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+
+  & legend {
+    float: left;
+    margin-inline-end: 4px;
+    padding: 0;
+    color: var(--nx-text-tertiary);
+    font-weight: 600;
+  }
+  & label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+}
+#pf-demo {
+  max-inline-size: none;
+}
+.pf-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px 16px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.pf-form__title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 16px;
+}
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-weight: 500;
+
+  & :is(input, select) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-background);
+    color: var(--nx-foreground);
+    font: 14px var(--nx-font-sans);
+
+    &:focus {
+      border-color: var(--nx-primary);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--nx-primary-soft);
+    }
+  }
+}
+.pf-field--wide {
+  grid-column: 1 / -1;
+}
+.pf-form__foot {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+.pf-save {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font: 600 13px var(--nx-font-sans);
+  cursor: pointer;
+}
