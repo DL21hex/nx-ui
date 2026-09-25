@@ -22,8 +22,10 @@ if (withWebkit) browsers.push("webkit");
 
 const steps = [
   ["Tipos", "npm", ["run", "typecheck"]],
-  ["Pruebas de lógica y DOM", "npm", ["test"]],
+  // El build va antes de las pruebas: `test/dist.test.ts` revisa el dist/ recién construido, no el
+  // de una build anterior.
   ["Build y límites de peso", "npm", ["run", "build"]],
+  ["Pruebas de lógica y DOM", "npm", ["test"]],
   ["Contraste de los tokens", "npm", ["run", "contrast"]],
   [`Navegador (${browsers.join(", ")}) y accesibilidad`, "npx", ["playwright", "test", ...browsers.map((b) => `--project=${b}`)]],
 ];
@@ -32,7 +34,10 @@ const done = [];
 for (const [name, cmd, args] of steps) {
   console.log(`\n▶ ${name}`);
   const t0 = performance.now();
-  const r = spawnSync(cmd, args, { stdio: "inherit", shell: process.platform === "win32" });
+  // Playwright levanta su propia galería en un puerto aparte: una `vite` abierta en 5173 (quizá de
+  // otro worktree) no se prueba por error.
+  const env = { ...process.env, NX_E2E_PORT: process.env.NX_E2E_PORT ?? "5199" };
+  const r = spawnSync(cmd, args, { stdio: "inherit", shell: process.platform === "win32", env });
   const s = ((performance.now() - t0) / 1000).toFixed(1);
   done.push(`${r.status === 0 ? "✓" : "✗"} ${name} · ${s} s`);
   if (r.status !== 0) {

@@ -6,7 +6,9 @@ import { build } from "esbuild";
 const toDist = {
   name: "nx-ui-dist",
   setup(b) {
-    b.onResolve({ filter: /components\/sidemenu\/index$/ }, () => ({ path: "../sidemenu.js", external: true }));
+    // Cada componente (y `nxSync`) sale del módulo ya construido: una sola copia de las clases, del
+    // registro de íconos y de la cola de nx-sync aunque la app importe también `nx-ui`.
+    b.onResolve({ filter: /components\/([\w-]+)\/(index|logic)$/ }, (a) => ({ path: `../${/components\/([\w-]+)\//.exec(a.path)[1]}.js`, external: true }));
   },
 };
 

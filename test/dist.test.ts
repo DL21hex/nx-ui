@@ -26,4 +26,10 @@ describe.skipIf(!hasDist)("dist/", () => {
     });
     expect(out.outputFiles[0].text).toContain("customElements.define");
   });
+
+  it("el adaptador Solid importa los componentes de dist/ y no trae su propia copia", () => {
+    const jsx = readFileSync("dist/solid/index.jsx", "utf8");
+    expect(jsx).toContain('from "../sync.js"');
+    expect(jsx).not.toMatch(/customElements\.define|extends Base/);
+  });
 });

@@ -68,14 +68,24 @@ const GLYPHS: Record<string, string> = {
   panel: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
 };
 
+const glyphs = new Map<string, DocumentFragment>();
+
 /** Un glifo interno por nombre, o el contenido SVG directo (`<path …/>`) para que cada componente
- *  traiga los suyos sin engordar el núcleo. */
+ *  traiga los suyos sin engordar el núcleo. El markup es SIEMPRE una constante del componente:
+ *  nunca un dato (para un ícono que nombra el backend está `icon()`, que solo usa el registro). */
 export function glyph(name: keyof typeof GLYPHS | string, cls = ""): HTMLSpanElement {
   const span = document.createElement("span");
   span.className = `nx-glyph ${cls}`.trim();
   span.setAttribute("aria-hidden", "true");
-  const tpl = document.createElement("template");
-  tpl.innerHTML = `${SVG_OPEN}${name.startsWith("<") ? name : (GLYPHS[name] ?? "")}</svg>`;
-  span.append(tpl.content);
+  if (typeof name !== "string") return span;
+  let frag = glyphs.get(name);
+  if (!frag) {
+    const inner = name.startsWith("<") ? name : Object.hasOwn(GLYPHS, name) ? GLYPHS[name] : "";
+    const tpl = document.createElement("template");
+    tpl.innerHTML = `${SVG_OPEN}${inner}</svg>`;
+    frag = tpl.content;
+    if (glyphs.size < 500) glyphs.set(name, frag);
+  }
+  span.append(frag.cloneNode(true));
   return span;
 }

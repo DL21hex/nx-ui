@@ -131,7 +131,17 @@ render({ component: "SideMenu", props: { items, active: "/ventas/pedidos" } }, c
 ```
 
 Cada componente declara qué props acepta. Una clave que no está en la lista se ignora y se avisa
-por consola.
+por consola. `registerComponent` solo acepta elementos personalizados (con guion) y nunca props como
+`innerHTML`, `srcdoc` u `on*`.
+
+**Orígenes permitidos.** Todo `endpoint`, `source`, `action` o canal que llega en un payload se usa
+solo si es del mismo origen que la página. Así un payload no puede mandar filas, textos pegados ni
+el contexto de la app a un tercero. Si la API vive en otro dominio, se declara una vez:
+
+```js
+import { allowOrigins } from "nx-ui";
+allowOrigins("https://api.miapp.co");
+```
 
 ## `<nx-sidemenu>`
 
@@ -1087,7 +1097,8 @@ npm run contrast       # contraste AA de los tokens de texto, en claro y oscuro 
 npm run check          # todo lo anterior + build y límites de peso; Chromium, Firefox y WebKit
 ```
 
-No hay CI en GitHub: las verificaciones corren en local. `npm install` activa el hook `pre-push`
+Las verificaciones corren en local. En GitHub solo corre el despliegue de la galería a Pages
+(`.github/workflows/pages.yml`), sin pruebas. `npm install` activa el hook `pre-push`
 (`.githooks/`), que corre `npm run check` antes de cada `git push` y no deja enviar si algo falla.
 WebKit se prueba si la máquina lo puede abrir; en Linux necesita `sudo npx playwright install-deps webkit`.
 

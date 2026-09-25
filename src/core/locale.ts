@@ -12,9 +12,29 @@ export interface MoneyLike {
   currency?: string;
 }
 
-/** El locale de un elemento: `locale`, o el `lang` más cercano, o «es-CO». */
+const canonical = new Map<string, string | null>();
+
+/** Un locale BCP 47 válido y canónico («es_CO» → «es-CO»), o `null` si `Intl` no lo entiende. */
+export function canonicalLocale(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  let c = canonical.get(t);
+  if (c === undefined) {
+    try {
+      c = Intl.getCanonicalLocales(t.replace(/_/g, "-"))[0] ?? null;
+    } catch {
+      c = null;
+    }
+    if (canonical.size > 200) canonical.clear();
+    canonical.set(t, c);
+  }
+  return c;
+}
+
+/** El locale de un elemento: `locale`, o el `lang` más cercano, o «es-CO». Uno inválido
+ *  (`lang="es_CO"` se corrige; `locale="xx!"` no) cae al siguiente: `Intl` nunca lanza por esto. */
 export function resolveLocale(el: Element): string {
-  return el.getAttribute("locale") || el.closest("[lang]")?.getAttribute("lang") || "es-CO";
+  return canonicalLocale(el.getAttribute("locale")) || canonicalLocale(el.closest("[lang]")?.getAttribute("lang")) || "es-CO";
 }
 
 export interface NxFormat {
@@ -38,7 +58,7 @@ const space = (s: string) => s.replace(/[  ]/g, " ");
 
 /** El formateador de un locale (inválido o ausente → «es-CO»). */
 export function nxFormat(locale?: string | null): NxFormat {
-  const key = locale || "es-CO";
+  const key = canonicalLocale(locale) || "es-CO";
   let f = cache.get(key);
   if (!f) {
     try {

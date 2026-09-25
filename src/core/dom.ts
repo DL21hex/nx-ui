@@ -38,3 +38,56 @@ export function safeHref(href: unknown): string | undefined {
   if (scheme && !ALLOWED_SCHEMES.has(scheme[1].toLowerCase())) return undefined;
   return trimmed;
 }
+
+const allowed = new Set<string>();
+
+/**
+ * Orígenes extra a los que los componentes pueden pedir datos (`allowOrigins("https://api.miapp.co")`).
+ * Por defecto solo el de la página: un `endpoint` que llega en un payload BDUI no puede mandar
+ * filas, textos pegados ni el contexto de la app a un tercero.
+ */
+export function allowOrigins(...origins: string[]): void {
+  for (const o of origins) {
+    try {
+      allowed.add(new URL(o).origin);
+    } catch {
+      console.warn(`[nx-ui] origen inválido: ${o}`);
+    }
+  }
+}
+
+/**
+ * La URL de un `fetch` si es segura, o `undefined`: http(s) del mismo origen que la página (o de
+ * uno permitido con `allowOrigins`). Las rutas relativas pasan; `//otro.com` no, porque resuelve a
+ * otro origen. Devuelve la URL resuelta y absoluta.
+ */
+export function safeEndpoint(url: unknown): string | undefined {
+  const href = safeHref(url);
+  if (!href || typeof location === "undefined") return href;
+  let u: URL;
+  try {
+    u = new URL(href, location.href);
+  } catch {
+    return undefined;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return undefined;
+  if (u.origin !== location.origin && !allowed.has(u.origin)) {
+    console.warn(`[nx-ui] endpoint de otro origen bloqueado: ${u.origin} (ver allowOrigins)`);
+    return undefined;
+  }
+  return u.href;
+}
+
+/** Una imagen de datos remotos (el avatar de otra persona): `https:` o del mismo origen; nunca
+ *  `http:` en claro ni otros esquemas. Quien la pinte debe poner `referrerpolicy="no-referrer"`. */
+export function safeImageSrc(src: unknown): string | undefined {
+  const href = safeHref(src);
+  if (!href || typeof location === "undefined") return href;
+  try {
+    const u = new URL(href, location.href);
+    if (u.origin === location.origin || u.protocol === "https:") return u.href;
+  } catch {
+    /* inválida */
+  }
+  return undefined;
+}

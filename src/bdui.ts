@@ -37,9 +37,25 @@ const registry = new Map<string, Entry>([
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 
-/** Registra un componente propio (o un alias) para `render`. */
+/** Props que nunca se aceptan, ni en un componente propio: HTML crudo, manejadores y prototipos. */
+const FORBIDDEN = /^(on.*|innerHTML|outerHTML|srcdoc|__proto__|constructor|prototype)$/i;
+
+/** Props que llevan una URL a la que el componente pide datos o envía algo. El agente las quita de
+ *  lo que muestra el modelo (`nx_show`): una respuesta del modelo no elige a dónde van los datos. */
+export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "source", "aiEndpoint", "nlEndpoint", "explainEndpoint", "channel", "stream", "ping", "href", "url"]);
+
+/** Registra un componente propio (o un alias) para `render`. Solo elementos personalizados (con
+ *  guion): un `<a>` o un `<iframe>` con props de un payload se saltarían el saneo de URLs. */
 export function registerComponent(name: string, tag: string, props: readonly string[]): void {
+  if (!/^[a-z][a-z0-9._]*-[a-z0-9._-]*$/.test(tag)) throw new Error(`[nx-ui] BDUI: "${tag}" no es un elemento personalizado`);
+  const bad = props.filter((p) => FORBIDDEN.test(p));
+  if (bad.length) throw new Error(`[nx-ui] BDUI: props no permitidas: ${bad.join(", ")}`);
   registry.set(name, { tag, props });
+}
+
+/** El componente BDUI está registrado (`render` lo sabe pintar). */
+export function hasComponent(name: string): boolean {
+  return registry.has(name);
 }
 
 /** Pinta los nodos dentro de `target`, reemplazando lo que tuviera. Devuelve los elementos creados. */
@@ -51,9 +67,12 @@ export function render(node: BduiNode | BduiNode[], target: Element): Element[] 
       console.warn(`[nx-ui] componente BDUI desconocido: ${n?.component}`);
       continue;
     }
+    if (typeof customElements !== "undefined" && !customElements.get(entry.tag)) {
+      console.warn(`[nx-ui] <${entry.tag}> no está definido: importa su módulo (nx-ui/…) antes de pintar ${n.component}`);
+    }
     const el = document.createElement(entry.tag) as unknown as Record<string, unknown> & Element;
     for (const [k, v] of Object.entries(n.props ?? {})) {
-      if (entry.props.includes(k)) el[k] = v;
+      if (entry.props.includes(k) && !FORBIDDEN.test(k)) el[k] = v;
       else console.warn(`[nx-ui] ${n.component}: prop ignorada "${k}"`);
     }
     out.push(el);

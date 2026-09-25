@@ -24,4 +24,5 @@ export * from "./components/history/index";
 export * from "./components/kanban/index";
 export * from "./components/number/index";
 export { registerIcons, hasIcon } from "./core/icons";
-export { nxFormat, resolveLocale, type NxFormat } from "./core/locale";
+export { nxFormat, resolveLocale, canonicalLocale, type NxFormat } from "./core/locale";
+export { allowOrigins, safeEndpoint } from "./core/dom";
