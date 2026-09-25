@@ -167,3 +167,18 @@ test("rango de fechas cerrado, abierto, eligiendo y con una frase que no entiend
   await page.locator("#dr-sales").getByRole("textbox").fill("cuando pueda");
   await audit(page, ["#dr-sales"]);
 });
+
+test("pegar y llenar: en reposo, con revisar y sugerencia, y con el servidor que falla", async ({ page }) => {
+  // Sin animaciones: axe no mide un chip a medio aparecer.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, "#/paste-fill");
+  await audit(page, ["#pf-demo"]);
+  await page.locator("#pf-demo [name=correo]").fill("compras@proveedor.co");
+  await page.getByRole("button", { name: "Firma con NIT mal escrito" }).click();
+  await expect(page.locator("#pf-demo .nx-pf__pill")).toHaveText("2 por revisar");
+  await audit(page, ["#pf-demo"]);
+  await page.locator("input[name=pf-mode][value=fail]").check();
+  await page.getByRole("button", { name: "WhatsApp informal" }).click();
+  await expect(page.locator("#pf-demo .nx-pf__err")).toBeVisible({ timeout: 10_000 });
+  await audit(page, ["#pf-demo"]);
+});

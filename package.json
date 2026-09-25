@@ -94,6 +94,10 @@
       "types": "./dist/types/components/date-range/index.d.ts",
       "import": "./dist/date-range.js"
     },
+    "./paste-fill": {
+      "types": "./dist/types/components/paste-fill/index.d.ts",
+      "import": "./dist/paste-fill.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -125,6 +129,7 @@
     "./inbox.css": "./dist/inbox.css",
     "./survey.css": "./dist/survey.css",
     "./tour.css": "./dist/tour.css",
+    "./paste-fill.css": "./dist/paste-fill.css",
     "./date-range.css": "./dist/date-range.css",
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",

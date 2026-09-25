@@ -1,9 +1,47 @@
 /**
  * Demo de `<nx-paste-fill>`: el formulario «Nuevo proveedor» de Compras y tres textos de ejemplo
  * como llegan de verdad (un correo formal reenviado, un WhatsApp informal y una firma con el NIT
- * mal escrito). Los usan la galería y el servidor de desarrollo. No es parte de la librería.
+ * mal escrito), y su «servidor» en el navegador. No es parte de la librería.
  */
 import type { NxPasteFill, PasteFieldInput } from "../src/components/paste-fill/index";
+import { matchFields } from "../src/components/paste-fill/logic";
+import type { PasteField } from "../src/components/paste-fill/types";
+import { addDemoRoute } from "./demo-api";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/* El «servidor» de la demo: lee el texto con el mismo extractor que el navegador y transmite los
+   campos uno a uno, con pausas reales, más una nota como la que daría un ERP. `?fail=1` responde
+   503 después de pensarlo un momento (para ver el aviso). */
+addDemoRoute("/demo/paste-fill", async (req, out) => {
+  let body: { text?: unknown; fields?: unknown };
+  try {
+    body = JSON.parse(req.body || "{}");
+  } catch {
+    out.status(400);
+    return out.end();
+  }
+  if (req.url.searchParams.has("fail")) {
+    await sleep(900);
+    out.status(503);
+    return out.end("El lector no está disponible");
+  }
+  const text = typeof body.text === "string" ? body.text : "";
+  const fields = (Array.isArray(body.fields) ? body.fields : []) as PasteField[];
+  out.type("application/x-ndjson");
+  const send = (o: object) => !out.closed() && out.write(`${JSON.stringify(o)}\n`);
+  await sleep(500);
+  for (const f of matchFields(fields, text)) {
+    if (out.closed()) return;
+    // El servidor «conoce» a los terceros: lo que sale de la firma o del remitente lo confirma.
+    send({ type: "field", ...f, confidence: Math.min(0.99, f.confidence + (f.confidence >= 0.8 ? 0.02 : 0)) });
+    await sleep(160 + Math.random() * 180);
+  }
+  send({ type: "note", message: /nit/i.test(text) ? "El proveedor no existe todavía en el maestro de terceros: se creará al guardar." : "Sin NIT en el texto: habrá que pedirlo antes de crear el tercero." });
+  await sleep(200);
+  send({ type: "done" });
+  out.end();
+});
 
 export const PASTE_SAMPLES: { id: string; label: string; text: string }[] = [
   {

@@ -14,6 +14,7 @@
 @import "../components/explain/explain.css";
 @import "../components/inbox/inbox.css";
 @import "../components/survey/survey.css";
+@import "../components/paste-fill/paste-fill.css";
 @import "../components/date-range/date-range.css";
 @import "../components/history/history.css";
 @import "../components/kanban/kanban.css";

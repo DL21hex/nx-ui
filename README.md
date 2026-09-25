@@ -770,6 +770,59 @@ debajo, atajos y un calendario de dos meses.
 | Métodos | `show(frase?)`, `hide()`, `open` |
 | Eventos | `nx-change` `{value}`, `nx-open-change` `{open}` |
 
+## `<nx-paste-fill>`
+
+Pegas un texto y el formulario se llena solo. Envuelve un formulario tuyo (sus `<input>`,
+`<select>` y `<textarea>` con `name`, sin moverlos): la persona pega un correo de un proveedor, un
+WhatsApp o una firma —con Ctrl/⌘+V sobre el formulario, en la zona «Pega aquí…», con el botón
+«Pegar» o arrastrando el texto— y cada campo recibe lo suyo con su **confianza** y su
+**evidencia**, como `<nx-doc-capture>` pero para texto.
+
+- **Esquema automático:** lee cada campo (`name`, su `<label>` o `aria-label` o `placeholder`,
+  `type`, opciones de un select). `fields` lo enriquece por `name`:
+  `{ name: "monto", kind: "money" }` (`kind`: `email`, `phone`, `nit`, `id`, `money`, `date`,
+  `url`, `name`, `company`, `role`, `address`, `city`, `number`, `text`). Sin `kind`, se deduce del
+  `type`, el `name` y la etiqueta, sin tildes.
+- **Extractor local, sin servidor:** correo; celular y fijo colombianos (`+57`, `60X`, y los de 7
+  cifras de antes con su indicativo nuevo); NIT con su dígito de verificación (si no cuadra,
+  confianza baja y el dígito correcto en el aviso); cédula; montos (`$ 1.450.000`, `1,45 millones`,
+  `450 mil`, `USD 300`, «2 palos»); fechas (`15/03/2026`, `15 de marzo`, `el próximo viernes`,
+  `en 15 días hábiles`, relativas a hoy); direcciones (`Cra. 15 # 93-47 Of. 301`); ciudades; razón
+  social (S.A.S., S.A., Ltda.); el nombre tras «Atentamente,» o «--» y su cargo; «Etiqueta: valor».
+  Cada campo recibe lo más probable según lo que dice el texto justo antes («con entrega el…» →
+  «Fecha de entrega»); si hay dos candidatos casi empatados, baja la confianza y lo dice.
+- **Al llenar:** cada campo brilla un instante; queda con un chip de confianza, y lo que está bajo
+  `review-below` (0,8) queda «Revisar» hasta que la persona lo corrige o lo confirma. Lo que la
+  persona ya había escrito **no se pisa**: se muestra la sugerencia con «Usar» / «Dejar el mío».
+  Cada campo que cambia recibe `input` y `change` (con el setter nativo: React también se entera).
+- **Evidencia:** el texto pegado con cada tramo del color de su campo; pasar por un campo ilumina
+  su tramo y al revés; clic en un tramo enfoca el campo.
+- **Deshacer:** el botón o Ctrl/⌘+Z fuera de un campo devuelven los valores de antes (lo que la
+  persona cambió después se respeta).
+- **Servidor opcional:** con `endpoint`, se llena primero lo local y a la vez se hace
+  `POST {text, fields}`; la respuesta (NDJSON o SSE) gana:
+  `{"type":"field","name","value","confidence","source":{"start","end"},"hint"?}`,
+  `{"type":"note","message"}`, `{"type":"done"}` / `{"type":"error"}`. Si falla, queda lo local y
+  se avisa.
+
+```html
+<nx-paste-fill endpoint="/proveedores/leer" fields='[{"name":"monto","kind":"money"}]'>
+  <form>
+    <label>Razón social <input name="razon_social"></label>
+    <label>NIT <input name="nit"></label>
+    <label>Correo <input name="correo" type="email"></label>
+    <label>Fecha de entrega <input name="entrega" type="date"></label>
+  </form>
+</nx-paste-fill>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `fields`, `endpoint`, `review-below`, `for` (el `id` de un formulario en otra parte), `locale`, `labels` · `state`, `text`, `pending` |
+| Métodos | `fill(text)`, `undo()`, `clear()` |
+| Eventos | `nx-paste-fill-start` `{text}` (cancelable), `nx-paste-fill-done` `{values, fields}`, `nx-paste-fill-undo` `{values}` |
+| Funciones | `extractPasteData(text)`, `matchPasteFields(fields, text)`, `nitCheckDigit(base)`: el mismo extractor, en el navegador o en un backend en JavaScript |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos

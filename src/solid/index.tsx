@@ -1,7 +1,8 @@
 /**
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
- * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`), y `nxToast` / `nxConfirm`.
+ * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
+ * `<PasteFill>`), y `nxToast` / `nxConfirm`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -57,6 +58,9 @@ import type { KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail } from ".
 import "../components/history/index";
 import type { NxHistory } from "../components/history/history";
 import type { HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail, HistoryValue } from "../components/history/types";
+import "../components/paste-fill/index";
+import type { NxPasteFill } from "../components/paste-fill/paste-fill";
+import type { PasteFieldInput, PasteFillDoneDetail, PasteFillLabels } from "../components/paste-fill/types";
 import "../components/date-range/index";
 import type { NxDateRange } from "../components/date-range/date-range";
 import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
@@ -78,6 +82,7 @@ export type { NxNumber, NumberAlign, NumberChangeDetail, NumberFormat, NumberLab
 export type { NxKanban, KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail };
 export type { NxHistory, HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail };
 export type { NxDateRange, DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue };
+export type { NxPasteFill, PasteFieldInput, PasteFillDoneDetail, PasteFillLabels };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -86,13 +91,13 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       items: MenuItem[] | CommandItem[] | InboxItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
       progress: number | null | undefined;
       options: SelectOption[];
-      fields: SelectField[] | HistoryField[] | undefined;
+      fields: SelectField[] | HistoryField[] | PasteFieldInput[] | undefined;
       record: Record<string, unknown> | undefined;
       events: HistoryEvent[] | undefined;
       user: HistoryActor | null | undefined;
@@ -218,6 +223,9 @@ declare module "solid-js" {
       "nx-kanban-add": CustomEvent<{ column: string }>;
       "nx-kanban-open": CustomEvent<{ card: KanbanCard }>;
       "nx-survey-change": CustomEvent<{ id: string; value: unknown; answers: SurveyAnswers }>;
+      "nx-paste-fill-start": CustomEvent<{ text: string }>;
+      "nx-paste-fill-done": CustomEvent<PasteFillDoneDetail>;
+      "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
       "nx-sidemenu": HTMLAttributes<NxSidemenu> & { active?: string };
@@ -236,6 +244,7 @@ declare module "solid-js" {
       "nx-kanban": HTMLAttributes<NxKanban> & { heading?: string };
       "nx-date-range": HTMLAttributes<NxDateRange> & { label?: string; placeholder?: string };
       "nx-history": HTMLAttributes<NxHistory> & { heading?: string; source?: string };
+      "nx-paste-fill": HTMLAttributes<NxPasteFill> & { endpoint?: string; for?: string };
     }
   }
 }
@@ -1007,5 +1016,43 @@ export function DateRange(props: DateRangeProps): JSX.Element {
       on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<DateRangeChangeDetail>)}
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
     />
+  );
+}
+
+export interface PasteFillProps extends JSX.HTMLAttributes<NxPasteFill> {
+  /** Enriquece los campos leídos del formulario, por `name` (p. ej. `{ name: "monto", kind: "money" }`). */
+  fields?: PasteFieldInput[];
+  /** Recibe `POST {text, fields}` y responde con el protocolo en streaming (opcional). */
+  endpoint?: string;
+  /** Confianza bajo la cual un campo queda «Revisar» (0,8). */
+  reviewBelow?: number;
+  /** El `id` de un formulario que está en otra parte (sin él, el que envuelve). */
+  for?: string;
+  locale?: string;
+  labels?: Partial<PasteFillLabels>;
+  /** Cancelable: no se llena nada. */
+  onStart?: (e: CustomEvent<{ text: string }>) => void;
+  onDone?: (e: CustomEvent<PasteFillDoneDetail>) => void;
+  onUndo?: (e: CustomEvent<{ values: Record<string, string> }>) => void;
+  children?: JSX.Element;
+}
+
+export function PasteFill(props: PasteFillProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["fields", "endpoint", "reviewBelow", "for", "locale", "labels", "onStart", "onDone", "onUndo", "children"]);
+  return (
+    <nx-paste-fill
+      {...rest}
+      prop:fields={local.fields}
+      prop:labels={local.labels}
+      attr:endpoint={local.endpoint}
+      attr:review-below={local.reviewBelow === undefined ? undefined : String(local.reviewBelow)}
+      attr:for={local.for}
+      attr:locale={local.locale}
+      on:nx-paste-fill-start={(e) => local.onStart?.(e)}
+      on:nx-paste-fill-done={(e) => local.onDone?.(e)}
+      on:nx-paste-fill-undo={(e) => local.onUndo?.(e)}
+    >
+      {local.children}
+    </nx-paste-fill>
   );
 }
