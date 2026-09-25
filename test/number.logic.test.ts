@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { affixes, clampValue, cleanAlign, cleanCurrency, cleanDecimals, cleanFormat, cleanLabels, cleanNumber, errorText, evaluate, formatEdit, formatText, numberToWords, roundTo, roundValue, stepValue, tidy, wordsCurrency } from "../src/components/number/logic";
+import { affixes, clampValue, cleanAlign, cleanCurrency, cleanDecimals, cleanFormat, cleanLabels, cleanNumber, errorText, evaluate, formatEdit, formatText, latinDigits, machineText, numberToWords, roundTo, roundValue, stepValue, tidy, wordsCurrency } from "../src/components/number/logic";
 import { NUMBER_LABELS } from "../src/components/number/number";
 import type { NumberReading } from "../src/components/number/types";
 
@@ -444,5 +444,49 @@ describe("limpiar lo que llega (BDUI)", () => {
     expect(l.max).toBe(NUMBER_LABELS.max);
     expect("nope" in l).toBe(false);
     expect(l.unknown).toBe(NUMBER_LABELS.unknown);
+  });
+});
+
+describe("revisión: otras cifras, límites y cuentas enormes", () => {
+  it("en ar-EG se edita con cifras latinas y lo formateado se vuelve a leer", () => {
+    const o = { locale: "ar-EG", format: "number" as const };
+    const t = formatEdit(1234.5, o);
+    expect(t).toBe("1,234.5");
+    expect(evaluate(t, { locale: "ar-EG" })).toEqual({ ok: true, value: 1234.5, calc: false });
+    // Lo que se pega con cifras y separadores árabes (o persas) también se entiende.
+    expect(evaluate("١٬٢٣٤٫٥", { locale: "ar-EG" })).toEqual({ ok: true, value: 1234.5, calc: false });
+    expect(evaluate("۱۲۳", { locale: "fa-IR" })).toEqual({ ok: true, value: 123, calc: false });
+    expect(evaluate("１２３", { locale: "es-CO" })).toEqual({ ok: true, value: 123, calc: false });
+    expect(latinDigits("٠١٢٣٤٥٦٧٨٩ ۰۹ ०९ 𝟎𝟗𝟘𝟡")).toBe("0123456789 09 09 0909");
+  });
+
+  it("value desde mil billones no se acepta; al <form> va sin exponente", () => {
+    expect(cleanNumber("1e21")).toBeNull();
+    expect(cleanNumber(1e21)).toBeNull();
+    expect(cleanNumber(-1e15)).toBeNull();
+    expect(cleanNumber(999999999999999)).toBe(999999999999999);
+    expect(machineText(1e-7)).toBe("0.0000001");
+    expect(machineText(1450000.5)).toBe("1450000.5");
+    expect(machineText(-0.00000123)).toBe("-0.00000123");
+  });
+
+  it("los centavos se conservan desde 10^13", () => {
+    expect(tidy(12345678901234.56)).toBe(12345678901234.56);
+    expect(roundTo(12345678901234.56, 2)).toBe(12345678901234.56);
+    expect(roundValue(98765432109876.54, { format: "money" })).toBe(98765432109876.54);
+    expect(evaluate("12.345.678.901.234,56", { locale: "es-CO" })).toEqual({ ok: true, value: 12345678901234.56, calc: false });
+    // Lo de siempre sigue igual.
+    expect(tidy(0.1 + 0.2)).toBe(0.3);
+    expect(roundTo(1.005, 2)).toBe(1.01);
+  });
+
+  it("paréntesis sin fin: un error, nunca una excepción", () => {
+    const deep = `=${"(".repeat(2000)}1${")".repeat(2000)}`;
+    expect(() => evaluate(deep)).not.toThrow();
+    expect(evaluate(deep)).toEqual({ ok: false, error: "paren" });
+    expect(evaluate(`=${"(".repeat(100)}1${")".repeat(100)}`)).toEqual({ ok: true, value: 1, calc: true });
+    // Signos repetidos: sin recursión.
+    expect(evaluate(`=${"-".repeat(20000)}5`)).toEqual({ ok: true, value: 5, calc: true });
+    expect(evaluate(`=${"-".repeat(20001)}5`)).toEqual({ ok: true, value: -5, calc: true });
   });
 });

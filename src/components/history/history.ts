@@ -13,12 +13,14 @@
  * hacia atrás con `?before=<id>` cuando se llega al final.
  */
 import { Base } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
+import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
+import { clampDelay } from "../../core/time";
 import { nxToast } from "../toast/toast";
 import "../toast/index";
-import { canRevert, changedKeys, cleanEvents, cleanFields, cleanRecord, dayLabel, filterEvents, groupByDay, isLongText, mergeEvents, relTime, revertChange, revertedKeys, stampText, stateAt, tally, valueText, wordDiff, type HistoryFilter } from "./logic";
+import { atDate, canRevert, changedKeys, cleanEvents, cleanFields, cleanRecord, dayLabel, filterEvents, groupByDay, isLongText, mergeEvents, relTime, revertChange, revertedKeys, same, stampText, stateAt, tally, valueText, wordDiff, type DiffPart, type HistoryFilter } from "./logic";
 import type { HistoryActor, HistoryChange, HistoryEvent, HistoryField, HistoryLabels, HistoryPage, HistoryValue } from "./types";
 
 export const HISTORY_LABELS: HistoryLabels = {
@@ -64,6 +66,19 @@ const JSON_ATTRS = ["record", "fields", "events", "labels", "user"];
 
 let uid = 0;
 type Outcome = "commit" | "undo" | "cancel";
+/** Una reversión que espera su tiempo de deshacer: `done` si ya se registró (el historial salió
+ *  del DOM) y cómo cerrar su aviso. */
+type Pending = { done: boolean; close: () => void };
+/** Lo que espera la búsqueda antes de volver a pintar: no se repinta todo por cada tecla. */
+const SEARCH_MS = 120;
+
+/** El aviso con deshacer y cómo cerrarlo desde aquí (`nxToast` no devuelve su nodo: es el último
+ *  que agregó el toaster). Cerrarlo lo resuelve con `"dismiss"`, que vale como «hazlo». */
+function undoToast(opts: Parameters<typeof nxToast>[0] & object): { result: ReturnType<typeof nxToast>; close: () => void } {
+  const result = nxToast(opts);
+  const li = document.querySelector("nx-toaster .nx-toaster__list")?.lastElementChild;
+  return { result, close: () => li?.querySelector<HTMLElement>('[data-r="dismiss"]')?.click() };
+}
 
 export class NxHistory extends Base {
   static observedAttributes = [...JSON_ATTRS, "source", "heading", "locale"];
@@ -77,8 +92,15 @@ export class NxHistory extends Base {
   /** El evento que se está viendo en el tiempo (índice en `#events`), o -1: el presente. */
   #at = -1;
   #flt: HistoryFilter = {};
-  /** Reversiones que esperan su tiempo de deshacer. */
-  #pending = new Set<string>();
+  /** Reversiones que esperan su tiempo de deshacer, por el `id` de su evento. */
+  #pending = new Map<string, Pending>();
+  /** El registro vino por la propiedad (o el atributo): el de `source` no lo pisa. */
+  #ownRecord = false;
+  /** Para el `id` de los comentarios: dos en el mismo milisegundo no se pisan. */
+  #seq = 0;
+  /** Las diferencias por palabras ya calculadas (una por cambio: no se recalculan al repintar). */
+  #diffs = new WeakMap<HistoryChange, DiffPart[]>();
+  #searchTimer = 0;
   #more = false;
   #loading = false;
   #failed = false;
@@ -103,6 +125,7 @@ export class NxHistory extends Base {
   }
   set record(v: Record<string, unknown> | null | undefined) {
     this.#record = cleanRecord(v);
+    this.#ownRecord = v !== null && v !== undefined;
     this.#paint();
   }
   /** Los campos: cómo se llaman y cómo se muestran (sin ellos, las claves del registro). */
@@ -146,7 +169,8 @@ export class NxHistory extends Base {
   /** Milisegundos para deshacer una reversión (7000). `0`: se registra al instante, sin aviso. */
   get undo(): number {
     const n = Number(this.getAttribute("undo"));
-    return this.hasAttribute("undo") && Number.isFinite(n) && n >= 0 ? n : 7000;
+    // Hasta ~24,8 días: más, y `setTimeout` lo dispararía al instante.
+    return this.hasAttribute("undo") && Number.isFinite(n) && n >= 0 ? clampDelay(n) : 7000;
   }
   set undo(v: number) {
     this.setAttribute("undo", String(v));
@@ -155,7 +179,7 @@ export class NxHistory extends Base {
     return this.#labels;
   }
   set labels(v: Partial<HistoryLabels> | null | undefined) {
-    this.#labels = { ...HISTORY_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(HISTORY_LABELS, v);
     this.#paint();
   }
   /** El `id` del evento que se está viendo en el tiempo, o `null` en el presente. */
@@ -182,7 +206,7 @@ export class NxHistory extends Base {
   comment(text: string): boolean {
     const t = text.trim();
     if (!t || !this.dispatchEvent(new CustomEvent("nx-history-comment", { detail: { text: t }, bubbles: true, composed: true, cancelable: true }))) return false;
-    this.#events = mergeEvents(this.#events, [{ id: `${this.#uid}-${Date.now()}`, at: new Date().toISOString(), actor: this.#me(), action: "comment", note: t }]);
+    this.#events = mergeEvents(this.#events, [{ id: `${this.#uid}-${Date.now()}-${++this.#seq}`, at: new Date().toISOString(), actor: this.#me(), action: "comment", note: t }]);
     this.#paint();
     return true;
   }
@@ -202,20 +226,34 @@ export class NxHistory extends Base {
     const r = revertChange(this.#record, event, change, this.#me(), new Date());
     this.#record = r.record;
     this.#events = mergeEvents(this.#events, [r.event]);
-    this.#pending.add(r.event.id);
+    const commit = () => this.dispatchEvent(new CustomEvent("nx-history-commit", { detail: { ...detail, revert: r.event, record: this.record }, bubbles: true, composed: true }));
+    const mine: Pending = { done: false, close: () => {} };
+    this.#pending.set(r.event.id, mine);
     this.#paint();
     const f = this.#field(field);
     const L = this.#labels;
-    const result = this.undo ? await nxToast({ message: L.revertDone.replace("{field}", f?.label ?? field).replace("{value}", valueText(f, change.from, this.#fmt())), undo: true, duration: this.undo, tone: "success" }) : "timeout";
+    let result = "timeout";
+    if (this.undo) {
+      const t = undoToast({ message: L.revertDone.replace("{field}", f?.label ?? field).replace("{value}", valueText(f, change.from, this.#fmt())), undo: true, duration: this.undo, tone: "success" });
+      mine.close = () => {
+        mine.done = true;
+        commit();
+        t.close();
+      };
+      result = await t.result;
+    }
+    // Ya registrada al salir del DOM (`disconnectedCallback`).
+    if (mine.done) return "commit";
     this.#pending.delete(r.event.id);
     if (result === "undo") {
-      this.#record = { ...this.#record, [field]: was };
+      // Solo si el campo sigue con lo que puso la reversión: si llegó un registro más nuevo, se respeta.
+      if (same(this.#record[field], change.from)) this.#record = { ...this.#record, [field]: was };
       this.#events = this.#events.filter((e) => e !== r.event);
       this.#paint();
       return "undo";
     }
     this.#paint();
-    this.dispatchEvent(new CustomEvent("nx-history-commit", { detail: { ...detail, revert: r.event, record: this.record }, bubbles: true, composed: true }));
+    commit();
     return "commit";
   }
 
@@ -223,6 +261,7 @@ export class NxHistory extends Base {
   reload(): void {
     this.#events = [];
     this.#at = -1;
+    this.#more = false;
     void this.#load();
   }
 
@@ -245,6 +284,11 @@ export class NxHistory extends Base {
   disconnectedCallback(): void {
     this.#abort?.abort();
     this.#loading = false;
+    clearTimeout(this.#searchTimer);
+    // Las reversiones que esperaban su tiempo de deshacer se registran ya (`nx-history-commit`,
+    // con el elemento todavía a mano) y sus avisos se cierran.
+    for (const p of this.#pending.values()) p.close();
+    this.#pending.clear();
   }
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -256,8 +300,20 @@ export class NxHistory extends Base {
       }
       return;
     }
-    // Antes de conectarse no se pide nada: lo hace `connectedCallback`.
-    if (name === "source" && value && value !== old && this.#built && this.isConnected) return this.reload();
+    if (name === "source" && value !== old) {
+      // Otro registro: nada del anterior (su registro, si no vino por propiedad, filtros, «más»).
+      if (!this.#ownRecord) this.#record = {};
+      this.#flt = {};
+      if (this.#search) this.#search.value = "";
+      this.#events = [];
+      this.#at = -1;
+      this.#more = false;
+      this.#failed = false;
+      this.#abort?.abort();
+      this.#loading = false;
+      // Antes de conectarse no se pide nada: lo hace `connectedCallback`.
+      if (value && this.#built && this.isConnected) return this.reload();
+    }
     this.#paint();
   }
 
@@ -281,7 +337,8 @@ export class NxHistory extends Base {
   }
 
   async #load(more = false): Promise<void> {
-    const src = this.source;
+    // Solo http(s) del mismo origen (o de `allowOrigins`): la URL puede venir del backend (BDUI).
+    const src = safeEndpoint(this.source);
     if (!src || (more && this.#loading)) return;
     this.#abort?.abort();
     const ac = (this.#abort = new AbortController());
@@ -295,7 +352,8 @@ export class NxHistory extends Base {
       const data = (await res.json()) as HistoryPage | HistoryEvent[];
       const page: HistoryPage = Array.isArray(data) ? { events: data } : (data ?? { events: [] });
       const evs = cleanEvents(page.events);
-      if (page.record && !Object.keys(this.#record).length) this.#record = cleanRecord(page.record);
+      // El registro de la primera página, salvo que la app haya puesto el suyo.
+      if (page.record && !more && !this.#ownRecord) this.#record = cleanRecord(page.record);
       const n = this.#events.length;
       this.#events = mergeEvents(this.#events, evs);
       // Lo que llega es más viejo: el momento que se está viendo se corre con él.
@@ -354,6 +412,7 @@ export class NxHistory extends Base {
         this.#flt[k] = this.#flt[k] === d.v ? null : d.v;
         this.#paint();
       } else if (d.act === "clear") {
+        clearTimeout(this.#searchTimer);
         this.#flt = {};
         this.#search!.value = "";
         this.#paint();
@@ -362,8 +421,11 @@ export class NxHistory extends Base {
       else if (d.act === "retry") void this.#load(this.#events.length > 0);
     });
     this.#search.addEventListener("input", () => {
-      this.#flt.query = this.#search!.value;
-      this.#paintFeed();
+      clearTimeout(this.#searchTimer);
+      this.#searchTimer = window.setTimeout(() => {
+        this.#flt.query = this.#search!.value;
+        this.#paintFeed();
+      }, SEARCH_MS);
     });
     this.#range.addEventListener("input", () => {
       const i = Number(this.#range!.value);
@@ -457,7 +519,7 @@ export class NxHistory extends Base {
     const shown = filterEvents(this.#events, this.#flt, this.#fields, this.#fmt());
     this.#feed!.setAttribute("aria-label", this.heading);
     this.#feed!.replaceChildren(
-      ...groupByDay(shown).map((g) => h("li", { class: "nx-history__day" }, h("h3", null, dayLabel(new Date(g[0].at), now, loc, L.today, L.yesterday)), h("ol", null, ...g.map((e) => this.#item(e, idx.get(e)!, rev, now, loc))))),
+      ...groupByDay(shown).map((g) => h("li", { class: "nx-history__day" }, h("h3", null, dayLabel(atDate(g[0].at), now, loc, L.today, L.yesterday)), h("ol", null, ...g.map((e) => this.#item(e, idx.get(e)!, rev, now, loc))))),
     );
     const filtered = !!(this.#flt.actor || this.#flt.field || this.#flt.query?.trim());
     this.#feed!.hidden = !shown.length;
@@ -489,7 +551,7 @@ export class NxHistory extends Base {
 
   #item(e: HistoryEvent, i: number, rev: Set<string>, now: Date, loc: string): HTMLLIElement {
     const L = this.#labels;
-    const d = new Date(e.at);
+    const d = atDate(e.at);
     const stamp = stampText(d, loc);
     return h(
       "li",
@@ -527,7 +589,7 @@ export class NxHistory extends Base {
       { "data-reverted": reverted ? "" : null },
       h("span", { class: "nx-history__field" }, label),
       isLongText(f, c)
-        ? h("p", { class: "nx-history__diff" }, ...wordDiff(String(c.from ?? ""), String(c.to ?? "")).map((p) => (p.op === "=" ? p.text : h(p.op === "-" ? "del" : "ins", null, p.text))))
+        ? h("p", { class: "nx-history__diff" }, ...this.#diff(c).map((p) => (p.op === "=" ? p.text : h(p.op === "-" ? "del" : "ins", null, p.text))))
         : h("span", { class: "nx-history__fromto" }, fresh ? null : this.#val(f, c.from, true), fresh ? null : h("span", { class: "nx-history__arrow" }, "→"), this.#val(f, c.to)),
       reverted ? h("span", { class: "nx-history__tag" }, L.reverted) : null,
       ok
@@ -539,6 +601,13 @@ export class NxHistory extends Base {
           )
         : null,
     );
+  }
+
+  /** La diferencia por palabras de un cambio, calculada una sola vez. */
+  #diff(c: HistoryChange): DiffPart[] {
+    let d = this.#diffs.get(c);
+    if (!d) this.#diffs.set(c, (d = wordDiff(String(c.from ?? ""), String(c.to ?? ""))));
+    return d;
   }
 
   /** El panel del tiempo y las marcas en la línea (sin volver a pintar la lista). */
@@ -556,7 +625,7 @@ export class NxHistory extends Base {
     const keys = this.#keys();
     const changed = new Set(changedKeys(then, this.#record, keys.map((f) => f.key)));
     const hit = new Set((e?.changes ?? []).map((c) => c.field));
-    const stamp = e ? stampText(new Date(e.at), loc) : "";
+    const stamp = e ? stampText(atDate(e.at), loc) : "";
     const panel = this.#panel!;
     const range = this.#range!;
     range.max = String(Math.max(0, n - 1));

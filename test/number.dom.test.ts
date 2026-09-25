@@ -306,3 +306,64 @@ describe("<nx-number>", () => {
     expect(got).toEqual([{ value: null, text: "" }]);
   });
 });
+
+describe("<nx-number>: revisión", () => {
+  /** happy-dom no tiene ElementInternals: uno de mentira que guarda lo que va al <form>. */
+  function withInternals(attrs = "") {
+    const sent: (string | null)[] = [];
+    const fake = { setFormValue: (v: string | null) => sent.push(v), setValidity: () => {}, form: null, labels: [] };
+    const orig = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = () => fake as unknown as ElementInternals;
+    try {
+      return { el: mount(attrs), sent };
+    } finally {
+      HTMLElement.prototype.attachInternals = orig;
+    }
+  }
+
+  it("con un texto que no se entiende, value es null y el <form> no envía el último válido", () => {
+    const { el, sent } = withInternals('name="monto" locale="es-CO"');
+    type(el, "1200");
+    blur(el);
+    expect(el.value).toBe(1200);
+    expect(sent.at(-1)).toBe("1200");
+    const inputs: (number | null)[] = [];
+    el.addEventListener("input", () => inputs.push(el.value));
+    type(el, "1200x");
+    blur(el);
+    expect(el.value).toBeNull();
+    expect(inputs).toEqual([null]);
+    expect(sent.at(-1)).toBeNull();
+    expect(inputOf(el).value).toBe("1200x");
+    expect(inputOf(el).hasAttribute("aria-invalid")).toBe(true);
+    // Escape vuelve a lo confirmado.
+    key(el, "Escape");
+    expect(el.value).toBe(1200);
+    expect(sent.at(-1)).toBe("1200");
+  });
+
+  it("value enorme no se acepta; los números pequeños van al <form> sin exponente", () => {
+    const { el, sent } = withInternals('name="x" decimals="8"');
+    el.setAttribute("value", "1e21");
+    expect(el.value).toBeNull();
+    expect(sent.at(-1)).toBeNull();
+    el.value = 0.0000001;
+    expect(sent.at(-1)).toBe("0.0000001");
+  });
+
+  it("en ar-EG el texto formateado se sigue entendiendo al salir", () => {
+    const el = mount('locale="ar-EG"');
+    el.value = 1234.5;
+    expect(inputOf(el).value).toBe("1,234.5");
+    type(el, inputOf(el).value);
+    blur(el);
+    expect(el.value).toBe(1234.5);
+    expect(inputOf(el).hasAttribute("aria-invalid")).toBe(false);
+  });
+
+  it("una cuenta con miles de paréntesis dice que revise los paréntesis", () => {
+    const el = mount();
+    type(el, `=${"(".repeat(2000)}1${")".repeat(2000)}`);
+    expect(hintOf(el).textContent).toBe(NUMBER_LABELS.paren);
+  });
+});

@@ -25,6 +25,7 @@ import {
   evaluate,
   formatEdit,
   formatText,
+  machineText,
   numberToWords,
   roundValue,
   stepValue,
@@ -96,7 +97,11 @@ export class NxNumber extends Base {
 
   // ---------------------------------------------------------------- propiedades
 
-  /** El número (`null` vacío). En `percent` es la fracción: 0,19 es 19 %. Acepta también texto («1450000.5» o «1.450.000,5»). */
+  /**
+   * El número (`null` vacío). En `percent` es la fracción: 0,19 es 19 %. Acepta también texto
+   * («1450000.5» o «1.450.000,5»); desde mil billones (`NUMBER_LIMIT`), `null`. Mientras el campo
+   * tiene un texto que no se entiende (al salir, «1200x»), es `null` y el <form> no envía nada.
+   */
   get value(): number | null {
     return this.#value;
   }
@@ -456,6 +461,9 @@ export class NxNumber extends Base {
     const r = this.#read();
     if (!r.ok) {
       this.#bad = cap(errorText(r, this.#labels));
+      // Un texto que no se entiende no vale lo último que sí se entendió: `value` es `null` (y el
+      // <form> no envía nada) hasta que se corrija. La base de «+15%» y Escape siguen con lo confirmado.
+      this.#setLive(null);
       this.#paintHint(r);
       this.#paintValue();
       if (enter) this.#say(this.#bad);
@@ -608,7 +616,7 @@ export class NxNumber extends Base {
     const v = this.#value;
     const { min, max } = this;
     try {
-      i.setFormValue(v === null ? null : String(v));
+      i.setFormValue(v === null || this.#bad ? null : machineText(v));
       const anchor = this.#input;
       const L = this.#labels;
       if (this.#bad) i.setValidity({ badInput: true }, this.#bad, anchor);

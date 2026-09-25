@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { nxFormat } from "../src/core/locale";
-import { canRevert, changedKeys, cleanEvents, cleanFields, cleanRecord, dayLabel, filterEvents, groupByDay, isLongText, mergeEvents, relTime, revertChange, revertedKeys, stampText, stateAt, tally, valueText, wordDiff } from "../src/components/history/logic";
+import { atDate, atTime, canRevert, changedKeys, cleanEvents, cleanFields, cleanRecord, dayLabel, filterEvents, groupByDay, isLongText, mergeEvents, relTime, revertChange, revertedKeys, stampText, stateAt, tally, valueText, wordDiff } from "../src/components/history/logic";
 import type { DiffPart } from "../src/components/history/logic";
 
 const fmt = nxFormat("es-CO");
@@ -204,5 +204,22 @@ describe("filtros", () => {
     expect(ids({ query: "1.500" })).toEqual(["e2"]);
     expect(ids({ query: "aceros caribe" })).toEqual(["e2"]);
     expect(ids({ query: "andres" })).toEqual(["e1", "e2"]);
+  });
+});
+
+describe("revisión: días sin hora", () => {
+  it("«2026-09-12» es ese día en la hora local (no la medianoche UTC, que en Bogotá es el 11)", () => {
+    const d = atDate("2026-09-12");
+    expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()]).toEqual([2026, 8, 12, 0]);
+    expect(atTime("2026-02-30")).toBeNaN();
+    expect(atTime("2026-09-12T15:00:00Z")).toBe(Date.parse("2026-09-12T15:00:00Z"));
+    const evs = cleanEvents([
+      { id: "a", at: "2026-09-12", actor: "A" },
+      { id: "b", at: new Date(2026, 8, 11, 22).toISOString(), actor: "A" },
+      { id: "x", at: "2026-02-30", actor: "A" },
+    ]);
+    expect(evs.map((e) => e.id)).toEqual(["b", "a"]);
+    expect(groupByDay(evs).map((g) => g.map((e) => e.id))).toEqual([["a"], ["b"]]);
+    expect(dayLabel(atDate("2026-09-12"), new Date(2026, 8, 13, 9), "es-CO", "Hoy", "Ayer")).toBe("Ayer");
   });
 });

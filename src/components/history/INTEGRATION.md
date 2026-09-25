@@ -148,10 +148,14 @@ La máquina del tiempo de un registro: quién cambió qué y cuándo, y cómo es
   encuentra valores formateados.
 - **Revertir** un cambio que sigue vigente: `nx-history-revert` (cancelable), se aplica al instante
   con un evento que lo cuenta, se deshace desde el aviso (o Ctrl+Z) y, al acabar el tiempo,
-  `nx-history-commit`: ahí la app guarda.
+  `nx-history-commit`: ahí la app guarda. Deshacer no pisa un registro más nuevo que haya llegado
+  mientras tanto. Si el historial sale del DOM con una reversión pendiente, se registra en ese momento
+  (el evento ya no sube hasta `document`: escúchelo en el elemento).
 - **Notas** que aparecen al instante (`nx-history-comment`, cancelable).
-- **`source`:** una URL que devuelve `{events, record?, more?}`; al llegar al final de la línea pide
-  `?before=<id>` (la página anterior).
+- **`source`:** una URL http(s) del mismo origen (o de `allowOrigins`) que devuelve
+  `{events, record?, more?}`; al llegar al final de la línea pide `?before=<id>` (la página
+  anterior). Cambiarla empieza de cero: filtros, eventos y el `record` de la anterior (salvo uno
+  puesto por la app). Un `at` sin hora («2026-09-12») es ese día en la hora local.
 
 ```html
 <nx-history id="historia" heading="OC-2291" source="/compras/oc-2291/historial"></nx-history>

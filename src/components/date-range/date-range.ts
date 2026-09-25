@@ -10,6 +10,7 @@
 import { Base, boolAttr } from "../../core/define";
 import { h } from "../../core/dom";
 import { glyph } from "../../core/icons";
+import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
 import { foldText } from "../../core/text";
 import { addMonths, clampRange, dayOf, cleanPresets, compareRange, dayLabel, dayOfISO, daysText, DEFAULT_PRESETS, formatRange, isoOf, monthGrid, monthTitle, parsePhrase, presetRange, rangeDays, startOfWeek, todayOf, toRange, weekdays, weekStartOf, ymd, type ParseOptions } from "./logic";
@@ -219,7 +220,7 @@ export class NxDateRange extends Base {
     return this.#labels;
   }
   set labels(v: Partial<DateRangeLabels> | null | undefined) {
-    this.#labels = { ...DATE_RANGE_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#labels = mergeLabels(DATE_RANGE_LABELS, v);
     this.#paint();
   }
   get open(): boolean {
@@ -259,6 +260,13 @@ export class NxDateRange extends Base {
 
   disconnectedCallback(): void {
     this.#track?.();
+    // Un popover abierto que sale del DOM se oculta sin `beforetoggle` ni `toggle`: si `open` se
+    // quedara en `true`, al volver a conectarse el panel ya no abriría.
+    if (this.#isOpen) {
+      this.#isOpen = false;
+      this.#typed = "";
+      this.#field?.setAttribute("aria-expanded", "false");
+    }
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {

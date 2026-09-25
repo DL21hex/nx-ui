@@ -8,6 +8,20 @@ const TYPES = new Set<HistoryFieldType>(["text", "number", "money", "date", "sta
 const TONES = new Set<HistoryTone>(["neutral", "success", "warning", "danger"]);
 const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v : undefined);
 const idOf = (v: unknown) => str(v) ?? (typeof v === "number" ? String(v) : undefined);
+/**
+ * El instante de un `at` (ms). Un día sin hora («2026-09-12») es ese día en la hora local, no la
+ * medianoche UTC (que en Bogotá cae el día anterior); lo demás, como lo lee `Date.parse`.
+ */
+export function atTime(at: string): number {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(at.trim());
+  if (!m) return Date.parse(at);
+  const d = new Date(2000, +m[2] - 1, +m[3]);
+  d.setFullYear(+m[1]);
+  return d.getMonth() === +m[2] - 1 && d.getDate() === +m[3] ? d.getTime() : NaN;
+}
+/** `atTime` como `Date`. */
+export const atDate = (at: string): Date => new Date(atTime(at));
+
 /** Lo que cabe en un campo: texto, número, sí/no o nada. Un objeto no es un valor. */
 const prim = (v: unknown): HistoryValue => (typeof v === "string" || typeof v === "boolean" || (typeof v === "number" && Number.isFinite(v)) ? v : null);
 
@@ -53,7 +67,7 @@ export function cleanEvents(v: unknown): HistoryEvent[] {
     const at = str(o.at);
     const a = o.actor;
     const actor: HistoryActor | undefined = str(a) ? { name: a } : str(a?.name) ? { name: a.name, avatar: str(a.avatar) } : undefined;
-    if (!id || !at || Number.isNaN(Date.parse(at)) || !actor || seen.has(id)) continue;
+    if (!id || !at || Number.isNaN(atTime(at)) || !actor || seen.has(id)) continue;
     seen.add(id);
     const changes = Array.isArray(o.changes) ? o.changes.filter((c: unknown) => str((c as HistoryChange)?.field)).map((c: HistoryChange): HistoryChange => ({ field: c.field, from: prim(c.from), to: prim(c.to) })) : [];
     out.push({ id, at, actor, action: ACTIONS.has(o.action) ? o.action : "update", changes: changes.length ? changes : undefined, note: str(o.note), revertOf: idOf(o.revertOf) });
@@ -62,7 +76,7 @@ export function cleanEvents(v: unknown): HistoryEvent[] {
 }
 
 /** Del más viejo al más nuevo (estable: dos eventos del mismo instante conservan su orden). */
-export const sortEvents = (evs: readonly HistoryEvent[]): HistoryEvent[] => [...evs].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+export const sortEvents = (evs: readonly HistoryEvent[]): HistoryEvent[] => [...evs].sort((a, b) => atTime(a.at) - atTime(b.at));
 
 /** Junta dos listas de eventos (la segunda gana si un `id` se repite), en orden. */
 export function mergeEvents(a: readonly HistoryEvent[], b: readonly HistoryEvent[]): HistoryEvent[] {
@@ -188,10 +202,19 @@ export function valueText(f: HistoryField | undefined, v: unknown, fmt: NxFormat
 }
 
 const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+/** Los formateadores, uno por locale y opciones: crearlos por cada evento pintado es lo caro. */
+const dtfs = new Map<string, Intl.DateTimeFormat>();
+const rtfs = new Map<string, Intl.RelativeTimeFormat>();
+function dtf(locale: string, o: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const k = `${locale}|${JSON.stringify(o)}`;
+  let f = dtfs.get(k);
+  if (!f) dtfs.set(k, (f = new Intl.DateTimeFormat(locale, o)));
+  return f;
+}
 /** Una fecha con `Intl`, cambiando por un espacio los separadores que dice `drop`: sin «de» por
  *  defecto («12 sept 2026, 3:40 p. m.» y no «12 de sept de 2026…»), como `nxFormat().date`. */
 const fmtDate = (d: Date, locale: string, o: Intl.DateTimeFormatOptions, drop = /^\s*de\s*$/) =>
-  new Intl.DateTimeFormat(locale, o)
+  dtf(locale, o)
     .formatToParts(d)
     .map((p) => (p.type === "literal" && drop.test(p.value) ? " " : p.value))
     .join("")
@@ -213,7 +236,8 @@ export const stampText = (d: Date, locale: string): string => fmtDate(d, locale,
 export function relTime(d: Date, now: Date, locale: string): string {
   const s = (now.getTime() - d.getTime()) / 1000;
   if (s < 0 || s >= 86400) return clockText(d, locale);
-  const r = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" });
+  let r = rtfs.get(locale);
+  if (!r) rtfs.set(locale, (r = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" })));
   return s < 45 ? r.format(0, "second") : s < 3600 ? r.format(-Math.max(1, Math.floor(s / 60)), "minute") : r.format(-Math.floor(s / 3600), "hour");
 }
 
@@ -222,7 +246,7 @@ export function groupByDay(events: readonly HistoryEvent[]): HistoryEvent[][] {
   const out: HistoryEvent[][] = [];
   let key = NaN;
   for (let i = events.length - 1; i >= 0; i--) {
-    const k = dayStart(new Date(events[i].at));
+    const k = dayStart(atDate(events[i].at));
     if (k !== key) out.push([]), (key = k);
     out[out.length - 1].push(events[i]);
   }

@@ -13,7 +13,9 @@
 import { Base, boolAttr } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
+import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
+import { clampDelay } from "../../core/time";
 import { nxToast } from "../toast/toast";
 import "../toast/index";
 import { boardStep, cleanCards, cleanColumns, columnCards, columnTotals, fill, isLate, matchesCard, moveCard, positionOf, wipState } from "./logic";
@@ -56,10 +58,19 @@ const SPEED = 16;
 
 type Parts = { root: HTMLElement; list: HTMLUListElement; fold: HTMLButtonElement; count: HTMLElement; sum: HTMLElement; warn: HTMLElement };
 type Drag = { id: string; el: HTMLElement; pid: number; x0: number; y0: number; x: number; y: number; dx: number; dy: number; on: boolean; touch: boolean; timer: number; raf: number; ghost?: HTMLElement; to?: { column: string; index: number } };
-type Pending = { detail: KanbanMoveDetail };
+/** Un movimiento que espera su tiempo de deshacer: `done` si ya se registró antes (otro movimiento
+ *  de la misma tarjeta, o el tablero salió del DOM), y cómo cerrar su aviso. */
+type Pending = { detail: KanbanMoveDetail; done: boolean; close: () => void };
 
 let uid = 0;
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** El aviso con deshacer y cómo cerrarlo desde aquí (`nxToast` no devuelve su nodo: es el último
+ *  que agregó el toaster). Cerrarlo lo resuelve con `"dismiss"`, que vale como «hazlo». */
+function undoToast(opts: Parameters<typeof nxToast>[0] & object): { result: ReturnType<typeof nxToast>; close: () => void } {
+  const result = nxToast(opts);
+  const li = document.querySelector("nx-toaster .nx-toaster__list")?.lastElementChild;
+  return { result, close: () => li?.querySelector<HTMLElement>('[data-r="dismiss"]')?.click() };
+}
 const isCard = (n: Element) => n.classList.contains("nx-kanban__card");
 /** Cuánto desplazar cerca de un borde: negativo hacia el inicio, positivo hacia el final. */
 const edge = (p: number, lo: number, hi: number) => {
@@ -105,6 +116,8 @@ export class NxKanban extends Base {
     return this.#columns;
   }
   set columns(v: KanbanColumn[] | null | undefined) {
+    // Repintar con una tarjeta en el aire la duplicaría (su nodo viejo sigue en el arrastre).
+    this.#stop();
     this.#columns = cleanColumns(v);
     this.#folded = new Set(this.#columns.filter((c) => c.collapsed).map((c) => c.id));
     this.#render();
@@ -129,7 +142,8 @@ export class NxKanban extends Base {
   /** Milisegundos para deshacer un movimiento (7000). `0`: se registra al instante, sin aviso. */
   get undo(): number {
     const n = Number(this.getAttribute("undo"));
-    return this.hasAttribute("undo") && Number.isFinite(n) && n >= 0 ? n : 7000;
+    // Hasta ~24,8 días: más, y `setTimeout` lo dispararía al instante.
+    return this.hasAttribute("undo") && Number.isFinite(n) && n >= 0 ? clampDelay(n) : 7000;
   }
   set undo(v: number) {
     this.setAttribute("undo", String(v));
@@ -145,7 +159,8 @@ export class NxKanban extends Base {
     return this.#labels;
   }
   set labels(v: Partial<KanbanLabels> | null | undefined) {
-    this.#labels = { ...KANBAN_LABELS, ...(v && typeof v === "object" ? v : {}) };
+    this.#stop();
+    this.#labels = mergeLabels(KANBAN_LABELS, v);
     this.#render();
   }
 
@@ -174,6 +189,10 @@ export class NxKanban extends Base {
 
   disconnectedCallback(): void {
     this.#stop();
+    // Lo que esperaba su tiempo de deshacer se registra ya (con el tablero todavía a mano) y sus
+    // avisos se cierran: un «Deshacer» después ya no tendría dónde volver.
+    for (const p of this.#pending.values()) this.#settle(p);
+    this.#pending.clear();
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
@@ -185,6 +204,7 @@ export class NxKanban extends Base {
       }
       return;
     }
+    this.#stop();
     this.#render();
   }
 
@@ -592,7 +612,13 @@ export class NxKanban extends Base {
     addEventListener("pointerup", this.#onUp);
     addEventListener("pointercancel", this.#onCancel);
     addEventListener("keydown", this.#onKey, true);
+    addEventListener("blur", this.#onBlur);
   }
+
+  /** La ventana pierde el foco (Alt+Tab) a mitad del arrastre: el `pointerup` no va a llegar. */
+  #onBlur = (): void => {
+    this.#endDrag(false);
+  };
 
   #onKey = (e: KeyboardEvent): void => {
     if (e.key !== "Escape" || !this.#drag?.on) return;
@@ -604,6 +630,8 @@ export class NxKanban extends Base {
   #onMove = (e: PointerEvent): void => {
     const d = this.#drag;
     if (!d || e.pointerId !== d.pid) return;
+    // Sin botones apretados: el `pointerup` se perdió (se soltó fuera de la ventana). Se cancela.
+    if (e.buttons === 0) return this.#endDrag(false);
     d.x = e.clientX;
     d.y = e.clientY;
     if (!d.on) {
@@ -694,6 +722,7 @@ export class NxKanban extends Base {
     removeEventListener("pointerup", this.#onUp);
     removeEventListener("pointercancel", this.#onCancel);
     removeEventListener("keydown", this.#onKey, true);
+    removeEventListener("blur", this.#onBlur);
     if (!d.on) return;
     this.removeAttribute("data-dragging");
     this.#warn(null);
@@ -758,16 +787,23 @@ export class NxKanban extends Base {
         return "cancel";
       }
     }
-    // Si la tarjeta ya tenía un movimiento esperando, ese queda registrado: este sale de donde aquel la dejó.
+    // Si la tarjeta ya tenía un movimiento esperando, ese queda registrado (y su aviso se cierra:
+    // su «Deshacer» ya no podría devolverla): este sale de donde aquel la dejó.
     const prev = this.#pending.get(id);
-    if (prev) this.#emit("commit", prev.detail);
-    const mine: Pending = { detail };
+    if (prev) this.#settle(prev);
+    const mine: Pending = { detail, done: false, close: () => {} };
     this.#pending.set(id, mine);
 
     const n = columnCards(this.#cards, to).length;
     const over = wipState(n, col.wip) === "over";
     const message = `${fill(L.moved, { title: card.title, column: col.label })}${over ? ` · ${fill(L.overLimit, { n, wip: col.wip! })}` : ""}`;
-    const result = this.undo ? await nxToast({ message, undo: true, duration: this.undo, tone: over ? "warning" : "neutral" }) : "timeout";
+    let result: Awaited<ReturnType<typeof nxToast>> = "timeout";
+    if (this.undo) {
+      const t = undoToast({ message, undo: true, duration: this.undo, tone: over ? "warning" : "neutral" });
+      mine.close = t.close;
+      result = await t.result;
+    }
+    if (mine.done) return "commit";
     if (this.#pending.get(id) === mine) this.#pending.delete(id);
     else if (gen === this.#gen) return "commit";
     if (result === "undo") {
@@ -781,6 +817,14 @@ export class NxKanban extends Base {
     }
     this.#emit("commit", detail);
     return "commit";
+  }
+
+  /** Registra ya un movimiento pendiente y cierra su aviso. */
+  #settle(p: Pending): void {
+    if (p.done) return;
+    p.done = true;
+    this.#emit("commit", p.detail);
+    p.close();
   }
 
   #back(id: string, from: { column: string; index: number }): void {

@@ -187,7 +187,9 @@ formateado al salir.
   `numberToWords(n, {currency})` hace lo mismo en el backend.
 - **Formulario:** `name`, `required`, validez nativa con mensaje (`valueMissing`, `badInput`,
   `rangeUnderflow`/`rangeOverflow`), `reset` y `<fieldset disabled>`. El valor va en formato de
-  máquina («1450000.5»).
+  máquina, sin exponente («1450000.5», «0.0000001»). Con un texto que no se entiende al salir
+  («1200x»), `value` es `null` y el formulario no envía nada hasta que se corrija (Escape vuelve a
+  lo confirmado). Desde mil billones no hay valor (`value = 1e21` queda `null`).
 
 ```html
 <label for="precio">Precio unitario</label>

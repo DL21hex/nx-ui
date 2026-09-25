@@ -160,8 +160,9 @@ debajo, atajos y un calendario de dos meses.
   «hasta el 10 de abril», «15/03/2026 - 20/04/2026», «primer semestre», «semana 12», «en lo que va
   del año», «año fiscal» (con `fiscal-start`). Sin año, la más reciente que ya empezó (en
   septiembre, «Q4» es el del año pasado); en un rango, el extremo que no dice su año o su mes lo
-  toma del otro («15 al 20 de abril», «de noviembre a febrero»). «Último trimestre» es el anterior
-  completo; «últimos N días» cuenta hoy.
+  toma del otro («15 al 20 de abril», «de noviembre a febrero»); un día suelto que así quedaría
+  del lado equivocado es del mes de al lado («25 al 5»: del 25 del mes pasado al 5). «Último
+  trimestre» es el anterior completo; «últimos N días» cuenta hoy.
 - **Calendario** de dos meses (uno en móvil): clic en el inicio y en el fin con vista previa al
   pasar; teclado completo (flechas, `PageUp`/`PageDown`, con `Shift` un año, `Home`/`End`, `Enter`,
   `Escape` suelta un inicio a medias y luego cierra); `min`/`max` deshabilitan días; hoy marcado.

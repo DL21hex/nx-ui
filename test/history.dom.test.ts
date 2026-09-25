@@ -135,7 +135,7 @@ describe("<nx-history>", () => {
     expect(evs(el)[3].querySelector(".nx-history__when")!.getAttribute("aria-label")).toMatch(/^Ver cómo estaba · /);
   });
 
-  it("filtros por persona y por campo (con conteo), y un buscador", () => {
+  it("filtros por persona y por campo (con conteo), y un buscador", async () => {
     const el = mount();
     const chips = [...el.querySelectorAll<HTMLButtonElement>(".nx-history__chip")];
     expect(chips.map((c) => c.textContent)).toEqual(["ARAndrés Ruiz3", "DCDiana Castro1", "LGLaura Gómez1", "Estado2", "Monto2", "Proveedor2", "Observaciones2"]);
@@ -158,9 +158,13 @@ describe("<nx-history>", () => {
     expect(q.getAttribute("aria-label")).toBe("Buscar en el historial");
     q.value = "presupuesto";
     q.dispatchEvent(new Event("input", { bubbles: true }));
+    // La búsqueda espera un instante (no repinta por cada tecla).
+    expect(evs(el)).toHaveLength(5);
+    await sleep(150);
     expect(evs(el).map((li) => li.dataset.i)).toEqual(["2"]);
     q.value = "nada de esto";
     q.dispatchEvent(new Event("input", { bubbles: true }));
+    await sleep(150);
     expect(el.querySelector(".nx-history__feed")!.hasAttribute("hidden")).toBe(true);
     expect(el.querySelector(".nx-history__msg")!.textContent).toBe("Nada coincide con los filtros. Quitar filtros");
     el.querySelector<HTMLButtonElement>('[data-act="clear"]')!.click();
@@ -302,5 +306,101 @@ describe("<nx-history>", () => {
     expect(el.fields).toHaveLength(4);
     expect(el.querySelector(".nx-history__msg")!.textContent).toBe("Todavía no hay cambios. ");
     expect(range(el).disabled).toBe(true);
+  });
+});
+
+describe("<nx-history>: revisión", () => {
+  const page = (evs: HistoryEvent[], extra: object = {}) => new Response(JSON.stringify({ events: evs, ...extra }), { status: 200 });
+  const flush = async () => {
+    await sleep(0);
+    await sleep(0);
+  };
+
+  it("otro source: ni el registro, ni los filtros, ni «más» del anterior", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      calls.push(url);
+      return url.startsWith("/h/a") ? page(EVENTS, { record: RECORD, more: true }) : page([{ id: "b1", at: ago(H), actor: { name: "Ana" }, action: "comment", note: "otra OC" }], { more: false });
+    });
+    document.body.innerHTML = `<nx-history source="/h/a" locale="es-CO"></nx-history>`;
+    const el = document.querySelector("nx-history")!;
+    el.fields = FIELDS;
+    await flush();
+    expect(el.record.monto).toBe(1_250_000);
+    el.querySelector<HTMLButtonElement>('.nx-history__chip[data-v="Andrés Ruiz"]')!.click();
+    expect(evs(el)).toHaveLength(3);
+    el.setAttribute("source", "/h/b");
+    await flush();
+    expect(calls).toEqual(["/h/a", "/h/b"]);
+    expect(el.record).toEqual({});
+    expect(evs(el)).toHaveLength(1);
+    expect(el.querySelector('[data-act="more"]')).toBeNull();
+    // Un registro puesto por la app se queda.
+    el.record = { monto: 5 };
+    el.setAttribute("source", "/h/a?otra");
+    await flush();
+    expect(el.record).toEqual({ monto: 5 });
+  });
+
+  it("source solo pide a http(s) del mismo origen", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => (calls.push(url), page([])));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    document.body.innerHTML = `<nx-history source="javascript:alert(1)"></nx-history><nx-history source="https://otro.example/h"></nx-history>`;
+    await flush();
+    expect(calls).toEqual([]);
+    vi.mocked(console.warn).mockRestore();
+  });
+
+  it("labels con valores que no son texto no rompen el pintado", () => {
+    const el = mount();
+    el.setAttribute("labels", JSON.stringify({ heading: null, update: 5, comment: "dejó una nota" }));
+    expect(el.labels.update).toBe("actualizó");
+    expect(evs(el)[0].querySelector(".nx-history__line")!.textContent).toContain("actualizó");
+  });
+
+  it("sacado del DOM con una reversión pendiente: se registra ya y el aviso se cierra", async () => {
+    const el = mount('undo="5000"');
+    const got: string[] = [];
+    el.addEventListener("nx-history-commit", (e) => got.push(e.detail.change.field));
+    const p = el.revert("5", "monto");
+    await sleep(0);
+    expect(document.querySelectorAll(".nx-toast:not(.is-out)")).toHaveLength(1);
+    el.remove();
+    expect(got).toEqual(["monto"]);
+    expect(document.querySelectorAll(".nx-toast:not(.is-out)")).toHaveLength(0);
+    await expect(p).resolves.toBe("commit");
+    expect(got).toEqual(["monto"]);
+  });
+
+  it("«Deshacer» no pisa un registro más nuevo", async () => {
+    const el = mount('undo="5000"');
+    const p = el.revert("5", "monto");
+    await sleep(0);
+    expect(el.record.monto).toBe(1_000_000);
+    // Mientras corre el aviso, llega el registro del servidor con otro monto.
+    el.record = { ...RECORD, monto: 1_400_000 };
+    document.querySelector<HTMLButtonElement>('.nx-toast:not(.is-out) [data-r="undo"]')!.click();
+    await expect(p).resolves.toBe("undo");
+    expect(el.record.monto).toBe(1_400_000);
+    expect(evs(el)).toHaveLength(5);
+  });
+
+  it("dos notas en el mismo milisegundo no se pisan", () => {
+    const el = mount();
+    expect(el.comment("una")).toBe(true);
+    expect(el.comment("otra")).toBe(true);
+    expect(el.events.filter((e) => e.action === "comment").map((e) => e.note)).toEqual(["Queda poco presupuesto.", "una", "otra"]);
+  });
+
+  it("un evento con solo la fecha cae en su día local", () => {
+    const el = mount();
+    el.events = [{ id: "d", at: "2026-09-24", actor: { name: "Ana" }, action: "comment", note: "ayer" }];
+    expect(el.querySelector(".nx-history__day > h3")!.textContent).toBe("Ayer");
+  });
+
+  it("undo enorme se recorta al máximo de setTimeout", () => {
+    const el = mount('undo="3000000000"');
+    expect(el.undo).toBe(2_147_483_647);
   });
 });

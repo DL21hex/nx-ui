@@ -492,3 +492,44 @@ describe("SSR", () => {
     expect(mod.parseDateRange("Q3", { today: TODAY })).toEqual({ start: "2026-07-01", end: "2026-09-30" });
   });
 });
+
+describe("revisión: días sueltos y años extremos", () => {
+  // Hoy, jueves 24: el 25 todavía no empezó.
+  const q = (text: string) => p(text, { today: "2026-09-24" });
+
+  it("un día suelto toma el mes del otro extremo; del lado equivocado, el mes de al lado (no otro año)", () => {
+    expect(q("25 al 5")).toBe("2026-08-25/2026-09-05");
+    expect(q("del 25 al 5 de octubre")).toBe("2025-09-25/2025-10-05");
+    expect(q("del 15 de marzo al 20")).toBe("2026-03-15/2026-03-20");
+    expect(q("del 25 de marzo al 5")).toBe("2026-03-25/2026-04-05");
+    expect(q("del 20 al 30 de septiembre")).toBe("2026-09-20/2026-09-30");
+    expect(q("del 25 al 5 de enero")).toBe("2025-12-25/2026-01-05");
+    expect(q("del 26 a hoy")).toBe("2026-08-26/2026-09-24");
+    expect(q("del 25 al 5 de octubre de 2027")).toBe("2027-09-25/2027-10-05");
+    // Un día que no existe en ese mes no salta al siguiente.
+    expect(q("del 15 de febrero al 30")).toBeNull();
+    expect(q("del 31 al 5 de octubre")).toBeNull();
+    // Un día suelto solo acompaña a otro día.
+    expect(q("del 5 al 2025")).toBeNull();
+    expect(q("marzo al 15")).toBeNull();
+  });
+
+  it("los años 1–99 no se vuelven 19xx; fuera de 0001–9999 no hay ISO", () => {
+    expect(isoOf(dayOf(50, 3, 1))).toBe("0050-03-01");
+    expect(dayOfISO("0050-03-01")).toBe(dayOf(50, 3, 1));
+    expect(isoOf(dayOfISO("0001-01-01")!)).toBe("0001-01-01");
+    expect(dayOfISO("0000-12-31")).toBeNull();
+    expect(isoOf(dayOf(0, 12, 31))).toBe("");
+    expect(isoOf(dayOf(10000, 1, 1))).toBe("");
+    expect(isoOf(dayOf(9999, 12, 31))).toBe("9999-12-31");
+    expect(toRange("0099-02-28/0099-03-01")).toEqual({ start: "0099-02-28", end: "0099-03-01" });
+  });
+
+  it("una frase que se sale de los años válidos no da rango (ni 1970)", () => {
+    expect(p("últimos 99999999 días")).toBeNull();
+    expect(p("últimos 999999999999 días")).toBeNull();
+    expect(p("próximos 99999999 meses")).toBeNull();
+    expect(clampRange({ start: "-271764-01-01", end: "2026-01-01" }, "2020-01-01")).toBeNull();
+    expect(formatRange({ start: "x", end: "2026-01-01" }, "es-CO")).toBe("");
+  });
+});

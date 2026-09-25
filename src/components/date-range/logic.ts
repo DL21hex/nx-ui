@@ -11,23 +11,35 @@ import type { DateRange, DateRangeCompare, DateRangePreset } from "./types";
 const MS = 864e5;
 type Span = [number, number];
 
-/** El día (entero) de una fecha; el mes y el día pueden desbordar (`d = 0` es el último del mes anterior). */
-export const dayOf = (y: number, m: number, d: number): number => Math.round(Date.UTC(y, m - 1, d) / MS);
+/**
+ * El día (entero) de una fecha; el mes y el día pueden desbordar (`d = 0` es el último del mes
+ * anterior). Con `setUTCFullYear` y no `Date.UTC`, que convierte los años 0–99 en 1900–1999.
+ */
+export function dayOf(y: number, m: number, d: number): number {
+  const t = new Date(0);
+  t.setUTCFullYear(y, m - 1, d);
+  return Math.round(t.getTime() / MS);
+}
 /** Año, mes (1–12) y día de un día. */
 export function ymd(day: number): [number, number, number] {
   const d = new Date(day * MS);
   return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
 }
-export const isoOf = (day: number): string => new Date(day * MS).toISOString().slice(0, 10);
-const monthLen = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+const pad = (n: number, w = 2) => String(n).padStart(w, "0");
+/** El día en ISO («2026-07-01»); `""` fuera de los años 0001–9999, que no se escriben con 4 cifras. */
+export function isoOf(day: number): string {
+  const [y, m, d] = ymd(day);
+  return y >= 1 && y <= 9999 ? `${pad(y, 4)}-${pad(m)}-${pad(d)}` : "";
+}
+const monthLen = (y: number, m: number) => ymd(dayOf(y, m + 1, 0))[2];
 /** El día si la fecha existe (el 30 de febrero no), o `null`. */
 function valid(y: number, m: number, d: number): number | null {
   return m >= 1 && m <= 12 && d >= 1 && d <= monthLen(y, m) ? dayOf(y, m, d) : null;
 }
-/** «2026-07-01» → día; cualquier otra cosa (o una fecha que no existe) → `null`. */
+/** «2026-07-01» → día; cualquier otra cosa (una fecha que no existe, el año 0000) → `null`. */
 export function dayOfISO(v: unknown): number | null {
   const m = typeof v === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim()) : null;
-  return m ? valid(+m[1], +m[2], +m[3]) : null;
+  return m && +m[1] >= 1 ? valid(+m[1], +m[2], +m[3]) : null;
 }
 /** Suma meses conservando el día, o el último del mes si no existe (31 mar − 1 mes → 28/29 feb). */
 export function addMonths(day: number, n: number): number {
@@ -125,14 +137,10 @@ interface U {
   m?: number;
   /** Sin año escrito: el año lo puso la regla (o el otro extremo del rango). */
   yl?: boolean;
-  /** Un día suelto («15»): solo vale frente a otro día. */
-  bare?: boolean;
 }
-/** Lo que el otro extremo de un rango le presta a este: año, mes, y si vale un día suelto («del 1 al 15»). */
+/** Lo que el otro extremo de un rango le presta a este: el año. */
 interface Force {
   year?: number;
-  month?: number;
-  bare?: boolean;
 }
 
 const fixed = (r: Span): U => {
@@ -249,32 +257,78 @@ function unit(s: string, c: Ctx, f: Force = {}): U | null {
     const y = x[3] && (x[3].length === 2 ? String(2000 + +x[3]) : x[3]);
     return yearly(dayBuild(+x[2], +x[1]), y, f, c, +x[2]);
   }
-  // Un día suelto, solo como extremo de un rango: «del 1 al 15», «15 al 20 de abril».
-  if (f.bare && (x = /^(\d{1,2})$/.exec(t))) {
-    const [y, m] = ymd(T);
-    const u = f.month !== undefined ? yearly(dayBuild(f.month, +x[1]), undefined, f, c, f.month) : valid(y, m, +x[1]) === null ? null : fixed([dayOf(y, m, +x[1]), dayOf(y, m, +x[1])]);
-    return u && { ...u, bare: true };
-  }
+  // Un día suelto («15») solo vale como extremo de un rango: lo resuelve `pair`.
   return null;
+}
+
+/** El número de un día suelto («15», «el 15»), o 0. «2025-13» no es «de 2025 al 13»: un día
+ *  suelto solo acompaña a otro día. */
+const bareDay = (s: string) => {
+  const x = /^(\d{1,2})$/.exec(s.replace(FILL, ""));
+  return x ? +x[1] : 0;
+};
+
+/**
+ * Un día suelto frente a otro día: toma el mes y el año del otro extremo. Si así queda del lado
+ * equivocado, es el mes de al lado, no otro año: «25 al 5» es del 25 del mes pasado al 5.
+ * `dir` = −1 si el día suelto es el inicio (va antes de `day`), +1 si es el fin.
+ */
+function besideDay(n: number, day: number, dir: -1 | 1): number | null {
+  const [y, m, d] = ymd(day);
+  // Del lado correcto, ese mes (aunque no exista: «del 15 de febrero al 30» no es el 30 de marzo).
+  if (dir < 0 ? n <= d : n >= d) return valid(y, m, n);
+  const [y2, m2] = ymd(dayOf(y, m + dir, 1));
+  return valid(y2, m2, n);
 }
 
 /** Dos extremos: el que no dice su año (o su mes) lo toma del otro. */
 function pair(ls: string, rs: string, c: Ctx): Span | null {
-  let r = unit(rs, c, { bare: true });
+  const dl = bareDay(ls);
+  const dr = bareDay(rs);
+  if (dl && dr) {
+    // «del 1 al 15»: los dos en el mes de hoy (el inicio, en el anterior si queda después del fin).
+    const [y, m] = ymd(c.t);
+    const b = valid(y, m, dr);
+    const a = b === null ? null : besideDay(dl, b, -1);
+    return a === null || b === null ? null : [a, b];
+  }
+  if (dr) {
+    // «del 15 de marzo al 20»: el fin, en el mes del inicio (o el siguiente).
+    const l = unit(ls, c);
+    if (!l || l.a !== l.b) return null;
+    const b = besideDay(dr, l.a, 1);
+    return b === null ? null : [l.a, b];
+  }
+  if (dl) {
+    // «15 al 20 de abril»: el inicio, en el mes del fin (o el anterior). Sin año escrito, el año es
+    // el del inicio más reciente que ya empezó (como una expresión sola).
+    const lead = (r: U | null): Span | null => {
+      if (!r || r.a !== r.b) return null;
+      const a = besideDay(dl, r.a, -1);
+      return a === null ? null : [a, r.b];
+    };
+    const r = unit(rs, c);
+    if (!r?.yl) return lead(r);
+    const y0 = ymd(c.t)[0];
+    for (let y = y0 + 1; y > y0 - 8; y--) {
+      const s = lead(unit(rs, c, { year: y }));
+      if (s && s[0] <= c.t) return s;
+    }
+    return null;
+  }
+  let r = unit(rs, c);
   if (!r) return null;
-  const hint: Force = { bare: true, month: r.m };
-  let l = unit(ls, c, r.yl ? hint : { ...hint, year: r.y });
+  let l = unit(ls, c, r.yl ? {} : { year: r.y });
   if (!l) return null;
   if (!r.yl) {
     // «diciembre a febrero de 2026»: diciembre es del año anterior.
-    if (l.yl && l.a > r.b) l = unit(ls, c, { ...hint, year: r.y - 1 });
+    if (l.yl && l.a > r.b) l = unit(ls, c, { year: r.y - 1 });
   } else {
     // «de noviembre a febrero»: el fin es el primero que viene después del inicio.
-    r = unit(rs, c, { bare: true, year: l.y });
-    if (r && r.b < l.a) r = unit(rs, c, { bare: true, year: l.y + 1 });
+    r = unit(rs, c, { year: l.y });
+    if (r && r.b < l.a) r = unit(rs, c, { year: l.y + 1 });
   }
-  // «2025-13» no es «de 2025 al 13»: un día suelto solo acompaña a otro día.
-  if (!l || !r || ((l.bare || r.bare) && (l.a !== l.b || r.a !== r.b))) return null;
+  if (!l || !r) return null;
   return l.a <= r.b ? [l.a, r.b] : [r.a, l.b];
 }
 
@@ -330,7 +384,10 @@ export function parsePhrase(text: string, opts: ParseOptions = {}): DateRange | 
   if (!t) return null;
   const c: Ctx = { t: todayOf(opts.today), ws: intIn(opts.weekStart, 1, 7, 1), fs: intIn(opts.fiscalStart, 1, 12, 1), min: dayOfISO(opts.min) ?? undefined };
   const r = span(t, c);
-  return r && { start: isoOf(r[0]), end: isoOf(r[1]) };
+  // «últimos 99999999 días» empezaría antes del año 1: no es un rango que se pueda escribir.
+  const start = r ? isoOf(r[0]) : "";
+  const end = r ? isoOf(r[1]) : "";
+  return start && end ? { start, end } : null;
 }
 
 // ---------------------------------------------------------------- rangos
@@ -351,8 +408,10 @@ export const rangeDays = (r: DateRange): number => dayOfISO(r.end)! - dayOfISO(r
 
 /** Recorta a `min`/`max`. `null` si queda por fuera del todo; `clamped` si se recortó. */
 export function clampRange(r: DateRange, min?: string | null, max?: string | null): (DateRange & { clamped?: true }) | null {
-  let a = dayOfISO(r.start)!;
-  let b = dayOfISO(r.end)!;
+  let a = dayOfISO(r.start);
+  let b = dayOfISO(r.end);
+  // Un extremo inválido no es el 1970-01-01 (el `null` como número).
+  if (a === null || b === null) return null;
   const lo = dayOfISO(min);
   const hi = dayOfISO(max);
   let clamped = false;
@@ -445,8 +504,11 @@ const SHORT: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year
 
 /** «1 jul – 30 sept 2026», «1 – 30 sept 2026», «15 dic 2025 – 10 ene 2026», «25 sept 2026». */
 export function formatRange(r: DateRange, locale: string): string {
-  const a = new Date(dayOfISO(r.start)! * MS);
-  const b = new Date(dayOfISO(r.end)! * MS);
+  const x = dayOfISO(r.start);
+  const y = dayOfISO(r.end);
+  if (x === null || y === null) return "";
+  const a = new Date(x * MS);
+  const b = new Date(y * MS);
   const f = dtf(locale, "s", SHORT);
   if (r.start === r.end) return tidy(f.formatToParts(a));
   try {

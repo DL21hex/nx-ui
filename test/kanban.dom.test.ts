@@ -319,3 +319,98 @@ describe("<nx-kanban>", () => {
     expect(el.querySelector(".nx-kanban__add")!.textContent).toBe("Add");
   });
 });
+
+describe("<nx-kanban>: revisión", () => {
+  const ptr = (type: string, o: PointerEventInit = {}) => new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", ...o });
+  /** Arrastre con el puntero (en happy-dom todo mide 0: con x = 0 cae en la última columna). */
+  function drag(el: NxKanban, id: string) {
+    card(el, id).dispatchEvent(ptr("pointerdown", { clientX: 0, clientY: 0, buttons: 1 }));
+    window.dispatchEvent(ptr("pointermove", { clientX: 0, clientY: 20, buttons: 1 }));
+  }
+  const copies = (el: NxKanban, id: string) => el.querySelectorAll(`.nx-kanban__card[data-id="${id}"]`).length;
+
+  it("labels con valores que no son texto: el movimiento y su aviso siguen", async () => {
+    const el = mount('undo="30"');
+    el.setAttribute("labels", JSON.stringify({ moved: null, undone: 5, board: "Compras" }));
+    expect(el.labels.moved).toBe("{title} → {column}");
+    const log = events(el);
+    const p = el.move("2291", "ok");
+    expect(document.querySelector(".nx-toast__msg")!.textContent).toBe("OC-2291 → Aprobado");
+    await expect(p).resolves.toBe("commit");
+    expect(log).toEqual(["move:2291→ok@1", "commit:2291→ok@1"]);
+  });
+
+  it("sacado del DOM con un deshacer pendiente: se registra ya (en el elemento) y el aviso se cierra", async () => {
+    const el = mount('undo="5000"');
+    const log = events(el);
+    const p = el.move("2291", "ok");
+    expect(document.querySelectorAll(".nx-toast:not(.is-out)")).toHaveLength(1);
+    el.remove();
+    expect(log).toEqual(["move:2291→ok@1", "commit:2291→ok@1"]);
+    expect(document.querySelectorAll(".nx-toast:not(.is-out)")).toHaveLength(0);
+    await expect(p).resolves.toBe("commit");
+    expect(log).toHaveLength(2);
+  });
+
+  it("la misma tarjeta movida otra vez: el primer aviso se cierra (su «Deshacer» ya no podría)", async () => {
+    const el = mount('undo="5000"');
+    const log = events(el);
+    const p1 = el.move("2291", "review");
+    const p2 = el.move("2291", "ok");
+    expect(log).toEqual(["move:2291→review@2", "move:2291→ok@1", "commit:2291→review@2"]);
+    await expect(p1).resolves.toBe("commit");
+    const alive = document.querySelectorAll(".nx-toast:not(.is-out)");
+    expect(alive).toHaveLength(1);
+    expect(alive[0].querySelector(".nx-toast__msg")!.textContent).toBe("OC-2291 → Aprobado");
+    alive[0].querySelector<HTMLButtonElement>('[data-r="undo"]')!.click();
+    await expect(p2).resolves.toBe("undo");
+    expect(ids(el, "review")).toContain("2291");
+  });
+
+  it("repintar a mitad de un arrastre lo cancela: la tarjeta no se duplica", () => {
+    const el = mount();
+    drag(el, "2291");
+    expect(el.hasAttribute("data-dragging")).toBe(true);
+    expect(el.querySelector(".nx-kanban__ghost")).not.toBeNull();
+    el.setAttribute("heading", "Otro");
+    expect(el.hasAttribute("data-dragging")).toBe(false);
+    expect(el.querySelector(".nx-kanban__ghost")).toBeNull();
+    window.dispatchEvent(ptr("pointermove", { clientX: 0, clientY: 40, buttons: 1 }));
+    window.dispatchEvent(ptr("pointerup", { clientX: 0, clientY: 40 }));
+    expect(copies(el, "2291")).toBe(1);
+    expect(ids(el, "draft")).toEqual(["2291", "2310"]);
+    // Con el teclado, igual: levantada y cambian las columnas o los textos.
+    const c = card(el, "2310");
+    c.focus();
+    key(c, " ");
+    key(c, "ArrowRight");
+    el.labels = { board: "Tablero de compras" };
+    expect(el.hasAttribute("data-moving")).toBe(false);
+    expect(copies(el, "2310")).toBe(1);
+    expect(ids(el, "draft")).toEqual(["2291", "2310"]);
+  });
+
+  it("un arrastre sin pointerup (Alt+Tab, soltado fuera) no se queda colgado", () => {
+    const el = mount();
+    const log = events(el);
+    drag(el, "2291");
+    // El siguiente movimiento llega sin botones apretados.
+    window.dispatchEvent(ptr("pointermove", { clientX: 0, clientY: 60, buttons: 0 }));
+    expect(el.hasAttribute("data-dragging")).toBe(false);
+    expect(el.querySelector(".nx-kanban__ghost")).toBeNull();
+    expect(ids(el, "draft")).toEqual(["2291", "2310"]);
+    // La ventana pierde el foco.
+    drag(el, "2310");
+    expect(el.hasAttribute("data-dragging")).toBe(true);
+    window.dispatchEvent(new Event("blur"));
+    expect(el.hasAttribute("data-dragging")).toBe(false);
+    window.dispatchEvent(ptr("pointerup", { clientX: 0, clientY: 60 }));
+    expect(log).toEqual([]);
+    expect(ids(el, "draft")).toEqual(["2291", "2310"]);
+  });
+
+  it("undo enorme se recorta al máximo de setTimeout", () => {
+    const el = mount('undo="3000000000"');
+    expect(el.undo).toBe(2_147_483_647);
+  });
+});

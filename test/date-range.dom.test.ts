@@ -397,3 +397,29 @@ describe("<nx-date-range> y el formulario", () => {
     expect(el.value).toEqual({ start: "2026-05-01", end: "2026-05-02" });
   });
 });
+
+describe("<nx-date-range>: revisión", () => {
+  it("sacado del DOM con el panel abierto (sin beforetoggle), vuelve a abrir al reconectarse", () => {
+    const el = mount();
+    el.show();
+    expect(el.open).toBe(true);
+    expect(field(el).getAttribute("aria-expanded")).toBe("true");
+    // El navegador oculta el popover sin eventos: aquí, simplemente no se emiten.
+    el.remove();
+    expect(el.open).toBe(false);
+    expect(field(el).getAttribute("aria-expanded")).toBe("false");
+    document.body.append(el);
+    el.show();
+    expect(el.open).toBe(true);
+  });
+
+  it("labels de un backend con valores que no son texto no rompen el pintado", () => {
+    const el = mount();
+    el.setAttribute("labels", JSON.stringify({ placeholder: null, day: 5, days: "{n} jornadas" }));
+    expect(el.labels.placeholder).toBe(DATE_RANGE_LABELS.placeholder);
+    expect(el.labels.day).toBe(DATE_RANGE_LABELS.day);
+    expect(field(el).textContent).toContain(DATE_RANGE_LABELS.placeholder);
+    el.value = "2026-09-01/2026-09-03";
+    expect(field(el).textContent).toContain("3 jornadas");
+  });
+});

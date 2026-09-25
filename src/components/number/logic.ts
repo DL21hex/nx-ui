@@ -12,25 +12,45 @@ import type { NumberAlign, NumberErrorCode, NumberFormat, NumberLabels, NumberRe
 /** Más allá, un `number` ya no guarda los pesos exactos (2^53 ≈ 9 × 10^15). */
 export const NUMBER_LIMIT = 1e15;
 
-/** Quita la basura de coma flotante (0,1 + 0,2) y el −0. */
+/**
+ * Quita la basura de coma flotante (0,1 + 0,2) y el −0. Con 15 cifras significativas, pero nunca
+ * menos de dos decimales: desde 10^13 los centavos no caben en 15 cifras y se perderían.
+ */
 export function tidy(n: number): number {
-  const v = Number(n.toPrecision(15));
+  if (!Number.isFinite(n)) return n;
+  const int = n ? Math.floor(Math.log10(Math.abs(n))) + 1 : 1;
+  const v = Number(n.toPrecision(Math.min(17, Math.max(15, int + 2))));
   return v === 0 ? 0 : v;
 }
 
 /** Redondea a `d` decimales, bien también en los casos de siempre (1,005 → 1,01). */
 export function roundTo(n: number, d: number): number {
   const f = 10 ** d;
-  return tidy((Math.sign(n) * Math.round(Number((Math.abs(n) * f).toPrecision(15)))) / f);
+  const m = Math.abs(n) * f;
+  // Desde 10^15 un `number` ya no tiene decimales que limpiar: `toPrecision(15)` se comería cifras.
+  const v = (Math.sign(n) * Math.round(m >= 1e15 ? m : Number(m.toPrecision(15)))) / f;
+  // Un entero entre una potencia de 10 da el decimal más cercano: no hace falta `tidy`.
+  return v === 0 ? 0 : v;
+}
+
+/**
+ * El número en formato de máquina, sin exponente: «1450000.5», «0.0000001» (no «1e-7»). Es lo que
+ * va al <form>.
+ */
+export function machineText(n: number): string {
+  const s = String(n);
+  return /e/i.test(s) && Math.abs(n) < 1 ? n.toFixed(20).replace(/\.?0+$/, "") : s;
 }
 
 // ---------------------------------------------------------------- limpiar lo que llega (BDUI)
 
-/** Un número finito, o un texto en formato de máquina («1450000.5»); lo demás es `null`. */
+/**
+ * Un número finito, o un texto en formato de máquina («1450000.5»); lo demás es `null`. Desde
+ * `NUMBER_LIMIT` (mil billones) tampoco: «1e21» no es un monto que el campo pueda guardar.
+ */
 export function cleanNumber(v: unknown): number | null {
-  if (typeof v === "number") return Number.isFinite(v) ? v : null;
-  if (typeof v === "string" && /^\s*-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?\s*$/i.test(v)) return Number(v);
-  return null;
+  const n = typeof v === "number" ? v : typeof v === "string" && /^\s*-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?\s*$/i.test(v) ? Number(v) : NaN;
+  return Number.isFinite(n) && Math.abs(n) < NUMBER_LIMIT ? n : null;
 }
 
 export function cleanFormat(v: unknown): NumberFormat {
@@ -80,6 +100,28 @@ class Fail {
 }
 
 const isEnglish = (locale: string) => /^en\b/i.test(locale);
+
+/** Paréntesis anidados que se aceptan: más no es una cuenta, y la recursión no se desborda. */
+const MAX_DEPTH = 100;
+
+/**
+ * Cifras de otros sistemas a 0–9: «١٢٣» (árabe), «۱۲۳» (persa), «１２３» (ancho completo). Las
+ * cifras de un sistema son 10 seguidas en Unicode: la posición en su tramo es su valor. También
+ * los separadores árabes («٫» decimal, «٬» de miles, «٪») y las marcas de dirección.
+ */
+export function latinDigits(s: string): string {
+  return s
+    .replace(/\p{Nd}/gu, (c) => {
+      let cp = c.codePointAt(0)!;
+      let k = 0;
+      while (k < 60 && /\p{Nd}/u.test(String.fromCodePoint(cp - 1))) cp--, k++;
+      return String(k % 10);
+    })
+    .replace(/\u066b/g, ".")
+    .replace(/\u066c/g, ",")
+    .replace(/\u066a/g, "%")
+    .replace(/[\u200e\u200f\u061c]/g, "");
+}
 
 /**
  * Los sufijos que multiplican. «m» y «M» son millón (el «mil» se escribe entero). «mm» es la
@@ -228,15 +270,17 @@ function evalTokens(toks: Tok[], unit: boolean): number {
     }
     return left;
   };
+  // Sin recursión: «=------1» no gasta la pila.
   const unary = (): Val => {
-    const t = peek();
-    if (t?.t === "op" && (t.v === "-" || t.v === "+")) {
+    let neg = false;
+    for (let t = peek(); t?.t === "op" && (t.v === "-" || t.v === "+"); t = peek()) {
       i++;
-      const u = unary();
-      return t.v === "-" ? { v: -u.v, pct: u.pct } : u;
+      if (t.v === "-") neg = !neg;
     }
-    return postfix();
+    const u = postfix();
+    return neg ? { v: -u.v, pct: u.pct } : u;
   };
+  let depth = 0;
   const postfix = (): Val => {
     const p = primary();
     for (let t = peek(); t?.t === "mul"; t = peek()) {
@@ -254,7 +298,9 @@ function evalTokens(toks: Tok[], unit: boolean): number {
     if (!t) throw new Fail("incomplete");
     if (t.t === "num") return { v: t.v, pct: false };
     if (t.t === "(") {
+      if (++depth > MAX_DEPTH) throw new Fail("paren");
       const v = expr();
+      depth--;
       if (toks[i++]?.t !== ")") throw new Fail("paren");
       return { v: v.v, pct: false };
     }
@@ -334,7 +380,7 @@ export function evaluate(text: string, opts: EvaluateOptions = {}): NumberReadin
   const locale = opts.locale || "es-CO";
   const unit = opts.format === "percent";
   const base = opts.base === null || opts.base === undefined || !Number.isFinite(opts.base) ? null : unit ? opts.base * 100 : opts.base;
-  const s = String(text ?? "")
+  const s = latinDigits(String(text ?? ""))
     .replace(/[    \t\r\n]/g, " ")
     .replace(/[−‒–—]/g, "-")
     .replace(/[×·]/g, "*")
@@ -365,7 +411,8 @@ export function evaluate(text: string, opts: EvaluateOptions = {}): NumberReadin
     return { ok: true, value: tidy(unit ? v / 100 : v), calc };
   } catch (e) {
     if (e instanceof Fail) return e.token ? { ok: false, error: e.error, token: e.token } : { ok: false, error: e.error };
-    throw e;
+    // Nunca lanza: lo que se escribe no puede romper el campo (ni un backend que lo use).
+    return { ok: false, error: "unknown", token: s.length > 12 ? `${s.slice(0, 12)}…` : s };
   }
 }
 
@@ -440,7 +487,8 @@ export function formatEdit(v: number, o: FormatOptions = {}): string {
   const n = f === "percent" ? tidy(v * 100) : v;
   // Un monto con centavos los muestra todos («1.200,50», no «1.200,5»).
   const min = f === "money" && roundTo(n, max) % 1 !== 0 ? max : 0;
-  return space(nf(o.locale || "es-CO", { minimumFractionDigits: min, maximumFractionDigits: max }).format(n));
+  // Siempre con cifras latinas (en ar-EG saldría «١٬٢٣٤٫٥»): es lo que se edita y se vuelve a leer.
+  return space(nf(o.locale || "es-CO", { minimumFractionDigits: min, maximumFractionDigits: max, numberingSystem: "latn" }).format(n));
 }
 
 /** El símbolo que acompaña al campo y de qué lado va, según el locale: «$» antes, «€» o «%» después. */

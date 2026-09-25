@@ -122,7 +122,9 @@ las flechas mueven entre posiciones y columnas, `Espacio` suelta y `Escape` canc
 anunciado al lector de pantalla («Tarjeta OC-2291 levantada. Columna Aprobado, posición 2 de 5»).
 
 Nada espera al servidor: el movimiento se ve al instante y se deshace mientras corre el aviso (o con
-`Ctrl`+`Z`); la app registra en el backend cuando llega `nx-kanban-commit`. Una columna con `confirm`
+`Ctrl`+`Z`); la app registra en el backend cuando llega `nx-kanban-commit`. Si el tablero sale del DOM
+con un movimiento pendiente, se registra en ese momento y el aviso se cierra (el evento ya no sube
+hasta `document`: escúchelo en el elemento). Una columna con `confirm`
 pide confirmación con impacto antes de aceptar la tarjeta (el protocolo de `nxConfirm`, que se carga
 solo cuando hace falta; si se niega, la tarjeta vuelve). Una con `wip` se marca en rojo cuando se pasa
 de su límite («6/5») y lo avisa al llevarle una tarjeta. Cada columna muestra cuántas tarjetas tiene y
