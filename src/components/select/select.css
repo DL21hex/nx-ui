@@ -53,7 +53,7 @@ nx-select [hidden] {
 .nx-select__placeholder {
   flex: 1;
   overflow: hidden;
-  color: var(--nx-text-quaternary);
+  color: var(--nx-text-tertiary);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -94,7 +94,7 @@ nx-select [hidden] {
   padding: 2px 3px 2px 8px;
   border-radius: 999px;
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 12px;
   font-weight: 550;
   white-space: nowrap;
@@ -120,7 +120,7 @@ nx-select [hidden] {
   block-size: 28px;
   border-radius: 50%;
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 10.5px;
   font-weight: 650;
   letter-spacing: 0.02em;
@@ -213,7 +213,7 @@ nx-select mark {
   font: inherit;
 
   &::placeholder {
-    color: var(--nx-text-quaternary);
+    color: var(--nx-text-tertiary);
   }
   &:focus {
     border-color: var(--nx-primary-border);
@@ -228,7 +228,7 @@ nx-select mark {
 }
 .nx-select__hint {
   margin: 6px 4px 0;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 11.5px;
 }
 .nx-select__list {
@@ -254,7 +254,7 @@ nx-select mark {
   background: var(--nx-hover);
 }
 .nx-select__opt[aria-selected="true"] .nx-select__primary {
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
 }
 .nx-select__opt[aria-disabled="true"] {
   cursor: not-allowed;
@@ -272,7 +272,7 @@ nx-select mark {
 .nx-select__check {
   inline-size: 15px;
   block-size: 15px;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   visibility: hidden;
 }
 .nx-select__opt[aria-selected="true"] .nx-select__check {

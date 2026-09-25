@@ -99,7 +99,7 @@ nx-toaster .nx-glyph {
   border: 0;
   border-radius: var(--nx-radius-md);
   background: none;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font: inherit;
   font-weight: 600;
   cursor: pointer;

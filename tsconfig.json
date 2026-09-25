@@ -13,5 +13,5 @@
     "jsxImportSource": "solid-js",
     "types": ["vite/client"]
   },
-  "include": ["src", "test", "gallery", "examples"]
+  "include": ["src", "test", "gallery", "examples", "e2e", "playwright.config.ts"]
 }

@@ -389,6 +389,62 @@ describe("<nx-grid>", () => {
     expect(opened).toEqual(["3", "2"]);
   });
 
+  it("deshacer y rehacer: Ctrl+Z, Ctrl+Y, Ctrl+Mayús+Z; un pegado es un solo paso", () => {
+    const el = mount();
+    const sources: string[] = [];
+    el.addEventListener("nx-grid-change", (e) => sources.push(e.detail.source));
+    const undoBtn = el.querySelector<HTMLButtonElement>(".nx-grid__icon")!;
+    expect(undoBtn.hidden).toBe(false);
+    expect(undoBtn.disabled).toBe(true);
+    // Una edición y un pegado de dos filas.
+    key(el, "End");
+    key(el, "9");
+    const input = el.querySelector<HTMLInputElement>(".nx-grid__input")!;
+    input.value = "9";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    const paste = new DataTransfer();
+    paste.setData("text/plain", "10\n20");
+    scroll(el).dispatchEvent(new ClipboardEvent("paste", { clipboardData: paste, bubbles: true, cancelable: true }));
+    expect(el.rows.map((r) => r.monto)).toEqual([9, 10, 20, 3_000_000]);
+    expect(undoBtn.disabled).toBe(false);
+    // Deshacer el pegado vuelve las dos celdas; la marca de editada se va si vuelven al original.
+    key(el, "z", { ctrlKey: true });
+    expect(el.rows.map((r) => r.monto)).toEqual([9, 1_000_000, 500_000, 3_000_000]);
+    expect(el.querySelector('[data-r="1"] > [data-c="3"]')!.classList.contains("is-edited")).toBe(false);
+    expect(el.querySelector('[data-r="0"] > [data-c="3"]')!.classList.contains("is-edited")).toBe(true);
+    // Lo deshecho queda seleccionado.
+    expect(el.querySelectorAll(".is-sel")).toHaveLength(2);
+    key(el, "z", { ctrlKey: true });
+    expect(el.rows[0].monto).toBe(8_000_000);
+    expect(el.canUndo).toBe(false);
+    key(el, "y", { ctrlKey: true });
+    key(el, "Z", { ctrlKey: true, shiftKey: true });
+    expect(el.rows.map((r) => r.monto)).toEqual([9, 10, 20, 3_000_000]);
+    expect(sources).toEqual(["edit", "paste", "undo", "undo", "redo", "redo"]);
+    // Un cambio nuevo borra lo que había para rehacer.
+    key(el, "z", { ctrlKey: true });
+    expect(el.canRedo).toBe(true);
+    key(el, "Delete");
+    expect(el.canRedo).toBe(false);
+  });
+
+  it("si la app cancela nx-grid-change, deshacer no pierde el paso; filas nuevas limpian el historial", () => {
+    const el = mount();
+    key(el, "End");
+    key(el, "Delete");
+    expect(el.rows[0].monto).toBeNull();
+    const block = (e: Event) => e.preventDefault();
+    el.addEventListener("nx-grid-change", block);
+    expect(el.undo()).toBe(false);
+    expect(el.canUndo).toBe(true);
+    el.removeEventListener("nx-grid-change", block);
+    expect(el.undo()).toBe(true);
+    expect(el.rows[0].monto).toBe(8_000_000);
+    el.redo();
+    el.rows = ROWS;
+    expect(el.canUndo).toBe(false);
+  });
+
   it("etiquetas propias y BDUI", () => {
     document.body.innerHTML = "<div id=t></div>";
     const [el] = render({ component: "Grid", props: { columns: COLS, rows: ROWS, labels: { rows: "{n} registros" } } }, document.getElementById("t")!) as NxGrid[];

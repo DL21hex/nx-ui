@@ -65,7 +65,7 @@ nx-sidemenu > [slot="footer"] {
 .nx-sidemenu__section {
   padding: 14px 10px 6px;
   overflow: hidden;
-  color: var(--nx-text-quaternary);
+  color: var(--nx-text-tertiary);
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -106,7 +106,7 @@ nx-sidemenu > [slot="footer"] {
 .nx-sidemenu__item[aria-current="page"],
 .nx-sidemenu__item[data-active] {
   background: var(--nx-nav-active-bg);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-weight: 550;
 }
 .nx-sidemenu__item[aria-current="page"]::before,
@@ -154,7 +154,7 @@ nx-sidemenu:dir(rtl) :is(.nx-sidemenu__chev, .nx-sidemenu__back) svg {
   padding-inline: 6px;
   border-radius: 9px;
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 10.5px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -300,7 +300,7 @@ nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
   block-size: 28px;
   border-radius: var(--nx-radius-md);
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
 
   & .nx-icon {
     inline-size: 16px;
@@ -352,7 +352,7 @@ nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
   font-size: 12.5px;
 
   &::placeholder {
-    color: var(--nx-text-quaternary);
+    color: var(--nx-text-tertiary);
   }
   &:focus {
     border-color: var(--nx-primary-border);
@@ -378,7 +378,7 @@ nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
 }
 .nx-panel__section {
   padding: 8px 10px 4px;
-  color: var(--nx-text-quaternary);
+  color: var(--nx-text-tertiary);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -418,18 +418,18 @@ nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
   color: var(--nx-foreground);
 
   & .nx-icon {
-    color: var(--nx-primary);
+    color: var(--nx-primary-ink);
   }
 }
 :is(.nx-panel__option, .nx-panel__chip) .nx-badge {
   margin-inline-start: auto;
 }
 :is(.nx-panel__option, .nx-panel__chip)[aria-current="page"] {
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-weight: 550;
 
   & .nx-icon {
-    color: var(--nx-primary);
+    color: var(--nx-primary-ink);
   }
 }
 .nx-panel__utils {

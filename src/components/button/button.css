@@ -246,7 +246,7 @@ nx-button[disabled] .nx-button__btn {
 .nx-button__t {
   flex: none;
   min-inline-size: 5.5ch;
-  color: var(--nx-text-quaternary);
+  color: var(--nx-text-tertiary);
   font-variant-numeric: tabular-nums;
 }
 .nx-button__mark {
@@ -260,7 +260,7 @@ nx-button[disabled] .nx-button__btn {
 }
 .nx-button__line--run .nx-button__mark,
 .nx-button__line--run .nx-button__m {
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
 }
 .nx-button__line--ok .nx-button__mark {
   color: var(--nx-success);

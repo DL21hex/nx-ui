@@ -294,7 +294,7 @@ export class NxDocCapture extends Base {
 
   #build(): void {
     this.#built = true;
-    const input = h("input", { type: "file", class: "nx-sr-only", tabindex: "-1" });
+    const input = h("input", { type: "file", class: "nx-sr-only", tabindex: "-1", "aria-label": this.#labels.choose });
     const chooseBtn = h("button", { type: "button", class: "nx-cap__choose" });
     this.#drop = h("div", { class: "nx-cap__drop" }, glyph(UPLOAD, "nx-cap__drop-icon"), h("p", { class: "nx-cap__drop-title" }), h("p", { class: "nx-cap__drop-hint" }), chooseBtn, input);
     chooseBtn.addEventListener("click", () => {

@@ -74,7 +74,7 @@ nx-grid:not([data-selection]) > [slot="bulk"] {
   border: 1px solid var(--nx-primary-border);
   border-radius: var(--nx-radius-lg);
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   animation: nx-grid-in var(--nx-motion-base) var(--nx-ease-out);
 
   & strong {
@@ -102,7 +102,7 @@ nx-grid:not([data-selection]) > [slot="bulk"] {
   background: color-mix(in oklab, var(--nx-primary) 7%, transparent);
 }
 .nx-grid__link {
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-weight: 500;
   cursor: pointer;
   &:hover {
@@ -164,7 +164,7 @@ nx-grid .nx-glyph {
     box-shadow: 0 0 0 3px var(--nx-primary-soft);
   }
   & .nx-glyph {
-    color: var(--nx-primary);
+    color: var(--nx-primary-ink);
   }
 }
 .nx-grid__ask-input {
@@ -205,13 +205,25 @@ nx-grid .nx-glyph {
   &[aria-expanded="true"] {
     border-color: var(--nx-primary-border);
     background: var(--nx-primary-soft);
-    color: var(--nx-primary);
+    color: var(--nx-primary-ink);
   }
   &.is-primary {
     justify-content: center;
     border-color: transparent;
     background: var(--nx-primary);
     color: var(--nx-primary-foreground);
+  }
+}
+.nx-grid__icon {
+  inline-size: 36px;
+  justify-content: center;
+  padding: 0;
+  &:disabled {
+    color: var(--nx-text-quaternary);
+    cursor: default;
+    &:hover {
+      background: var(--nx-card);
+    }
   }
 }
 .nx-grid__badge,
@@ -257,7 +269,7 @@ nx-grid .nx-glyph {
   border: 1px solid var(--nx-primary-border);
   border-radius: 13px;
   background: var(--nx-primary-soft);
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font-size: 12px;
   font-weight: 500;
   animation: nx-grid-in var(--nx-motion-base) var(--nx-ease-out);
@@ -386,7 +398,7 @@ nx-grid .nx-glyph {
   padding: 4px 6px;
   border: 0;
   background: none;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
@@ -481,7 +493,7 @@ nx-grid .nx-grid__sort-icon {
 .nx-grid__th[data-sort="asc"] .nx-grid__sort-icon,
 .nx-grid__th[data-sort="desc"] .nx-grid__sort-icon {
   opacity: 1;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
 }
 .nx-grid__th[data-sort="desc"] .nx-grid__sort-icon {
   rotate: 180deg;
@@ -489,7 +501,7 @@ nx-grid .nx-grid__sort-icon {
 nx-grid .nx-grid__ai-mark {
   inline-size: 13px;
   block-size: 13px;
-  color: var(--nx-primary);
+  color: var(--nx-primary-ink);
 }
 .nx-grid__ai-prompt {
   display: -webkit-box;

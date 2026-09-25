@@ -1,0 +1,4 @@
+#!/bin/sh
+# Antes de enviar: las mismas verificaciones que haría un CI, en esta máquina.
+# Si algo falla, el push no sale. Para saltarlo en una emergencia: git push --no-verify
+npm run check

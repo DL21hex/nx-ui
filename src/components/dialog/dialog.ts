@@ -530,7 +530,11 @@ export class NxDialog extends Base {
     // El foco vuelve a quien abrió (o al diálogo que queda arriba).
     const top = stack[stack.length - 1];
     if (top) top.focusFirst();
-    else if (origin instanceof HTMLElement && origin.isConnected) origin.focus({ preventScroll: true });
+    else if (origin instanceof HTMLElement && origin.isConnected) {
+      // El origen puede ser un envoltorio (<nx-button>): el foco va a lo enfocable de adentro.
+      const target = origin.matches(FOCUSABLE) ? origin : origin.querySelector<HTMLElement>(FOCUSABLE);
+      (target ?? origin).focus({ preventScroll: true });
+    }
     this.#resolve?.(value);
     this.#resolve = undefined;
     this.#promise = undefined;
