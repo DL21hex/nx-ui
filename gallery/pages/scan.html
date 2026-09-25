@@ -1,0 +1,130 @@
+    <!-- ================================================================ Escanear -->
+    <template id="page-scan">
+      <p class="eyebrow">Componentes</p>
+      <h1>Escanear <code class="tag">&lt;nx-scan&gt;</code></h1>
+      <p class="lead">
+        Códigos de barras y QR con la cámara del teléfono, para inventario y recepción. Cada lectura vibra, suena y
+        suma a la lista agrupada por código, con lo esperado de la orden y los faltantes y sobrantes en color. Sin
+        cámara también sirve: se escribe el código, una pistola lectora USB funciona sola y se puede leer una foto.
+      </p>
+
+      <div class="scan-demo" lang="es-CO">
+        <header class="scan-oc">
+          <div>
+            <p class="scan-oc__kicker">Recepción de mercancía</p>
+            <p class="scan-oc__id">OC-2291 · Aceros del Caribe S.A.S.</p>
+          </div>
+          <p class="scan-oc__meta">Bodega Itagüí · 25 sep 2026<br />6 líneas · 129 unidades esperadas</p>
+        </header>
+        <nx-scan id="scan-count" mode="count" source="/demo/scan/producto?code=" formats="ean_13,code_128,qr_code"></nx-scan>
+      </div>
+
+      <div class="scan-try" lang="es-CO">
+        <section class="scan-try__col" aria-labelledby="scan-sim-title">
+          <h2 id="scan-sim-title" class="scan-try__title">Sin cámara: simula una lectura</h2>
+          <p class="scan-try__desc">
+            Los productos de la orden, con su código. Escanéalos con el teléfono desde esta pantalla o toca «Simular
+            lectura».
+          </p>
+          <ul class="scan-sim" id="scan-sim"></ul>
+          <div class="dlg-row">
+            <button type="button" class="dlg-plain" id="scan-wedge">Simular una pistola lectora</button>
+            <button type="button" class="dlg-plain" id="scan-reset">Vaciar sin deshacer (<code>clear()</code>)</button>
+          </div>
+        </section>
+        <section class="scan-try__col" aria-labelledby="scan-phone-title">
+          <h2 id="scan-phone-title" class="scan-try__title">Pruébalo con el teléfono</h2>
+          <ol class="scan-phone">
+            <li>Abre esta página en el teléfono desde la galería publicada en GitHub Pages: la cámara exige <strong>HTTPS</strong> (en <code>http://</code> solo funciona en <code>localhost</code>).</li>
+            <li>Usa <strong>Chrome o Edge en Android</strong>: traen <code>BarcodeDetector</code>. En iPhone, Firefox o Chrome de escritorio en Windows/Linux, el componente lo dice y quedan la entrada manual y la pistola.</li>
+            <li>Toca «Activar cámara», acepta el permiso y apunta a los códigos de la izquierda en la pantalla del computador. Si está oscuro, la linterna aparece arriba a la derecha.</li>
+            <li>Escanea la misma lámina varias veces: suma de a una (la misma caja quieta frente a la cámara no cuenta dos veces). El disco de corte no venía en la orden: sobra.</li>
+          </ol>
+          <p class="sel-tip">
+            Con una pistola USB: escanea sin hacer clic en nada; la ráfaga de teclas se reconoce aunque el foco no esté
+            en el campo, pero nunca se roba lo que escribes en otro campo. En el campo, <kbd>12*7707123450011</kbd>
+            suma 12 de una vez. <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace la última lectura.
+          </p>
+        </section>
+      </div>
+      <ol class="stage__log btn-events" id="scan-log"></ol>
+
+      <h2>Modo único: consultar un producto</h2>
+      <div class="scan-single" lang="es-CO">
+        <nx-scan id="scan-single" source="/demo/scan/producto?code=" formats="ean_13,qr_code"></nx-scan>
+        <p class="btn-demo__desc">
+          <code>mode="single"</code> (por defecto): una lectura dispara <code>nx-scan</code> y la cámara se apaga. Útil para
+          buscar un producto o una orden. Prueba escribir <kbd>7707123450042</kbd> y <kbd>Enter</kbd>.
+        </p>
+      </div>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
+          <tbody>
+            <tr><td>«Activar cámara»</td><td><code>getUserMedia</code> con la cámara trasera. <code>BarcodeDetector</code> mira unas diez veces por segundo con los <code>formats</code> pedidos. Linterna si la cámara la tiene (<code>torch</code>) y cambio de cámara si hay más de una.</td></tr>
+            <tr><td>Lee un código</td><td>Vibra, suena un «bip» (con el botón de sonido o <code>muted</code> se calla), el visor destella y un recuadro marca el código. Un sobrante suena distinto. El mismo código no vuelve a contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.</td></tr>
+            <tr><td>Conteo</td><td>La línea nueva entra arriba; una repetida suma en su lugar y se resalta. La cantidad se edita con −/+ o escribiéndola (en 0 se quita, con deshacer). «Deshacer» del aviso o <kbd>Ctrl</kbd>+<kbd>Z</kbd> quitan la última lectura.</td></tr>
+            <tr><td><code>source</code></td><td>La primera vez que aparece un código se pide su descripción: «Lámina HR 3 mm · esperadas 40 · contadas 38». Con <code>expected</code> se marcan faltantes (rojo), completas (verde) y sobrantes (ámbar). 404: «Código sin registrar».</td></tr>
+            <tr><td>Pistola lectora</td><td>Teclea el código muy rápido (menos de 60 ms entre teclas, 40 en promedio) y un Enter: se toma como lectura en cualquier parte de la página, salvo con el foco en otro campo (ahí escribe en ese campo, como siempre). Una persona no teclea tan parejo.</td></tr>
+            <tr><td>Sin cámara</td><td>Sin <code>BarcodeDetector</code>, sin permiso, sin HTTPS o sin cámara, lo dice en el visor y quedan el campo, la pistola y (si hay detector) la foto.</td></tr>
+            <tr><td>No se ve</td><td>Otra pestaña, fuera de la pantalla o fuera de la página: la cámara se apaga (la luz del teléfono también) y vuelve sola.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Protocolo</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué es</th></tr></thead>
+          <tbody>
+            <tr><td><code>source</code></td><td><code>GET {source}{código}</code> (o reemplaza <code>{code}</code>) → <code>{"code":"7707123450011","name":"Lámina HR 3 mm","unit":"und","expected":40}</code>. <code>expected</code> y <code>unit</code> son opcionales; 404 si no existe. Una vez por código.</td></tr>
+            <tr><td><code>items</code></td><td><code>[{code, qty, name?, unit?, expected?, format?}]</code>. Se pueden precargar las líneas de una orden con <code>qty: 0</code>: así lo que falta se ve desde el comienzo.</td></tr>
+            <tr><td><code>nx-scan</code></td><td><code>{code, format, via}</code> en cada lectura (<code>via</code>: <code>camera</code>, <code>photo</code>, <code>manual</code>, <code>wedge</code>, <code>api</code>). Cancelable: con <code>preventDefault()</code> no se cuenta.</td></tr>
+            <tr><td><code>nx-scan-count</code></td><td><code>{items}</code> después de cada cambio: lectura, edición, deshacer, vaciar o la descripción que llegó.</td></tr>
+            <tr><td><code>nx-scan-error</code></td><td><code>{problem}</code>: <code>nodetector</code>, <code>nocamera</code>, <code>insecure</code>, <code>denied</code>, <code>busy</code> o <code>failed</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-scan id="recepcion" mode="count" source="/inventario/producto?code="
+  formats="ean_13,code_128,qr_code"&gt;&lt;/nx-scan&gt;
+
+// Las líneas de la orden, para ver desde el comienzo lo que falta:
+recepcion.items = oc.lineas.map((l) =&gt; ({ code: l.ean, name: l.nombre, expected: l.cantidad, qty: 0 }));
+recepcion.addEventListener("nx-scan-count", (e) =&gt; guardarBorrador(e.detail.items));
+
+&lt;nx-scan id="buscar"&gt;&lt;/nx-scan&gt;
+buscar.addEventListener("nx-scan", (e) =&gt; abrirProducto(e.detail.code));   // {code, format, via}</code></pre>
+        <pre role="tabpanel" hidden><code>import { Scan } from "nx-ui/solid";
+
+&lt;Scan mode="count" source="/inventario/producto?code=" formats={["ean_13", "code_128"]}
+  items={lineas()} onCount={(e) =&gt; setLineas(e.detail.items)} /&gt;
+
+&lt;Scan onScan={(e) =&gt; navigate(`/productos/${e.detail.code}`)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>mode</code></td><td><code>single</code> (por defecto): una lectura y la cámara se apaga. <code>count</code>: cada lectura suma a la lista.</td></tr>
+            <tr><td><code>formats</code></td><td>Lista con comas o JSON: <code>ean_13</code>, <code>ean_8</code>, <code>upc_a</code>, <code>upc_e</code>, <code>code_128</code>, <code>code_39</code>, <code>code_93</code>, <code>codabar</code>, <code>itf</code>, <code>qr_code</code>, <code>data_matrix</code>, <code>pdf417</code>, <code>aztec</code>. Por defecto los de inventario y QR.</td></tr>
+            <tr><td><code>source</code>, <code>items</code></td><td>La URL que describe un código y las líneas del conteo (ver «Protocolo»).</td></tr>
+            <tr><td><code>muted</code>, <code>autostart</code>, <code>wedge</code></td><td>Sin «bip»; abrir la cámara al cargar; dónde se escucha la pistola: <code>page</code> (por defecto), <code>field</code> u <code>off</code>.</td></tr>
+            <tr><td><code>locale</code>, <code>labels</code></td><td>Formato de las cantidades y los textos (<code>SCAN_LABELS</code>).</td></tr>
+            <tr><td><code>state</code>, <code>problem</code></td><td>Solo lectura: <code>idle</code>, <code>starting</code>, <code>live</code>, <code>paused</code>, <code>done</code> o <code>unavailable</code>, y por qué.</td></tr>
+            <tr><td>Métodos</td><td><code>start()</code>, <code>stop()</code>, <code>add(código, cantidad?)</code>, <code>undo()</code>, <code>clear()</code>, <code>focus()</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-scan</code> <code>{code, format, via}</code> (cancelable), <code>nx-scan-count</code> <code>{items}</code>, <code>nx-scan-error</code> <code>{problem}</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>

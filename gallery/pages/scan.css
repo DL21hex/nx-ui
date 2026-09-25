@@ -1,0 +1,130 @@
+/* ---------------------------------------------------------------- demo de <nx-scan> */
+
+.scan-demo {
+  display: grid;
+  gap: 14px;
+  padding: 18px 18px 20px;
+  border: 1px solid var(--nx-border);
+  border-radius: calc(var(--nx-radius-lg) + 4px);
+  background: var(--nx-background);
+}
+.scan-oc {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 24px;
+  & p {
+    margin: 0;
+  }
+}
+.scan-oc__kicker {
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.scan-oc__id {
+  font-size: 16px;
+  font-weight: 650;
+}
+.scan-oc__meta {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  text-align: end;
+}
+.scan-try {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 24px;
+  margin-block-start: 22px;
+}
+.scan-try__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.scan-try__desc {
+  margin: 0 0 10px;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.scan-sim {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.scan-sim__item {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  & > .scan-code {
+    grid-row: span 2;
+  }
+  & > :first-child:not(svg) {
+    grid-column: 1 / -1;
+  }
+}
+.scan-code {
+  display: block;
+  inline-size: 116px;
+  border-radius: 3px;
+}
+.scan-sim__info {
+  display: grid;
+  min-inline-size: 0;
+  font-size: 13px;
+  & strong {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  & span {
+    color: var(--nx-text-tertiary);
+    font-size: 12px;
+  }
+}
+.scan-sim__btn {
+  justify-self: start;
+  white-space: nowrap;
+}
+.scan-sim__item > :first-child:not(svg) ~ .scan-sim__btn {
+  grid-column: 1 / -1;
+}
+.scan-phone {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding-inline-start: 20px;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+  & strong {
+    color: var(--nx-foreground);
+  }
+}
+.scan-single {
+  display: grid;
+  gap: 10px;
+  max-inline-size: 560px;
+}
+@media (max-width: 560px) {
+  .scan-demo {
+    padding: 14px 12px 16px;
+  }
+  .scan-oc__meta {
+    text-align: start;
+  }
+  .scan-sim__item {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .scan-code {
+    inline-size: 96px;
+  }
+}
