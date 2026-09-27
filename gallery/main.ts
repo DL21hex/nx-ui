@@ -25,6 +25,10 @@ import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
+import { mountImportDemo } from "./demo-import";
+import "./pages/import.css";
+import { mountKeytipsDemo } from "./demo-keytips";
+import "./pages/keytips.css";
 
 registerIcons(lucide);
 // Los ejemplos piden a `/demo/*`: aquí mismo se responde (también publicada como archivos estáticos).
@@ -112,6 +116,8 @@ const NAV: MenuItem[] = [
   { id: "trend", label: "Tendencias", href: "#/trend", icon: "chart-column", section: "Componentes", badge: "Nuevo" },
   { id: "scan", label: "Escanear", href: "#/scan", icon: "package", section: "Componentes", badge: "Nuevo" },
   { id: "sync", label: "Sin conexión", href: "#/sync", icon: "truck", section: "Componentes", badge: "Nuevo" },
+  { id: "keytips", label: "Atajos con Alt", href: "#/keytips", icon: "settings", section: "Componentes", badge: "Nuevo" },
+  { id: "import", label: "Importar", href: "#/import", icon: "folder", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -141,6 +147,8 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/history": { template: "page-history", mount: mountHistoryDemo },
   "#/kanban": { template: "page-kanban", mount: mountKanbanDemo },
   "#/number": { template: "page-number", mount: mountNumberDemo },
+  "#/keytips": { template: "page-keytips", mount: mountKeytipsDemo },
+  "#/import": { template: "page-import", mount: mountImportDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 

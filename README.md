@@ -1153,6 +1153,103 @@ intermitente.
 | Eventos | `nx-sync-change` `{online, pending, conflicts}`, `nx-sync-done` `{op, data}`, `nx-sync-auth` `{op}` |
 | Protocolo | cada envío con `Idempotency-Key`, `Content-Type: application/json` e `If-Match` al resolver · 409 `{server, local?, fields?, etag?, message?}` · otro 4xx `{message}` · `GET ping`: cualquier respuesta es conexión |
 
+## `<nx-import>`
+
+Importar una hoja de Excel o un CSV sin sufrir. Hoy la persona pega mil filas, el sistema dice
+«error en la fila 412» y vuelve a empezar. Aquí se suelta el archivo, las columnas se acomodan
+solas, los errores se corrigen ahí mismo y se importa. Tres pasos con un solo indicador («Paso 2
+de 3 · Columnas»), controles de formulario normales y botones Anterior / Siguiente.
+
+- **Archivo.** Se arrastra, se elige (la zona es un botón) o se pega con Ctrl/⌘+V lo copiado de
+  Excel. CSV/TSV/TXT: detecta el separador (`,` `;` tabulador `|`) por consistencia de columnas,
+  respeta comillas, comillas escapadas y saltos de línea dentro de una celda, quita el BOM y lee
+  UTF-8, UTF-16 (el «Texto Unicode» de Excel) o windows-1252 si trae bytes inválidos («Bogotá» y no
+  «Bogot�»). .xlsx: lector propio sin dependencias (ZIP con `DecompressionStream`, textos
+  compartidos y enriquecidos, fechas por su formato, sistema 1900 y 1904) que se carga solo cuando
+  llega un libro; si hay varias hojas, se elige. La **fila de encabezados** se encuentra aunque haya
+  títulos o filas vacías arriba, y se cambia a mano. Tope de tamaño (`max-size`, 20 MB).
+- **Columnas.** Cada campo queda asociado a una columna del archivo, con una muestra de sus valores
+  y la confianza: **por el nombre** (`label`, `key` y `aliases`, sin tildes, tolerante a una letra
+  de más: «Nit/CC» ↔ `nit`, «Celular» ↔ «Teléfono móvil») o, si el encabezado no dice nada
+  («Columna 3» o vacío), **por el contenido**: correos, NIT con dígito de verificación válido,
+  fechas, montos, opciones. Uno a uno. Un `<select>` lo cambia, lo deja en «No importar» o le pone
+  **un mismo valor a todas las filas** («Ciudad: Medellín»). Un obligatorio sin columna no deja
+  seguir. El mapeo se **recuerda** (`localStorage`, por `memory` o `id` y los encabezados): el
+  mismo archivo del mes siguiente sale igual, y se dice.
+- **Revisión.** Cada fila se normaliza y valida por el tipo del campo (`text`, `number`, `money`,
+  `percent`, `date`, `email`, `phone`, `nit`, `bool`, `option`) y las reglas (`required`, `unique`,
+  `min`/`max`, `pattern`). Los números en el formato del locale, pero **decidido por columna**: una
+  columna «1,234.50» en un archivo es-CO se lee bien; montos con `$`, contables `(1.200)`, `19%` o
+  `0,19`. Fechas ISO, dd/mm o mm/dd (por columna: si algún día pasa de 12 en la primera posición es
+  dd/mm; si no se sabe, el del locale), «12-sep-2026», seriales de Excel, años de 2 cifras. Arriba,
+  «1.204 filas listas · 7 con errores · 3 vacías que se omiten»; abajo, primero las filas con
+  error (con su número de fila del archivo) y la celda **editable ahí mismo**; al corregir se
+  revisa de nuevo esa fila. O «Omitir las filas con errores». Nunca más de 200 filas pintadas.
+- **Importar.** Sin `endpoint`: `nx-import-done` con `{rows, skipped, mapping, fixed, headers}`
+  (números como número, fechas ISO, opciones por su `value`). Con `endpoint` (del mismo origen, o
+  de uno de `allowOrigins()`): `POST {rows, offset}` en lotes de `batch`, con avance y
+  cancelable; la respuesta puede traer `{errors: [{row, field?, message}]}` (`row` = `offset` +
+  índice en el lote) y esas filas vuelven a la revisión para corregirlas y reenviar solo esas. Al
+  final, «Importamos 1.197 clientes» y un CSV (con BOM, para Excel) con lo que no entró y el motivo.
+- 50.000 filas × 15 columnas se revisan por tramos, sin congelar la página.
+
+```html
+<nx-import id="clientes" endpoint="/api/clientes/importar" columns='[
+  {"key":"nit","label":"NIT","type":"nit","required":true,"unique":true,"aliases":["nit/cc"]},
+  {"key":"razon_social","label":"Razón social","required":true},
+  {"key":"ciudad","label":"Ciudad","type":"option","options":[{"value":"05001","label":"Medellín"},{"value":"11001","label":"Bogotá D.C."}]},
+  {"key":"cupo","label":"Cupo de crédito","type":"money","min":0},
+  {"key":"alta","label":"Fecha de alta","type":"date"}
+]'></nx-import>
+<script>
+  clientes.addEventListener("nx-import-done", (e) => console.log(e.detail.rows));
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `columns` (`{key, label, type?, required?, unique?, options?, aliases?, min?, max?, pattern?, hint?}`), `endpoint`, `batch` (500), `accept`, `max-size` («20MB»), `memory`, `locale`, `labels` (plural con «uno\|varios»), `disabled` · `state`, `rows`, `mapping` (solo lectura) |
+| Métodos | `load(archivo \| texto)`, `reset()` |
+| Eventos | `nx-import-parsed` `{name, sheet?, sheets?, headers, headerRow, rows}`, `nx-import-mapped` `{mapping, fixed, remembered}`, `nx-import-done` `{rows, skipped, mapping, fixed, headers}`, `nx-import-error` `{code, message}` (`size`, `read`, `empty`, `network`) |
+| Funciones | `parseCsv`, `decodeImportBytes`, `detectHeaderRow`, `autoMapColumns`, `validateImportRows`, `normalizeImportValue`, `parseImportNumber`, `parseImportDate`, `importRowsToCsv`…: la misma lógica sin DOM, para un backend en JavaScript |
+
+## `<nx-keytips>`
+
+Atajos de teclado sin configurar nada, como los KeyTips de Office. Se pone una vez en la página;
+se **toca Alt** (se presiona y se suelta, sola) y cada acción visible muestra una letra en una
+etiqueta pequeña; se pulsa la letra y se ejecuta. Esc, Tab, un clic o otro toque de Alt los ocultan.
+Mantener Alt ~400 ms también los muestra (y Alt+letra sin soltar ejecuta).
+
+- **Qué recibe letra:** botones, enlaces, pestañas, `summary`, casillas, campos, listas,
+  `contenteditable`, lo tabulable con nombre y lo marcado con `data-keytip`; solo lo visible y sin
+  tapar dentro de `scope`. Nada deshabilitado, inerte, oculto ni `data-keytip="off"` (en un
+  contenedor, todo lo de adentro). Con un diálogo modal (`<nx-dialog>`, `<dialog>`) o un popover
+  abierto, solo lo de adentro.
+- **Qué letra:** la inicial de la primera palabra que importa del nombre accesible, sin tildes
+  («Guardar» G, «Enviar al cliente» E), luego las iniciales de las demás palabras y luego sus otras
+  letras. `data-keytip="X"` la fija. Es **estable**: el mismo elemento conserva su letra entre
+  aperturas mientras siga en pantalla. Con más de 30 acciones, dos letras (como Vimium): la primera
+  atenúa las que no empiezan por ella. `assignKeytips()` es la misma asignación, pura.
+- **Qué hace:** un clic (botones, enlaces, pestañas, casillas; en `<nx-button>`, su botón) o el
+  foco con el texto seleccionado (campos). Antes sale `nx-keytip`, cancelable.
+- **No estorba:** funciona mientras se escribe en un campo (la letra no se escribe); Alt+Tab, AltGr
+  para «@» y Ctrl+Alt no lo activan; Tab y los atajos con Ctrl/⌘ (la paleta con Ctrl+K) cierran los
+  atajos y siguen su camino. Cerrado, solo escucha `keydown`/`keyup`.
+
+```html
+<nx-keytips></nx-keytips>
+
+<button data-keytip="X">Exportar a Excel</button>  <!-- letra fija -->
+<button data-keytip="off">Eliminar</button>         <!-- sin atajo -->
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `scope` (selector), `key` (`Alt`, `Control`, `Shift`, `Meta` o `none`), `disabled`, `labels` · `open`, `assignments` (`[{key, name, element}]`) |
+| Métodos | `show()`, `hide()` |
+| Eventos | `nx-keytip` `{key, target, name}` (cancelable), `nx-open-change` `{open}` |
+| Funciones | `assignKeytips([{name, forced?, prev?}])` → códigos, `keytipLetters(nombre)` |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos

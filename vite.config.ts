@@ -55,6 +55,8 @@ export default defineConfig(({ command, mode }) => {
           history: "src/components/history/index.ts",
           kanban: "src/components/kanban/index.ts",
           number: "src/components/number/index.ts",
+          "import": "src/components/import/index.ts",
+          "keytips": "src/components/keytips/index.ts",
           icons: "src/icons/index.ts",
           bdui: "src/bdui.ts",
         },

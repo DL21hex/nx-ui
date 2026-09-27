@@ -2,7 +2,8 @@
  * Adaptador para SolidJS: tipos JSX de las etiquetas y envoltorios (`<SideMenu>`, `<Button>`,
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
- * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
+ * `<Keytips>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -80,6 +81,12 @@ import type { SyncChangeDetail, SyncField, SyncLabels, SyncOp } from "../compone
 import "../components/date-range/index";
 import type { NxDateRange } from "../components/date-range/date-range";
 import type { DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue } from "../components/date-range/types";
+import "../components/import/index";
+import type { NxImport } from "../components/import/import";
+import type { ImportColumnInput, ImportDoneDetail, ImportErrorDetail, ImportLabels, ImportMappedDetail, ImportParsedDetail, ImportState } from "../components/import/types";
+import "../components/keytips/index";
+import type { NxKeytips } from "../components/keytips/keytips";
+import type { KeytipAssignment, KeytipDetail, KeytipsLabels } from "../components/keytips/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -104,6 +111,8 @@ export type { NxWhatIf, WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, Wh
 export type { NxTrend, TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, TrendWhyDetail };
 export type { NxScan, ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMode, ScanProblem, ScanWedge };
 export type { NxSync, SyncChangeDetail, SyncField, SyncLabels, SyncOp };
+export type { NxImport, ImportColumnInput, ImportDoneDetail, ImportErrorDetail, ImportLabels, ImportMappedDetail, ImportParsedDetail, ImportState };
+export type { NxKeytips, KeytipAssignment, KeytipDetail, KeytipsLabels };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -120,7 +129,7 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -133,7 +142,7 @@ declare module "solid-js" {
       value: string | string[] | number | DateRangeValue | null | undefined;
       presets: DateRangePresetInput[] | undefined;
       selection: SelectOption[] | undefined;
-      columns: GridColumn[] | KanbanColumn[];
+      columns: GridColumn[] | KanbanColumn[] | ImportColumnInput[];
       cards: KanbanCard[] | undefined;
       rows: GridRow[] | undefined;
       filters: GridFilter[] | undefined;
@@ -146,6 +155,12 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      scope: string | undefined;
+      key: string | undefined;
+      batch: string | undefined;
+      accept: string | undefined;
+      "max-size": string | undefined;
+      memory: string | undefined;
       ping: string | undefined;
       wedge: ScanWedge | undefined;
       "explain-endpoint": string | undefined;
@@ -226,6 +241,11 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-keytip": CustomEvent<KeytipDetail>;
+      "nx-import-parsed": CustomEvent<ImportParsedDetail>;
+      "nx-import-mapped": CustomEvent<ImportMappedDetail>;
+      "nx-import-done": CustomEvent<ImportDoneDetail>;
+      "nx-import-error": CustomEvent<ImportErrorDetail>;
       "nx-sync-done": CustomEvent<{ op: SyncOp; data: unknown }>;
       "nx-sync-change": CustomEvent<SyncChangeDetail>;
       "nx-sync-auth": CustomEvent<{ op: SyncOp }>;
@@ -280,6 +300,8 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-import": HTMLAttributes<NxImport> & { endpoint?: string };
+      "nx-keytips": HTMLAttributes<NxKeytips>;
       "nx-sync": HTMLAttributes<NxSync> & { ping?: string };
       "nx-scan": HTMLAttributes<NxScan> & { source?: string };
       "nx-trend": HTMLAttributes<NxTrend> & { heading?: string };
@@ -1317,6 +1339,78 @@ export function Sync(props: SyncProps): JSX.Element {
       on:nx-sync-change={(e) => local.onChange?.(e)}
       on:nx-sync-done={(e) => local.onDone?.(e)}
       on:nx-sync-auth={(e) => local.onAuth?.(e)}
+    />
+  );
+}
+
+export interface ImportProps extends Omit<JSX.HTMLAttributes<NxImport>, "onError"> {
+  /** Los campos de destino: `{key, label, type?, required?, unique?, options?, aliases?, min?, max?, pattern?, hint?}`. */
+  columns: ImportColumnInput[];
+  /** Recibe `POST {rows, offset}` por lotes y puede responder `{errors: [{row, field?, message}]}`. Sin él, solo `onDone`. */
+  endpoint?: string;
+  /** Filas por lote (500). */
+  batch?: number;
+  accept?: string;
+  /** Tamaño máximo del archivo: bytes o «20MB» (por defecto 20 MB). */
+  maxSize?: number | string;
+  /** Clave para recordar el mapeo (sin ella, el `id`). */
+  memory?: string;
+  locale?: string;
+  labels?: Partial<ImportLabels>;
+  disabled?: boolean;
+  onParsed?: (e: CustomEvent<ImportParsedDetail>) => void;
+  onMapped?: (e: CustomEvent<ImportMappedDetail>) => void;
+  /** `{rows, skipped, mapping, fixed, headers}`: las filas ya normalizadas. */
+  onDone?: (e: CustomEvent<ImportDoneDetail>) => void;
+  onError?: (e: CustomEvent<ImportErrorDetail>) => void;
+}
+
+export function Import(props: ImportProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["columns", "endpoint", "batch", "accept", "maxSize", "memory", "locale", "labels", "disabled", "onParsed", "onMapped", "onDone", "onError"]);
+  return (
+    <nx-import
+      {...rest}
+      prop:columns={local.columns}
+      prop:labels={local.labels}
+      attr:endpoint={local.endpoint}
+      attr:batch={local.batch === undefined ? undefined : String(local.batch)}
+      attr:accept={local.accept}
+      attr:max-size={local.maxSize === undefined ? undefined : String(local.maxSize)}
+      attr:memory={local.memory}
+      attr:locale={local.locale}
+      bool:disabled={!!local.disabled}
+      on:nx-import-parsed={(e) => local.onParsed?.(e)}
+      on:nx-import-mapped={(e) => local.onMapped?.(e)}
+      on:nx-import-done={(e) => local.onDone?.(e)}
+      on:nx-import-error={(e) => local.onError?.(e)}
+    />
+  );
+}
+
+export interface KeytipsProps extends JSX.HTMLAttributes<NxKeytips> {
+  /** Selector de la región con atajos (por defecto, toda la página). */
+  scope?: string;
+  /** La tecla que los muestra: `Alt` (por defecto), `Control`, `Shift` o `Meta`; `none`: solo con `show()`. */
+  trigger?: string;
+  disabled?: boolean;
+  labels?: Partial<KeytipsLabels>;
+  /** Antes de ejecutar una acción: `{key, target, name}`. Cancelable. */
+  onKeytip?: (e: CustomEvent<KeytipDetail>) => void;
+  onOpenChange?: (e: CustomEvent<OpenChangeDetail>) => void;
+}
+
+/** `<nx-keytips>`: la tecla va como `trigger` (en JSX, `key` es de otros). */
+export function Keytips(props: KeytipsProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["scope", "trigger", "disabled", "labels", "onKeytip", "onOpenChange"]);
+  return (
+    <nx-keytips
+      {...rest}
+      prop:labels={local.labels}
+      attr:scope={local.scope}
+      attr:key={local.trigger}
+      bool:disabled={!!local.disabled}
+      on:nx-keytip={(e) => local.onKeytip?.(e)}
+      on:nx-open-change={(e) => local.onOpenChange?.(e)}
     />
   );
 }

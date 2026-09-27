@@ -23,6 +23,8 @@ export * from "./components/date-range/index";
 export * from "./components/history/index";
 export * from "./components/kanban/index";
 export * from "./components/number/index";
+export * from "./components/import/index";
+export * from "./components/keytips/index";
 export { registerIcons, hasIcon } from "./core/icons";
 export { nxFormat, resolveLocale, canonicalLocale, type NxFormat } from "./core/locale";
 export { allowOrigins, safeEndpoint } from "./core/dom";

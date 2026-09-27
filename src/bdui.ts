@@ -34,6 +34,8 @@ const registry = new Map<string, Entry>([
   ["Trend", { tag: "nx-trend", props: ["series", "anomalies", "heading", "kind", "format", "currency", "height", "detect", "explainEndpoint", "busy", "locale", "labels"] }],
   ["Scan", { tag: "nx-scan", props: ["mode", "formats", "source", "muted", "autostart", "wedge", "items", "labels", "locale"] }],
   ["Sync", { tag: "nx-sync", props: ["ping", "fields", "labels"] }],
+  ["Keytips", { tag: "nx-keytips", props: ["scope", "key", "disabled", "labels"] }],
+  ["Import", { tag: "nx-import", props: ["columns", "endpoint", "batch", "accept", "maxSize", "memory", "locale", "labels", "disabled"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

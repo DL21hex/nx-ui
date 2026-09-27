@@ -118,6 +118,14 @@
       "types": "./dist/types/components/sync/index.d.ts",
       "import": "./dist/sync.js"
     },
+    "./keytips": {
+      "types": "./dist/types/components/keytips/index.d.ts",
+      "import": "./dist/keytips.js"
+    },
+    "./import": {
+      "types": "./dist/types/components/import/index.d.ts",
+      "import": "./dist/import.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -158,7 +166,8 @@
     "./date-range.css": "./dist/date-range.css",
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
-    "./number.css": "./dist/number.css"
+    "./number.css": "./dist/number.css",
+    "./keytips.css": "./dist/keytips.css"
   },
   "sideEffects": [
     "*.css",
