@@ -19,6 +19,10 @@ const u32 = (b: Uint8Array, o: number) => (u16(b, o) | (u16(b, o + 2) << 16)) >>
 const utf8 = new TextDecoder();
 /** Tope de lo que puede ocupar un archivo del ZIP ya descomprimido (contra las «bombas zip»). */
 const MAX_ENTRY = 256 * 1024 * 1024;
+/** Los límites de una hoja de Excel (XFD y 1.048.576): una referencia más allá es basura o un
+ *  archivo armado, y rellenar hasta ella reservaría miles de millones de celdas. */
+const MAX_COLS = 16384;
+const MAX_ROWS = 1048576;
 
 async function inflate(data: Uint8Array): Promise<Uint8Array> {
   const reader = new ReadableStream<Uint8Array>({
@@ -161,7 +165,7 @@ export async function readXlsx(bytes: Uint8Array): Promise<XlsxBook> {
       for (const rm of src.matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)) {
         const r = Number(/\sr="(\d+)"/.exec(rm[1])?.[1] ?? next + 1) - 1;
         next = r + 1;
-        if (!rm[2]) continue;
+        if (!rm[2] || r < 0 || r >= MAX_ROWS) continue;
         const row: ImportCell[] = [];
         let col = 0;
         for (const cm of rm[2].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
@@ -169,6 +173,7 @@ export async function readXlsx(bytes: Uint8Array): Promise<XlsxBook> {
           const ref = /\sr="([A-Z]+)/.exec(a)?.[1];
           const c = ref ? colOf(ref) : col;
           col = c + 1;
+          if (c < 0 || c >= MAX_COLS) continue;
           const body = cm[2] ?? "";
           const t = /\st="(\w+)"/.exec(a)?.[1];
           const v = /<v>([^<]*)<\/v>/.exec(body)?.[1];

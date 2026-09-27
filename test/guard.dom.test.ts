@@ -439,6 +439,20 @@ describe("<nx-guard>: chequeo remoto", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     warn.mockRestore();
   });
+
+  it("un campo con `remote: false` tampoco va en `values` cuando se pregunta por otro", async () => {
+    const fetchMock = vi.fn(async () => ok({ findings: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="/api/guard"');
+    el.fields = { ...FIELDS, precio: { ...FIELDS.precio, remote: false } } as never;
+    field("precio").value = "1200000";
+    type("factura", "FC-1");
+    await wait(350);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body.values.factura).toBe("FC-1");
+    expect(body.values).not.toHaveProperty("precio");
+  });
 });
 
 describe("<nx-guard>: API, textos y locale", () => {
@@ -455,6 +469,15 @@ describe("<nx-guard>: API, textos y locale", () => {
     expect(el.findings).toEqual([]);
     expect(document.querySelectorAll(".nx-guard__note")).toHaveLength(0);
     expect(field("precio").getAttribute("aria-describedby")).toBe("ayuda");
+  });
+
+  it("un campo que sale del formulario (una fila borrada) ya no está en `findings`", () => {
+    const el = mount();
+    type("cantidad", "1000");
+    type("precio", "12000000");
+    expect(el.findings.map((f) => f.field)).toEqual(["precio", "cantidad"]);
+    field("cantidad").closest("label")!.remove();
+    expect(el.findings.map((f) => f.field)).toEqual(["precio"]);
   });
 
   it("labels (JSON) con sus plantillas", () => {

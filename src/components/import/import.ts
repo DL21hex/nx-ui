@@ -392,6 +392,9 @@ export class NxImport extends Base {
     if (!data && !manual) return this.#fail("empty", L.onlyHeaders);
     if (!data) this.#error = L.onlyHeaders;
     this.#table = t;
+    // Otra tabla (otra fila de encabezados u otra hoja): los índices de antes ya no son estas filas.
+    this.#checks = [];
+    this.#accepted.clear();
     this.#samples = t.headers.map((_, c) => {
       const out: string[] = [];
       for (let r = 0; r < t.rows.length && out.length < 3 && r < 500; r++) {
@@ -622,18 +625,26 @@ export class NxImport extends Base {
     const L = this.#labels;
     const check = importValidator(t, this.#columns, this.mapping, { messages: L, locale: resolveLocale(this), fixed: this.#fixed });
     const out: ImportRowCheck[] = new Array(t.rows.length);
+    // Lo que ya entró al servidor (un envío cancelado o fallido, y luego Anterior → Siguiente) sigue
+    // enviado: se queda con lo que se mandó y no se reenvía. Solo un archivo nuevo o `reset()` lo olvidan.
+    const prev = this.#checks;
     this.#check = check;
     this.#checks = [];
     this.#edits.clear();
-    this.#accepted.clear();
     this.#checking = true;
     this.#skip = false;
     for (let i = 0; i < t.rows.length; i++) {
-      out[i] = check(i);
+      out[i] = this.#accepted.has(i) && prev[i] ? prev[i] : check(i);
       if (i % SLICE === SLICE - 1) {
         this.#setStatus(fmtLabel(L.checking, { pct: `${Math.round((i / t.rows.length) * 100)} %` }), [i, t.rows.length]);
         await pause();
         if (run !== this.#run) return;
+        // La persona volvió a las columnas: esta revisión ya no sirve (al seguir se hace otra) y no
+        // puede repintar el paso de columnas encima (se llevaba el select con el foco).
+        if (this.#step !== "review") {
+          this.#checking = false;
+          return;
+        }
       }
     }
     markDuplicates(out, this.#columns, L);

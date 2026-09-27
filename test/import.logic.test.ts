@@ -481,6 +481,23 @@ describe("import: xlsx", () => {
     expect(await book.sheet(1)).toEqual([["Nombre", "", "Fecha"], [], ["Bogotá D.C.", "true", "1904-01-01", 1234.5], ["Inline <ok>", "Nombrex", "1904-01-02", "", "", "", "L1\r\nL2"]]);
   });
 
+  it("celdas y filas fuera de los límites de Excel (XFD, 1.048.576) se ignoran: un r=«ZZZZZZZ1» no reserva miles de millones de celdas", async () => {
+    const files: [string, string][] = [
+      ["xl/workbook.xml", `<workbook><sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets></workbook>`],
+      ["xl/_rels/workbook.xml.rels", `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>`],
+      [
+        "xl/worksheets/sheet1.xml",
+        `<worksheet><sheetData><row r="1"><c r="A1"><v>1</v></c><c r="ZZZZ1"><v>2</v></c></row><row r="2000000"><c r="A2000000"><v>3</v></c></row><row r="2"><c r="XFD2"><v>4</v></c></row></sheetData></worksheet>`,
+      ],
+    ];
+    const blob = await zip(files.map(([name, s]) => ({ name, data: enc.encode(s) })));
+    const rows = await (await readXlsx(await bytes(blob))).sheet(0);
+    expect(rows.length).toBe(2);
+    expect(rows[0]).toEqual([1]);
+    expect(rows[1].length).toBe(16384);
+    expect(rows[1][16383]).toBe(4);
+  });
+
   it("un archivo que no es zip, o un zip sin libro, lanza", async () => {
     await expect(readXlsx(enc.encode("hola"))).rejects.toThrow();
     const blob = await zip([{ name: "otra.txt", data: enc.encode("x") }]);
