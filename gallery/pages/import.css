@@ -1,0 +1,77 @@
+/* Demo de <nx-import>: «Importar clientes» y los controles de la página. */
+
+.imp-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-block: 4px 14px;
+}
+.imp-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.imp-sample {
+  padding: 6px 12px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-primary-ink);
+  font: 550 13px var(--nx-font-sans);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-primary-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.imp-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+
+  & legend {
+    float: left;
+    margin-inline-end: 4px;
+    padding: 0;
+    color: var(--nx-text-tertiary);
+    font-weight: 600;
+  }
+  & label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+}
+.imp-card {
+  margin-block-end: 16px;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-background);
+}
+.imp-card__title {
+  margin: 0 0 12px;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+@media (max-width: 560px) {
+  .imp-card {
+    padding: 14px 12px;
+  }
+}

@@ -1,0 +1,102 @@
+    <!-- ================================================================ Importar -->
+    <template id="page-import">
+      <p class="eyebrow">Componentes</p>
+      <h1>Importar <code class="tag">&lt;nx-import&gt;</code></h1>
+      <p class="lead">
+        Importar una hoja de Excel o un CSV sin sufrir. Se suelta el archivo, las columnas se acomodan solas (por el
+        nombre o por lo que traen), los errores se corrigen ahí mismo y se importa. Nada de «error en la fila 412» y volver
+        a empezar.
+      </p>
+      <p class="sel-tip">
+        Prueba con un archivo de ejemplo, suelta uno tuyo o copia unas filas de Excel y presiona <kbd>Ctrl</kbd><kbd>V</kbd>
+        sobre el componente. El CSV de ejemplo viene como lo exporta otro sistema: separador <code>;</code>, en windows-1252,
+        con títulos arriba, un NIT con el dígito mal, un correo sin @, un repetido y una fecha 31/02. Con servidor, dos
+        clientes ya existen y vuelven a la revisión. La segunda vez que cargues el mismo archivo, las columnas salen como
+        las dejaste.
+      </p>
+      <div class="imp-tools">
+        <div class="imp-samples" id="import-samples" role="group" aria-label="Archivos de ejemplo"></div>
+        <fieldset class="imp-mode">
+          <legend>Al importar</legend>
+          <label><input type="radio" name="imp-mode" value="server" checked /> Enviar al servidor</label>
+          <label><input type="radio" name="imp-mode" value="local" /> Solo el evento</label>
+        </fieldset>
+      </div>
+      <section class="imp-card" aria-labelledby="imp-card-title">
+        <h2 class="imp-card__title" id="imp-card-title">Importar clientes</h2>
+        <nx-import id="import-demo" memory="erp-clientes" endpoint="/demo/import/clientes" batch="500" locale="es-CO"></nx-import>
+      </section>
+      <ol class="stage__log btn-events" id="import-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Paso</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td>Archivo</td><td>CSV, TSV, TXT o .xlsx, arrastrado, elegido o pegado desde Excel. En CSV detecta el separador (<code>,</code> <code>;</code> tabulador <code>|</code>), las comillas, los saltos de línea dentro de una celda, el BOM y la codificación (UTF-8, y si no, windows-1252). El .xlsx se lee sin dependencias con un lector que se carga solo cuando llega un libro; si tiene varias hojas, se elige. La fila de encabezados se encuentra aunque haya títulos arriba, y se cambia a mano.</td></tr>
+            <tr><td>Columnas</td><td>Cada campo queda asociado a una columna del archivo, con una muestra y la confianza: por el nombre (sin tildes, con <code>aliases</code>, tolerante a una letra de más) o, si el encabezado no dice nada, por lo que trae (correos, NIT con dígito válido, fechas, montos, opciones). Uno a uno. Un campo puede llevar un mismo valor para todas las filas. El mapeo se recuerda por encabezados (<code>memory</code> o el <code>id</code>).</td></tr>
+            <tr><td>Revisión</td><td>Cada fila se normaliza según el tipo: números en el formato del archivo aunque no sea el del locale, montos con <code>$</code>, contables <code>(1.200)</code>, porcentajes, fechas dd/mm o mm/dd decididas por columna, seriales de Excel, sí/no/x. Primero las filas con errores, con su número de fila y la celda editable ahí mismo. Nunca se pintan más de 200.</td></tr>
+            <tr><td>Importar</td><td>Sin <code>endpoint</code>, <code>nx-import-done</code> con las filas normalizadas. Con <code>endpoint</code>, en lotes con avance y cancelable; lo que el servidor rechaza vuelve a la revisión para corregirlo y reenviar solo eso. Al final, un CSV con lo que no entró y el motivo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Protocolo</h2>
+      <p>
+        Con <code>endpoint</code>, las filas listas van en lotes de <code>batch</code> (500): <code>POST {"rows":[…],"offset":500}</code>.
+        La respuesta puede traer errores; <code>row</code> es la posición en el envío (<code>offset</code> + índice), y sin
+        <code>field</code> el error es de la fila entera. Un 4xx con <code>errors</code> también vale; sin <code>errors</code>, es un fallo del envío.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Respuesta</th><th>Qué pasa</th></tr></thead>
+          <tbody>
+            <tr><td><code>{}</code></td><td>Todo el lote entró.</td></tr>
+            <tr><td><code>{"errors":[{"row":503,"field":"nit","message":"NIT ya existe en el sistema"}]}</code></td><td>Esa fila vuelve a la revisión con el mensaje en su celda; el resto del lote entró.</td></tr>
+            <tr><td>Error de red o 5xx</td><td>Se detiene, dice cuántas entraron y deja reintentar el resto.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-import id="clientes" endpoint="/api/clientes/importar" columns='[
+  {"key":"nit","label":"NIT","type":"nit","required":true,"unique":true,"aliases":["nit/cc","documento"]},
+  {"key":"razon_social","label":"Razón social","required":true},
+  {"key":"ciudad","label":"Ciudad","type":"option","options":[{"value":"05001","label":"Medellín"},{"value":"11001","label":"Bogotá D.C."}]},
+  {"key":"correo","label":"Correo","type":"email"},
+  {"key":"cupo","label":"Cupo de crédito","type":"money","min":0},
+  {"key":"alta","label":"Fecha de alta","type":"date"}
+]'&gt;&lt;/nx-import&gt;
+&lt;script&gt;
+  clientes.addEventListener("nx-import-done", (e) =&gt; console.log(e.detail.rows, e.detail.skipped));
+&lt;/script&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import { Import } from "nx-ui/solid";
+
+&lt;Import
+  id="clientes"
+  columns={[{ key: "nit", label: "NIT", type: "nit", required: true }, { key: "correo", label: "Correo", type: "email" }]}
+  onDone={(e) =&gt; guardar(e.detail.rows)}
+/&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>columns</code></td><td>Los campos de destino: <code>{key, label, type?, required?, unique?, options?, aliases?, min?, max?, pattern?, hint?}</code>. <code>type</code>: <code>text</code>, <code>number</code>, <code>money</code>, <code>percent</code>, <code>date</code>, <code>email</code>, <code>phone</code>, <code>nit</code>, <code>bool</code>, <code>option</code>.</td></tr>
+            <tr><td><code>endpoint</code>, <code>batch</code></td><td>A dónde se envían las filas (mismo origen, o uno de <code>allowOrigins</code>) y cuántas por lote.</td></tr>
+            <tr><td><code>accept</code>, <code>max-size</code></td><td>Tipos de archivo del selector y tamaño máximo (por defecto 20 MB; acepta «5MB», «500 KB»).</td></tr>
+            <tr><td><code>memory</code>, <code>locale</code>, <code>labels</code>, <code>disabled</code></td><td>Clave para recordar el mapeo (sin ella, el <code>id</code>), formato de números y fechas, textos (<code>IMPORT_LABELS</code>; «uno|varios» para el plural).</td></tr>
+            <tr><td><code>load(archivo | texto)</code>, <code>reset()</code></td><td>Cargar desde código; volver al paso 1. <code>state</code>, <code>rows</code> y <code>mapping</code> dicen cómo va.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-import-parsed</code> <code>{name, sheet?, sheets?, headers, headerRow, rows}</code>, <code>nx-import-mapped</code> <code>{mapping, fixed, remembered}</code>, <code>nx-import-done</code> <code>{rows, skipped, mapping, fixed, headers}</code>, <code>nx-import-error</code> <code>{code, message}</code>.</td></tr>
+            <tr><td>Funciones</td><td><code>parseCsv</code>, <code>detectHeaderRow</code>, <code>autoMapColumns</code>, <code>validateImportRows</code>, <code>parseImportNumber</code>, <code>parseImportDate</code>… la misma lógica, sin DOM, para un backend en JavaScript o para probarla.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>

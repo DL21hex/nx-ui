@@ -1,0 +1,374 @@
+/*
+ * <nx-import>. Variables propias:
+ *   --nx-import-table-height (420px): alto de la tabla antes de su propio scroll
+ *
+ * Un formulario sobrio: un título con el paso, controles con borde y los botones abajo. En angosto,
+ * el mapeo se apila y las tablas hacen scroll horizontal dentro de su caja.
+ */
+
+nx-import {
+  position: relative;
+  display: block;
+  container-type: inline-size;
+  color: var(--nx-foreground);
+  font: 13.5px/1.45 var(--nx-font-sans);
+  outline: none;
+}
+nx-import *,
+nx-import *::before {
+  box-sizing: border-box;
+}
+nx-import [hidden] {
+  display: none !important;
+}
+nx-import .nx-glyph {
+  display: inline-flex;
+  flex: none;
+  inline-size: 18px;
+  block-size: 18px;
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+/* Arrastrando un archivo encima. */
+nx-import[data-drag]::after {
+  content: attr(data-drop);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--nx-primary);
+  border-radius: var(--nx-radius-lg);
+  background: color-mix(in oklab, var(--nx-background) 88%, transparent);
+  color: var(--nx-primary-ink);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.nx-imp__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 650;
+  outline: none;
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+}
+.nx-imp__count {
+  color: var(--nx-muted-foreground);
+  font-weight: 500;
+}
+.nx-imp__ok {
+  color: var(--nx-success);
+}
+.nx-imp__body {
+  display: grid;
+  gap: 12px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+:is(.nx-imp__meta, .nx-imp__note, .nx-imp__summary, .nx-imp__error, .nx-imp__info, .nx-imp__msg, .nx-imp__status) {
+  margin: 0;
+}
+:is(.nx-imp__note, .nx-imp__info, .nx-imp__status) {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.nx-imp__meta {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.nx-imp__error {
+  padding: 8px 12px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+}
+.nx-imp__msg,
+.nx-imp__bad,
+.nx-imp__req {
+  color: var(--nx-danger);
+  font-size: 12.5px;
+}
+.nx-imp__bad {
+  font-size: inherit;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- archivo */
+
+.nx-imp__drop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  inline-size: 100%;
+  padding: 20px 18px;
+  border: 1.5px dashed var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--nx-motion-fast),
+    background-color var(--nx-motion-fast);
+  &:hover {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+  }
+  & small {
+    display: block;
+    color: var(--nx-muted-foreground);
+    font-size: 12.5px;
+  }
+  & .nx-glyph {
+    inline-size: 26px;
+    block-size: 26px;
+    color: var(--nx-primary-ink);
+  }
+}
+.nx-imp__opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+.nx-imp__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--nx-muted-foreground);
+}
+
+/* ---------------------------------------------------------------- controles */
+
+.nx-imp__select,
+.nx-imp__input {
+  min-inline-size: 0;
+  block-size: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  &:focus-visible {
+    border-color: var(--nx-primary-border);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+  &[aria-invalid="true"] {
+    border-color: var(--nx-danger);
+  }
+}
+.nx-imp__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  & input {
+    inline-size: 16px;
+    block-size: 16px;
+    margin: 0;
+    accent-color: var(--nx-primary);
+  }
+}
+.nx-imp__btn {
+  flex: none;
+  min-block-size: 34px;
+  padding: 6px 16px;
+  border: 1px solid var(--nx-primary);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font: 600 13px var(--nx-font-sans);
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+.nx-imp__btn--soft {
+  border-color: var(--nx-border);
+  background: var(--nx-background);
+  color: var(--nx-foreground);
+  justify-self: start;
+  &:hover:not(:disabled) {
+    filter: none;
+    background: var(--nx-hover);
+  }
+}
+:is(.nx-imp__drop, .nx-imp__btn, .nx-imp__scroll, .nx-imp__check input):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- columnas */
+
+.nx-imp__map {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) minmax(180px, 280px) minmax(0, 1fr);
+  column-gap: 16px;
+}
+.nx-imp__row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  row-gap: 4px;
+  padding-block: 10px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  & .nx-imp__msg {
+    grid-column: 2 / -1;
+  }
+  & .nx-imp__msg:empty {
+    display: none;
+  }
+}
+.nx-imp__label {
+  font-weight: 550;
+  & small {
+    display: block;
+    color: var(--nx-muted-foreground);
+    font-size: 12px;
+    font-weight: 400;
+  }
+}
+.nx-imp__ctl {
+  display: grid;
+  gap: 6px;
+}
+.nx-imp__info {
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- tablas */
+
+.nx-imp__scroll {
+  max-block-size: var(--nx-import-table-height, 420px);
+  overflow: auto;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.nx-imp__table {
+  min-inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  & :is(th, td) {
+    padding: 6px 10px;
+    border-block-end: 1px solid var(--nx-border-subtle);
+    text-align: start;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  & thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    background: var(--nx-sidebar);
+    color: var(--nx-muted-foreground);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  & tbody th {
+    color: var(--nx-text-tertiary);
+    font-weight: 500;
+  }
+  & .is-bad {
+    background: var(--nx-danger-soft);
+  }
+  & .nx-imp__input {
+    inline-size: 100%;
+    min-inline-size: 150px;
+    block-size: 30px;
+  }
+  & .nx-imp__msg {
+    display: block;
+    max-inline-size: 260px;
+    margin-block-start: 3px;
+    white-space: normal;
+    font-size: 12px;
+  }
+}
+.nx-imp__table--preview {
+  & :is(th, td) {
+    max-inline-size: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  & .is-head > * {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+    font-weight: 600;
+  }
+}
+
+/* ---------------------------------------------------------------- pie */
+
+.nx-imp__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-block-start: 16px;
+  padding-block-start: 14px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+.nx-imp__progress {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-inline-size: 0;
+}
+.nx-imp__bar {
+  inline-size: 100%;
+  block-size: 6px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--nx-border-subtle);
+  overflow: hidden;
+  appearance: none;
+  &::-webkit-progress-bar {
+    background: transparent;
+  }
+  &::-webkit-progress-value {
+    background: var(--nx-primary);
+  }
+  &::-moz-progress-bar {
+    background: var(--nx-primary);
+  }
+}
+
+@container (max-width: 560px) {
+  .nx-imp__map {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nx-imp__row .nx-imp__msg {
+    grid-column: 1;
+  }
+  .nx-imp__foot {
+    flex-wrap: wrap;
+  }
+  .nx-imp__progress {
+    flex-basis: 100%;
+    order: -1;
+  }
+  .nx-imp__foot .nx-imp__btn:last-child {
+    margin-inline-start: auto;
+  }
+}
