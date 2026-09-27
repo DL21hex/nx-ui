@@ -375,7 +375,8 @@ function checkNumber(v: number, raw: string | undefined, rule: GuardRule, fmt: N
     // Un cero de más o de menos: v / 10^k cae en lo habitual (la menor potencia que sirva).
     if (!first && band.strong(v))
       for (let k = 1; k <= 3 && !first; k++) {
-        const up = Math.abs(v) > Math.abs(band.center);
+        // Con límites del autor, el lado lo dice el límite que se pasó (con solo `max` el centro es −∞).
+        const up = band.hard ? v > band.hi : Math.abs(v) > Math.abs(band.center);
         const x = tidy(up ? v / 10 ** k : v * 10 ** k);
         if (band.has(x)) first = warn("magnitude", `${fillText(up ? L.times : L.fraction, { value: show(v), n: fmt.number(10 ** k), typical })} ${zeros(up ? k : -k, L)}`, x);
       }

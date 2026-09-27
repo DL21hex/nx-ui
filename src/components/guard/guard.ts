@@ -122,7 +122,9 @@ export class NxGuard extends Base {
   }
   /** Los avisos vigentes (sin los reconocidos), en el orden de los campos en la página. */
   get findings(): GuardFinding[] {
+    // Un campo que ya no está (una fila borrada) no tiene avisos vigentes.
     return [...this.#results]
+      .filter(([, r]) => this.contains(r.el))
       .sort(([, a], [, b]) => (a.el.compareDocumentPosition(b.el) & 2 ? 1 : -1))
       .flatMap(([name, r]) => (this.#acked.get(name)?.has(r.key) ? [] : this.#all(name, r)));
   }
@@ -321,7 +323,8 @@ export class NxGuard extends Base {
       const stop = setTimeout(() => job.ctrl.abort(), TIMEOUT);
       try {
         const values: Record<string, unknown> = {};
-        for (const el of this.#controls()) values[nameOf(el)] ??= isNumber(el) ? el.value : String(el.value ?? "");
+        // Un campo con `remote: false` no sale nunca: tampoco como contexto de otro.
+        for (const el of this.#controls()) if (this.#rule(el)?.remote !== false) values[nameOf(el)] ??= isNumber(el) ? el.value : String(el.value ?? "");
         const res = await fetch(url, {
           method: "POST",
           signal: job.ctrl.signal,

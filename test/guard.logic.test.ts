@@ -119,6 +119,11 @@ describe("guardCheck: un cero de más o de menos", () => {
     expect(check(50, { min: 10, max: 100 })).toEqual([]);
   });
 
+  it("solo `max`: un cero de más se corrige hacia abajo (el centro de «≤ max» es −∞)", () => {
+    expect(check(50000, { max: 1000 })[0]).toMatchObject({ kind: "magnitude", suggestion: 500 });
+    expect(check(5, { min: 100 })[0]).toMatchObject({ kind: "magnitude", suggestion: 500 });
+  });
+
   it("sin configuración, un número no se vigila", () => {
     expect(check(12_000_000)).toEqual([]);
     expect(check(-5)).toEqual([]);
