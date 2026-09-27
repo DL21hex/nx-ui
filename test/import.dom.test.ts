@@ -426,6 +426,25 @@ describe("<nx-import>: paso 3, revisión", () => {
     expect(el.querySelector(".nx-imp__meta")).toBeNull();
     expect(el.state).toBe("file");
   });
+
+  it("volver a las columnas mientras se revisa un archivo grande: la revisión vieja no repinta encima", async () => {
+    const el = mount();
+    const lines = ["NIT;Razón social"];
+    for (let i = 0; i < 12000; i++) lines.push(`900359742-3;Empresa ${i}`);
+    await el.load(lines.join("\n"));
+    btn(el, "next").click();
+    btn(el, "next").click();
+    // Revisando por tramos: la persona vuelve y está eligiendo una columna.
+    btn(el, "back").click();
+    expect(title(el)).toBe("Paso 2 de 3 · Columnas");
+    const s = sel(el, "correo");
+    s.focus();
+    for (let k = 0; k < 6; k++) await tick();
+    expect(el.contains(s)).toBe(true);
+    expect(document.activeElement).toBe(s);
+    expect(status(el)).toBe("");
+    expect(el.querySelector(".nx-imp__bar")!.hasAttribute("hidden")).toBe(true);
+  });
 });
 
 describe("<nx-import>: envío al servidor", () => {
@@ -498,6 +517,40 @@ describe("<nx-import>: envío al servidor", () => {
     expect(status(el)).toBe("Envío cancelado. Se importaron 2; puedes seguir con el resto.");
     expect(summary(el)).toBe("3 filas listas");
     expect(btn(el, "next").textContent).toBe("Importar 3 filas");
+  });
+
+  it("tras cancelar, volver a las columnas y seguir no reenvía lo que ya entró (ni lo pierde del resultado)", async () => {
+    const bodies: { rows: Record<string, unknown>[] }[] = [];
+    let n = 0;
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      if (n++ === 0) return Promise.resolve(json({}));
+      return new Promise<Response>((resolve, reject) => {
+        if (n > 2) return resolve(json({}));
+        init.signal!.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const el = mount('endpoint="/api/clientes" batch="2"');
+    await toReview(el, ALL_OK);
+    btn(el, "next").click();
+    await tick(5);
+    btn(el, "cancel").click();
+    await tick();
+    expect(status(el)).toBe("Envío cancelado. Se importaron 2; puedes seguir con el resto.");
+    // Anterior → Siguiente: la revisión se hace de nuevo, pero lo enviado sigue enviado.
+    btn(el, "back").click();
+    btn(el, "next").click();
+    await tick();
+    expect(summary(el)).toBe("3 filas listas");
+    const done = vi.fn();
+    el.addEventListener("nx-import-done", (e) => done(e.detail));
+    btn(el, "next").click();
+    await tick(10);
+    expect(el.state).toBe("done");
+    const sent = bodies.slice(0, 1).concat(bodies.slice(2)).flatMap((b) => b.rows.map((r) => r.razon));
+    expect(sent).toEqual(["Uno", "Dos", "Tres", "Cuatro", "Cinco"]);
+    expect(done.mock.calls[0][0].rows.map((r: Record<string, unknown>) => r.razon)).toEqual(["Uno", "Dos", "Tres", "Cuatro", "Cinco"]);
   });
 
   it("si el servidor falla: aviso, nx-import-error y se puede reintentar", async () => {
