@@ -23,6 +23,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-keytips>` + núcleo (ESM) | ≈ 4 KB |
 | `<nx-guard>` + núcleo (ESM) | ≈ 8,8 KB |
 | `<nx-handoff>` + QR + núcleo (ESM); el lado celular, ≈ 5 KB, se carga con `side="phone"` | ≈ 8,9 KB |
+| `<nx-award>` + núcleo (ESM) | ≈ 15,1 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1354,6 +1355,66 @@ escanea) y el resultado aparece solo en el formulario.
 | Eventos | `nx-handoff-state` `{state}`, `nx-handoff-item` `{item, file?}` (cancelable), `nx-handoff-done` `{items}`, `nx-handoff-error` `{message}` |
 | Protocolo | `POST {endpoint}` → `{id, url, expiresIn, token}` · `GET …/{id}/events?after=` (SSE/NDJSON) · `GET …/{id}?after=` (polling) · `GET …/{id}?t=` (celular) · `POST …/{id}/items?t=` y `…/done?t=` · `DELETE …/{id}`. Detalle en `src/components/handoff/INTEGRATION.md` |
 | Funciones | `qrMatrix(texto, {ecc?})` (matriz booleana; modo byte, L/M/Q/H, versiones 1–40, las 8 máscaras), `qrSvgPath(matriz)` (un solo `d` con las corridas fusionadas), `parseHandoffEvent()` |
+
+## `<nx-award>`
+
+**Adjudicar una cotización con la IA al lado.** Artículos en filas, proveedores en columnas y, en
+cada celda, lo que cotizó. La IA sugiere un proveedor por artículo y esa sugerencia arranca como la
+elección del comprador; él decide al final. Con 60 artículos y 10 proveedores son 600 números: el
+componente no pide leerlos todos, sino que lleva a las filas que merecen ojo humano.
+
+- **Tres marcas en la celda, nada más:** contorno punteado con ✦ (sugerida por la IA), relleno (lo
+  elegido) y ámbar (una alerta). Cuando el comprador se aparta, la sugerencia sigue a la vista.
+- **Alertas del backend:** un precio atípico que no se tuvo en cuenta, una sola cotización, una
+  decisión cerrada, un proveedor con la póliza por vencer. «Siguiente alerta» (o `J`/`K`) abre la
+  próxima; el resumen cuenta las que faltan.
+- **El costo de apartarse:** arriba, el total, lo que cuestan los cambios frente a la IA (en rojo si
+  suben), cuántas órdenes salen y las alertas por abrir. En el detalle de la fila, «Elegiste
+  Ferrecaribe: +$ 144.000 frente a la sugerencia», el motivo (sugerencias o texto libre; obligatorio
+  con `require-reason`) y «Volver a la sugerencia».
+- **Por qué:** el detalle muestra la razón de la IA, el ranking con el aporte de cada criterio (una
+  barra por proveedor) y el precio original antes de normalizar («US$ 28,50 · TRM 4.150»).
+- **Proveedor:** clic en su columna para ver lo que cotizó y lo que se le adjudica, excluirlo de la
+  sugerencia (se vuelve a pedir) o darle todo lo que cotizó (se deshace con un clic).
+- **Criterios y escenarios:** mover un peso vuelve a pedir la recomendación y los contornos cambian
+  de celda; los escenarios del backend («Máximo 3 proveedores») dicen cuántas órdenes dan y cuánto
+  cuestan.
+- **Vista:** precio unitario, total de la línea, plazo o puntaje; todos, con alertas o cambiados.
+  Encabezado, primera columna y pie (lo adjudicado a cada proveedor) fijos al desplazarse.
+- **Teclado:** una grilla WAI-ARIA con un solo punto de tabulación: flechas, `Inicio`/`Fin`,
+  `RePág`/`AvPág`; `Espacio` elige, `Supr` vuelve a la sugerencia, `↵` abre el detalle, `Esc` lo
+  cierra.
+
+El componente no puntúa: la recomendación es del backend, en streaming, y las celdas se marcan a
+medida que llega. `price` es el unitario comparable (ya normalizado por unidad, moneda e impuestos).
+
+```html
+<nx-award id="rfq" heading="RFQ-0412" endpoint="/compras/rfq/412/recomendar" currency="COP" require-reason></nx-award>
+<script>
+  rfq.suppliers = [{ id: "ferrecaribe", name: "Ferrecaribe", detail: "★ 4,6 · 5 d" }, …];
+  rfq.items = [{ id: "A15", name: "Tubo PVC ½\" x 6 m", qty: 240, unit: "und", group: "Hidráulicos" }, …];
+  rfq.quotes = [{ item: "A15", supplier: "ferrecaribe", price: 18500, leadTime: 5 }, …];
+  rfq.criteria = [{ id: "precio", label: "Precio", weight: 50 }, { id: "plazo", label: "Plazo", weight: 30 }];
+  rfq.addEventListener("nx-award-submit", (e) => crearOrdenes(e.detail.orders));
+</script>
+```
+
+El backend recibe `POST {weights, excluded}` y responde una línea por evento:
+
+```
+{"type":"recommend","item":"A15","supplier":"tresr","reason":"El precio más bajo, con entrega en 4 días.","ranking":[{"supplier":"tresr","score":91.2,"scores":{"precio":100,"plazo":75,"calidad":94}}, …]}
+{"type":"flag","item":"A27","supplier":"rivera","message":"Cotiza 46 % bajo la mediana: ¿otra unidad? No se tuvo en cuenta."}
+{"type":"scenario","id":"tres","label":"Máximo 3 proveedores","picks":{"A15":"andes", …}}
+{"type":"done"}
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `suppliers` (`[{id, name, detail?, alert?}]`), `items` (`[{id, name, qty, unit?, code?, group?}]`), `quotes` (`[{item, supplier, price, leadTime?, original?, note?}]`), `criteria` (`[{id, label, weight}]`), `weights`, `advice` (los eventos, sin servidor), `choices` (`[{item, supplier, reason?}]`), `excluded`, `reasons`, `scenario`, `filter` (`all`, `alerts`, `changed`), `lens` (`price`, `total`, `lead`, `score`), `endpoint`, `heading`, `currency`, `readonly`, `require-reason`, `require-review`, `locale`, `labels` · `value` (solo lectura: `{artículo: proveedor}`) |
+| Métodos | `submit()`, `next(dir?)`, `open(item)`, `refresh()` |
+| Eventos | `nx-award-advise` `{weights, excluded, respond(events)}` (sin `endpoint`; cancelable), `nx-award-change` `{item, supplier, recommended, reason, value}`, `nx-award-submit` `{orders, changes, value, total, unassigned, scenario, weights, excluded, pending}` |
+| Protocolo | NDJSON o SSE: `recommend`, `flag` (`tone`), `scenario`, `note`, `error`, `done`. Lo que una recomendación completa no vuelve a mandar desaparece |
+| Funciones | `awardOrders()`, `awardChanges()`, `awardTotal()`, `awardShares()`, `awardGridMove()`, `parseAwardEvent()` |
 
 ## Desarrollo
 
