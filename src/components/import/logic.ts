@@ -8,7 +8,7 @@
  */
 import { canonicalLocale, nxFormat } from "../../core/locale";
 import { foldText } from "../../core/text";
-import { nitCheckDigit } from "../paste-fill/logic";
+import { nitCheckDigit } from "../../core/nit";
 import type { ImportCell, ImportColumn, ImportMapping, ImportMatch, ImportMessages, ImportOption, ImportRowCheck, ImportTable, ImportType } from "./types";
 
 export const IMPORT_MESSAGES: ImportMessages = {

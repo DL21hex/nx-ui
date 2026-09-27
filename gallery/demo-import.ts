@@ -7,7 +7,7 @@
  */
 import type { ImportColumnInput, NxImport } from "../src/components/import/index";
 import { buildXlsx } from "../src/components/grid/xlsx";
-import { nitCheckDigit } from "../src/components/paste-fill/logic";
+import { nitCheckDigit } from "../src/core/nit";
 import { addDemoRoute } from "./demo-api";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
