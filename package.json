@@ -126,6 +126,10 @@
       "types": "./dist/types/components/import/index.d.ts",
       "import": "./dist/import.js"
     },
+    "./guard": {
+      "types": "./dist/types/components/guard/index.d.ts",
+      "import": "./dist/guard.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"

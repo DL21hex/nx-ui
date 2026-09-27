@@ -1250,6 +1250,66 @@ Mantener Alt ~400 ms también los muestra (y Alt+letra sin soltar ejecuta).
 | Eventos | `nx-keytip` `{key, target, name}` (cancelable), `nx-open-change` `{open}` |
 | Funciones | `assignKeytips([{name, forced?, prev?}])` → códigos, `keytipLetters(nombre)` |
 
+## `<nx-guard>`
+
+El detector de dedazos. Los errores más caros de un ERP no son los que la validación rechaza, sino
+los valores válidos pero absurdos: un precio con un cero de más, una cantidad de 1000 donde siempre
+van 10, una fecha en 2062, dos dígitos invertidos en un total. `<nx-guard>` envuelve tu formulario
+(sin mover sus campos) y, al salir de un campo, compara lo escrito con lo habitual; si algo no
+cuadra, lo dice **junto al campo, sin bloquear**, con la corrección a un clic.
+
+- **Un cero de más o de menos:** con `history` (valores recientes del campo) calcula lo habitual
+  con mediana y MAD (un atípico en la historia no mueve nada; tiempo lineal, sin ordenar). Si el
+  valor está lejos y ÷ o × 10, 100 o 1.000 cae en lo habitual: «$ 12.000.000 es 10 veces lo
+  habitual ($ 1.200.000). ¿Sobra un cero?» con «Corregir a $ 1.200.000». Si solo está muy lejos:
+  «Muy por encima de lo habitual ($1,1 M – $1,3 M)». Con menos de 4 datos, solo lo obvio. Sin
+  historia, `typical: [lo, hi]` o `min`/`max` blandos.
+- **Separador confundido:** «1.500» queriendo 1,5, o «1,500» de un sistema en inglés: si la otra
+  lectura de lo tecleado cae en lo habitual, «Se leyó 1.500. ¿Querías 1,5?». Lee como
+  `<nx-number>` y `nxFormat().parse`.
+- **Dígitos invertidos:** con `expected` (un número, `"#id"` de un elemento con el valor o
+  `"@name"` de otro campo): «¿Invertiste dos dígitos? Esperado $ 1.530.000» o «Difiere en un
+  dígito de …».
+- **Fechas:** año con dígitos invertidos o de otro siglo (2062, 2206, 0226 → 2026), fuera de
+  `typical: ["-30d", "+90d"]` (ISO o relativas a hoy: `d`, `w`, `m`, `y`, `today`), fin de semana
+  o festivo con `workdays` y `holidays`.
+- **Además:** `repeat` (igual al último de `history`), decimales donde siempre van enteros
+  (`integer`, o deducido de la historia) y negativos donde nunca los hay (`negative`, o deducido).
+- **El servidor:** con `endpoint`, `POST {field, value, values}` tras 300 ms (un cambio nuevo
+  cancela el anterior); responde `{findings: [{field, kind, message, suggestion?}]}` («Esta factura
+  ya se registró el 12 sep»). Si falla o tarda más de 4 s, silencio.
+- **Cómo avisa:** una línea sobria debajo del campo (después de su `<label>` si lo envuelve), con
+  «Corregir a …» (en `<nx-number>` por su `value`; en un input, con `input` y `change`) y «Está
+  bien» (no vuelve a avisar por ese valor). El campo la suma a su `aria-describedby` (nunca
+  `aria-invalid`) y se anuncia en una región `role="status"`. Con `mode="confirm"`, el primer envío
+  con avisos se detiene y dice cuántos arriba del botón; el segundo pasa.
+- **Sin trabajo de más:** delegación de eventos en el guard (los campos que entran después también
+  cuentan); nada corre mientras nadie toca el formulario.
+
+```html
+<nx-guard mode="confirm" fields='{
+  "precio": {"history": [1180000, 1210000, 1195000, 1240000], "format": "money", "currency": "COP"},
+  "cantidad": {"typical": [1, 50]},
+  "total": {"expected": "#total-oc", "format": "money", "currency": "COP"},
+  "fecha": {"typical": ["-60d", "today"]}
+}'>
+  <form>
+    <label for="precio">Precio unitario</label>
+    <nx-number id="precio" name="precio" format="money" currency="COP"></nx-number>
+    <label>Cantidad <input name="cantidad" data-guard='{"integer": true}'></label>
+    <label>Fecha <input name="fecha" type="date"></label>
+  </form>
+</nx-guard>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `fields` (por `name`; o `data-guard` en el campo), `mode` (`warn`, `confirm`), `endpoint`, `locale`, `labels`, `disabled` · `findings` |
+| Por campo | `history`, `typical`, `min`, `max`, `expected`, `format`, `currency`, `integer`, `negative`, `repeat`, `type`, `workdays`, `holidays`, `remote: false` |
+| Métodos | `check(name?)` (revisa ya y devuelve los hallazgos), `reset()` |
+| Eventos | `nx-guard-warn` `{field, finding}`, `nx-guard-fix` `{field, from, to}`, `nx-guard-ack` `{field, value}`, `nx-guard-block` `{findings}` (cancelable) |
+| Funciones | `guardCheck(valor, regla, {locale, raw})`, `robustRange(historia)`, `guardDate("-30d")`: la misma lógica en un backend en JavaScript |
+
 ## Desarrollo
 
 **Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos

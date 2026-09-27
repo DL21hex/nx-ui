@@ -47,6 +47,7 @@ const BUDGET = [
   ["dist/keytips.js", 4.25 * 1024, "keytips + núcleo (ESM)"],
   ["dist/import.js", 17 * 1024, "import + núcleo (ESM; el lector de .xlsx se carga aparte)"],
   [lazy("read-xlsx"), 2.5 * 1024, "lector de .xlsx de nx-import (se carga al llegar un libro)"],
+  ["dist/guard.js", 9.25 * 1024, "guard + núcleo (ESM)"],
   ["dist/bdui.js", 1.75 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/solid/index.jsx", 5 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
@@ -78,6 +79,7 @@ const BUDGET = [
   ["dist/sync.css", 3 * 1024, "sync (CSS)"],
   ["dist/keytips.css", 0.75 * 1024, "keytips (CSS)"],
   ["dist/import.css", 2 * 1024, "import (CSS)"],
+  ["dist/guard.css", 1 * 1024, "guard (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

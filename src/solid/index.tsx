@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -87,6 +87,9 @@ import type { ImportColumnInput, ImportDoneDetail, ImportErrorDetail, ImportLabe
 import "../components/keytips/index";
 import type { NxKeytips } from "../components/keytips/keytips";
 import type { KeytipAssignment, KeytipDetail, KeytipsLabels } from "../components/keytips/types";
+import "../components/guard/index";
+import type { NxGuard } from "../components/guard/guard";
+import type { GuardFields, GuardFinding, GuardLabels, GuardMode } from "../components/guard/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -113,6 +116,7 @@ export type { NxScan, ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMod
 export type { NxSync, SyncChangeDetail, SyncField, SyncLabels, SyncOp };
 export type { NxImport, ImportColumnInput, ImportDoneDetail, ImportErrorDetail, ImportLabels, ImportMappedDetail, ImportParsedDetail, ImportState };
 export type { NxKeytips, KeytipAssignment, KeytipDetail, KeytipsLabels };
+export type { NxGuard, GuardFields, GuardFinding, GuardLabels, GuardMode };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -129,13 +133,13 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
       progress: number | null | undefined;
       options: SelectOption[];
-      fields: SelectField[] | HistoryField[] | PasteFieldInput[] | SyncField[] | undefined;
+      fields: SelectField[] | HistoryField[] | PasteFieldInput[] | SyncField[] | GuardFields | undefined;
       record: Record<string, unknown> | undefined;
       events: HistoryEvent[] | undefined;
       user: HistoryActor | null | undefined;
@@ -193,7 +197,7 @@ declare module "solid-js" {
       locale: string | undefined;
       heading: string | undefined;
       description: string | undefined;
-      mode: DialogMode | ScanMode | undefined;
+      mode: DialogMode | ScanMode | GuardMode | undefined;
       size: DialogSize | undefined;
       url: string | undefined;
       hold: string | undefined;
@@ -241,6 +245,10 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-guard-warn": CustomEvent<{ field: string; finding: GuardFinding }>;
+      "nx-guard-fix": CustomEvent<{ field: string; from: number | string | null; to: number | string }>;
+      "nx-guard-ack": CustomEvent<{ field: string; value: number | string | null }>;
+      "nx-guard-block": CustomEvent<{ findings: GuardFinding[] }>;
       "nx-keytip": CustomEvent<KeytipDetail>;
       "nx-import-parsed": CustomEvent<ImportParsedDetail>;
       "nx-import-mapped": CustomEvent<ImportMappedDetail>;
@@ -300,6 +308,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-guard": HTMLAttributes<NxGuard> & { endpoint?: string };
       "nx-import": HTMLAttributes<NxImport> & { endpoint?: string };
       "nx-keytips": HTMLAttributes<NxKeytips>;
       "nx-sync": HTMLAttributes<NxSync> & { ping?: string };
@@ -1412,5 +1421,44 @@ export function Keytips(props: KeytipsProps): JSX.Element {
       on:nx-keytip={(e) => local.onKeytip?.(e)}
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
     />
+  );
+}
+
+export interface GuardProps extends JSX.HTMLAttributes<NxGuard> {
+  /** La configuración por `name`: `{precio: {history: [...], format: "money", currency: "COP"}}`. */
+  fields?: GuardFields;
+  /** `warn` (por defecto: nunca bloquea) o `confirm` (el primer envío con avisos se detiene). */
+  mode?: GuardMode;
+  /** Recibe `POST {field, value, values}` y responde `{findings: [...]}` (opcional). */
+  endpoint?: string;
+  locale?: string;
+  labels?: Partial<GuardLabels>;
+  disabled?: boolean;
+  onWarn?: (e: CustomEvent<{ field: string; finding: GuardFinding }>) => void;
+  onFix?: (e: CustomEvent<{ field: string; from: number | string | null; to: number | string }>) => void;
+  onAck?: (e: CustomEvent<{ field: string; value: number | string | null }>) => void;
+  /** Cancelable: cancelarlo deja pasar el envío. */
+  onBlock?: (e: CustomEvent<{ findings: GuardFinding[] }>) => void;
+  children?: JSX.Element;
+}
+
+export function Guard(props: GuardProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["fields", "mode", "endpoint", "locale", "labels", "disabled", "onWarn", "onFix", "onAck", "onBlock", "children"]);
+  return (
+    <nx-guard
+      {...rest}
+      prop:fields={local.fields}
+      prop:labels={local.labels}
+      attr:mode={local.mode}
+      attr:endpoint={local.endpoint}
+      attr:locale={local.locale}
+      bool:disabled={!!local.disabled}
+      on:nx-guard-warn={(e) => local.onWarn?.(e)}
+      on:nx-guard-fix={(e) => local.onFix?.(e)}
+      on:nx-guard-ack={(e) => local.onAck?.(e)}
+      on:nx-guard-block={(e) => local.onBlock?.(e)}
+    >
+      {local.children}
+    </nx-guard>
   );
 }

@@ -31,6 +31,7 @@ const entries = {
   "history": "src/components/history/history.css",
   "kanban": "src/components/kanban/kanban.css",
   "number": "src/components/number/number.css",
+  "guard": "src/components/guard/guard.css",
   "import": "src/components/import/import.css",
   "keytips": "src/components/keytips/keytips.css",
 };
