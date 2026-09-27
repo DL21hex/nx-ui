@@ -269,6 +269,8 @@ export class NxImport extends Base {
       try {
         const bytes = new Uint8Array(await src.arrayBuffer());
         if (bytes[0] === 0xd0 && bytes[1] === 0xcf) return this.#fail("read", L.oldExcel, run);
+        // Una imagen, un PDF o un audio (una captura pegada, el archivo equivocado) no es una tabla.
+        if (/^(image|audio|video)\//.test(src.type) || src.type === "application/pdf" || /^(\x89PNG|\xff\xd8\xff|%PDF|GIF8)/.test(String.fromCharCode(...bytes.subarray(0, 4)))) return this.#fail("read", L.unreadable, run);
         if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 3) {
           const { readXlsx } = await import("./read-xlsx");
           book = await readXlsx(bytes);

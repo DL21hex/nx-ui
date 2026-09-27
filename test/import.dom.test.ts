@@ -168,7 +168,11 @@ describe("<nx-import>: paso 1, archivo", () => {
     expect(el.querySelector(".nx-imp__error")!.textContent).toContain(".xls antiguos");
     await el.load(fileOf([new Uint8Array([0x50, 0x4b, 3, 4, 1, 2, 3])], "roto.xlsx"));
     expect(el.querySelector(".nx-imp__error")!.textContent).toContain("No se pudo leer el archivo");
-    expect(errors.map((e) => e.code)).toEqual(["empty", "empty", "size", "read", "read"]);
+    // Una captura pegada o un PDF no se leen como un CSV de basura.
+    await el.load(fileOf([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])], "captura.png"));
+    expect(el.querySelector(".nx-imp__error")!.textContent).toContain("No se pudo leer el archivo");
+    await el.load(fileOf([new Uint8Array([0x25, 0x50, 0x44, 0x46])], "factura.pdf"));
+    expect(errors.map((e) => e.code)).toEqual(["empty", "empty", "size", "read", "read", "read", "read"]);
     expect(btn(el, "next").disabled).toBe(true);
     // Un archivo bueno quita el error.
     await el.load("NIT\n900359742-3");
