@@ -152,7 +152,8 @@ export class NxKeytips extends Base {
     if (this.disabled || !this.isConnected) return;
     this.#tap = 0;
     this.#typed = "";
-    if (!this.#paint()) return;
+    // Sin ninguna acción visible no abre (y si ya estaba abierto, cierra: si no, se tragaría las teclas).
+    if (!this.#paint()) return this.hide();
     if (this.#open) return;
     this.#open = true;
     const layer = this.#layer!;
@@ -321,7 +322,10 @@ export class NxKeytips extends Base {
     const detail: KeytipDetail = { key: t.key, target: el, name: t.name };
     const ok = this.dispatchEvent(new CustomEvent("nx-keytip", { detail, bubbles: true, composed: true, cancelable: true }));
     this.hide();
-    if (!ok) return;
+    // Algo que se ocultó por clase o estilo con los atajos abiertos (el observador no mira `class`
+    // ni `style`) ya no se pulsa.
+    const gone = !el.isConnected || (el.checkVisibility && !el.checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true } as CheckVisibilityOptions));
+    if (!ok || gone) return;
     const target = control(el);
     const k = kind(target);
     if (k === 2 || (!k && !target.hasAttribute("data-keytip"))) {
@@ -349,9 +353,12 @@ export class NxKeytips extends Base {
       // Un envoltorio con `data-keytip` se queda con la letra de lo de adentro.
       const owner = el.parentElement?.closest("[data-keytip]");
       if (owner && root.contains(owner)) continue;
+      // Con solo `tabindex` (o un `role` que no se pulsa), cuenta si se puede tabular hasta él y tiene
+      // nombre. Lo que no es tabulable se descarta antes de leer su texto (un `role="main"` es toda la página).
+      const plain = !kind(el) && !el.hasAttribute("data-keytip");
+      if (plain && el.tabIndex < 0) continue;
       const name = nameOf(control(el));
-      // Con solo `tabindex`, cuenta si se puede tabular hasta él y tiene nombre.
-      if (!kind(el) && !el.hasAttribute("data-keytip") && (el.tabIndex < 0 || !name)) continue;
+      if (plain && !name) continue;
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height || r.bottom <= 0 || r.right <= 0 || r.top >= vh || r.left >= vw) continue;
       if (el.checkVisibility && !el.checkVisibility({ checkVisibilityCSS: true, visibilityProperty: true } as CheckVisibilityOptions)) continue;

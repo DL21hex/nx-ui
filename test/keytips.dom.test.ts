@@ -470,4 +470,25 @@ describe("<nx-keytips>", () => {
     // Con los atajos cerrados, un pointerdown no hace nada (no hay listener que lo atienda).
     expect(el.open).toBe(false);
   });
+
+  it("show() con los atajos abiertos y ya sin acciones visibles los cierra (no se queda tragando teclas)", () => {
+    const el = mount();
+    el.show();
+    expect(el.open).toBe(true);
+    for (const b of document.querySelectorAll("button, input, textarea")) b.setAttribute("hidden", "");
+    el.show();
+    expect(el.open).toBe(false);
+  });
+
+  it("una acción que se ocultó (por clase o estilo) con los atajos abiertos ya no se pulsa", () => {
+    const el = mount();
+    const save = document.getElementById("save")!;
+    const click = vi.fn();
+    save.addEventListener("click", click);
+    tap();
+    save.checkVisibility = () => false;
+    down(el.assignments.find((a) => a.element === save)!.key);
+    expect(click).not.toHaveBeenCalled();
+    expect(el.open).toBe(false);
+  });
 });
