@@ -1,0 +1,107 @@
+/*
+ * <nx-guard>. Variables propias:
+ *   --nx-guard-warn: el ámbar del ícono y del borde del campo (por defecto `--nx-warning`, si existe)
+ *   --nx-guard-ink: el ámbar como texto
+ *
+ * El formulario es del autor: aquí solo se pintan las piezas propias (`.nx-guard__*`). Al campo con
+ * aviso se le pone `data-nx-guard="warn|info"`, por si el autor quiere usarlo en su CSS.
+ */
+
+nx-guard {
+  --nx-guard-warn: var(--nx-warning, light-dark(oklch(0.7 0.15 70), oklch(0.8 0.14 75)));
+  --nx-guard-ink: var(--nx-warning-ink, light-dark(oklch(0.5 0.12 65), oklch(0.83 0.13 80)));
+  display: block;
+}
+nx-guard :is(input, select, textarea)[data-nx-guard],
+nx-guard nx-number[data-nx-guard] .nx-number__field {
+  border-color: var(--nx-guard-warn);
+}
+
+.nx-guard__note,
+.nx-guard__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 2px 8px;
+  margin: 6px 0 0;
+  color: var(--nx-muted-foreground);
+  font: 400 12.5px/1.45 var(--nx-font-sans);
+  text-align: start;
+  outline: none;
+}
+.nx-guard__note {
+  animation: nx-guard-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-guard__confirm {
+  margin-block: 0 10px;
+  color: var(--nx-foreground);
+  font-size: 13px;
+}
+.nx-guard__note:focus-visible {
+  border-radius: var(--nx-radius-sm);
+  box-shadow: 0 0 0 2px var(--nx-ring);
+}
+/* El ícono de advertencia (triángulo de Lucide) va en CSS: el JS no carga glifos. */
+.nx-guard__note::before,
+.nx-guard__confirm::before {
+  content: "";
+  flex: none;
+  inline-size: 15px;
+  block-size: 15px;
+  margin-block-start: 1px;
+  background: var(--nx-guard-warn);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4m0 4h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.nx-guard__msg {
+  flex: 1 1 14em;
+  min-inline-size: 0;
+}
+.nx-guard__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin-inline-start: 23px;
+  flex-basis: 100%;
+
+  & button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--nx-muted-foreground);
+    font: 600 12.5px/1.45 var(--nx-font-sans);
+    text-underline-offset: 3px;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+    &:focus-visible {
+      border-radius: 3px;
+      outline: 2px solid var(--nx-ring);
+      outline-offset: 2px;
+    }
+  }
+  & .nx-guard__fix {
+    color: var(--nx-primary-ink);
+  }
+}
+.nx-guard__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes nx-guard-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-guard__note {
+    animation: none;
+  }
+}

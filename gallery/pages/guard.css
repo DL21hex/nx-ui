@@ -1,0 +1,186 @@
+/* Demo de <nx-guard>: «Registrar factura de proveedor» y los controles de la página. */
+
+.gd-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-block: 4px 14px;
+}
+.gd-try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  & > span:last-child {
+    display: contents;
+  }
+}
+.gd-try__label {
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.gd-chip {
+  padding: 5px 11px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-primary-ink);
+  font: 550 12.5px var(--nx-font-sans);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-primary-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.gd-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+
+  & legend {
+    float: left;
+    margin-inline-end: 4px;
+    padding: 0;
+    color: var(--nx-text-tertiary);
+    font-weight: 600;
+  }
+  & label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+}
+
+.gd-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  align-items: start;
+  gap: 16px;
+  max-inline-size: 880px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.gd-form__head {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 10px 24px;
+  padding-block-end: 14px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+
+  & p {
+    margin: 0;
+  }
+}
+.gd-form__kicker {
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.gd-form__title {
+  margin: 2px 0 0;
+  font-size: 17px;
+}
+.gd-form__meta {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.gd-oc {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+
+  & div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  & dt {
+    color: var(--nx-muted-foreground);
+  }
+  & dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+.gd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  --nx-number-width: 100%;
+
+  & > label {
+    color: var(--nx-muted-foreground);
+    font-size: 12.5px;
+    font-weight: 550;
+  }
+  & > input {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-background);
+    color: var(--nx-foreground);
+    font: 14px var(--nx-font-sans);
+
+    &:focus {
+      border-color: var(--nx-primary);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--nx-primary-soft);
+    }
+  }
+}
+.gd-hint {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+.gd-form__foot {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* La línea de «Revisa n valores…» (de nx-guard) va en su propia fila, arriba de los botones. */
+.gd-form > .nx-guard__confirm {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+.gd-save {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font: 600 13px var(--nx-font-sans);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}

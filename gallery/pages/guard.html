@@ -1,0 +1,158 @@
+    <!-- ================================================================ Detector de dedazos -->
+    <template id="page-guard">
+      <p class="eyebrow">Componentes</p>
+      <h1>Detector de dedazos <code class="tag">&lt;nx-guard&gt;</code></h1>
+      <p class="lead">
+        Los errores más caros de un ERP no son los que la validación rechaza, sino los valores válidos pero absurdos: un
+        precio con un cero de más, una cantidad de 120 donde siempre van 12, una fecha en 2062, dos dígitos invertidos en
+        un total. <code>&lt;nx-guard&gt;</code> envuelve tu formulario y, al salir de un campo, lo compara con lo
+        habitual: si algo no cuadra, lo dice junto al campo, sin bloquear, con la corrección a un clic.
+      </p>
+
+      <div class="gd-tools" lang="es-CO">
+        <div class="gd-try" role="group" aria-labelledby="gd-try-label">
+          <span class="gd-try__label" id="gd-try-label">Prueba esto</span>
+          <span id="gd-try"></span>
+        </div>
+        <fieldset class="gd-mode">
+          <legend>Al registrar</legend>
+          <label><input type="radio" name="gd-mode" value="warn" checked /> Solo avisar</label>
+          <label><input type="radio" name="gd-mode" value="confirm" /> Pedir confirmación</label>
+        </fieldset>
+      </div>
+
+      <nx-guard id="gd-demo" lang="es-CO" endpoint="/demo/guard/check">
+        <form class="gd-form" id="gd-form">
+          <header class="gd-form__head">
+            <div>
+              <p class="gd-form__kicker">Cuentas por pagar · Registrar factura de proveedor</p>
+              <h2 class="gd-form__title">Aceros del Caribe S.A.S.</h2>
+              <p class="gd-form__meta">NIT 900.359.742-3 · Barranquilla · Crédito 30 días</p>
+            </div>
+            <dl class="gd-oc">
+              <div><dt>Orden de compra</dt><dd>OC-2291</dd></div>
+              <div><dt>Lámina HR 4×8 cal. 14</dt><dd>12 × $ 1.275.000</dd></div>
+              <div><dt>Total de la OC</dt><dd id="gd-oc-total">$ 15.300.000</dd></div>
+            </dl>
+          </header>
+          <div class="gd-field">
+            <label for="gd-factura">Número de factura</label>
+            <input id="gd-factura" name="factura" autocomplete="off" placeholder="FC-0000" />
+            <small class="gd-hint">La última registrada de este proveedor es la FC-8811.</small>
+          </div>
+          <div class="gd-field">
+            <label for="gd-fecha">Fecha de la factura</label>
+            <input id="gd-fecha" name="fecha" type="date" />
+          </div>
+          <div class="gd-field">
+            <label for="gd-cantidad">Cantidad (láminas)</label>
+            <input id="gd-cantidad" name="cantidad" inputmode="decimal" autocomplete="off" placeholder="0" />
+          </div>
+          <div class="gd-field">
+            <label for="gd-precio">Precio unitario</label>
+            <nx-number id="gd-precio" name="precio" format="money" currency="COP" min="0" placeholder="$ 0"></nx-number>
+          </div>
+          <div class="gd-field">
+            <label for="gd-total">Total de la factura</label>
+            <nx-number id="gd-total" name="total" format="money" currency="COP" min="0" placeholder="$ 0"></nx-number>
+          </div>
+          <div class="gd-form__foot">
+            <button type="reset" class="dlg-plain">Limpiar</button>
+            <button type="submit" class="gd-save">Registrar factura</button>
+          </div>
+        </form>
+      </nx-guard>
+      <ol class="stage__log btn-events" id="guard-log"></ol>
+
+      <h2>Qué detecta</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dedazo</th><th>Cómo lo ve</th></tr></thead>
+          <tbody>
+            <tr><td>Un cero de más o de menos</td><td>Con <code>history</code> (valores recientes del campo) calcula lo habitual con mediana y MAD: un atípico en la historia no mueve nada. Si lo escrito está lejos y dividido (o multiplicado) por 10, 100 o 1.000 cae en lo habitual, lo dice así: «$ 12.000.000 es 10 veces lo habitual ($ 1.200.000). ¿Sobra un cero?». Si solo está muy lejos: «Muy por encima de lo habitual ($1,1 M – $1,3 M)». Con menos de 4 datos, solo lo obvio.</td></tr>
+            <tr><td>El separador confundido</td><td>«1.500» queriendo 1,5, o «1,500» de un sistema en inglés queriendo mil quinientos: si la otra lectura de lo que se tecleó cae en lo habitual, pregunta «¿Querías 1,5?». Lee igual que <code>&lt;nx-number&gt;</code>: «1.5» en es-CO es 1,5.</td></tr>
+            <tr><td>Dígitos invertidos</td><td>Con <code>expected</code> (el total de la OC, el saldo, lo que dice el documento): dos dígitos vecinos cambiados de lugar («¿Invertiste dos dígitos? Esperado $ 15.300.000») o uno distinto.</td></tr>
+            <tr><td>Fechas raras</td><td>Un año con dígitos invertidos o de otro siglo (2062, 2206, 0226 → 2026), fuera del rango del campo (<code>typical: ["-60d", "today"]</code>), fin de semana o festivo con <code>workdays</code>.</td></tr>
+            <tr><td>Repetidos, decimales, negativos</td><td><code>repeat</code>: igual al último registrado. Decimales donde siempre van enteros (dicho o deducido de la historia) y negativos donde nunca los hay.</td></tr>
+            <tr><td>Lo que sabe el servidor</td><td>Con <code>endpoint</code>: «Esta factura ya se registró». Si el servidor falla o tarda, silencio.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
+          <tbody>
+            <tr><td>Escribes</td><td>Nada: no interrumpe mientras se escribe.</td></tr>
+            <tr><td>Sales del campo</td><td>Si algo no cuadra, aparece debajo una línea con el aviso, «Corregir a …» (si hay una corrección) y «Está bien». El campo la tiene en su <code>aria-describedby</code> (nunca <code>aria-invalid</code>: no es un error) y se anuncia por una región <code>role="status"</code>.</td></tr>
+            <tr><td>«Corregir a …»</td><td>Pone el valor (en <code>&lt;nx-number&gt;</code> por su <code>value</code>; en un input, con <code>input</code> y <code>change</code> para que tu framework se entere) y vuelve al campo.</td></tr>
+            <tr><td>«Está bien»</td><td>No vuelve a avisar por ese valor en ese campo.</td></tr>
+            <tr><td>Envías</td><td>Con <code>mode="warn"</code> (por defecto), nunca bloquea. Con <code>mode="confirm"</code>, el primer envío con avisos sin reconocer se detiene y dice cuántos hay arriba del botón; el segundo pasa.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Protocolo</h2>
+      <p>
+        Con <code>endpoint</code>, tras una pausa de 300 ms desde el cambio, se hace <code>POST {field, value, values}</code>
+        (un cambio nuevo cancela el anterior). Lo que responde va primero, antes de lo local; si falla o tarda más de 4 s,
+        no pasa nada. El <code>endpoint</code> es del mismo origen (o de uno de <code>allowOrigins()</code>).
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td>Pide</td><td><code>{"field":"factura","value":"FC-8812","values":{"factura":"FC-8812","fecha":"2026-09-24","cantidad":"12","precio":1275000,"total":null}}</code></td></tr>
+            <tr><td>Responde</td><td><code>{"findings":[{"field":"factura","kind":"duplicate","message":"Esta factura ya se registró el 12 sept 2026 (CP-004512)"}]}</code>. Opcionales: <code>suggestion</code> y <code>severity</code> (<code>warn</code> o <code>info</code>).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-guard mode="confirm" endpoint="/facturas/revisar" fields='{
+  "precio": {"history": [1180000, 1210000, 1195000, 1240000], "format": "money", "currency": "COP"},
+  "cantidad": {"typical": [1, 50]},
+  "total": {"expected": "#oc-total", "format": "money", "currency": "COP"},
+  "fecha": {"typical": ["-60d", "today"]},
+  "factura": {"repeat": true, "history": ["FC-8809", "FC-8811"]}
+}'&gt;
+  &lt;form&gt;
+    &lt;label&gt;Factura &lt;input name="factura"&gt;&lt;/label&gt;
+    &lt;label&gt;Fecha &lt;input name="fecha" type="date"&gt;&lt;/label&gt;
+    &lt;label&gt;Cantidad &lt;input name="cantidad" data-guard='{"integer": true}'&gt;&lt;/label&gt;
+    &lt;label for="precio"&gt;Precio unitario&lt;/label&gt;
+    &lt;nx-number id="precio" name="precio" format="money" currency="COP"&gt;&lt;/nx-number&gt;
+  &lt;/form&gt;
+&lt;/nx-guard&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import { Guard } from "nx-ui/solid";
+
+&lt;Guard mode="confirm" fields={{ precio: { history: historia(), format: "money", currency: "COP" } }}
+  onWarn={(e) =&gt; console.log(e.detail.field, e.detail.finding.message)}&gt;
+  &lt;form onSubmit={registrar}&gt;
+    &lt;label for="precio"&gt;Precio unitario&lt;/label&gt;
+    &lt;NumberInput id="precio" name="precio" format="money" currency="COP" /&gt;
+  &lt;/form&gt;
+&lt;/Guard&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>fields</code></td><td>La configuración por <code>name</code> (JSON). También <code>data-guard='{…}'</code> en el propio campo, que gana. Campos sin configuración: nada, salvo un <code>&lt;input type="date"&gt;</code> con un año absurdo.</td></tr>
+            <tr><td>Por campo</td><td><code>history</code>, <code>typical: [lo, hi]</code>, <code>min</code>/<code>max</code> (blandos), <code>expected</code> (un número, <code>"#id"</code> o <code>"@name"</code>), <code>format</code>/<code>currency</code>, <code>integer</code>, <code>negative</code>, <code>repeat</code>, <code>type</code> (<code>number</code>, <code>date</code>, <code>text</code>), <code>workdays</code>, <code>holidays</code>, <code>remote: false</code>. En fechas, <code>typical</code> acepta ISO o relativas a hoy: <code>"-30d"</code>, <code>"+2w"</code>, <code>"+6m"</code>, <code>"-1y"</code>, <code>"today"</code>.</td></tr>
+            <tr><td><code>mode</code>, <code>endpoint</code>, <code>locale</code>, <code>labels</code>, <code>disabled</code></td><td><code>warn</code> o <code>confirm</code>, chequeo remoto, formato de montos y fechas, textos (con <code>{value}</code>, <code>{typical}</code>, <code>{n}</code>…), apagarlo.</td></tr>
+            <tr><td><code>check(name?)</code>, <code>reset()</code>, <code>findings</code></td><td>Revisar ya (un campo o todos) y devolver los hallazgos; olvidar avisos y reconocidos; los avisos vigentes.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-guard-warn</code> <code>{field, finding}</code>, <code>nx-guard-fix</code> <code>{field, from, to}</code>, <code>nx-guard-ack</code> <code>{field, value}</code>, <code>nx-guard-block</code> <code>{findings}</code> (cancelable: cancelarlo deja pasar el envío).</td></tr>
+            <tr><td>Funciones</td><td><code>guardCheck(valor, regla, {locale, raw})</code> y <code>robustRange(historia)</code>: la misma lógica, para revisar un lote importado en un backend en JavaScript.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
