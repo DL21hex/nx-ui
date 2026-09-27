@@ -1,0 +1,326 @@
+/*
+ * <nx-handoff>. Variables propias:
+ *   --nx-handoff-qr (152px): lado del QR en el escritorio
+ *   --nx-handoff-qr-dark / --nx-handoff-qr-light: colores del QR. Siempre oscuro sobre claro,
+ *     también en modo oscuro: muchos lectores no leen un QR invertido.
+ */
+
+nx-handoff {
+  --nx-handoff-qr-dark: oklch(0.18 0.01 260);
+  --nx-handoff-qr-light: oklch(1 0 0);
+  display: block;
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--nx-foreground);
+
+  & *,
+  & *::before {
+    box-sizing: border-box;
+  }
+  & [hidden] {
+    display: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- botones */
+
+.nx-ho__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-block-size: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: 550 13.5px var(--nx-font-sans);
+  cursor: pointer;
+  transition: background-color var(--nx-motion-fast);
+
+  &:hover:not(:disabled) {
+    background: var(--nx-hover);
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+.nx-ho__btn--primary {
+  border-color: transparent;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--nx-primary), black 10%);
+  }
+}
+.nx-ho__btn--quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--nx-muted-foreground);
+}
+:is(.nx-ho__btn, .nx-ho__again, .nx-ho__panel):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+.nx-ho__icon,
+.nx-ho__ok,
+.nx-ho__thumb {
+  display: inline-flex;
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+/* ---------------------------------------------------------------- escritorio */
+
+.nx-ho__panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 20px;
+  max-inline-size: 34rem;
+  padding: 14px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.nx-ho__qr {
+  flex: none;
+  inline-size: var(--nx-handoff-qr, 152px);
+  line-height: 0;
+
+  & svg {
+    inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--nx-radius-sm);
+  }
+  & rect {
+    fill: var(--nx-handoff-qr-light);
+  }
+  & path {
+    fill: var(--nx-handoff-qr-dark);
+  }
+}
+.nx-ho__body {
+  display: grid;
+  flex: 1 1 14rem;
+  gap: 6px;
+  justify-items: start;
+
+  & p {
+    margin: 0;
+  }
+}
+.nx-ho__steps {
+  font-weight: 600;
+}
+.nx-ho__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--nx-muted-foreground);
+
+  &::before {
+    content: "";
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 50%;
+    background: var(--nx-border-strong);
+  }
+  &:is([data-tone="connected"], [data-tone="receiving"])::before {
+    background: var(--nx-primary);
+  }
+  &[data-tone="receiving"]::before {
+    animation: nx-ho-pulse 1s ease-in-out infinite alternate;
+  }
+  &:is([data-tone="expired"], [data-tone="error"]) {
+    color: var(--nx-danger);
+  }
+  &:is([data-tone="expired"], [data-tone="error"])::before {
+    background: var(--nx-danger);
+  }
+}
+.nx-ho__expires {
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-ho__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 4px;
+}
+.nx-ho__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  color: var(--nx-muted-foreground);
+}
+.nx-ho__ok {
+  color: var(--nx-success);
+}
+.nx-ho__again {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--nx-primary-ink);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ---------------------------------------------------------------- celular: una columna, botones grandes */
+
+.nx-ho__phone {
+  display: grid;
+  gap: 14px;
+  max-inline-size: 30rem;
+  margin-inline: auto;
+  font-size: 16px;
+
+  & p {
+    margin: 0;
+  }
+}
+.nx-ho__title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.nx-ho__hint,
+.nx-ho__msg {
+  color: var(--nx-muted-foreground);
+}
+.nx-ho__pick {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+.nx-ho__file {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.nx-ho__btn--big {
+  inline-size: 100%;
+  min-block-size: 52px;
+  font-size: 16px;
+  border-radius: var(--nx-radius-lg);
+
+  & .nx-ho__icon {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+}
+.nx-ho__shots {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &:empty {
+    display: none;
+  }
+}
+.nx-ho__shot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+
+  & img,
+  & .nx-ho__thumb {
+    flex: none;
+    inline-size: 56px;
+    block-size: 56px;
+    border-radius: var(--nx-radius-sm);
+    object-fit: cover;
+  }
+  & .nx-ho__thumb {
+    padding: 14px;
+    background: var(--nx-hover);
+    color: var(--nx-text-tertiary);
+  }
+  & small {
+    display: block;
+    color: var(--nx-text-tertiary);
+    font-size: 13px;
+  }
+  &[data-status="uploaded"] small {
+    color: var(--nx-success);
+  }
+  &[data-status="failed"] small {
+    color: var(--nx-danger);
+  }
+  &[data-status="sending"] {
+    border-color: var(--nx-primary-border);
+  }
+}
+.nx-ho__shot-name {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.nx-ho__x {
+  inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: none;
+
+  & .nx-glyph,
+  & svg {
+    inline-size: 18px;
+    block-size: 18px;
+  }
+}
+.nx-ho__end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+
+  & .nx-ho__ok {
+    inline-size: 24px;
+    block-size: 24px;
+  }
+}
+
+@keyframes nx-ho-pulse {
+  to {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-ho__status::before {
+    animation: none !important;
+  }
+}
