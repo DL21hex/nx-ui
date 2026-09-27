@@ -1,0 +1,148 @@
+/* ---------------------------------------------------------------- demo de <nx-handoff> */
+
+.ho-demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  gap: 24px;
+  align-items: start;
+
+  @media (width < 900px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ho-forms {
+  display: grid;
+  gap: 18px;
+  min-inline-size: 0;
+}
+.ho-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px 18px 20px;
+  border: 1px solid var(--nx-border);
+  border-radius: calc(var(--nx-radius-lg) + 4px);
+  background: var(--nx-background);
+}
+.ho-card__head p,
+.ho-card__head h2 {
+  margin: 0;
+}
+.ho-card__kicker {
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ho-card__title {
+  margin-block: 2px !important;
+  font-size: 16px;
+}
+.ho-card__meta {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.ho-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+}
+.ho-field {
+  display: grid;
+  gap: 4px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-weight: 550;
+
+  & input {
+    padding: 7px 9px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-card);
+    color: var(--nx-foreground);
+    font: 13.5px var(--nx-font-sans);
+  }
+}
+.ho-field--wide {
+  grid-column: 1 / -1;
+}
+.ho-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+
+  &:empty {
+    display: none;
+  }
+  & img {
+    inline-size: 72px;
+    block-size: 96px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-sm);
+    object-fit: cover;
+  }
+  & p {
+    margin: 0;
+  }
+}
+
+/* El celular: un marco sobrio, sin adornos. */
+.ho-sim {
+  position: sticky;
+  inset-block-start: 12px;
+  display: grid;
+  gap: 10px;
+}
+.ho-sim__title {
+  margin: 0;
+  font-size: 14px;
+}
+.ho-phone {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  block-size: 560px;
+  border: 10px solid light-dark(oklch(0.26 0.01 260), oklch(0.36 0.01 260));
+  border-radius: 34px;
+  background: var(--nx-background);
+  overflow: hidden;
+}
+.ho-phone__bar {
+  justify-self: center;
+  inline-size: 72px;
+  block-size: 6px;
+  margin-block: 8px 4px;
+  border-radius: 3px;
+  background: var(--nx-border-strong);
+}
+.ho-phone__screen {
+  padding: 12px 14px 16px;
+  overflow: auto;
+  overscroll-behavior: contain;
+
+  & nx-scan {
+    --nx-scan-height: 170px;
+    --nx-scan-list-height: 220px;
+  }
+}
+.ho-phone__idle {
+  margin: 40px 8px 0;
+  color: var(--nx-text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+.ho-sim__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ho-sim__codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  &[hidden] {
+    display: none;
+  }
+}
