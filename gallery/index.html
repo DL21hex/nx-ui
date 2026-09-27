@@ -2514,6 +2514,98 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Adjudicación -->
+        <template id="page-award">
+          <p class="eyebrow">Componentes</p>
+          <h1>Adjudicación <code class="tag">&lt;nx-award&gt;</code></h1>
+          <p class="lead">
+            60 artículos cotizados por 10 proveedores. La IA ya sugirió un proveedor por artículo (contorno punteado y ✦) y
+            esa sugerencia arranca como tu elección (relleno). Elige otra celda cuando quieras: la sugerencia sigue a la vista,
+            la fila dice cuánto cuesta el cambio y pide el motivo. No hace falta leer los 600 números: las alertas llevan a las
+            filas que merecen ojo humano.
+          </p>
+          <nx-award id="award-demo" heading="RFQ-0412 · Torres del Parque" endpoint="/demo/award" currency="COP" locale="es-CO"></nx-award>
+          <p class="sel-tip">
+            Enfoca la tabla y muévete con <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd>; <kbd>Espacio</kbd> elige la celda,
+            <kbd>Supr</kbd> vuelve a la sugerencia, <kbd>↵</kbd> sobre un artículo abre su detalle y <kbd>J</kbd>/<kbd>K</kbd>
+            saltan a la siguiente alerta. Prueba el cemento (un precio atípico que la IA no tuvo en cuenta), sube el peso del
+            plazo en «Criterios», o haz clic en «Metales Unión» y excluye al proveedor.
+          </p>
+          <ol class="stage__log btn-events" id="award-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Celdas</td><td>Tres marcas y nada más: contorno punteado con ✦ (sugerida por la IA), relleno (lo elegido) y ámbar (una alerta). Cuando coinciden, relleno con ✦. «—» donde el proveedor no cotizó.</td></tr>
+                <tr><td>Resumen</td><td>Total adjudicado, lo que cuestan tus cambios frente a la IA (en rojo si suben, en verde si bajan), cuántas órdenes salen y cuántas alertas quedan por abrir, con «Siguiente alerta».</td></tr>
+                <tr><td>Detalle</td><td>Clic en un artículo: sus alertas, la razón de la IA, el ranking con el aporte de cada criterio, el precio original antes de normalizar y, si te apartaste, el costo del cambio, el motivo (con sugerencias o escrito) y «Volver a la sugerencia».</td></tr>
+                <tr><td>Proveedor</td><td>Clic en su columna: cuántos artículos cotizó y cuántos se le adjudican. «Excluir de la sugerencia» vuelve a pedir la recomendación sin él; «Darle todo lo que cotizó» consolida con un clic y se deshace con otro.</td></tr>
+                <tr><td>Criterios y escenarios</td><td>Mover un peso vuelve a pedir la recomendación y los contornos cambian de celda. Los escenarios del backend («Máximo 3 proveedores») cambian la sugerencia de los artículos que tocan, con cuántas órdenes dan y cuánto cuestan.</td></tr>
+                <tr><td>Vista</td><td>Precio unitario, total de la línea, plazo o puntaje; todos los artículos, los que tienen alertas o los cambiados. Encabezado, primera columna y pie fijos al desplazarse.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Forma</th></tr></thead>
+              <tbody>
+                <tr><td><code>POST endpoint</code></td><td><code>{weights: {criterio: peso}, excluded: [proveedor]}</code> → NDJSON (o <code>data:</code> de SSE), un evento por línea. Se pide al conectar, al mover un peso (con espera) y al excluir.</td></tr>
+                <tr><td><code>recommend</code></td><td><code>{"type":"recommend","item","supplier","reason?","ranking":[{supplier, score, scores?: {criterio: 0–100}}]}</code>. <code>supplier: null</code> si no hay a quién sugerir.</td></tr>
+                <tr><td><code>flag</code></td><td><code>{"type":"flag","item","supplier?","message","tone?"}</code> (<code>warning</code> por defecto, <code>danger</code>, <code>neutral</code>). Con <code>supplier</code>, también se marca su celda.</td></tr>
+                <tr><td><code>scenario</code></td><td><code>{"type":"scenario","id","label","detail?","picks":{artículo: proveedor}}</code>.</td></tr>
+                <tr><td><code>note</code>, <code>error</code>, <code>done</code></td><td>Avisos sobre la tabla; un error deja «Reintentar». Al terminar, lo que la recomendación no volvió a mandar desaparece.</td></tr>
+                <tr><td><code>nx-award-advise</code></td><td>Sin <code>endpoint</code>: <code>{weights, excluded, respond(events)}</code>. O asigna la prop <code>advice</code> con los mismos eventos.</td></tr>
+                <tr><td><code>nx-award-change</code></td><td><code>{item, supplier, recommended, reason, value}</code> (<code>item: null</code> si cambiaron varios).</td></tr>
+                <tr><td><code>nx-award-submit</code></td><td><code>{orders: [{supplier, lines, total}], changes: [{item, supplier, recommended, reason, delta}], value, total, unassigned, scenario, weights, excluded, pending}</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-award id="rfq" heading="RFQ-0412" endpoint="/compras/rfq/412/recomendar"
+      currency="COP" require-reason&gt;&lt;/nx-award&gt;
+
+    rfq.suppliers = [{ id: "ferrecaribe", name: "Ferrecaribe", detail: "★ 4,6 · 5 d" }, …];
+    rfq.items = [{ id: "A15", name: "Tubo PVC ½\" x 6 m", qty: 240, unit: "und", group: "Hidráulicos" }, …];
+    rfq.quotes = [{ item: "A15", supplier: "ferrecaribe", price: 18500, leadTime: 5 }, …];
+    rfq.criteria = [{ id: "precio", label: "Precio", weight: 50 }, { id: "plazo", label: "Plazo", weight: 30 }];
+    rfq.addEventListener("nx-award-submit", (e) =&gt;
+      fetch("/compras/rfq/412/adjudicar", { method: "POST", body: JSON.stringify(e.detail) }));</code></pre>
+            <pre role="tabpanel" hidden><code>import { Award } from "nx-ui/solid";
+
+    &lt;Award heading="RFQ-0412" endpoint="/compras/rfq/412/recomendar" currency="COP" requireReason
+      suppliers={proveedores()} items={articulos()} quotes={cotizaciones()} criteria={criterios}
+      onSubmit={(e) =&gt; adjudicar(e.detail.orders)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>suppliers</code>, <code>items</code>, <code>quotes</code></td><td><code>[{id, name, detail?, alert?}]</code>, <code>[{id, name, qty, unit?, code?, group?}]</code> y <code>[{item, supplier, price, leadTime?, original?, note?}]</code>. <code>price</code> es el unitario comparable (ya normalizado por unidad, moneda e impuestos); <code>original</code>, lo que cotizó de verdad.</td></tr>
+                <tr><td><code>criteria</code>, <code>weights</code></td><td><code>[{id, label, weight}]</code>: la leyenda del puntaje y los deslizadores de «Criterios». <code>weights</code>, los de ahora.</td></tr>
+                <tr><td><code>advice</code></td><td>La recomendación como eventos del protocolo, sin servidor. Leerla devuelve la de ahora.</td></tr>
+                <tr><td><code>choices</code>, <code>value</code></td><td>Lo elegido a mano <code>[{item, supplier, reason?}]</code> (para guardar un borrador) y lo adjudicado <code>{artículo: proveedor}</code>.</td></tr>
+                <tr><td><code>excluded</code>, <code>scenario</code>, <code>filter</code>, <code>lens</code></td><td>Proveedores fuera de la sugerencia, escenario aplicado, filas visibles (<code>all</code>, <code>alerts</code>, <code>changed</code>) y lo que muestran las celdas (<code>price</code>, <code>total</code>, <code>lead</code>, <code>score</code>).</td></tr>
+                <tr><td><code>endpoint</code>, <code>heading</code>, <code>currency</code>, <code>reasons</code>, <code>locale</code>, <code>labels</code></td><td>URL de la recomendación, título, moneda, motivos sugeridos, formato y textos.</td></tr>
+                <tr><td><code>readonly</code>, <code>require-reason</code>, <code>require-review</code></td><td>Solo consulta; apartarse de la IA pide motivo; las alertas se abren antes de generar las órdenes.</td></tr>
+                <tr><td><code>submit()</code>, <code>next(dir?)</code>, <code>open(item)</code>, <code>refresh()</code></td><td>Generar las órdenes, ir a la siguiente alerta, abrir un detalle y volver a pedir la recomendación.</td></tr>
+                <tr><td>Teclado</td><td>Grilla con un solo punto de tabulación: flechas, <kbd>Inicio</kbd>/<kbd>Fin</kbd> (con <kbd>Ctrl</kbd>, de la grilla), <kbd>RePág</kbd>/<kbd>AvPág</kbd>. <kbd>Espacio</kbd> o <kbd>↵</kbd> eligen; sobre un artículo abren el detalle y sobre un proveedor, su barra. <kbd>Supr</kbd> vuelve a la sugerencia, <kbd>J</kbd>/<kbd>K</kbd> saltan entre alertas y <kbd>Esc</kbd> cierra el detalle.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

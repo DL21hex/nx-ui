@@ -24,6 +24,7 @@ export * from "./components/history/index";
 export * from "./components/kanban/index";
 export * from "./components/number/index";
 export * from "./components/handoff/index";
+export * from "./components/award/index";
 export * from "./components/guard/index";
 export * from "./components/import/index";
 export * from "./components/keytips/index";

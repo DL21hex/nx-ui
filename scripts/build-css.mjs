@@ -32,6 +32,7 @@ const entries = {
   "kanban": "src/components/kanban/kanban.css",
   "number": "src/components/number/number.css",
   "handoff": "src/components/handoff/handoff.css",
+  "award": "src/components/award/award.css",
   "guard": "src/components/guard/guard.css",
   "import": "src/components/import/import.css",
   "keytips": "src/components/keytips/keytips.css",
