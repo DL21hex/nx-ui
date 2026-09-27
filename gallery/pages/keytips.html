@@ -1,0 +1,168 @@
+    <!-- ================================================================ Atajos con Alt -->
+    <template id="page-keytips">
+      <p class="eyebrow">Componentes</p>
+      <h1>Atajos con Alt <code class="tag">&lt;nx-keytips&gt;</code></h1>
+      <p class="lead">
+        Atajos de teclado sin configurar nada, como los KeyTips de Office. Toca <kbd>Alt</kbd> y cada acción visible
+        muestra una letra; pulsa la letra y se ejecuta. Para quien digita todo el día: no hay que soltar el teclado ni
+        aprenderse una lista, y la letra de cada botón no cambia de un día para otro.
+      </p>
+
+      <div class="kt-howto">
+        <p class="kt-howto__title">Cómo se usa</p>
+        <ol>
+          <li>Toca <kbd>Alt</kbd> (presiona y suelta, sola). También vale mantenerla un momento.</li>
+          <li>Pulsa la letra de la acción: <kbd>G</kbd> guarda, <kbd>P</kbd> va a Pagos, <kbd>C</kbd> te lleva al cliente.</li>
+          <li><kbd>Esc</kbd>, <kbd>Tab</kbd>, un clic o <kbd>Alt</kbd> otra vez los ocultan.</li>
+        </ol>
+        <p class="kt-howto__note">Funciona aunque estés escribiendo en un campo: la letra no se escribe.</p>
+      </div>
+
+      <section class="kt-order" id="kt-order" lang="es-CO" aria-label="Pedido PED-1043">
+        <header class="kt-order__head">
+          <div>
+            <p class="kt-order__kicker">Pedido de venta</p>
+            <p class="kt-order__id">PED-1043 <span class="kt-order__state" id="kt-state">Borrador</span></p>
+          </div>
+          <p class="kt-order__meta">Ferretería El Tornillo S.A.S. · NIT 900.318.442-7<br />Asesor: Laura Restrepo · Medellín</p>
+        </header>
+
+        <div class="kt-order__bar" role="toolbar" aria-label="Acciones del pedido">
+          <nx-button id="kt-save" label="Guardar" variant="primary" log-mode="none"></nx-button>
+          <button type="button" class="dlg-plain" id="kt-approve">Aprobar</button>
+          <button type="button" class="dlg-plain" id="kt-print">Imprimir</button>
+          <button type="button" class="dlg-plain" id="kt-send">Enviar al cliente</button>
+          <button type="button" class="dlg-plain" id="kt-excel" data-keytip="X" title="data-keytip=&quot;X&quot;">Exportar a Excel</button>
+          <button type="button" class="dlg-plain kt-danger" id="kt-void">Anular…</button>
+          <button type="button" class="dlg-plain kt-muted" id="kt-delete" data-keytip="off" title="data-keytip=&quot;off&quot;">Eliminar borrador</button>
+        </div>
+
+        <div class="kt-fields">
+          <label class="kt-field kt-field--wide">
+            <span>Cliente</span>
+            <input id="kt-client" value="Ferretería El Tornillo S.A.S." autocomplete="off" />
+          </label>
+          <label class="kt-field">
+            <span>Fecha de entrega</span>
+            <input id="kt-date" type="date" value="2026-10-02" />
+          </label>
+          <label class="kt-field kt-field--full">
+            <span>Observaciones</span>
+            <textarea id="kt-notes" rows="2">Entregar en la bodega de Itagüí antes de las 10 a. m.</textarea>
+          </label>
+        </div>
+
+        <div class="kt-tabs" role="tablist" aria-label="Secciones del pedido">
+          <button type="button" role="tab" id="kt-tab-detail" aria-selected="true" aria-controls="kt-panel-detail">Detalle</button>
+          <button type="button" role="tab" id="kt-tab-pay" aria-selected="false" aria-controls="kt-panel-pay" tabindex="-1">Pagos</button>
+          <button type="button" role="tab" id="kt-tab-log" aria-selected="false" aria-controls="kt-panel-log" tabindex="-1">Historial</button>
+        </div>
+        <div class="kt-panel" role="tabpanel" id="kt-panel-detail" aria-labelledby="kt-tab-detail">
+          <table class="kt-lines">
+            <thead><tr><th>Referencia</th><th>Descripción</th><th>Cant.</th><th>Total</th></tr></thead>
+            <tbody>
+              <tr><td>TOR-1/4</td><td>Tornillo hexagonal 1/4" × 2" galvanizado</td><td>1.200</td><td>$ 540.000</td></tr>
+              <tr><td>TUE-1/4</td><td>Tuerca hexagonal 1/4" galvanizada</td><td>1.200</td><td>$ 180.000</td></tr>
+              <tr><td>ARA-1/4</td><td>Arandela plana 1/4"</td><td>2.400</td><td>$ 96.000</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="kt-panel" role="tabpanel" id="kt-panel-pay" aria-labelledby="kt-tab-pay" hidden>
+          <p>Crédito a 30 días · Cupo disponible $ 12.400.000 · Anticipo recibido el 24 sep: $ 300.000.</p>
+          <button type="button" class="dlg-plain" id="kt-receipt">Registrar abono</button>
+        </div>
+        <div class="kt-panel" role="tabpanel" id="kt-panel-log" aria-labelledby="kt-tab-log" hidden>
+          <p>26 sep, 9:12 a. m. · Laura Restrepo creó el pedido desde la cotización COT-0877.</p>
+        </div>
+      </section>
+
+      <nx-dialog id="kt-void-dlg" heading="Anular PED-1043" description="Dentro del diálogo solo cuentan sus acciones: toca Alt aquí.">
+        <form class="dlg-form" id="kt-void-form">
+          <label>Motivo
+            <select name="motivo">
+              <option>El cliente canceló la compra</option>
+              <option>Precio mal cotizado</option>
+              <option>Pedido duplicado</option>
+            </select>
+          </label>
+          <label>Comentario <textarea name="nota" rows="2" placeholder="Opcional"></textarea></label>
+        </form>
+        <div slot="footer">
+          <nx-button label="Volver" variant="ghost" log-mode="none" data-nx-close="cancel"></nx-button>
+          <nx-button id="kt-void-ok" label="Anular pedido" variant="danger" log-mode="none"></nx-button>
+        </div>
+      </nx-dialog>
+
+      <div class="kt-tools">
+        <label class="kt-check"><input type="checkbox" id="kt-whole" /> Toda la página (con el menú lateral pasan de 30 acciones: dos letras)</label>
+        <button type="button" class="dlg-plain" id="kt-sheet-btn">Ver la hoja de atajos</button>
+      </div>
+      <dl class="kt-sheet" id="kt-sheet" hidden></dl>
+      <ol class="stage__log btn-events" id="kt-log"></ol>
+
+      <nx-keytips id="kt" scope="#kt-order"></nx-keytips>
+
+      <h2>Cómo elige la letra</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Regla</th><th>Ejemplo</th></tr></thead>
+          <tbody>
+            <tr><td>El autor manda: <code>data-keytip="X"</code></td><td>«Exportar a Excel» es <kbd>X</kbd>, aunque la E esté libre.</td></tr>
+            <tr><td>La misma letra de la vez anterior, mientras la pantalla no cambie</td><td>Si aparece «Gastos» antes que «Guardar», «Guardar» sigue en <kbd>G</kbd>.</td></tr>
+            <tr><td>La inicial de la primera palabra que importa (sin tildes)</td><td>«Guardar» <kbd>G</kbd>; «Órdenes» <kbd>O</kbd>. En «Enviar al cliente» no cuenta «al».</td></tr>
+            <tr><td>Luego las iniciales de las demás palabras, y luego sus otras letras</td><td>«Anular» choca con «Aprobar»: le toca <kbd>N</kbd>.</td></tr>
+            <tr><td>Más de 30 acciones: dos letras, como Vimium</td><td>«Guardar» <kbd>G</kbd><kbd>U</kbd>. Al pulsar <kbd>G</kbd> se atenúan las que no empiezan por G; <kbd>Retroceso</kbd> la borra.</td></tr>
+            <tr><td>No recibe letra</td><td>Lo deshabilitado, inerte, oculto, fuera de la pantalla o tapado, y <code>data-keytip="off"</code> (en un contenedor, todo lo de adentro). Con un diálogo o un popover abierto, solo lo de adentro.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Qué hace la letra</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>En</th><th>Pasa</th></tr></thead>
+          <tbody>
+            <tr><td>Botones, enlaces, pestañas, <code>summary</code>, casillas</td><td>Un clic (en <code>&lt;nx-button&gt;</code>, en su botón). Antes sale <code>nx-keytip</code>, cancelable.</td></tr>
+            <tr><td>Campos, listas, áreas de texto, <code>contenteditable</code></td><td>Reciben el foco, con el texto seleccionado para reemplazarlo.</td></tr>
+            <tr><td>Mientras están a la vista</td><td>Toda tecla es de los atajos (no se escribe en el campo ni cierra el diálogo de abajo), salvo <kbd>Tab</kbd> y los atajos con <kbd>Ctrl</kbd>/<kbd>⌘</kbd> (<kbd>Ctrl</kbd>+<kbd>K</kbd> abre la paleta), que los cierran y siguen su camino.</td></tr>
+            <tr><td>Si la acción abre algo</td><td>Los atajos no se vuelven a mostrar solos: otro toque de <kbd>Alt</kbd> los muestra dentro del diálogo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;!-- Una vez en la página (en el layout de la app). --&gt;
+&lt;nx-keytips&gt;&lt;/nx-keytips&gt;
+
+&lt;button data-keytip="X"&gt;Exportar a Excel&lt;/button&gt;   &lt;!-- letra fija --&gt;
+&lt;button data-keytip="off"&gt;Eliminar&lt;/button&gt;          &lt;!-- sin atajo --&gt;
+
+keytips.addEventListener("nx-keytip", (e) =&gt; console.log(e.detail.key, e.detail.name));</code></pre>
+        <pre role="tabpanel" hidden><code>import { Keytips } from "nx-ui/solid";
+
+&lt;Keytips scope="#contenido" onKeytip={(e) =&gt; track(e.detail.key)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>scope</code></td><td>Selector de la región con atajos. Por defecto, toda la página.</td></tr>
+            <tr><td><code>key</code></td><td>La tecla que los muestra: <code>Alt</code> (por defecto), <code>Control</code>, <code>Shift</code> o <code>Meta</code>. <code>none</code>: solo con <code>show()</code>.</td></tr>
+            <tr><td><code>disabled</code></td><td>Apaga todo.</td></tr>
+            <tr><td><code>labels</code></td><td><code>{open}</code>: lo que se anuncia al mostrarlos («Atajos visibles. Pulsa una letra o Esc para salir.»).</td></tr>
+            <tr><td><code>show()</code>, <code>hide()</code>, <code>open</code></td><td>Mostrarlos u ocultarlos desde código (<code>show()</code> no abre si no hay ninguna acción visible).</td></tr>
+            <tr><td><code>assignments</code></td><td><code>[{key, name, element}]</code> de lo visible: para una hoja de ayuda o para las pruebas.</td></tr>
+            <tr><td><code>data-keytip</code></td><td>En cualquier elemento: <code>"G"</code> fija la letra (o <code>"GU"</code>), <code>""</code> le da letra a algo que no es un control, <code>"off"</code> lo excluye (con todo lo de adentro).</td></tr>
+            <tr><td>Eventos</td><td><code>nx-keytip</code> <code>{key, target, name}</code> (cancelable: no se ejecuta) y <code>nx-open-change</code> <code>{open}</code>.</td></tr>
+            <tr><td><code>assignKeytips()</code></td><td>La asignación, pura y sin DOM: <code>assignKeytips([{name: "Guardar"}, {name: "Generar"}])</code> → <code>["G", "E"]</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>

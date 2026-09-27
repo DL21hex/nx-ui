@@ -1,0 +1,65 @@
+/*
+ * <nx-keytips>: las etiquetas de los atajos. Una capa propia en la capa superior (encima de los
+ * diálogos) que no recibe el mouse; cada etiqueta es una «tecla» pequeña en la esquina superior
+ * izquierda de su acción.
+ */
+
+nx-keytips {
+  display: contents;
+}
+.nx-keytips__status {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.nx-keytips__layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  inline-size: auto;
+  block-size: auto;
+  max-inline-size: none;
+  max-block-size: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  pointer-events: none;
+  animation: nx-keytips-in var(--nx-motion-fast) var(--nx-ease-out);
+  &[hidden] {
+    display: none;
+  }
+}
+.nx-keytips__tip {
+  position: absolute;
+  min-inline-size: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--nx-border-strong);
+  border-block-end-width: 2px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--nx-foreground) 22%, transparent);
+  font: 650 11px/16px var(--nx-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-align: center;
+  white-space: nowrap;
+}
+.nx-keytips__tip--off {
+  opacity: 0.3;
+}
+@keyframes nx-keytips-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-keytips__layer {
+    animation: none;
+  }
+}
