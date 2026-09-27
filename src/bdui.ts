@@ -39,6 +39,7 @@ const registry = new Map<string, Entry>([
   ["Guard", { tag: "nx-guard", props: ["fields", "mode", "endpoint", "locale", "labels", "disabled"] }],
   ["Handoff", { tag: "nx-handoff", props: ["side", "endpoint", "for", "kind", "accept", "multiple", "context", "session", "token", "labels", "locale", "disabled"] }],
   ["Award", { tag: "nx-award", props: ["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "weights", "scenario", "filter", "lens", "endpoint", "heading", "currency", "readonly", "requireReason", "requireReview", "locale", "labels"] }],
+  ["Account", { tag: "nx-account", props: ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "applyLocale", "session", "expiresAt", "warnBefore", "viewAs", "viewAsSource", "lock", "lockEndpoint", "lockAfter", "logoutUrl", "labels", "locale", "disabled"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

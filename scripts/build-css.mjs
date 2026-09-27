@@ -31,6 +31,7 @@ const entries = {
   "history": "src/components/history/history.css",
   "kanban": "src/components/kanban/kanban.css",
   "number": "src/components/number/number.css",
+  "account": "src/components/account/account.css",
   "handoff": "src/components/handoff/handoff.css",
   "award": "src/components/award/award.css",
   "guard": "src/components/guard/guard.css",

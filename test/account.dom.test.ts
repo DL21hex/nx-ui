@@ -680,6 +680,27 @@ describe("<nx-account> bloquear", () => {
     await until(() => mocks.nxLock.mock.calls.length === 2);
   });
 
+  it("si la página se recargó bloqueada (`nx-locked` en sessionStorage), vuelve a bloquear al conectar", async () => {
+    sessionStorage.setItem("nx-locked", "{}");
+    try {
+      mount("lock");
+      await until(() => mocks.nxLock.mock.calls.length === 1);
+      expect(mocks.nxLock.mock.calls[0][0]).toMatchObject({ user: USER });
+    } finally {
+      sessionStorage.removeItem("nx-locked");
+    }
+    // Sin `lock`, el marcador no bloquea nada.
+    mocks.nxLock.mockClear();
+    sessionStorage.setItem("nx-locked", "{}");
+    try {
+      mount();
+      await flushAll();
+      expect(mocks.nxLock).not.toHaveBeenCalled();
+    } finally {
+      sessionStorage.removeItem("nx-locked");
+    }
+  });
+
   it("lock-after bloquea tras la inactividad; la actividad lo aplaza", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     mount('lock lock-after="2"');

@@ -24,6 +24,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-guard>` + núcleo (ESM) | ≈ 8,8 KB |
 | `<nx-handoff>` + QR + núcleo (ESM); el lado celular, ≈ 5 KB, se carga con `side="phone"` | ≈ 8,9 KB |
 | `<nx-award>` + núcleo (ESM) | ≈ 15,1 KB |
+| `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB), el bloqueo (≈ 3,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,3 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1415,6 +1416,45 @@ El backend recibe `POST {weights, excluded}` y responde una línea por evento:
 | Eventos | `nx-award-advise` `{weights, excluded, respond(events)}` (sin `endpoint`; cancelable), `nx-award-change` `{item, supplier, recommended, reason, value}`, `nx-award-submit` `{orders, changes, value, total, unassigned, scenario, weights, excluded, pending}` |
 | Protocolo | NDJSON o SSE: `recommend`, `flag` (`tone`), `scenario`, `note`, `error`, `done`. Lo que una recomendación completa no vuelve a mandar desaparece |
 | Funciones | `awardOrders()`, `awardChanges()`, `awardTotal()`, `awardShares()`, `awardGridMove()`, `parseAwardEvent()` |
+
+## `<nx-account>`
+
+**La cuenta, al pie del menú.** Avatar con su punto de estado, nombre y «Empresa · Sede». Un clic y
+está todo lo de la persona, en un panel sobrio que se abre hacia arriba (a la derecha del riel
+compacto; en el celular, una hoja desde abajo):
+
+- **Empresa, sede y rol**: selector en el mismo panel, con buscador sin tildes, recientes, agrupado por
+  empresa y 1–9 como atajo. `nx-account-switch` es cancelable.
+- **Estado**: En línea, Ausente, No molestar (1 h, hoy o sin fin). El avatar también dice si hay
+  cambios en cola (anillo ámbar) o si no hay conexión (punto gris), de `<nx-sync>`.
+- **Tema y color**: Claro/Sistema/Oscuro y las paletas de `palettes.css`. Pasar el mouse por un color
+  repinta toda la app; al elegir, el cambio crece como un círculo desde el clic (View Transitions).
+  Se guarda en `localStorage` y se aplica al cargar (`applyAccountPrefs()` en el `<head>` evita el destello).
+- **Idioma y formatos**: cada locale con su muestra («1.234.567,50 · 26 sept 2026»); elegir pone
+  `<html lang>` y toda la librería lo sigue.
+- **Ver como…**, **Bloquear pantalla** (<kbd>Ctrl</kbd> <kbd>L</kbd> y por inactividad) y **Cerrar
+  sesión** sin «¿Seguro?»: si hay cambios sin sincronizar, se envían antes (con tope y «Salir de
+  todos modos»).
+- **Sesión por vencer**: «Tu sesión vence en 4:59 · Extender», un solo anuncio para el lector de pantalla.
+- **Paleta de comandos**: `<nx-command account="cuenta">` suma sus acciones («Tema: Oscuro», «Color:
+  Océano», cada sede…).
+
+```html
+<nx-sidemenu id="menu">
+  <nx-account slot="footer" id="cuenta" user='{"name":"Diego Llinás","email":"diego@crear.co"}'
+    tenants='[{"id":"med","name":"Crear Colombia S.A.S.","detail":"Sede Medellín","role":"Aprobador"}]' current="med"
+    session='{"expiresAt":"2026-09-26T18:00:00Z","extendEndpoint":"/api/sesion/extender"}'
+    lock-endpoint="/api/desbloquear" lock-after="15" logout-url="/salir"></nx-account>
+</nx-sidemenu>
+<nx-command account="cuenta"></nx-command>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `user`, `tenants`, `current`, `status` (`online`, `away`, `dnd`), `items`, `palettes`, `locales`, `storage` (`nx-account`; `none`), `apply-locale`, `session` / `expires-at`, `warn-before` (min, 5), `view-as`, `view-as-source`, `lock`, `lock-endpoint`, `lock-after` (min), `logout-url` (mismo origen), `labels`, `locale`, `disabled` · propiedades `sync` (cola de nx-sync), `lockVerify`, `commands` (solo lectura), `open` |
+| Métodos | `show()`, `hide()`, `lock()`, `logout()` |
+| Eventos | `nx-account-switch` `{tenant}` (cancelable), `nx-account-status` `{status, until}`, `nx-account-theme` `{theme, palette}`, `nx-account-locale` `{locale}`, `nx-account-select` `{id}`, `nx-account-view-as` `{user}` (cancelable al entrar), `nx-account-extend` (cancelable), `nx-account-expired`, `nx-account-logout` `{pending}` (cancelable), `nx-open-change` `{open}` |
+| Funciones | `applyAccountPrefs(storage?)`, `accountCommands()`, `accountInitials()`, `sessionRemaining()`, `sessionPhase()`, `formatSessionRemaining()` («4:59»), `normalizePalettes()`, `pickTheme()`, `revealRadius()`, `accountStatusUntil()`, `BUILTIN_PALETTES` |
 
 ## Desarrollo
 

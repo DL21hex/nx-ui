@@ -52,7 +52,12 @@ const BUDGET = [
   // El chunk del celular importa el de escritorio (ya cargado en esa página): se mide todo lo que baja el celular.
   [lazy("handoff-phone"), 12.5 * 1024, "página del celular de nx-handoff: handoff + su chunk (se carga con side=\"phone\")"],
   ["dist/award.js", 15.5 * 1024, "award + núcleo (ESM)"],
-  ["dist/bdui.js", 1.75 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
+  ["dist/account.js", 9.75 * 1024, "account + núcleo (ESM; panel, bloqueo, ver como y nxSync con import())"],
+  // Igual que el del celular de handoff: el chunk del panel importa el de la cuenta; se mide todo lo que baja la página.
+  [lazy("account-panel"), 13 * 1024, "nx-account con su panel: cuenta + panel (el panel se trae en reposo o al apuntar a la tarjeta)"],
+  [lazy("lock"), 3.75 * 1024, "pantalla de bloqueo de nx-account (se carga al bloquear)"],
+  [lazy("view-as"), 1.75 * 1024, "franja «Ver como» de nx-account (se carga al suplantar)"],
+  ["dist/bdui.js", 2 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/solid/index.jsx", 5 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
@@ -86,6 +91,7 @@ const BUDGET = [
   ["dist/guard.css", 1 * 1024, "guard (CSS)"],
   ["dist/handoff.css", 1.75 * 1024, "handoff (CSS)"],
   ["dist/award.css", 3.25 * 1024, "award (CSS)"],
+  ["dist/account.css", 4.25 * 1024, "account (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];
