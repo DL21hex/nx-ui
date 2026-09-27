@@ -19,8 +19,12 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-explain>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 10,2 KB |
 | `<nx-survey>` + núcleo (ESM) | ≈ 12,1 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 34,6 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 171 KB |
+| `<nx-import>` + núcleo (ESM); el lector de .xlsx, ≈ 2 KB, se carga al llegar un libro | ≈ 16,4 KB |
+| `<nx-keytips>` + núcleo (ESM) | ≈ 4 KB |
+| `<nx-guard>` + núcleo (ESM) | ≈ 8,8 KB |
+| `<nx-handoff>` + QR + núcleo (ESM); el lado celular, ≈ 5 KB, se carga con `side="phone"` | ≈ 8,9 KB |
+| `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
+| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
 Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
 
@@ -1309,6 +1313,47 @@ cuadra, lo dice **junto al campo, sin bloquear**, con la corrección a un clic.
 | Métodos | `check(name?)` (revisa ya y devuelve los hallazgos), `reset()` |
 | Eventos | `nx-guard-warn` `{field, finding}`, `nx-guard-fix` `{field, from, to}`, `nx-guard-ack` `{field, value}`, `nx-guard-block` `{findings}` (cancelable) |
 | Funciones | `guardCheck(valor, regla, {locale, raw})`, `robustRange(historia)`, `guardDate("-30d")`: la misma lógica en un backend en JavaScript |
+
+## `<nx-handoff>`
+
+**Sigue en el celular.** Alguien en el escritorio necesita la foto de una factura, de una cédula o
+del producto recibido, o escanear 30 códigos. En vez de tomarla, mandarla por WhatsApp, descargarla
+y subirla: «Usar el celular» muestra un QR, el teléfono lo abre con la cámara, toma la foto (o
+escanea) y el resultado aparece solo en el formulario.
+
+- **Escritorio** (por defecto): un panel sobrio debajo del botón con el QR (dibujado aquí, sin
+  dependencias), «Copiar enlace», cuánto falta para que venza y «Cancelar». Un solo indicador que
+  avanza: *Esperando el celular…* → *iPhone de Diego conectado* → *Recibiendo 2 fotos…*. Al terminar
+  el panel se cierra solo y queda «2 fotos desde el celular · Recibir más».
+- **Entrega al destino** (`for`): un archivo se descarga y va a `extract(file)` de
+  `<nx-doc-capture>` o a un `<input type=file>` (con `input` y `change`, como si lo hubieran elegido);
+  un código va a `add(código)` de `<nx-scan>` o a un campo de texto. Antes sale `nx-handoff-item`,
+  cancelable: la app puede encargarse ella.
+- **Celular** (`side="phone"`, se carga aparte): una columna, botones grandes. «Tomar foto» (cámara
+  trasera) o «Elegir de la galería», miniaturas, quitar, y «Enviar al computador». Las fotos se reducen
+  en el teléfono (2000 px, JPEG 0,85) y suben una por una con reintento. Con `kind="scan"`, un
+  `<nx-scan>` en modo conteo manda cada código al leerlo.
+- **Red:** SSE o NDJSON con reconexión de espera creciente y polling de respaldo. Nada queda abierto
+  al cerrar el panel, al vencer la sesión o al sacar el componente de la página.
+- **Seguridad:** sesión de un solo uso con token opaco (lo único que va en el QR), vencimiento
+  visible, «Cancelar» la invalida en el servidor. `endpoint`, el enlace del QR y los archivos, solo
+  del mismo origen (o de `allowOrigins()`).
+
+```html
+<nx-handoff endpoint="/api/handoff" for="factura" kind="photo" context='{"doc":"OC-2291"}'></nx-handoff>
+<nx-doc-capture id="factura" endpoint="/api/captura"></nx-doc-capture>
+
+<!-- La página del celular (el url del QR; lee ?s= y ?t=) -->
+<nx-handoff side="phone" endpoint="/api/handoff"></nx-handoff>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `side` (`desktop`, `phone`), `endpoint`, `for`, `kind` (`photo`, `file`, `scan`), `accept`, `multiple`, `context` (JSON), `session`, `token` (celular; si no, `?s=`/`?t=`), `labels`, `locale`, `disabled` · `state` (solo lectura: `idle`, `creating`, `waiting`, `connected`, `receiving`, `done`, `expired`, `error`) |
+| Métodos | `start()`, `cancel()` |
+| Eventos | `nx-handoff-state` `{state}`, `nx-handoff-item` `{item, file?}` (cancelable), `nx-handoff-done` `{items}`, `nx-handoff-error` `{message}` |
+| Protocolo | `POST {endpoint}` → `{id, url, expiresIn, token}` · `GET …/{id}/events?after=` (SSE/NDJSON) · `GET …/{id}?after=` (polling) · `GET …/{id}?t=` (celular) · `POST …/{id}/items?t=` y `…/done?t=` · `DELETE …/{id}`. Detalle en `src/components/handoff/INTEGRATION.md` |
+| Funciones | `qrMatrix(texto, {ecc?})` (matriz booleana; modo byte, L/M/Q/H, versiones 1–40, las 8 máscaras), `qrSvgPath(matriz)` (un solo `d` con las corridas fusionadas), `parseHandoffEvent()` |
 
 ## Desarrollo
 

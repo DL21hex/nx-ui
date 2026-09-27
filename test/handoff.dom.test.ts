@@ -6,7 +6,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import "../src/components/handoff/index";
 import { HANDOFF_LABELS, type HandoffItemDetail, type NxHandoff } from "../src/components/handoff/index";
-import { HANDOFF_PHONE_LABELS } from "../src/components/handoff/phone";
+import { HANDOFF_PHONE_LABELS } from "../src/components/handoff/handoff-phone";
 
 beforeAll(() => {
   // <nx-scan> (lado celular) abre avisos con la Popover API, que happy-dom no tiene.

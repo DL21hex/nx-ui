@@ -48,6 +48,9 @@ const BUDGET = [
   ["dist/import.js", 17 * 1024, "import + núcleo (ESM; el lector de .xlsx se carga aparte)"],
   [lazy("read-xlsx"), 2.5 * 1024, "lector de .xlsx de nx-import (se carga al llegar un libro)"],
   ["dist/guard.js", 9.25 * 1024, "guard + núcleo (ESM)"],
+  ["dist/handoff.js", 9.25 * 1024, "handoff + QR + núcleo (ESM; el lado celular y nx-scan con import())"],
+  // El chunk del celular importa el de escritorio (ya cargado en esa página): se mide todo lo que baja el celular.
+  [lazy("handoff-phone"), 12.5 * 1024, "página del celular de nx-handoff: handoff + su chunk (se carga con side=\"phone\")"],
   ["dist/bdui.js", 1.75 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/solid/index.jsx", 5 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
@@ -80,6 +83,7 @@ const BUDGET = [
   ["dist/keytips.css", 0.75 * 1024, "keytips (CSS)"],
   ["dist/import.css", 2 * 1024, "import (CSS)"],
   ["dist/guard.css", 1 * 1024, "guard (CSS)"],
+  ["dist/handoff.css", 1.75 * 1024, "handoff (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

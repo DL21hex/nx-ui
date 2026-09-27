@@ -24,7 +24,7 @@ con los `import()` fuera.
 |---|---|---|
 | `dist/handoff.js`: escritorio + QR + núcleo (`readLines`, `h`, `safeEndpoint`, `mergeLabels`) | **8,89 KB** (9 106 B) | 9,25 KB |
 | Con el comando del brief (`--splitting`): solo `index.js`, sin los chunks compartidos que importa | 7,56 KB (7 738 B) | — |
-| Chunk del celular (`phone-*.js`, con lo que comparte), se carga solo con `side="phone"` | **4,93 KB** (5 049 B) | 5,25 KB |
+| Chunk del celular (`handoff-phone-*.js`), se carga solo con `side="phone"`. `scripts/size.mjs` lo mide con el de escritorio que importa (lo que baja la página del celular) | **4,93 KB** solo; **11,95 KB** con el escritorio | 12,5 KB |
 | `<nx-scan>` del celular (chunk `scan`, ya existente), solo con `kind="scan"` | 11,33 KB | — (el de scan) |
 | `dist/handoff.css` (los dos lados) | **1,42 KB** (1 453 B) | 1,75 KB |
 
@@ -36,13 +36,11 @@ Para `scripts/size.mjs`:
 
 ```js
   ["dist/handoff.js", 9.25 * 1024, "handoff + QR + núcleo (ESM; el lado celular y nx-scan con import())"],
-  [lazy("phone"), 5.25 * 1024, "lado celular de nx-handoff (se carga con side=\"phone\")"],
+  [lazy("handoff-phone"), 5.25 * 1024, "lado celular de nx-handoff (se carga con side=\"phone\")"],
   // …
   ["dist/handoff.css", 1.75 * 1024, "handoff (CSS)"],
 ```
 
-(El chunk lazy se llama `phone-<hash>.js` porque sale de `phone.ts`; si otro componente llegara a
-tener un `phone.ts` cargado con `import()`, renombrarlo a `handoff-phone.ts`.)
 
 ## Nav
 
@@ -214,7 +212,7 @@ escanea) y el resultado aparece solo en el formulario.
 - `scripts/build-css.mjs` → `"handoff": "src/components/handoff/handoff.css",`
 - `package.json` → en `exports`:
   `"./handoff": { "types": "./dist/types/components/handoff/index.d.ts", "import": "./dist/handoff.js" }`
-  y `"./handoff.css": "./dist/handoff.css"`. `sideEffects` ya cubre `./dist/*.js` (el chunk `phone-*`
+  y `"./handoff.css": "./dist/handoff.css"`. `sideEffects` ya cubre `./dist/*.js` (el chunk `handoff-phone-*`
   lleva hash) y `./src/components/*/index.ts`.
 
 ---
@@ -426,7 +424,7 @@ el ejemplo quepa. En varias instancias, las sesiones y los eventos van a Redis o
   siguen en la misma hasta que venza. El «un solo uso» es por teléfono (la primera apertura la ata).
 - **Deduplicación:** por `seq` (eventos) y por `item.id` (ítems). Sin ellos, un servidor que repite el
   historial al reconectar entregaría dos veces.
-- **Textos del celular aparte** (`HANDOFF_PHONE_LABELS` en `phone.ts`, tipo `HandoffPhoneLabels`): el
+- **Textos del celular aparte** (`HANDOFF_PHONE_LABELS` en `handoff-phone.ts`, tipo `HandoffPhoneLabels`): el
   mismo atributo `labels` sirve para los dos lados, pero sus valores por defecto no pesan en el
   escritorio. `HANDOFF_LABELS` (escritorio) sí se exporta desde el índice.
 - **El resumen** es «2 fotos desde el celular» (y no «2 fotos recibidas…»): evita la concordancia de

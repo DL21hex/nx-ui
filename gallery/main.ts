@@ -25,6 +25,8 @@ import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
+import { mountHandoffDemo } from "./demo-handoff";
+import "./pages/handoff.css";
 import { mountGuardDemo } from "./demo-guard";
 import "./pages/guard.css";
 import { mountImportDemo } from "./demo-import";
@@ -118,9 +120,10 @@ const NAV: MenuItem[] = [
   { id: "trend", label: "Tendencias", href: "#/trend", icon: "chart-column", section: "Componentes", badge: "Nuevo" },
   { id: "scan", label: "Escanear", href: "#/scan", icon: "package", section: "Componentes", badge: "Nuevo" },
   { id: "sync", label: "Sin conexión", href: "#/sync", icon: "truck", section: "Componentes", badge: "Nuevo" },
-  { id: "keytips", label: "Atajos con Alt", href: "#/keytips", icon: "settings", section: "Componentes", badge: "Nuevo" },
-  { id: "import", label: "Importar", href: "#/import", icon: "folder", section: "Componentes", badge: "Nuevo" },
-  { id: "guard", label: "Detector de dedazos", href: "#/guard", icon: "shield", section: "Componentes", badge: "Nuevo" },
+  { id: "keytips", label: "Atajos con Alt", href: "#/keytips", icon: "keyboard", section: "Componentes", badge: "Nuevo" },
+  { id: "import", label: "Importar", href: "#/import", icon: "upload", section: "Componentes", badge: "Nuevo" },
+  { id: "guard", label: "Detector de dedazos", href: "#/guard", icon: "shield-alert", section: "Componentes", badge: "Nuevo" },
+  { id: "handoff", label: "Sigue en el celular", href: "#/handoff", icon: "smartphone", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -153,6 +156,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/keytips": { template: "page-keytips", mount: mountKeytipsDemo },
   "#/import": { template: "page-import", mount: mountImportDemo },
   "#/guard": { template: "page-guard", mount: mountGuardDemo },
+  "#/handoff": { template: "page-handoff", mount: mountHandoffDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 

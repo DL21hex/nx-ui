@@ -2386,6 +2386,134 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Sigue en el celular -->
+        <template id="page-handoff">
+          <p class="eyebrow">Componentes</p>
+          <h1>Sigue en el celular <code class="tag">&lt;nx-handoff&gt;</code></h1>
+          <p class="lead">
+            Para adjuntar la foto de una factura o contar 30 cajas, nadie debería mandarse fotos por WhatsApp. «Usar el
+            celular» muestra un QR; con la cámara del teléfono se abre una página simple, se toma la foto (o se escanea) y
+            el resultado aparece solo en este formulario.
+          </p>
+
+          <div class="ho-demo" lang="es-CO">
+            <div class="ho-forms">
+              <section class="ho-card" aria-labelledby="ho-factura-title">
+                <header class="ho-card__head">
+                  <p class="ho-card__kicker">Recepción de la OC-2291</p>
+                  <h2 class="ho-card__title" id="ho-factura-title">Adjuntar la factura del proveedor</h2>
+                  <p class="ho-card__meta">Aceros del Caribe S.A.S. · NIT 900.123.456-7</p>
+                </header>
+                <div class="ho-fields">
+                  <label class="ho-field">N.º de factura <input value="FE-10482" autocomplete="off" /></label>
+                  <label class="ho-field">Valor total <input value="$ 12.880.560" autocomplete="off" inputmode="numeric" /></label>
+                  <label class="ho-field ho-field--wide">Factura (foto o PDF) <input type="file" id="ho-factura" accept="image/*,application/pdf" /></label>
+                </div>
+                <nx-handoff id="ho-photo" endpoint="/demo/handoff" for="ho-factura" kind="photo" context='{"doc":"OC-2291","demo":"factura"}' locale="es-CO"></nx-handoff>
+                <div class="ho-preview" id="ho-preview" aria-live="polite"></div>
+              </section>
+
+              <section class="ho-card" aria-labelledby="ho-conteo-title">
+                <header class="ho-card__head">
+                  <p class="ho-card__kicker">Recepción de la OC-2291</p>
+                  <h2 class="ho-card__title" id="ho-conteo-title">Contar lo que llegó, escaneando con el celular</h2>
+                  <p class="ho-card__meta">Bodega Itagüí · 4 líneas de la orden</p>
+                </header>
+                <nx-handoff id="ho-scan" endpoint="/demo/handoff" for="ho-count" kind="scan" context='{"doc":"OC-2291","demo":"conteo"}' locale="es-CO"></nx-handoff>
+                <nx-scan id="ho-count" mode="count" formats="ean_13,code_128,qr_code" locale="es-CO"></nx-scan>
+              </section>
+            </div>
+
+            <aside class="ho-sim" aria-labelledby="ho-sim-title">
+              <h2 class="ho-sim__title" id="ho-sim-title">Celular simulado</h2>
+              <div class="ho-phone">
+                <div class="ho-phone__bar" aria-hidden="true"></div>
+                <div class="ho-phone__screen" id="ho-screen"></div>
+              </div>
+              <div class="ho-sim__tools">
+                <button type="button" class="dlg-plain" id="ho-open">Abrir el enlace del QR</button>
+                <button type="button" class="dlg-plain" id="ho-sample" hidden>Usar una foto de ejemplo</button>
+                <div class="ho-sim__codes" id="ho-codes" role="group" aria-label="Leer un código con el celular" hidden></div>
+              </div>
+              <p class="sel-tip">
+                Aquí la API de sesiones es de mentira y vive en esta pestaña: un teléfono real no la alcanza. Por eso el
+                celular de al lado abre la misma sesión que muestra el QR. Con un backend real, el QR se escanea con la cámara
+                del teléfono y la página que se abre es este mismo <code>&lt;nx-handoff side="phone"&gt;</code>.
+              </p>
+            </aside>
+          </div>
+          <ol class="stage__log btn-events" id="ho-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
+              <tbody>
+                <tr><td>«Usar el celular»</td><td><code>POST {endpoint}</code> crea una sesión de un solo uso y el panel muestra el QR del enlace (con el token de la sesión), «Copiar enlace» por si el celular no lee QR, cuánto falta para que venza y «Cancelar».</td></tr>
+                <tr><td>El celular abre el enlace</td><td>El servidor lo marca conectado: «Celular conectado» (o el nombre del equipo, si el servidor lo sabe). Nadie más puede usar esa sesión.</td></tr>
+                <tr><td>Toma la foto</td><td>Se reduce en el teléfono (lado mayor 2000 px, JPEG 0,85) y se sube una por una, con avance y reintento. En el computador: «Recibiendo 2 fotos…».</td></tr>
+                <tr><td>Llega al formulario</td><td>Se descarga, sale <code>nx-handoff-item</code> (cancelable) y se entrega al elemento <code>for</code>: <code>extract(file)</code> de <code>&lt;nx-doc-capture&gt;</code>, un <code>&lt;input type=file&gt;</code> (con su <code>change</code>), <code>add(código)</code> de <code>&lt;nx-scan&gt;</code> o un campo de texto.</td></tr>
+                <tr><td>Termina</td><td>El panel se cierra solo y queda «2 fotos desde el celular» con «Recibir más» (misma sesión si no ha vencido).</td></tr>
+                <tr><td>Se corta la red</td><td>Reconecta con espera creciente (1 s, 2 s, 4 s… hasta 15 s) y pide desde el último evento; si el stream no está disponible, consulta cada 2 s. Cerrar el panel, cancelar o sacar el componente de la página corta todo.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Protocolo</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ruta</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td><code>POST {endpoint}</code></td><td><code>{kind, accept?, multiple?, context?}</code> → <code>{id, url, expiresIn, token?}</code>. <code>url</code> es la página del celular, del mismo origen (o de <code>allowOrigins()</code>).</td></tr>
+                <tr><td><code>GET {endpoint}/{id}/events?after=</code></td><td>SSE o NDJSON: <code>connected {device?}</code>, <code>progress {received, total?}</code>, <code>item {item}</code>, <code>done</code>, <code>expired</code>, <code>error {message}</code>, cada uno con <code>seq</code>.</td></tr>
+                <tr><td><code>GET {endpoint}/{id}?after=</code></td><td>Polling de respaldo: <code>{events: […]}</code>.</td></tr>
+                <tr><td><code>GET {endpoint}/{id}?t=</code></td><td>El celular: <code>{kind, accept?, multiple?, title?, hint?}</code>; marca «conectado». 410 si venció o ya se usó.</td></tr>
+                <tr><td><code>POST {endpoint}/{id}/items?t=</code></td><td>Una foto (<code>multipart</code>, campo <code>file</code>) o un código (<code>{kind: "code", code, format?}</code>) → <code>{item}</code>. <code>POST …/done?t=</code> cierra la tanda.</td></tr>
+                <tr><td><code>DELETE {endpoint}/{id}</code></td><td>«Cancelar»: la sesión deja de servir.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;!-- En el formulario del computador --&gt;
+    &lt;nx-handoff endpoint="/api/handoff" for="factura" kind="photo" context='{"doc":"OC-2291"}'&gt;&lt;/nx-handoff&gt;
+    &lt;nx-doc-capture id="factura" endpoint="/api/captura"&gt;&lt;/nx-doc-capture&gt;
+
+    &lt;!-- La página del celular (la del url del QR: lee ?s= y ?t=) --&gt;
+    &lt;nx-handoff side="phone" endpoint="/api/handoff"&gt;&lt;/nx-handoff&gt;</code></pre>
+            <pre role="tabpanel" hidden><code>import { Handoff } from "nx-ui/solid";
+
+    &lt;Handoff endpoint="/api/handoff" for="conteo" kind="scan"
+      onItem={(e) =&gt; console.log(e.detail.item)} onDone={(e) =&gt; guardar(e.detail.items)} /&gt;
+    &lt;Scan id="conteo" mode="count" /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>side</code></td><td><code>desktop</code> (por defecto): el botón, el QR y la escucha. <code>phone</code>: la página que abre el QR (se carga aparte).</td></tr>
+                <tr><td><code>endpoint</code></td><td>La base de las rutas de la sesión. Mismo origen o uno permitido con <code>allowOrigins()</code>.</td></tr>
+                <tr><td><code>for</code></td><td>El <code>id</code> del elemento que recibe: <code>&lt;nx-doc-capture&gt;</code>, <code>&lt;nx-scan&gt;</code>, <code>&lt;input type=file&gt;</code> o un campo de texto. Sin él, solo eventos.</td></tr>
+                <tr><td><code>kind</code>, <code>accept</code>, <code>multiple</code></td><td>Qué se pide: <code>photo</code> (por defecto), <code>file</code> o <code>scan</code>; los tipos de archivo; si se puede mandar más de uno.</td></tr>
+                <tr><td><code>context</code></td><td>JSON que viaja al servidor al crear la sesión (<code>{"doc":"OC-2291"}</code>).</td></tr>
+                <tr><td><code>session</code>, <code>token</code></td><td>Lado celular; si no vienen, se leen de <code>?s=</code> y <code>?t=</code> de la página.</td></tr>
+                <tr><td><code>labels</code>, <code>locale</code>, <code>disabled</code></td><td>Textos de los dos lados (<code>HANDOFF_LABELS</code> y los del celular), locale, y apagar el botón.</td></tr>
+                <tr><td><code>state</code></td><td>Solo lectura: <code>idle</code>, <code>creating</code>, <code>waiting</code>, <code>connected</code>, <code>receiving</code>, <code>done</code>, <code>expired</code> o <code>error</code>.</td></tr>
+                <tr><td>Métodos</td><td><code>start()</code>, <code>cancel()</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-handoff-state</code> <code>{state}</code>, <code>nx-handoff-item</code> <code>{item, file?}</code> (cancelable), <code>nx-handoff-done</code> <code>{items}</code>, <code>nx-handoff-error</code> <code>{message}</code>.</td></tr>
+                <tr><td>Funciones</td><td><code>qrMatrix(texto, {ecc?})</code> y <code>qrSvgPath(matriz)</code>: el QR propio, sin dependencias (modo byte, niveles L/M/Q/H, versiones 1–40).</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

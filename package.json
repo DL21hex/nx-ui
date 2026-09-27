@@ -130,6 +130,10 @@
       "types": "./dist/types/components/guard/index.d.ts",
       "import": "./dist/guard.js"
     },
+    "./handoff": {
+      "types": "./dist/types/components/handoff/index.d.ts",
+      "import": "./dist/handoff.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"

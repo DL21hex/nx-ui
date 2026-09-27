@@ -562,7 +562,7 @@ export class NxHandoff extends Base {
         },
         emit: (type, detail) => this.#emit(type, detail),
       };
-      void import("./phone").then((m) => {
+      void import("./handoff-phone").then((m) => {
         if (this.isConnected && this.#built === "phone" && !this.#phone) this.#phone = m.mountPhone(host);
       });
       return;

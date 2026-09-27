@@ -55,6 +55,7 @@ export default defineConfig(({ command, mode }) => {
           history: "src/components/history/index.ts",
           kanban: "src/components/kanban/index.ts",
           number: "src/components/number/index.ts",
+          "handoff": "src/components/handoff/index.ts",
           "guard": "src/components/guard/index.ts",
           "import": "src/components/import/index.ts",
           "keytips": "src/components/keytips/index.ts",
