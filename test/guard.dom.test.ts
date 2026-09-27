@@ -334,6 +334,21 @@ describe("<nx-guard>: al enviar", () => {
     expect(document.querySelector(".nx-guard__confirm")).toBeNull();
   });
 
+  it("`confirm` con el guard dentro del <form> (vigila solo un grupo): el envío también se detiene", () => {
+    document.body.innerHTML = `<form><nx-guard mode="confirm"><label>Cantidad <input name="cantidad"></label></nx-guard><button type="submit">Registrar</button></form>`;
+    const el = document.querySelector("nx-guard")!;
+    el.fields = { cantidad: { typical: [1, 50] } } as never;
+    const form = document.querySelector("form")!;
+    const sent = vi.fn((e: Event) => e.preventDefault());
+    form.addEventListener("submit", sent);
+    type("cantidad", "1000");
+    expect(submit().defaultPrevented).toBe(true);
+    expect(sent).not.toHaveBeenCalled();
+    expect(document.querySelector(".nx-guard__confirm")!.nextElementSibling).toBe(form.querySelector("[type=submit]"));
+    submit();
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
+
   it("`confirm`: un aviso nuevo después de detenerlo vuelve a detener; sin avisos, pasa de una", () => {
     mount('mode="confirm"');
     const sent = vi.fn((e: Event) => e.preventDefault());

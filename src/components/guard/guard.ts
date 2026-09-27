@@ -185,8 +185,12 @@ export class NxGuard extends Base {
       const name = b?.parentElement?.parentElement?.dataset.field;
       if (name !== undefined) this.#decide(name, b!.dataset.act === "fix");
     });
-    this.addEventListener("submit", (e) => this.#submit(e as SubmitEvent), true);
+    this.addEventListener("submit", this.#onSubmit, true);
   }
+
+  /** El <form> que envuelve al guard (si el guard vigila solo un grupo de campos): su envío no pasa por aquí. */
+  #outer: HTMLFormElement | null = null;
+  #onSubmit = (e: Event): void => this.#submit(e as SubmitEvent);
 
   connectedCallback(): void {
     for (const p of PROPS) {
@@ -197,9 +201,13 @@ export class NxGuard extends Base {
         self[p] = v;
       }
     }
+    this.#outer = this.parentElement?.closest("form") ?? null;
+    this.#outer?.addEventListener("submit", this.#onSubmit, true);
   }
 
   disconnectedCallback(): void {
+    this.#outer?.removeEventListener("submit", this.#onSubmit, true);
+    this.#outer = null;
     this.#stop();
   }
 
