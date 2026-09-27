@@ -10,7 +10,6 @@
  * hay dos preferencias peleándose (ver INTEGRATION.md).
  */
 import "../src/components/account/index";
-import "../src/components/account/account.css";
 import "../src/components/keytips/index";
 import type { NxAccount } from "../src/components/account/index";
 import type { NxSidemenu } from "../src/components/sidemenu/index";

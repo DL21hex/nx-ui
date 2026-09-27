@@ -25,6 +25,8 @@ import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
+import { mountAccountDemo } from "./demo-account";
+import "./pages/account.css";
 import { mountHandoffDemo } from "./demo-handoff";
 import "./pages/handoff.css";
 import { mountGuardDemo } from "./demo-guard";
@@ -124,6 +126,7 @@ const NAV: MenuItem[] = [
   { id: "import", label: "Importar", href: "#/import", icon: "upload", section: "Componentes", badge: "Nuevo" },
   { id: "guard", label: "Detector de dedazos", href: "#/guard", icon: "shield-alert", section: "Componentes", badge: "Nuevo" },
   { id: "handoff", label: "Sigue en el celular", href: "#/handoff", icon: "smartphone", section: "Componentes", badge: "Nuevo" },
+  { id: "account", label: "Cuenta", href: "#/account", icon: "user", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -157,6 +160,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/import": { template: "page-import", mount: mountImportDemo },
   "#/guard": { template: "page-guard", mount: mountGuardDemo },
   "#/handoff": { template: "page-handoff", mount: mountHandoffDemo },
+  "#/account": { template: "page-account", mount: mountAccountDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 

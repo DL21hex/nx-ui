@@ -134,6 +134,10 @@
       "types": "./dist/types/components/handoff/index.d.ts",
       "import": "./dist/handoff.js"
     },
+    "./account": {
+      "types": "./dist/types/components/account/index.d.ts",
+      "import": "./dist/account.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -175,6 +179,7 @@
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
     "./number.css": "./dist/number.css",
+    "./account.css": "./dist/account.css",
     "./keytips.css": "./dist/keytips.css"
   },
   "sideEffects": [

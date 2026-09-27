@@ -38,6 +38,7 @@ const registry = new Map<string, Entry>([
   ["Import", { tag: "nx-import", props: ["columns", "endpoint", "batch", "accept", "maxSize", "memory", "locale", "labels", "disabled"] }],
   ["Guard", { tag: "nx-guard", props: ["fields", "mode", "endpoint", "locale", "labels", "disabled"] }],
   ["Handoff", { tag: "nx-handoff", props: ["side", "endpoint", "for", "kind", "accept", "multiple", "context", "session", "token", "labels", "locale", "disabled"] }],
+  ["Account", { tag: "nx-account", props: ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "applyLocale", "session", "expiresAt", "warnBefore", "viewAs", "viewAsSource", "lock", "lockEndpoint", "lockAfter", "logoutUrl", "labels", "locale", "disabled"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

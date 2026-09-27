@@ -3,7 +3,8 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`,
+ * `<Account>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -93,6 +94,9 @@ import type { GuardFields, GuardFinding, GuardLabels, GuardMode } from "../compo
 import "../components/handoff/index";
 import type { NxHandoff } from "../components/handoff/handoff";
 import type { HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, HandoffPhoneLabels, HandoffSide, HandoffState } from "../components/handoff/types";
+import "../components/account/index";
+import type { NxAccount } from "../components/account/account";
+import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -121,6 +125,7 @@ export type { NxImport, ImportColumnInput, ImportDoneDetail, ImportErrorDetail, 
 export type { NxKeytips, KeytipAssignment, KeytipDetail, KeytipsLabels };
 export type { NxGuard, GuardFields, GuardFinding, GuardLabels, GuardMode };
 export type { NxHandoff, HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, HandoffPhoneLabels, HandoffSide, HandoffState };
+export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -136,8 +141,8 @@ declare module "solid-js" {
       outputs: WhatIfMetric[] | undefined;
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
-      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | undefined;
+      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AccountItem[] | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AccountLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -146,7 +151,12 @@ declare module "solid-js" {
       fields: SelectField[] | HistoryField[] | PasteFieldInput[] | SyncField[] | GuardFields | undefined;
       record: Record<string, unknown> | undefined;
       events: HistoryEvent[] | undefined;
-      user: HistoryActor | null | undefined;
+      user: HistoryActor | AccountUser | null | undefined;
+      tenants: AccountTenant[] | undefined;
+      palettes: (string | AccountPalette)[] | undefined;
+      locales: AccountLocale[] | undefined;
+      session: AccountSession | null | undefined;
+      viewAs: AccountPerson | null | undefined;
       value: string | string[] | number | DateRangeValue | null | undefined;
       presets: DateRangePresetInput[] | undefined;
       selection: SelectOption[] | undefined;
@@ -210,6 +220,16 @@ declare module "solid-js" {
       hold: string | undefined;
       for: string | undefined;
       menu: string | undefined;
+      account: string | undefined;
+      current: string | undefined;
+      status: AccountStatus | undefined;
+      "apply-locale": string | undefined;
+      "expires-at": string | undefined;
+      "warn-before": string | undefined;
+      "view-as-source": string | undefined;
+      "lock-endpoint": string | undefined;
+      "lock-after": string | undefined;
+      "logout-url": string | undefined;
       agent: string | undefined;
       hotkey: string | undefined;
       storage: string | undefined;
@@ -231,6 +251,7 @@ declare module "solid-js" {
       "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
+      lock: boolean;
       autostart: boolean;
       muted: boolean;
       collapsed: boolean;
@@ -252,6 +273,15 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-account-switch": CustomEvent<AccountSwitchDetail>;
+      "nx-account-status": CustomEvent<AccountStatusDetail>;
+      "nx-account-theme": CustomEvent<AccountThemeDetail>;
+      "nx-account-locale": CustomEvent<{ locale: string }>;
+      "nx-account-select": CustomEvent<{ id: string }>;
+      "nx-account-view-as": CustomEvent<AccountViewAsDetail>;
+      "nx-account-extend": CustomEvent<{ session: AccountSession | null }>;
+      "nx-account-expired": CustomEvent<{ expiresAt: number | null }>;
+      "nx-account-logout": CustomEvent<AccountLogoutDetail>;
       "nx-handoff-state": CustomEvent<{ state: HandoffState }>;
       "nx-handoff-item": CustomEvent<HandoffItemDetail>;
       "nx-handoff-done": CustomEvent<HandoffDoneDetail>;
@@ -319,6 +349,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-account": HTMLAttributes<NxAccount>;
       "nx-handoff": HTMLAttributes<NxHandoff> & { endpoint?: string; for?: string };
       "nx-guard": HTMLAttributes<NxGuard> & { endpoint?: string };
       "nx-import": HTMLAttributes<NxImport> & { endpoint?: string };
@@ -1522,6 +1553,76 @@ export function Handoff(props: HandoffProps): JSX.Element {
       on:nx-handoff-item={(e) => local.onItem?.(e)}
       on:nx-handoff-done={(e) => local.onDone?.(e)}
       on:nx-handoff-error={(e) => local.onError?.(e)}
+    />
+  );
+}
+
+export interface AccountProps extends Omit<JSX.HTMLAttributes<NxAccount>, "onSelect"> {
+  user: AccountUser;
+  tenants?: AccountTenant[];
+  current?: string;
+  status?: AccountStatus;
+  items?: AccountItem[];
+  palettes?: (string | AccountPalette)[];
+  locales?: AccountLocale[];
+  storage?: string;
+  applyLocale?: boolean;
+  session?: AccountSession | null;
+  warnBefore?: number;
+  viewAs?: AccountPerson | null;
+  viewAsSource?: string;
+  lock?: boolean;
+  lockEndpoint?: string;
+  lockAfter?: number;
+  logoutUrl?: string;
+  labels?: Partial<AccountLabels>;
+  locale?: string;
+  disabled?: boolean;
+  onSwitch?: (e: CustomEvent<AccountSwitchDetail>) => void;
+  onStatus?: (e: CustomEvent<AccountStatusDetail>) => void;
+  onTheme?: (e: CustomEvent<AccountThemeDetail>) => void;
+  onLocale?: (e: CustomEvent<{ locale: string }>) => void;
+  onSelect?: (e: CustomEvent<{ id: string }>) => void;
+  onViewAs?: (e: CustomEvent<AccountViewAsDetail>) => void;
+  onExtend?: (e: CustomEvent<{ session: AccountSession | null }>) => void;
+  onExpired?: (e: CustomEvent<{ expiresAt: number | null }>) => void;
+  onLogout?: (e: CustomEvent<AccountLogoutDetail>) => void;
+}
+
+export function Account(props: AccountProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "applyLocale", "session", "warnBefore", "viewAs", "viewAsSource", "lock", "lockEndpoint", "lockAfter", "logoutUrl", "labels", "locale", "disabled", "onSwitch", "onStatus", "onTheme", "onLocale", "onSelect", "onViewAs", "onExtend", "onExpired", "onLogout"]);
+  return (
+    <nx-account
+      {...rest}
+      prop:user={local.user}
+      prop:tenants={local.tenants}
+      prop:items={local.items}
+      prop:palettes={local.palettes}
+      prop:locales={local.locales}
+      prop:session={local.session}
+      prop:viewAs={local.viewAs}
+      prop:labels={local.labels}
+      attr:current={local.current}
+      attr:status={local.status}
+      attr:storage={local.storage}
+      attr:apply-locale={local.applyLocale === false ? "false" : undefined}
+      attr:warn-before={local.warnBefore === undefined ? undefined : String(local.warnBefore)}
+      attr:view-as-source={local.viewAsSource}
+      attr:lock-endpoint={local.lockEndpoint}
+      attr:lock-after={local.lockAfter === undefined ? undefined : String(local.lockAfter)}
+      attr:logout-url={local.logoutUrl}
+      attr:locale={local.locale}
+      bool:lock={!!local.lock}
+      bool:disabled={!!local.disabled}
+      on:nx-account-switch={(e) => local.onSwitch?.(e)}
+      on:nx-account-status={(e) => local.onStatus?.(e)}
+      on:nx-account-theme={(e) => local.onTheme?.(e)}
+      on:nx-account-locale={(e) => local.onLocale?.(e)}
+      on:nx-account-select={(e) => local.onSelect?.(e)}
+      on:nx-account-view-as={(e) => local.onViewAs?.(e)}
+      on:nx-account-extend={(e) => local.onExtend?.(e)}
+      on:nx-account-expired={(e) => local.onExpired?.(e)}
+      on:nx-account-logout={(e) => local.onLogout?.(e)}
     />
   );
 }

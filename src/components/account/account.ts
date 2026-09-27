@@ -276,6 +276,7 @@ export class NxAccount extends Base {
         set(this: NxAccount, v: unknown) {
           (this.#d as Record<string, unknown>)[k] = CLEAN[k](parseJsonAttr(v));
           if (k === "viewAs") this.#banner();
+          if (k === "user") this.#relock();
           this.#schedule();
         },
       });
@@ -441,6 +442,7 @@ export class NxAccount extends Base {
     this.#armUntil();
     this.#banner();
     this.#paint();
+    this.#relock();
   }
 
   disconnectedCallback(): void {
@@ -474,7 +476,7 @@ export class NxAccount extends Base {
       this.#session = { ...this.#session, expiresAt: parseExpiry(value) };
       this.#scheduleSession();
     } else if (name === "warn-before") this.#scheduleSession();
-    else if (name === "lock-after" || name === "lock" || name === "lock-endpoint") this.#armIdle();
+    else if (name === "lock-after" || name === "lock" || name === "lock-endpoint") this.#armIdle(), this.#relock();
     else if (name === "disabled" && value !== null) this.hide();
     this.#schedule();
   }
@@ -496,6 +498,18 @@ export class NxAccount extends Base {
 
   #num(n: number): string {
     return n.toLocaleString(resolveLocale(this));
+  }
+
+  /** Se recargó la página estando bloqueada (`./lock` deja `nx-locked` en sessionStorage): vuelve a
+   *  bloquear en cuanto hay usuario y bloqueo activo. Se mira aquí, sin cargar `./lock`. */
+  #relock(): void {
+    let locked = false;
+    try {
+      locked = sessionStorage.getItem("nx-locked") !== null;
+    } catch {
+      /* sin almacenamiento: el bloqueo no sobrevivió a la recarga */
+    }
+    if (locked && this.isConnected && this.#lockOn() && this.#d.user && !this.#locking && !this.disabled) void this.lock();
   }
 
   #lockOn(): boolean {

@@ -5,6 +5,9 @@
  * Punto de corte de la hoja móvil: 768px (el mismo que el drawer de <nx-sidemenu>).
  */
 
+/* La pantalla de bloqueo y la franja de «Ver como» (./lock y ./view-as, que se cargan aparte). */
+@import "./lock.css";
+
 nx-account {
   --_bg: var(--nx-account-bg, var(--nx-sidebar));
   --_amber: light-dark(oklch(0.68 0.15 70), oklch(0.8 0.14 75));
@@ -745,3 +748,4 @@ html[data-nx-reveal]::view-transition-new(root) {
     forced-color-adjust: none;
   }
 }
+
