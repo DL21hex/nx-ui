@@ -5,6 +5,7 @@
  * Junta varias fuentes, todas JSON:
  * - `items`: entradas propias (acciones, pantallas, submenús);
  * - `menu="id"`: las pantallas de un `<nx-sidemenu>`, con su ruta como pista;
+ * - `account="id"`: las acciones de un `<nx-account>` (tema, paleta, empresa, idioma, salir…);
  * - `source="/url"`: registros del servidor mientras se escribe (`?q=`);
  * - `agent="id"`: lo que no se encuentra va a ese `<nx-agent>` como pregunta.
  *
@@ -44,7 +45,7 @@ export const COMMAND_LABELS: CommandLabels = {
 
 const SPARK = '<path d="M9.94 14.06 5 19"/><path d="m14 4 1.27 3.73L19 9l-3.73 1.27L14 14l-1.27-3.73L9 9l3.73-1.27Z"/>';
 const RECENT = '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>';
-const PROPS = ["items", "menu", "source", "agent", "hotkey", "placeholder", "storage", "limit", "labels"] as const;
+const PROPS = ["items", "menu", "account", "source", "agent", "hotkey", "placeholder", "storage", "limit", "labels"] as const;
 const DEBOUNCE_MS = 200;
 
 type Row = { kind: "item"; item: CommandItem; recent?: boolean } | { kind: "ask" };
@@ -105,6 +106,14 @@ export class NxCommand extends Base {
   }
   set menu(v: string | null) {
     this.#attr("menu", v);
+  }
+  /** Id de un `<nx-account>`: sus acciones (`commands`) entran en la paleta (se leen al abrir). Las
+   *  ejecuta la propia cuenta al oír `nx-command-select`. */
+  get account(): string | null {
+    return this.getAttribute("account");
+  }
+  set account(v: string | null) {
+    this.#attr("account", v);
   }
   /** Búsqueda en el servidor: `GET source?q=…` → un arreglo de entradas (o `{items}`). */
   get source(): string | null {
@@ -432,7 +441,8 @@ export class NxCommand extends Base {
     if (page) return page.children ?? [];
     const menu = this.menu ? (document.getElementById(this.menu) as (HTMLElement & { items?: MenuItem[] }) | null) : null;
     const nav = Array.isArray(menu?.items) ? flattenMenu(menu.items, this.#labels.navigate) : [];
-    return [...this.#items, ...nav];
+    const acc = this.account ? (document.getElementById(this.account) as (HTMLElement & { commands?: unknown }) | null) : null;
+    return [...this.#items, ...cleanItems(acc?.commands), ...nav];
   }
 
   /** Recalcula las filas; con `source`, pide al servidor (con espera entre teclas). */

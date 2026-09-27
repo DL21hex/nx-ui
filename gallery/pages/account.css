@@ -1,0 +1,45 @@
+/* ---------------------------------------------------------------- demo de <nx-account> */
+
+.acc-stage {
+  block-size: 620px;
+
+  @media (max-width: 767.98px) {
+    block-size: 460px;
+  }
+}
+.acc-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 10px;
+  color: var(--nx-foreground);
+  font-weight: 650;
+  text-decoration: none;
+}
+.acc-brand__mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font-size: 13px;
+}
+nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) .acc-brand {
+  justify-content: center;
+  padding-inline: 0;
+
+  & .acc-brand__name {
+    display: none;
+  }
+}
+.acc-bar__org {
+  margin-inline-start: auto;
+  overflow: hidden;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

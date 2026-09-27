@@ -1,0 +1,181 @@
+/**
+ * Demo de `<nx-account>`: un ERP pequeño (menú de 5 pantallas) con la tarjeta de Diego Llinás al pie.
+ *
+ * La API es de mentira y vive en esta pestaña (`addDemoRoute("/demo/account", …)`): desbloquear con
+ * «1234», extender la sesión y buscar personas para «Ver como…». Los cambios sin sincronizar los
+ * simula una cola falsa que se pasa en `sync` (se vacía sola al enviar, salvo «Sin conexión»).
+ *
+ * La galería ya guarda su tema y su paleta (`nx-ui-gallery-theme`/`-palette`): la cuenta va con
+ * `storage="none"` y, cuando cambia, escribe esas claves y marca los botones de la galería. Así no
+ * hay dos preferencias peleándose (ver INTEGRATION.md).
+ */
+import "../src/components/account/index";
+import "../src/components/account/account.css";
+import "../src/components/keytips/index";
+import type { NxAccount } from "../src/components/account/index";
+import type { NxSidemenu } from "../src/components/sidemenu/index";
+import { addDemoRoute } from "./demo-api";
+
+const PEOPLE = [
+  { id: "u01", name: "Ana María Rincón", role: "Cajera · Medellín" },
+  { id: "u02", name: "Héctor Galeano", role: "Jefe de bodega · Bogotá" },
+  { id: "u03", name: "Laura Restrepo", role: "Asesora comercial · Medellín" },
+  { id: "u04", name: "Walber Pumarejo", role: "Técnico electricista · Cali" },
+  { id: "u05", name: "Sofía Castaño", role: "Contadora · Bogotá" },
+  { id: "u06", name: "Julián Ospina", role: "Aprobador de compras · Cali" },
+];
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+let routes = false;
+
+function installRoutes(): void {
+  if (routes) return;
+  routes = true;
+  addDemoRoute("/demo/account", async (req, out) => {
+    const path = req.url.pathname.slice(req.url.pathname.indexOf("/demo/account") + "/demo/account".length);
+    const reply = (o: unknown, status = 200) => {
+      out.status(status);
+      out.type("application/json");
+      out.end(JSON.stringify(o));
+    };
+    await sleep(300);
+    if (path === "/unlock") {
+      let password = "";
+      try {
+        password = String(JSON.parse(req.body || "{}").password ?? "");
+      } catch {
+        /* cuerpo raro: clave vacía */
+      }
+      return password === "1234" ? reply({ ok: true }) : reply({ error: "Clave incorrecta" }, 401);
+    }
+    if (path === "/extend") return reply({ expiresAt: new Date(Date.now() + 30 * 60_000).toISOString() });
+    if (path === "/people") {
+      const q = fold(req.url.searchParams.get("q") ?? "");
+      return reply(PEOPLE.filter((p) => fold(`${p.name} ${p.role}`).includes(q)));
+    }
+    reply({ error: "No existe" }, 404);
+  });
+}
+
+export function mountAccountDemo(root: HTMLElement): void {
+  installRoutes();
+  const $ = <T extends HTMLElement = HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+  const acc = $<NxAccount>("#acc");
+  const menu = $<NxSidemenu>("#acc-menu");
+  const log = $<HTMLOListElement>("#acc-log");
+  const add = (text: string) => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 8) log.lastElementChild!.remove();
+  };
+
+  menu.items = [
+    { id: "inicio", label: "Inicio", href: "#/account", icon: "house" },
+    { id: "pedidos", label: "Pedidos", href: "/ventas/pedidos", icon: "shopping-cart", badge: 4 },
+    { id: "compras", label: "Compras", href: "/compras", icon: "receipt" },
+    { id: "inventario", label: "Inventario", href: "/inventario", icon: "warehouse" },
+    { id: "informes", label: "Informes", href: "/informes", icon: "chart-column" },
+  ];
+  // En la demo ninguna hoja navega: solo se anota.
+  menu.addEventListener("nx-select", (e) => {
+    e.preventDefault();
+    menu.active = e.detail.item.href ?? null;
+    add(`Menú → ${e.detail.item.label}`);
+  });
+  $<HTMLInputElement>("#acc-collapsed").addEventListener("change", (e) => (menu.collapsed = (e.target as HTMLInputElement).checked));
+
+  acc.user = { name: "Diego Llinás", email: "diego.llinas@crear.co" };
+  acc.tenants = [
+    { id: "cc-med", name: "Crear Colombia S.A.S.", detail: "Sede Medellín", role: "Aprobador", group: "Crear Colombia S.A.S." },
+    { id: "cc-bog", name: "Crear Colombia S.A.S.", detail: "Sede Bogotá", role: "Consulta", group: "Crear Colombia S.A.S." },
+    { id: "nx-cali", name: "nx32 Quality", detail: "Sede Cali", role: "Administrador", group: "nx32 Quality" },
+  ];
+  acc.current = "cc-med";
+  acc.items = [
+    { id: "perfil", label: "Mi perfil", icon: "user" },
+    { id: "config", label: "Configuración", icon: "settings", hint: "Ctrl ," },
+  ];
+  acc.session = { expiresAt: Date.now() + 25 * 60_000, extendEndpoint: "/demo/account/extend" };
+  // En la demo, cualquier clave de 4 cifras que no sea 1234 es «incorrecta» (la valida la ruta de mentira).
+  acc.setAttribute("lock", "");
+
+  // ---------------------------------------------------------------- cola de sincronización falsa
+  let pending = 0;
+  let online = true;
+  const subs = new Set<(s: { online: boolean; pending: number }) => void>();
+  const emit = () => subs.forEach((fn) => fn({ online, pending }));
+  let draining = false;
+  acc.sync = {
+    subscribe(fn) {
+      subs.add(fn);
+      fn({ online, pending });
+      return () => subs.delete(fn);
+    },
+    async flush() {
+      if (draining) return;
+      draining = true;
+      while (pending > 0 && online) {
+        await sleep(900);
+        if (!online) break;
+        pending--;
+        add(`Sincronizado: queda${pending === 1 ? "" : "n"} ${pending}`);
+        emit();
+      }
+      draining = false;
+    },
+  };
+  $("#acc-pending").addEventListener("click", () => {
+    pending = 3;
+    emit();
+    add("3 cambios en cola (sin enviar)");
+  });
+  $<HTMLInputElement>("#acc-offline").addEventListener("change", (e) => {
+    online = !(e.target as HTMLInputElement).checked;
+    emit();
+    if (online && pending) void acc.sync!.flush();
+  });
+  $("#acc-expire").addEventListener("click", () => {
+    acc.session = { expiresAt: Date.now() + 60_000, extendEndpoint: "/demo/account/extend" };
+    add("La sesión vence en 1 min (aviso: 5 min antes)");
+  });
+
+  // ---------------------------------------------------------------- la galería y la cuenta, un solo tema
+  const galleryTheme = (theme: string) => {
+    for (const b of document.querySelectorAll<HTMLButtonElement>("[data-theme-set]")) b.setAttribute("aria-pressed", String(b.dataset.themeSet === (theme === "system" ? "auto" : theme)));
+  };
+  acc.addEventListener("nx-account-theme", (e) => {
+    const { theme, palette } = e.detail;
+    add(`nx-account-theme → ${theme} · ${palette}`);
+    galleryTheme(theme);
+    try {
+      localStorage.setItem("nx-ui-gallery-theme", theme === "system" ? "auto" : theme);
+      localStorage.setItem("nx-ui-gallery-palette", palette);
+    } catch {
+      /* sin almacenamiento */
+    }
+  });
+
+  // ---------------------------------------------------------------- registro de eventos
+  const org = $("#acc-org");
+  const paintOrg = () => {
+    const t = acc.tenants.find((x) => x.id === acc.current);
+    org.textContent = t ? `${t.name} · ${t.detail}` : "";
+  };
+  paintOrg();
+  acc.addEventListener("nx-account-switch", (e) => {
+    add(`nx-account-switch → ${e.detail.tenant.name} · ${e.detail.tenant.detail}`);
+    queueMicrotask(paintOrg);
+  });
+  acc.addEventListener("nx-account-status", (e) => add(`nx-account-status → ${e.detail.status}${e.detail.until ? ` hasta ${new Date(e.detail.until).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" })}` : ""}`));
+  acc.addEventListener("nx-account-locale", (e) => add(`nx-account-locale → ${e.detail.locale} (la página cambió de lang)`));
+  acc.addEventListener("nx-account-select", (e) => add(`nx-account-select → ${e.detail.id}`));
+  acc.addEventListener("nx-account-view-as", (e) => add(`nx-account-view-as → ${e.detail.user ? e.detail.user.name : "salir"}`));
+  acc.addEventListener("nx-account-extend", () => add("nx-account-extend → POST /demo/account/extend"));
+  acc.addEventListener("nx-account-expired", () => add("nx-account-expired → la app pediría iniciar sesión"));
+  acc.addEventListener("nx-account-logout", (e) => add(`nx-account-logout → sesión cerrada${e.detail.pending ? ` (${e.detail.pending} sin enviar)` : ""} (en la demo no se navega)`));
+  acc.addEventListener("nx-open-change", (e) => add(`nx-open-change → ${e.detail.open ? "abierto" : "cerrado"}`));
+
+  // Las acciones de la cuenta también en la paleta de comandos de la galería (Ctrl K).
+  document.querySelector("#cmd")?.setAttribute("account", "acc");
+}

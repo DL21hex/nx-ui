@@ -1,0 +1,747 @@
+/*
+ * <nx-account>. Variables propias:
+ *   --nx-account-width (320px): ancho del panel
+ *   --nx-account-bg (--nx-sidebar): el fondo detrás de la tarjeta (el borde del punto de estado)
+ * Punto de corte de la hoja móvil: 768px (el mismo que el drawer de <nx-sidemenu>).
+ */
+
+nx-account {
+  --_bg: var(--nx-account-bg, var(--nx-sidebar));
+  --_amber: light-dark(oklch(0.68 0.15 70), oklch(0.8 0.14 75));
+  --_amber-ink: light-dark(oklch(0.5 0.12 65), oklch(0.84 0.13 75));
+  --_st: var(--nx-success);
+  display: block;
+  padding: 8px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.35;
+}
+nx-account[status="away"] {
+  --_st: var(--_amber);
+}
+nx-account[status="dnd"] {
+  --_st: var(--nx-danger);
+}
+nx-account[data-sync="offline"] {
+  --_st: var(--nx-text-quaternary);
+}
+nx-account *,
+nx-account *::before,
+nx-account *::after {
+  box-sizing: border-box;
+}
+nx-account [hidden] {
+  display: none !important;
+}
+.nx-account__vh {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- tarjeta */
+
+.nx-account__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--nx-motion-fast);
+
+  &:hover,
+  &[aria-expanded="true"] {
+    background: var(--nx-hover);
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+nx-account :is(button, a, input, h2):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: -2px;
+}
+.nx-account__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+:is(.nx-account__name, .nx-account__org, .nx-account__big, .nx-account__mail, .nx-account__label) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-account__name {
+  font-weight: 600;
+}
+.nx-account__org,
+.nx-account__mail {
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+}
+.nx-account__chev,
+.nx-account__more {
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--nx-text-quaternary);
+}
+
+/* ---------------------------------------------------------------- avatar y estado */
+
+.nx-account__av {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  /* Del color de la paleta: la vista previa se nota también aquí. */
+  background: linear-gradient(145deg, var(--nx-primary), color-mix(in oklch, var(--nx-primary) 70%, black));
+  color: var(--nx-primary-foreground);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  transition: box-shadow var(--nx-motion-base);
+
+  & img {
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+.nx-account__av--lg {
+  inline-size: 42px;
+  block-size: 42px;
+  font-size: 15px;
+}
+.nx-account__dot {
+  position: absolute;
+  inset-block-end: -1px;
+  inset-inline-end: -1px;
+  inline-size: 11px;
+  block-size: 11px;
+  border: 2px solid var(--_bg);
+  border-radius: 50%;
+  background: var(--_st);
+  transition: background-color var(--nx-motion-base);
+}
+/* «No molestar» lleva su raya: el estado no depende solo del color. */
+:is(nx-account[status="dnd"]:not([data-sync="offline"]) .nx-account__card, .nx-account__seg) .nx-account__dot:is(:not([data-s]), [data-s="dnd"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  inline-size: 60%;
+  block-size: 2px;
+  border-radius: 1px;
+  background: var(--nx-danger-foreground);
+}
+/* Cambios en cola o sesión por vencer: un anillo ámbar alrededor del avatar. */
+nx-account:is([data-sync="pending"], [data-session]) .nx-account__card .nx-account__av {
+  box-shadow:
+    0 0 0 2px var(--_bg),
+    0 0 0 3.5px var(--_amber);
+}
+nx-account[data-session="expired"] .nx-account__card .nx-account__av {
+  box-shadow:
+    0 0 0 2px var(--_bg),
+    0 0 0 3.5px var(--nx-danger);
+}
+
+/* ---------------------------------------------------------------- franja de la sesión */
+
+.nx-account__session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 6px;
+  padding: 6px 8px;
+  border-radius: var(--nx-radius-md);
+  background: color-mix(in oklch, var(--_amber) 15%, transparent);
+  color: var(--_amber-ink);
+  font-size: 12px;
+
+  & > .nx-glyph {
+    inline-size: 14px;
+    block-size: 14px;
+  }
+}
+.nx-account__session--pop {
+  margin: 0 0 4px;
+}
+nx-account[data-session="expired"] .nx-account__session {
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+}
+.nx-account__stext {
+  flex: 1;
+  min-inline-size: 0;
+}
+.nx-account__time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+:is(.nx-account__extend, .nx-account__anyway) {
+  flex: none;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.7;
+  }
+}
+
+/* ---------------------------------------------------------------- compacto (riel de íconos) */
+
+nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) nx-account {
+  padding-inline: 0;
+
+  & .nx-account__card {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  /* El nombre se oculta a la vista, no al lector de pantalla ni a las letras de <nx-keytips>. */
+  & .nx-account__card > .nx-account__text {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  & :is(.nx-account__chev, .nx-account__session) {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- panel */
+
+.nx-account__pop {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 6px;
+  inline-size: var(--nx-account-width, 320px);
+  max-inline-size: calc(100vw - 16px);
+  max-block-size: calc(100dvh - 16px);
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: calc(var(--nx-radius-lg) + 2px);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  text-align: start;
+  transform-origin: bottom left;
+
+  &:popover-open {
+    display: flex;
+    flex-direction: column;
+    animation: nx-account-in var(--nx-motion-base) var(--nx-ease-out);
+  }
+  & hr {
+    flex: none;
+    margin: 6px 4px;
+    border: 0;
+    border-block-start: 1px solid var(--nx-border-subtle);
+  }
+  & p {
+    margin: 0;
+  }
+}
+@keyframes nx-account-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+    scale: 0.985;
+  }
+}
+.nx-account__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 12px;
+}
+.nx-account__who {
+  min-inline-size: 0;
+}
+.nx-account__big {
+  font-size: 14px;
+  font-weight: 650;
+}
+.nx-account__mail {
+  font-size: 12px;
+}
+
+/* Empresa · sede · rol: una fila con borde, como un campo de formulario. */
+.nx-account__tenant {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  margin: 0 2px 6px;
+  padding: 7px 10px 7px 7px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast);
+
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  & > .nx-glyph:first-child {
+    inline-size: 30px;
+    block-size: 30px;
+    padding: 7px;
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+}
+
+/* ---------------------------------------------------------------- estado, tema y color */
+
+.nx-account__field {
+  display: grid;
+  flex: none;
+  gap: 5px;
+  padding: 6px 4px;
+}
+.nx-account__caption {
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+}
+.nx-account__seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-hover);
+
+  & > button {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-inline-size: 0;
+    padding: 5px 6px;
+    border: 0;
+    border-radius: calc(var(--nx-radius-md) - 2px);
+    background: transparent;
+    color: var(--nx-muted-foreground);
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--nx-motion-fast),
+      color var(--nx-motion-fast);
+
+    &:hover {
+      color: var(--nx-foreground);
+    }
+    &[aria-pressed="true"] {
+      background: var(--nx-card);
+      color: var(--nx-foreground);
+      font-weight: 550;
+      box-shadow:
+        0 1px 2px light-dark(rgb(15 20 30 / 0.08), rgb(0 0 0 / 0.3)),
+        0 0 0 1px var(--nx-border-subtle);
+    }
+  }
+  & .nx-glyph {
+    inline-size: 14px;
+    block-size: 14px;
+  }
+  & .nx-account__dot {
+    position: relative;
+    inset: auto;
+    inline-size: 9px;
+    block-size: 9px;
+    border: 0;
+  }
+}
+.nx-account__dot[data-s="online"] {
+  background: var(--nx-success);
+}
+.nx-account__dot[data-s="away"] {
+  background: var(--_amber);
+}
+.nx-account__dot[data-s="dnd"] {
+  background: var(--nx-danger);
+}
+/* Cada muestra se pinta con su propia paleta (lleva `data-nx-palette`) o con `--_sw`. */
+.nx-account__swatches {
+  --_gap: var(--nx-popover);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 3px 2px;
+}
+.nx-account__sw {
+  position: relative;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--_sw, var(--nx-primary));
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+  transition:
+    scale var(--nx-motion-fast) var(--nx-ease-out),
+    box-shadow var(--nx-motion-fast);
+
+  &:hover {
+    scale: 1.12;
+  }
+  &[aria-pressed="true"] {
+    box-shadow:
+      0 0 0 2px var(--_gap),
+      0 0 0 4px var(--_sw, var(--nx-primary));
+  }
+  /* Elegida: además del anillo, un punto (no solo color). */
+  &[aria-pressed="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 50%;
+    background: var(--nx-primary-foreground);
+  }
+  &:focus-visible {
+    outline-offset: 5px;
+  }
+}
+
+/* ---------------------------------------------------------------- filas */
+
+.nx-account__item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-block-size: 32px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  & > :is(.nx-glyph, .nx-icon):first-child {
+    inline-size: 16px;
+    block-size: 16px;
+    color: var(--nx-text-tertiary);
+  }
+}
+.nx-account__label {
+  flex: 1;
+  min-inline-size: 0;
+}
+.nx-account__hint {
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-account__item--danger {
+  color: var(--nx-danger);
+
+  &:hover {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+  & > .nx-glyph:first-child {
+    color: currentColor;
+  }
+}
+/* Cerrando sesión: los cambios en cola se envían antes (una barra que avanza mientras tanto). */
+.nx-account__leaving {
+  display: grid;
+  flex: none;
+  gap: 6px;
+  margin: 0 2px 6px;
+  padding: 8px 10px;
+  border-radius: var(--nx-radius-md);
+  background: color-mix(in oklch, var(--_amber) 15%, transparent);
+  color: var(--_amber-ink);
+  font-size: 12px;
+
+  &:not([data-stuck])::after {
+    content: "";
+    block-size: 2px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, transparent, var(--_amber), transparent) 0 0 / 40% 100% no-repeat;
+    animation: nx-account-send 1.2s linear infinite;
+  }
+  & .nx-account__anyway {
+    justify-self: start;
+    padding-inline: 0;
+  }
+}
+@keyframes nx-account-send {
+  to {
+    background-position: 250% 0;
+  }
+}
+
+/* ---------------------------------------------------------------- sub-vistas */
+
+.nx-account__subview {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+}
+.nx-account__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 8px;
+
+  & h2 {
+    margin: 0;
+    border-radius: var(--nx-radius-sm);
+    font-size: 13.5px;
+    font-weight: 650;
+  }
+}
+.nx-account__back {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+}
+.nx-account__search {
+  position: relative;
+  padding: 0 2px 6px;
+
+  & .nx-glyph {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-start: 11px;
+    inline-size: 14px;
+    block-size: 14px;
+    color: var(--nx-text-quaternary);
+    pointer-events: none;
+  }
+  & input {
+    inline-size: 100%;
+    block-size: 30px;
+    padding-block: 0;
+    padding-inline: 28px 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    outline: none;
+    background: var(--nx-card);
+    color: var(--nx-foreground);
+    font: inherit;
+    font-size: 12.5px;
+
+    &::placeholder {
+      color: var(--nx-text-tertiary);
+    }
+    &:focus {
+      border-color: var(--nx-primary-border);
+      box-shadow: 0 0 0 3px var(--nx-primary-soft);
+    }
+  }
+}
+.nx-account__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-block-size: min(50vh, 380px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  transition: opacity var(--nx-motion-fast);
+
+  &[aria-busy] {
+    opacity: 0.6;
+  }
+}
+.nx-account__group {
+  padding: 8px 8px 4px;
+  color: var(--nx-text-tertiary);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.nx-account__opt {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &[aria-current] {
+    background: var(--nx-primary-soft);
+  }
+  & .nx-account__org {
+    font-variant-numeric: tabular-nums;
+  }
+  & .nx-account__av {
+    inline-size: 28px;
+    block-size: 28px;
+    font-size: 11px;
+  }
+}
+.nx-account__check {
+  inline-size: 15px;
+  block-size: 15px;
+  color: var(--nx-primary-ink);
+}
+.nx-account__n {
+  min-inline-size: 18px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  opacity: 0.8;
+}
+.nx-account__empty {
+  padding: 14px 8px;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- móvil: hoja desde abajo */
+
+@media (max-width: 767.98px) {
+  .nx-account__pop {
+    inset: auto 0 0;
+    inline-size: 100%;
+    max-inline-size: none;
+    max-block-size: 88dvh;
+    padding: 6px 8px calc(10px + env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
+
+    &:popover-open {
+      animation-name: nx-account-sheet;
+    }
+    /* El asa: dice «esto se desliza» sin texto. */
+    &::before {
+      content: "";
+      flex: none;
+      align-self: center;
+      inline-size: 36px;
+      block-size: 4px;
+      margin: 2px 0 8px;
+      border-radius: 2px;
+      background: var(--nx-border-strong);
+    }
+    &::backdrop {
+      background: var(--nx-backdrop);
+    }
+  }
+  .nx-account__item,
+  .nx-account__opt {
+    min-block-size: 40px;
+  }
+}
+@keyframes nx-account-sheet {
+  from {
+    translate: 0 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- tema y paleta: el círculo */
+
+/* Solo durante la transición de esta cuenta: la vista nueva crece como un círculo desde el clic
+   (el `clip-path` lo anima account.ts) sobre la vieja, sin el fundido por defecto. */
+html[data-nx-reveal]::view-transition-old(root),
+html[data-nx-reveal]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ---------------------------------------------------------------- preferencias del sistema */
+
+@media (prefers-reduced-motion: reduce) {
+  nx-account,
+  nx-account *,
+  nx-account *::before,
+  nx-account *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+  .nx-account__leaving::after {
+    animation: none !important;
+  }
+}
+@media (forced-colors: active) {
+  .nx-account__seg > button[aria-pressed="true"],
+  .nx-account__sw[aria-pressed="true"],
+  .nx-account__opt[aria-current] {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+  .nx-account__dot,
+  .nx-account__sw {
+    forced-color-adjust: none;
+  }
+}
