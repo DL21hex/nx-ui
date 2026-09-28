@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -99,6 +99,9 @@ import type { AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion,
 import "../components/account/index";
 import type { NxAccount } from "../components/account/account";
 import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
+import "../components/launcher/index";
+import type { NxLauncher } from "../components/launcher/launcher";
+import type { LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView } from "../components/launcher/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -128,6 +131,7 @@ export type { NxKeytips, KeytipAssignment, KeytipDetail, KeytipsLabels };
 export type { NxGuard, GuardFields, GuardFinding, GuardLabels, GuardMode };
 export type { NxAward, AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier };
 export type { NxHandoff, HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, HandoffPhoneLabels, HandoffSide, HandoffState };
+export type { NxLauncher, LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView };
 export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
@@ -136,6 +140,7 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      query: string | undefined;
       suppliers: AwardSupplier[] | undefined;
       quotes: AwardQuote[] | undefined;
       criteria: AwardCriterion[] | undefined;
@@ -151,8 +156,8 @@ declare module "solid-js" {
       outputs: WhatIfMetric[] | undefined;
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
-      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | undefined;
+      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -183,6 +188,8 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      columns: string | undefined;
+      "heading-level": string | undefined;
       scenario: string | undefined;
       lens: AwardLens | undefined;
       side: HandoffSide | undefined;
@@ -263,6 +270,7 @@ declare module "solid-js" {
       "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
+      search: boolean;
       lock: boolean;
       autostart: boolean;
       muted: boolean;
@@ -286,6 +294,7 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-launcher-select": CustomEvent<LauncherSelectDetail>;
       "nx-award-advise": CustomEvent<AwardAdviseDetail>;
       "nx-award-change": CustomEvent<AwardChangeDetail>;
       "nx-award-submit": CustomEvent<AwardSubmitDetail>;
@@ -367,6 +376,7 @@ declare module "solid-js" {
     interface IntrinsicElements {
       "nx-award": HTMLAttributes<NxAward> & { heading?: string; endpoint?: string };
       "nx-account": HTMLAttributes<NxAccount>;
+      "nx-launcher": HTMLAttributes<NxLauncher>;
       "nx-handoff": HTMLAttributes<NxHandoff> & { endpoint?: string; for?: string };
       "nx-guard": HTMLAttributes<NxGuard> & { endpoint?: string };
       "nx-import": HTMLAttributes<NxImport> & { endpoint?: string };
@@ -1706,6 +1716,40 @@ export function Account(props: AccountProps): JSX.Element {
       on:nx-account-extend={(e) => local.onExtend?.(e)}
       on:nx-account-expired={(e) => local.onExpired?.(e)}
       on:nx-account-logout={(e) => local.onLogout?.(e)}
+    />
+  );
+}
+
+export interface LauncherProps extends Omit<JSX.HTMLAttributes<NxLauncher>, "onSelect"> {
+  /** Las tarjetas `{id, label, href?, icon?, description?, section?, views?, signal?, featured?, eyebrow?, progress?}`. */
+  items: LauncherItem[];
+  /** Muestra el buscador «Ir a» (lo que no coincide se apaga en su sitio; `Enter` abre la primera). */
+  search?: boolean;
+  /** Lo escrito en el buscador (también filtra sin él). */
+  query?: string;
+  /** Máximo de columnas (4 por defecto). */
+  columns?: number;
+  /** Nivel de los títulos de sección (2 por defecto). */
+  headingLevel?: number;
+  locale?: string;
+  labels?: Partial<LauncherLabels>;
+  /** Una tarjeta o una vista elegida. Cancelable: `preventDefault()` y la app navega (p. ej. dentro de `startViewTransition`). */
+  onSelect?: (e: CustomEvent<LauncherSelectDetail>) => void;
+}
+
+export function Launcher(props: LauncherProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["items", "search", "query", "columns", "headingLevel", "locale", "labels", "onSelect"]);
+  return (
+    <nx-launcher
+      {...rest}
+      prop:items={local.items}
+      prop:query={local.query}
+      prop:labels={local.labels}
+      attr:columns={local.columns === undefined ? undefined : String(local.columns)}
+      attr:heading-level={local.headingLevel === undefined ? undefined : String(local.headingLevel)}
+      attr:locale={local.locale}
+      bool:search={!!local.search}
+      on:nx-launcher-select={(e) => local.onSelect?.(e)}
     />
   );
 }

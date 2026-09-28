@@ -142,6 +142,10 @@
       "types": "./dist/types/components/account/index.d.ts",
       "import": "./dist/account.js"
     },
+    "./launcher": {
+      "types": "./dist/types/components/launcher/index.d.ts",
+      "import": "./dist/launcher.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -185,7 +189,8 @@
     "./number.css": "./dist/number.css",
     "./keytips.css": "./dist/keytips.css",
     "./award.css": "./dist/award.css",
-    "./account.css": "./dist/account.css"
+    "./account.css": "./dist/account.css",
+    "./launcher.css": "./dist/launcher.css"
   },
   "sideEffects": [
     "*.css",

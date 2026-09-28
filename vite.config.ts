@@ -56,6 +56,7 @@ export default defineConfig(({ command, mode }) => {
           kanban: "src/components/kanban/index.ts",
           number: "src/components/number/index.ts",
           "account": "src/components/account/index.ts",
+          "launcher": "src/components/launcher/index.ts",
           "handoff": "src/components/handoff/index.ts",
           "award": "src/components/award/index.ts",
           "guard": "src/components/guard/index.ts",

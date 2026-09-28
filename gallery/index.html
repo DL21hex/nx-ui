@@ -2740,6 +2740,100 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Launcher -->
+        <template id="page-launcher">
+          <p class="eyebrow">Componentes</p>
+          <h1>Launcher <code class="tag">&lt;nx-launcher&gt;</code></h1>
+          <p class="lead">
+            Tarjetas para entrar a los módulos de un área. Cada una dice para qué sirve el módulo y trae un solo dato vivo
+            («3 de tu equipo por aprobar»). Pasa el puntero: la descripción cede su lugar a las pestañas del módulo, para
+            entrar directo a una. Al hacer clic, la tarjeta se convierte en la página.
+          </p>
+
+          <h2>Autoservicio de Talento humano</h2>
+          <div class="la-demo" data-la-demo="talento">
+            <nx-launcher locale="es-CO" labels='{"nav":"Trámites de Talento humano","views":"Pestañas de {name}"}'></nx-launcher>
+            <div class="la-page" hidden></div>
+          </div>
+
+          <h2>Compras: secciones, destacada y buscador</h2>
+          <div class="la-demo" data-la-demo="compras">
+            <nx-launcher locale="es-CO" search></nx-launcher>
+            <div class="la-page" hidden></div>
+          </div>
+          <p class="sel-tip">
+            Escribe en cualquier parte de la página (sin tener un campo enfocado): va al buscador, lo que no coincide se apaga
+            sin moverse y <kbd>↵</kbd> abre la primera coincidencia; prueba «diferencia» o «pólizas». Con el foco en una
+            tarjeta, las flechas pasan a la vecina. Cada tanto llega una solicitud nueva y su número cambia con un pulso.
+          </p>
+          <ol class="stage__log btn-events" id="la-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Tarjeta</td><td>Un <code>&lt;a href&gt;</code> real que ocupa toda la tarjeta: el router de la app lo intercepta y en HTML plano navega. Sin <code>href</code>, el de su primera vista; sin ninguno, un botón.</td></tr>
+                <tr><td>Vistas</td><td>Con puntero, al pasar por la tarjeta (o al llegar con <kbd>Tab</kbd>) la descripción cede su lugar a las vistas, sin cambiar el tamaño. En pantallas táctiles se ven siempre, debajo. Pueden llevar contador y una pista («15 sep 2026»).</td></tr>
+                <tr><td>Señal</td><td>El dato grande, su etiqueta y una nota con punto de color (<code>success</code>, <code>warning</code>, <code>danger</code>), una barra (<code>meter</code>) o una minigráfica (<code>trend</code>). Si el dato cambia, pulsa; si solo cambia la señal, la tarjeta no se rehace.</td></tr>
+                <tr><td>Destacada</td><td><code>featured</code>: dos columnas con el acento de fondo, una línea superior y una barra por partes («38 adjudicados · 7 con sugerencia · 15 sin decidir»).</td></tr>
+                <tr><td>Columnas</td><td>Las que caben con <code>--nx-launcher-min</code> (240 px), hasta <code>columns</code> (4). Entre esas y una menos, las que dejan menos tarjetas huérfanas: 4 módulos donde caben 3 van en 2 × 2.</td></tr>
+                <tr><td>Buscador</td><td><code>search</code>: lo que no coincide se apaga en su sitio (la memoria de dónde está cada módulo vale más que un reacomodo). Busca en el nombre, la descripción y las vistas; <kbd>↵</kbd> abre la primera coincidencia, que puede ser una vista.</td></tr>
+                <tr><td>Transición</td><td>La tarjeta abierta lleva los nombres <code>nx-launcher-card</code>, <code>-icon</code> y <code>-label</code>. El encabezado de la página de destino usa los mismos (<code>.nx-launcher-hero</code>, <code>.nx-launcher-hero-icon</code>, <code>.nx-launcher-hero-label</code>) y el navegador anima el paso: con <code>startViewTransition</code> en una SPA, o entre documentos con <code>@view-transition { navigation: auto }</code>. Al volver, <code>reveal()</code> (o solo, con <code>pagereveal</code>) devuelve los nombres a la tarjeta de la que se salió.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-launcher id="th"&gt;&lt;/nx-launcher&gt;
+
+    th.items = [
+      { id: "permisos", label: "Permisos", icon: "calendar", href: "/talento/permisos",
+        description: "Pide tus permisos y aprueba los de las personas a tu cargo.",
+        views: [{ label: "Propias", href: "/talento/permisos/propias" },
+                { label: "De mis colaboradores", href: "/talento/permisos/equipo", badge: 3 }],
+        signal: { value: 3, label: "de tu equipo por aprobar", note: "el más antiguo, hace 2 días", tone: "warning" } },
+      { id: "cesantias", label: "Cesantías", icon: "wallet", href: "/talento/cesantias",
+        signal: { value: "$ 11.482.300", label: "en el fondo" } },
+    ];
+
+    /* Página de destino (entre documentos): */
+    @view-transition { navigation: auto; }
+    &lt;header class="nx-launcher-hero"&gt;&lt;span class="nx-launcher-hero-icon"&gt;…&lt;/span&gt;
+      &lt;h1&gt;&lt;span class="nx-launcher-hero-label"&gt;Permisos&lt;/span&gt;&lt;/h1&gt;&lt;/header&gt;</code></pre>
+            <pre role="tabpanel" hidden><code>import { Launcher } from "nx-ui/solid";
+    import { useNavigate } from "@solidjs/router";
+
+    const navigate = useNavigate();
+    &lt;Launcher items={modulos()} search
+      onSelect={(e) =&gt; {
+        // La tarjeta ya lleva los nombres: la página nueva «sale» de ella.
+        e.preventDefault();
+        document.startViewTransition(() =&gt; navigate(e.detail.href!));
+      }} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>items</code></td><td><code>[{id, label, href?, icon?, description?, section?, views?, signal?, featured?, eyebrow?, progress?, data?}]</code>. <code>views</code>: <code>[{label, href?, badge?, hint?}]</code>; <code>signal</code>: <code>{value?, label?, note?, tone?, meter?, trend?}</code>; <code>progress</code>: <code>[{label, value}]</code>.</td></tr>
+                <tr><td><code>search</code>, <code>query</code></td><td>Muestra el buscador «Ir a»; lo escrito (también filtra sin el campo).</td></tr>
+                <tr><td><code>columns</code>, <code>heading-level</code>, <code>locale</code>, <code>labels</code></td><td>Máximo de columnas (4), nivel de los títulos de sección (2), formato de los números y textos.</td></tr>
+                <tr><td><code>nx-launcher-select</code></td><td><code>{item, view, href}</code>, cancelable. Un clic con modificador (otra pestaña) es del navegador y no se anuncia.</td></tr>
+                <tr><td><code>focusItem(id?)</code>, <code>reveal(id?)</code></td><td>Enfocar una tarjeta; marcar para la transición de vuelta la tarjeta de la que se salió (o <code>id</code>).</td></tr>
+                <tr><td>Teclado</td><td><kbd>Tab</kbd> entra a la tarjeta y a sus vistas. Con el foco en una tarjeta, las flechas pasan a la vecina (también entre secciones) e <kbd>Inicio</kbd>/<kbd>Fin</kbd> van a la primera y la última. Con <code>search</code>, escribir va al buscador, <kbd>↓</kbd> baja a las tarjetas y <kbd>Esc</kbd> lo limpia.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>
