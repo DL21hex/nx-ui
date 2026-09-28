@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -114,6 +114,9 @@ import type { SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMe
 import "../components/planner/index";
 import type { NxPlanner } from "../components/planner/planner";
 import type { PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView } from "../components/planner/types";
+import "../components/review/index";
+import type { NxReview } from "../components/review/review";
+import type { ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail } from "../components/review/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -149,6 +152,7 @@ export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogou
 export type { NxPrint, PrintLabels, PrintOrientation, PrintPaginateDetail, PrintZoom };
 export type { NxSignature, SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMeta, SignatureValue };
 export type { NxPlanner, PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView };
+export type { NxReview, ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -156,6 +160,7 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      initial: Record<string, unknown> | null | undefined;
       resources: PlannerResource[] | undefined;
       bookings: PlannerBooking[] | undefined;
       workdays: number[] | undefined;
@@ -179,7 +184,7 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -210,6 +215,10 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      threshold: string | undefined;
+      "max-silent": string | undefined;
+      empty: "notice" | undefined;
+      rebase: "false" | undefined;
       view: PlannerView | undefined;
       date: string | undefined;
       snap: string | undefined;
@@ -271,7 +280,7 @@ declare module "solid-js" {
       locale: string | undefined;
       heading: string | undefined;
       description: string | undefined;
-      mode: DialogMode | ScanMode | GuardMode | undefined;
+      mode: DialogMode | ScanMode | GuardMode | ReviewMode | undefined;
       size: DialogSize | string | undefined;
       url: string | undefined;
       hold: string | undefined;
@@ -336,6 +345,10 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-review-open": CustomEvent<ReviewOpenDetail>;
+      "nx-review-confirm": CustomEvent<ReviewConfirmDetail>;
+      "nx-review-cancel": CustomEvent<{ changes: ReviewChange[] }>;
+      "nx-review-dirty": CustomEvent<ReviewDirtyDetail>;
       "nx-planner-change": CustomEvent<PlannerChangeDetail>;
       "nx-planner-create": CustomEvent<PlannerCreateDetail>;
       "nx-planner-delete": CustomEvent<PlannerDeleteDetail>;
@@ -429,6 +442,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-review": HTMLAttributes<NxReview>;
       "nx-planner": HTMLAttributes<NxPlanner>;
       "nx-signature": HTMLAttributes<NxSignature>;
       "nx-print": HTMLAttributes<NxPrint> & { heading?: string };
@@ -2009,5 +2023,53 @@ export function Planner(props: PlannerProps): JSX.Element {
       on:nx-planner-select={(e) => local.onSelect?.(e)}
       on:nx-planner-range={(e) => local.onRange?.(e)}
     />
+  );
+}
+
+export interface ReviewProps extends Omit<JSX.HTMLAttributes<NxReview>, "onCancel"> {
+  /** `significant` (por defecto), `always` o `never` (solo con `review()`). */
+  mode?: ReviewMode;
+  /** Desde qué porcentaje un monto es importante (20). */
+  threshold?: number;
+  /** Más de cuántos cambios se muestra aunque nada sea importante (5). */
+  maxSilent?: number;
+  /** `notice`: al enviar sin cambios, «No hay cambios que guardar» y no envía. */
+  empty?: "notice";
+  /** La base: el registro como se cargó (`{campo: valor}`, filas anidadas o planas). */
+  initial?: Record<string, unknown> | null;
+  /** `false`: después de guardar, la base no cambia. */
+  rebase?: boolean;
+  locale?: string;
+  labels?: Partial<ReviewLabels>;
+  disabled?: boolean;
+  /** Cancelable: cancelarlo envía directo. */
+  onOpen?: (e: CustomEvent<ReviewOpenDetail>) => void;
+  onConfirm?: (e: CustomEvent<ReviewConfirmDetail>) => void;
+  onCancel?: (e: CustomEvent<{ changes: ReviewChange[] }>) => void;
+  onDirty?: (e: CustomEvent<ReviewDirtyDetail>) => void;
+  children?: JSX.Element;
+}
+
+export function Review(props: ReviewProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["mode", "threshold", "maxSilent", "empty", "initial", "rebase", "locale", "labels", "disabled", "onOpen", "onConfirm", "onCancel", "onDirty", "children"]);
+  return (
+    <nx-review
+      {...rest}
+      prop:initial={local.initial}
+      prop:labels={local.labels}
+      attr:mode={local.mode}
+      attr:threshold={local.threshold === undefined ? undefined : String(local.threshold)}
+      attr:max-silent={local.maxSilent === undefined ? undefined : String(local.maxSilent)}
+      attr:empty={local.empty}
+      attr:rebase={local.rebase === false ? "false" : undefined}
+      attr:locale={local.locale}
+      bool:disabled={!!local.disabled}
+      on:nx-review-open={(e) => local.onOpen?.(e)}
+      on:nx-review-confirm={(e) => local.onConfirm?.(e)}
+      on:nx-review-cancel={(e) => local.onCancel?.(e)}
+      on:nx-review-dirty={(e) => local.onDirty?.(e)}
+    >
+      {local.children}
+    </nx-review>
   );
 }

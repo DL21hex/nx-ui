@@ -30,6 +30,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
+| `<nx-review>` + núcleo (ESM) | ≈ 10,4 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1703,6 +1704,57 @@ selector de fecha y zoom con `Ctrl` + rueda.
 | Métodos | `goTo(fecha)`, `today()`, `scrollToBooking(id)`, `undo()` |
 | Eventos | `nx-planner-change` `{booking, from, to, via}`, `nx-planner-create` `{booking, resource, start, end, via}`, `nx-planner-delete` `{booking, via}` (los tres cancelables), `nx-planner-select` `{booking}`, `nx-planner-range` `{from, to, view}` |
 | Funciones | `plannerLanes()`, `plannerClashes()`, `plannerSnap()`, `plannerMove()`, `plannerResize()`, `plannerSpan()`, `plannerRange()`, `plannerColumns()`, `plannerX()`, `plannerTime()`, `plannerOccupancy()`, `plannerParse()`, `plannerISO()`, `PLANNER_LABELS` |
+
+## `<nx-review>`
+
+**Resumen antes de guardar.** Envuelve tu formulario y, al enviar, dice qué va a cambiar: «Vas a
+guardar 3 cambios», en un panel sobrio justo encima del botón (sin modales), con «Guardar» y «Seguir
+editando». Es el antes de `<nx-history>`: la misma lista (`changes`) va al servidor como bitácora.
+
+- **Qué compara**: cada campo contra como estaba al cargar (o contra `initial`, o contra lo que haya
+  cuando llamas `snapshot()` después de traer el registro). Inputs nativos, selects, radios, casillas,
+  `<nx-number>`, `<nx-select>` y cualquier elemento con `name` y `value`. Nunca contraseñas ni
+  `data-review="off"`.
+- **Cómo lo dice**, con el locale: «Precio unitario: $ 10.000 → $ 12.000 (+$ 2.000 · +20%)»,
+  «Fecha de entrega: 12 oct 2026 → 15 oct 2026 (+3 días)», «Estado: Por aprobar → Aprobada»,
+  «Facturar con IVA: Sí → No», los textos largos con la diferencia por palabras, agrupado por
+  `<fieldset>`.
+- **Filas de detalle** (`lineas[0].cantidad`, `lineas[2][precio]`, `lineas.3.cantidad` o un
+  `data-review-row` por fila): «2 líneas nuevas · 1 quitada · 1 cambiada», reconocidas por su `id`.
+- **Lo importante primero y marcado** (ícono y texto, no solo color): un monto que cambió 20 % o más
+  (`threshold`), una fecha que se movió más de 7 días, un estado, un campo `data-review="important"` y
+  los avisos de `<nx-guard>`.
+- **Cuándo aparece**: `significant` (por defecto: si hay algo importante o más de `max-silent`
+  cambios), `always` o `never` (solo con `review()`). «Guardar» reenvía con el mismo botón.
+- **`dirty`** y `nx-review-dirty` `{dirty, count}` para el «¿Salir sin guardar?».
+
+```html
+<nx-review mode="significant" empty="notice">
+  <form>
+    <fieldset><legend>Encabezado</legend>
+      <label>Fecha de entrega <input name="entrega" type="date" value="2026-10-12"></label>
+      <label>Estado <select name="estado">…</select></label>
+    </fieldset>
+    <table data-label="Líneas de la orden">
+      <tr><td><input type="hidden" name="lineas[0].id" value="L-101">
+        <nx-number name="lineas[0].precio" format="money" currency="COP" value="1275000"></nx-number></td></tr>
+    </table>
+    <button>Guardar</button>
+  </form>
+</nx-review>
+<script>
+  review.addEventListener("nx-review-confirm", (e) => bitacora(e.detail.changes));
+  if (await review.review()) await guardar(); // sin <form>, con tu propio botón
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `mode` (`significant`, `always`, `never`), `threshold` (20), `max-silent` (5), `empty` (`notice`), `initial`, `rebase`, `locale`, `labels`, `disabled` · en los campos: `data-label`, `data-format`, `data-currency`, `data-review` (`important`, `status`, `off`), `data-review-section`, `data-review-rows`, `data-review-row` |
+| Métodos | `snapshot()`, `review()` (promesa `true`/`false`), `reset()` |
+| Getters | `changes` (`{field, label, section, from, to, fromText, toText, kind, significant, reason, delta, diff, rows, warnings}`), `dirty` |
+| Eventos | `nx-review-open` `{changes}` (cancelable: cancelarlo envía directo), `nx-review-confirm` `{changes, silent}`, `nx-review-cancel`, `nx-review-dirty` `{dirty, count}` |
+| Funciones | `diffReview()`, `describeReview()`, `groupReview()`, `reviewShouldOpen()`, `flattenReview()`, `reviewRowName()`, `sameReviewValue()`, `REVIEW_LABELS` |
 
 ## Desarrollo
 

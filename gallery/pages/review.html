@@ -1,0 +1,182 @@
+        <!-- ================================================================ Resumen antes de guardar -->
+        <template id="page-review">
+          <p class="eyebrow">Componentes</p>
+          <h1>Resumen antes de guardar <code class="tag">&lt;nx-review&gt;</code></h1>
+          <p class="lead">
+            Antes de guardar, lo que va a cambiar: «Vas a guardar 3 cambios», con el precio de antes y el de ahora, la
+            fecha que se movió, el estado que pasó de «Por aprobar» a «Aprobada» y las líneas nuevas y quitadas. Es el antes
+            de <code>&lt;nx-history&gt;</code>: la misma lista va al servidor como bitácora.
+          </p>
+
+          <div class="rv-tools" lang="es-CO">
+            <div class="rv-try" role="group" aria-labelledby="rv-try-label">
+              <span class="rv-try__label" id="rv-try-label">Prueba esto</span>
+              <span id="rv-try"></span>
+            </div>
+            <fieldset class="rv-mode">
+              <legend>Mostrar el resumen</legend>
+              <label><input type="radio" name="rv-mode" value="significant" checked /> Si hay algo importante</label>
+              <label><input type="radio" name="rv-mode" value="always" /> Siempre</label>
+              <label><input type="radio" name="rv-mode" value="never" /> Nunca (solo <code>review()</code>)</label>
+            </fieldset>
+          </div>
+
+          <nx-review id="rv-demo" lang="es-CO" mode="significant" empty="notice">
+            <nx-guard id="rv-guard">
+              <form class="rv-form" id="rv-form">
+                <header class="rv-form__head">
+                  <div>
+                    <p class="rv-form__kicker">Compras · Orden de compra</p>
+                    <h2 class="rv-form__title">OC-2291</h2>
+                    <p class="rv-form__meta">Creada el 21 sept 2026 por Diego Llinás · Bodega Malambo</p>
+                  </div>
+                  <p class="rv-dirty" id="rv-dirty" aria-live="polite">Sin cambios</p>
+                </header>
+
+                <fieldset class="rv-sec">
+                  <legend>Encabezado</legend>
+                  <div class="rv-field rv-field--wide">
+                    <label for="rv-proveedor">Proveedor</label>
+                    <input id="rv-proveedor" name="proveedor" value="Aceros del Caribe S.A.S." autocomplete="off" />
+                  </div>
+                  <div class="rv-field">
+                    <label for="rv-entrega">Fecha de entrega</label>
+                    <input id="rv-entrega" name="entrega" type="date" value="2026-10-12" />
+                  </div>
+                  <div class="rv-field">
+                    <label for="rv-pago">Condición de pago</label>
+                    <select id="rv-pago" name="pago">
+                      <option value="contado">Contado</option>
+                      <option value="c30" selected>Crédito 30 días</option>
+                      <option value="c60">Crédito 60 días</option>
+                    </select>
+                  </div>
+                  <div class="rv-field">
+                    <label for="rv-estado">Estado</label>
+                    <select id="rv-estado" name="estado">
+                      <option value="borrador">Borrador</option>
+                      <option value="por-aprobar" selected>Por aprobar</option>
+                      <option value="aprobada">Aprobada</option>
+                      <option value="anulada">Anulada</option>
+                    </select>
+                  </div>
+                  <label class="rv-check">
+                    <input type="checkbox" name="iva" checked /> Facturar con IVA
+                  </label>
+                  <div class="rv-field rv-field--full">
+                    <label for="rv-obs">Observaciones</label>
+                    <textarea id="rv-obs" name="observaciones" rows="3">Entregar en la bodega de Malambo de lunes a viernes, de 7:00 a. m. a 3:00 p. m. Traer remisión firmada y certificado de calidad de la colada.</textarea>
+                  </div>
+                </fieldset>
+
+                <fieldset class="rv-sec rv-sec--lines">
+                  <legend>Líneas</legend>
+                  <div class="rv-table-wrap">
+                    <table class="rv-lines" data-review-rows="lineas" data-label="Líneas de la orden">
+                      <thead>
+                        <tr><th>Descripción</th><th class="rv-num">Cantidad</th><th class="rv-num">Precio unitario</th><th><span class="rv-sr">Quitar</span></th></tr>
+                      </thead>
+                      <tbody id="rv-body"></tbody>
+                    </table>
+                  </div>
+                  <button type="button" class="btn rv-add" id="rv-add">Agregar línea</button>
+                </fieldset>
+
+                <div class="rv-form__foot">
+                  <button type="button" class="btn" id="rv-manual">Revisar sin enviar</button>
+                  <button type="submit" class="rv-save">Guardar orden</button>
+                </div>
+              </form>
+            </nx-guard>
+          </nx-review>
+
+          <p class="stage__loglabel">Eventos</p>
+          <ol class="stage__log btn-events" id="review-log"></ol>
+          <div class="rv-bitacora" id="rv-bitacora" hidden>
+            <p class="stage__loglabel">Esto es lo que va a la bitácora (<code>changes</code>)</p>
+            <pre><code id="rv-json"></code></pre>
+          </div>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
+              <tbody>
+                <tr><td>Cargas el formulario</td><td>Guarda cómo está cada campo (o toma <code>initial</code>, o lo que haya cuando llamas <code>snapshot()</code> después de traer el registro).</td></tr>
+                <tr><td>Escribes</td><td>Nada, salvo la cuenta de <code>dirty</code> con una pausa: <code>nx-review-dirty</code> <code>{dirty, count}</code>, para el «¿Salir sin guardar?».</td></tr>
+                <tr><td>Envías</td><td>Si hay algo importante (un monto que cambió 20 % o más, una fecha que se movió más de 7 días, un estado, un campo <code>data-review="important"</code>, un aviso de <code>&lt;nx-guard&gt;</code>) o más de 5 cambios, el envío se detiene y el resumen se despliega encima del botón, agrupado por sección y con lo importante primero. Si no, pasa directo.</td></tr>
+                <tr><td>«Guardar»</td><td>Vuelve a enviar con el mismo botón (<code>requestSubmit(submitter)</code>), avisa <code>nx-review-confirm</code> <code>{changes}</code> y, después del envío, lo guardado pasa a ser la base.</td></tr>
+                <tr><td>«Seguir editando» o <kbd>Esc</kbd></td><td>Cierra y lleva el foco al primer campo cambiado. Cada línea del resumen es un botón que lleva a su campo.</td></tr>
+                <tr><td>Envías sin cambios</td><td>Pasa; con <code>empty="notice"</code>, dice «No hay cambios que guardar» y no envía.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Cómo lo dice</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Campo</th><th>Así</th></tr></thead>
+              <tbody>
+                <tr><td>Montos y números</td><td>«Precio unitario: $ 10.000 → $ 12.000 (+$ 2.000 · +20%)». El formato sale de <code>&lt;nx-number format currency&gt;</code> o de <code>data-format</code> / <code>data-currency</code>, con el <code>locale</code>.</td></tr>
+                <tr><td>Fechas</td><td>«Fecha de entrega: 12 oct 2026 → 15 oct 2026 (+3 días)».</td></tr>
+                <tr><td>Selects y radios</td><td>Por la etiqueta de la opción: «Estado: Por aprobar → Aprobada». También <code>&lt;nx-select&gt;</code>.</td></tr>
+                <tr><td>Casillas</td><td>«Facturar con IVA: Sí → No».</td></tr>
+                <tr><td>Textos largos</td><td>La diferencia por palabras: lo quitado tachado y lo agregado resaltado.</td></tr>
+                <tr><td>Filas de detalle</td><td>Nombres como <code>lineas[0].cantidad</code>, <code>lineas[2][precio]</code> o <code>lineas.3.cantidad</code>, o un <code>data-review-row</code> por fila: «2 líneas nuevas · 1 quitada · 1 cambiada», con cada una. Las reconoce por su campo <code>id</code>; sin él, por posición.</td></tr>
+                <tr><td>Nunca</td><td>Contraseñas y campos con <code>data-review="off"</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-review mode="significant" threshold="20"&gt;
+  &lt;form&gt;
+    &lt;fieldset&gt;&lt;legend&gt;Encabezado&lt;/legend&gt;
+      &lt;label&gt;Fecha de entrega &lt;input name="entrega" type="date" value="2026-10-12"&gt;&lt;/label&gt;
+      &lt;label&gt;Estado &lt;select name="estado"&gt;…&lt;/select&gt;&lt;/label&gt;
+    &lt;/fieldset&gt;
+    &lt;table data-label="Líneas de la orden"&gt;
+      &lt;tr&gt;&lt;td&gt;&lt;input type="hidden" name="lineas[0].id" value="L-101"&gt;
+          &lt;nx-number name="lineas[0].precio" format="money" currency="COP" value="1275000"&gt;&lt;/nx-number&gt;&lt;/td&gt;&lt;/tr&gt;
+    &lt;/table&gt;
+    &lt;button&gt;Guardar&lt;/button&gt;
+  &lt;/form&gt;
+&lt;/nx-review&gt;
+&lt;script&gt;
+  review.addEventListener("nx-review-confirm", (e) =&gt; bitacora.push(e.detail.changes));
+  // Sin formulario, con tu propio botón:
+  if (await review.review()) await guardar();
+&lt;/script&gt;</code></pre>
+            <pre role="tabpanel" hidden><code>import { Review } from "nx-ui/solid";
+
+&lt;Review mode="significant" initial={orden()} onConfirm={(e) =&gt; guardarBitacora(e.detail.changes)}
+  onDirty={(e) =&gt; setSucio(e.detail.dirty)}&gt;
+  &lt;form onSubmit={guardar}&gt;…&lt;/form&gt;
+&lt;/Review&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>mode</code></td><td><code>significant</code> (por defecto), <code>always</code> o <code>never</code> (solo con <code>review()</code>).</td></tr>
+                <tr><td><code>threshold</code>, <code>max-silent</code></td><td>Desde qué porcentaje un monto es importante (20) y más de cuántos cambios se muestran aunque nada lo sea (5).</td></tr>
+                <tr><td><code>empty</code></td><td><code>notice</code>: al enviar sin cambios, «No hay cambios que guardar» y no envía.</td></tr>
+                <tr><td><code>initial</code></td><td>La base (JSON <code>{campo: valor}</code>, con filas anidadas <code>{lineas: [{id, cantidad}]}</code> o planas).</td></tr>
+                <tr><td><code>rebase</code></td><td><code>false</code>: después de guardar, la base no cambia (tú llamas <code>snapshot()</code>).</td></tr>
+                <tr><td><code>locale</code>, <code>labels</code>, <code>disabled</code></td><td>Formato de montos y fechas, textos (<code>REVIEW_LABELS</code>; «uno|varios» con <code>{n}</code>), apagarlo.</td></tr>
+                <tr><td>En los campos</td><td><code>data-label</code>, <code>data-format</code> (<code>money</code>, <code>number</code>, <code>percent</code>, <code>date</code>, <code>text</code>), <code>data-currency</code>, <code>data-review="important|status|off"</code>, <code>data-review-section</code>; en el contenedor de filas, <code>data-review-rows</code> y <code>data-label</code>; <code>data-review-row="clave"</code> por fila.</td></tr>
+                <tr><td><code>snapshot()</code>, <code>review()</code>, <code>reset()</code></td><td>Lo de ahora es la base; mostrar el resumen sin formulario (promesa <code>true</code>/<code>false</code>); volver cada campo a la base.</td></tr>
+                <tr><td><code>changes</code>, <code>dirty</code></td><td>La lista <code>{field, label, section, from, to, fromText, toText, kind, significant, reason, delta, diff, rows, warnings}</code>; ¿hay algo distinto?</td></tr>
+                <tr><td>Eventos</td><td><code>nx-review-open</code> <code>{changes}</code> (cancelable: cancelarlo envía directo), <code>nx-review-confirm</code> <code>{changes, silent}</code>, <code>nx-review-cancel</code>, <code>nx-review-dirty</code> <code>{dirty, count}</code>.</td></tr>
+                <tr><td>Funciones</td><td><code>diffReview</code>, <code>describeReview</code>, <code>groupReview</code>, <code>reviewShouldOpen</code>, <code>flattenReview</code>…: la misma lógica, para armar la bitácora en un backend en JavaScript.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
