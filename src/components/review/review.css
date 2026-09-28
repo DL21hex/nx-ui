@@ -1,0 +1,243 @@
+/*
+ * <nx-review>. Variables propias:
+ *   --nx-review-mark: el ámbar de lo importante y de los avisos de guard (por defecto `--nx-warning`, si existe)
+ *   --nx-review-ink: el ámbar como texto
+ *
+ * El formulario es del autor: aquí solo se pintan las piezas propias (`.nx-review*`). El panel va en
+ * el flujo del formulario, encima de la fila del botón de enviar, y se despliega al entrar.
+ */
+
+nx-review {
+  display: block;
+}
+
+.nx-review {
+  --nx-review-mark: var(--nx-warning, light-dark(oklch(0.7 0.15 70), oklch(0.8 0.14 75)));
+  --nx-review-ink: var(--nx-warning-ink, light-dark(oklch(0.5 0.12 65), oklch(0.83 0.13 80)));
+  container-type: inline-size;
+  grid-column: 1 / -1;
+  margin: 0 0 12px;
+  padding: 14px 16px 16px;
+  overflow: clip;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: 400 13px/1.45 var(--nx-font-sans);
+  /* Se despliega: la altura crece desde 0 (donde se puede interpolar `auto`) y aparece. */
+  interpolate-size: allow-keywords;
+  transition:
+    block-size var(--nx-motion-base) var(--nx-ease-out),
+    opacity var(--nx-motion-base) var(--nx-ease-out);
+
+  & ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  & button {
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--nx-ring);
+      outline-offset: 2px;
+    }
+  }
+}
+@starting-style {
+  .nx-review {
+    block-size: 0;
+    opacity: 0;
+  }
+}
+
+.nx-review__title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  outline: none;
+}
+.nx-review__sec + .nx-review__sec {
+  margin-top: 10px;
+}
+.nx-review__sec-title,
+.nx-review__tag {
+  margin: 0 0 2px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Cada línea es un botón que lleva a su campo. */
+.nx-review__line {
+  display: grid;
+  grid-template-columns: minmax(8em, 13em) 1fr;
+  align-items: baseline;
+  gap: 2px 12px;
+  inline-size: 100%;
+  margin: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: inherit;
+  text-align: start;
+}
+button.nx-review__line:hover,
+.nx-review__warn:hover {
+  background: var(--nx-hover);
+}
+.nx-review__label,
+.nx-review__from,
+.nx-review__rtext {
+  color: var(--nx-muted-foreground);
+}
+.nx-review__imp,
+.nx-review__warn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--nx-review-ink);
+  font-weight: 600;
+}
+.nx-review__imp {
+  grid-column: 1;
+  font-size: 11.5px;
+}
+/* El ícono (triángulo de Lucide) va en CSS: lo importante no se marca solo con color. */
+.nx-review__imp::before,
+.nx-review__warn::before {
+  content: "";
+  flex: none;
+  align-self: center;
+  inline-size: 13px;
+  block-size: 13px;
+  background: var(--nx-review-mark);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20zm0 6v5m0 2v2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.nx-review__imp + .nx-review__vals,
+.nx-review__imp + .nx-review__diff {
+  grid-area: 1 / 2 / span 2;
+}
+.nx-review__vals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-review__arrow,
+.nx-review__delta {
+  color: var(--nx-text-tertiary);
+}
+.nx-review__to {
+  font-weight: 600;
+}
+.nx-review__diff {
+  line-height: 1.6;
+  white-space: pre-wrap;
+
+  & del,
+  & ins {
+    padding: 1px 2px;
+    border-radius: 3px;
+    color: inherit;
+  }
+  & del {
+    background: light-dark(oklch(0.93 0.05 25), oklch(0.38 0.08 25));
+    text-decoration: line-through light-dark(oklch(0.52 0.2 27 / 0.6), oklch(0.8 0.1 27 / 0.7));
+  }
+  & ins {
+    background: light-dark(oklch(0.92 0.07 150), oklch(0.38 0.08 150));
+    text-decoration: none;
+  }
+}
+.nx-review__item[data-significant] > .nx-review__line {
+  background: light-dark(oklch(0.98 0.03 80), oklch(0.26 0.03 75));
+}
+
+/* Filas de detalle: nuevas, quitadas y cambiadas, debajo del resumen del grupo. */
+.nx-review .nx-review__rows {
+  margin: 0 0 2px calc(min(13em, 40%) + 20px);
+  border-inline-start: 2px solid var(--nx-border-subtle);
+}
+.nx-review__row > .nx-review__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.nx-review__row[data-kind="removed"] .nx-review__rtitle {
+  color: var(--nx-muted-foreground);
+  text-decoration: line-through;
+}
+.nx-review .nx-review__warns {
+  margin-block-end: 8px;
+}
+.nx-review__warn {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  font-weight: 500;
+  text-align: start;
+}
+
+.nx-review__acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-block-start: 14px;
+
+  & button {
+    min-block-size: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-card);
+    color: var(--nx-foreground);
+    font-weight: 600;
+  }
+  & .nx-review__save {
+    border-color: transparent;
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+  }
+}
+.nx-review__none {
+  grid-column: 1 / -1;
+  margin: 0 0 10px;
+  color: var(--nx-muted-foreground);
+}
+.nx-review__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Angosto: la etiqueta encima del cambio. */
+@container (max-width: 520px) {
+  .nx-review__line {
+    grid-template-columns: 1fr;
+  }
+  .nx-review__imp + .nx-review__vals,
+  .nx-review__imp + .nx-review__diff {
+    grid-area: auto;
+  }
+  .nx-review .nx-review__rows {
+    margin-inline-start: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-review {
+    transition: none;
+  }
+}
