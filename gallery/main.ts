@@ -25,6 +25,8 @@ import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
+import { mountPrintDemo } from "./demo-print";
+import "./pages/print.css";
 import { mountAccountDemo } from "./demo-account";
 import "./pages/account.css";
 import { mountHandoffDemo } from "./demo-handoff";
@@ -134,6 +136,7 @@ const NAV: MenuItem[] = [
   { id: "account", label: "Cuenta", href: "#/account", icon: "user", section: "Componentes", badge: "Nuevo" },
   { id: "launcher", label: "Launcher", href: "#/launcher", icon: "layout-grid", section: "Componentes", badge: "Nuevo" },
   { id: "cards", label: "Tarjetas con zoom", href: "#/cards", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
+  { id: "print", label: "Imprimir documentos", href: "#/print", icon: "printer", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -171,6 +174,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/launcher": { template: "page-launcher", mount: mountLauncherDemo },
   "#/cards": { template: "page-cards", mount: mountCardsDemo },
   "#/account": { template: "page-account", mount: mountAccountDemo },
+  "#/print": { template: "page-print", mount: mountPrintDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 
