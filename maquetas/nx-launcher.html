@@ -1,0 +1,542 @@
+<title>Maqueta de nx-launcher</title>
+<style>
+/* Tokens de nx-ui (src/styles/tokens.css), recortados a lo que usa la maqueta. */
+:root {
+  color-scheme: light dark;
+  --_h: 262; --_c: 0.19; --_l: 0.54; --_ld: 0.72; --_n: 260; --_t: 1;
+  --nx-canvas: light-dark(oklch(0.985 calc(0.002 * var(--_t)) var(--_n)), oklch(0.165 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-border-subtle: light-dark(oklch(0.925 calc(0.004 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 calc(0.005 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 calc(0.006 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.17));
+  --nx-foreground: light-dark(oklch(0.2 calc(0.008 * var(--_t)) var(--_n)), oklch(0.955 calc(0.003 * var(--_t)) var(--_n)));
+  --nx-muted-foreground: light-dark(oklch(0.44 calc(0.01 * var(--_t)) var(--_n)), oklch(0.76 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-text-tertiary: light-dark(oklch(0.51 calc(0.01 * var(--_t)) var(--_n)), oklch(0.64 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-primary: light-dark(oklch(var(--_l) var(--_c) var(--_h)), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h)));
+  --nx-primary-ink: light-dark(oklch(calc(var(--_l) - 0.07) var(--_c) var(--_h)), oklch(calc(var(--_ld) + 0.05) calc(var(--_c) * 0.7) var(--_h)));
+  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 calc(var(--_c) * 0.1) var(--_h)));
+  --nx-primary-soft: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.1), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.15));
+  --nx-primary-border: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.35), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.4));
+  --nx-hover: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.05), oklch(1 0 0 / 0.06));
+  --nx-ring: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.6), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.7));
+  --nx-success: light-dark(oklch(0.49 0.13 150), oklch(0.74 0.14 150));
+  --nx-success-soft: light-dark(oklch(0.55 0.14 150 / 0.1), oklch(0.74 0.14 150 / 0.14));
+  --nx-danger: light-dark(oklch(0.52 0.2 27), oklch(0.72 0.16 27));
+  --nx-danger-soft: light-dark(oklch(0.55 0.2 27 / 0.1), oklch(0.7 0.17 27 / 0.15));
+  --nx-warning: light-dark(oklch(0.74 0.15 70), oklch(0.8 0.14 78));
+  --nx-warning-ink: light-dark(oklch(0.5 0.12 60), oklch(0.84 0.13 80));
+  --nx-warning-soft: light-dark(oklch(0.75 0.15 70 / 0.16), oklch(0.8 0.14 78 / 0.15));
+  --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
+    0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
+  --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --nx-radius-md: 7px; --nx-radius-lg: 10px;
+  --nx-motion-fast: 140ms; --nx-motion-base: 220ms;
+  --nx-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--nx-canvas); color: var(--nx-foreground); font: 14px/1.45 var(--nx-font-sans); -webkit-font-smoothing: antialiased; }
+.page { max-width: 1180px; margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 28px 72px; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+kbd { font: 12px var(--nx-font-mono); padding: 1px 5px; border: 1px solid var(--nx-border); border-bottom-width: 2px; border-radius: 4px; background: var(--nx-card); }
+a { color: inherit; }
+
+/* ---------- Encabezado del hub ---------- */
+.hub-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 24px; margin-bottom: 26px; }
+.hub-head__text { display: grid; gap: 6px; flex: 1 1 420px; min-width: 0; }
+.eyebrow { font: 12px/1.3 var(--nx-font-mono); color: var(--nx-primary-ink); letter-spacing: 0.02em; margin: 0; }
+h1 { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.hub-head p.note { margin: 0; max-width: 72ch; color: var(--nx-muted-foreground); }
+.go { display: grid; gap: 4px; flex: 0 1 300px; min-width: 0; }
+.go label { font-size: 12px; color: var(--nx-muted-foreground); }
+.go__box { position: relative; }
+.go__box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--nx-text-tertiary); }
+.go input {
+  width: 100%; height: 36px; padding: 0 10px 0 32px; font: inherit; color: inherit;
+  border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); background: var(--nx-card);
+}
+.go input:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; border-color: var(--nx-primary-border); }
+.go__hint { font-size: 12px; color: var(--nx-text-tertiary); min-height: 17px; }
+.go__hint b { color: var(--nx-primary-ink); font-weight: 600; }
+.settings {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; align-self: flex-end;
+  border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); background: var(--nx-card);
+  color: var(--nx-muted-foreground); font: inherit; font-size: 13px; cursor: pointer; margin-bottom: 21px;
+}
+.settings:hover { color: var(--nx-foreground); background: var(--nx-hover); }
+.settings svg.i { width: 16px; height: 16px; }
+.settings:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+
+/* ---------- Grupos y tarjetas ---------- */
+.group + .group { margin-top: 30px; }
+.group h2 { font-size: 12.5px; font-weight: 600; color: var(--nx-muted-foreground); margin: 0 0 10px; letter-spacing: 0.01em; }
+.mods { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); container: mods / inline-size; }
+
+.mod {
+  position: relative; min-width: 0;
+  display: grid; grid-template-rows: auto auto 1fr auto; gap: 8px;
+  padding: 16px 16px 14px;
+  background: var(--nx-card); border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg);
+  transition: border-color var(--nx-motion-fast), opacity var(--nx-motion-base) var(--nx-ease-out), filter var(--nx-motion-base), transform var(--nx-motion-base) var(--nx-ease-out);
+}
+.mod:hover { border-color: var(--nx-border); }
+.mod:has(.mod__link:focus-visible) { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+.mod.is-dim { opacity: 0.3; filter: saturate(0.3); transform: scale(0.985); }
+.mod.is-first { border-color: var(--nx-primary-border); }
+
+/* Luz que sigue al puntero (la misma de la maqueta de tarjetas) */
+.mod::before, .mod::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  opacity: 0; transition: opacity var(--nx-motion-base) var(--nx-ease-out);
+}
+.mod::before { background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--nx-primary) 6%, transparent), transparent 70%); }
+.mod::after {
+  z-index: 3; padding: 1px;
+  background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--nx-primary) 75%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.mod:hover::before, .mod:hover::after { opacity: 1; }
+
+.mod__top { display: flex; align-items: center; justify-content: space-between; }
+.mod__icon {
+  width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--nx-primary-soft); color: var(--nx-primary-ink);
+}
+.mod__go { color: var(--nx-text-tertiary); transition: transform var(--nx-motion-base) var(--nx-ease-out), color var(--nx-motion-fast); }
+.mod__go svg.i { width: 16px; height: 16px; }
+.mod:hover .mod__go { color: var(--nx-primary-ink); transform: translate(2px, -2px); }
+
+.mod__name { display: inline-block; }
+.mod__link { text-decoration: none; font-size: 15.5px; font-weight: 620; line-height: 1.25; outline: none; }
+.mod__link::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+
+/* La descripción y las subvistas comparten el mismo lugar: al pasar el puntero (o con el foco
+   dentro) se cambia una por otra y la tarjeta no cambia de tamaño. */
+.mod__swap { display: grid; min-height: 58px; }
+.mod__desc, .mod__subs { grid-area: 1 / 1; transition: opacity var(--nx-motion-base) var(--nx-ease-out), transform var(--nx-motion-base) var(--nx-ease-out), visibility 0s; }
+.mod__desc { margin: 0; font-size: 13px; color: var(--nx-muted-foreground); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mod__subs {
+  position: relative; z-index: 2; list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; align-content: start; gap: 6px;
+  opacity: 0; visibility: hidden; transform: translateY(6px);
+  transition-delay: 0s, 0s, var(--nx-motion-base);
+}
+.mod__subs a {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px;
+  font-size: 12.5px; text-decoration: none; white-space: nowrap;
+  border: 1px solid var(--nx-border); background: var(--nx-canvas); color: var(--nx-foreground);
+}
+.mod__subs a:hover, .mod__subs a.hit { background: var(--nx-primary-soft); border-color: var(--nx-primary-border); color: var(--nx-primary-ink); }
+.mod__subs a:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; }
+.mod__subs a .n { margin-left: 5px; font-variant-numeric: tabular-nums; color: var(--nx-text-tertiary); }
+
+@media (hover: hover) {
+  .mod:hover .mod__desc, .mod:focus-within .mod__desc, .mod.show-subs .mod__desc { opacity: 0; transform: translateY(-6px); }
+  .mod:hover .mod__subs, .mod:focus-within .mod__subs, .mod.show-subs .mod__subs { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+}
+/* En pantallas táctiles no hay «pasar el puntero»: las subvistas se ven siempre, debajo. */
+@media (hover: none) {
+  .mod__swap { gap: 10px; }
+  .mod__desc, .mod__subs { grid-area: auto; }
+  .mod__subs { opacity: 1; visibility: visible; transform: none; }
+}
+
+/* Señal: el único dato vivo de cada módulo */
+.mod__signal {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 7px;
+  padding-top: 10px; border-top: 1px solid var(--nx-border-subtle);
+  font-size: 12.5px; color: var(--nx-muted-foreground); font-variant-numeric: tabular-nums;
+}
+.mod__signal b { font-size: 19px; font-weight: 650; color: var(--nx-foreground); letter-spacing: -0.01em; display: inline-block; }
+.mod__signal .x { color: var(--tone-ink, var(--nx-muted-foreground)); display: inline-flex; align-items: center; gap: 5px; }
+.mod__signal .x::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tone-warn { --tone-ink: var(--nx-warning-ink); }
+.tone-danger { --tone-ink: var(--nx-danger); }
+.tone-ok { --tone-ink: var(--nx-success); }
+.meter { flex: 1 1 100%; height: 5px; border-radius: 3px; background: var(--nx-border-subtle); overflow: hidden; margin-top: 2px; }
+.meter i { display: block; height: 100%; border-radius: inherit; background: var(--nx-primary); }
+.mini { flex: 1 1 80px; height: 22px; min-width: 60px; align-self: center; }
+.mini svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.mini .area { fill: var(--nx-primary-soft); }
+.mini .line { fill: none; stroke: var(--nx-primary); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+
+/* Tarjeta «Continuar donde ibas»: la única con acento de fondo, ocupa dos columnas. */
+.mod--resume {
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--nx-primary-soft), transparent 60%),
+    var(--nx-card);
+  border-color: var(--nx-primary-border);
+}
+@container mods (min-width: 540px) { .mod--resume { grid-column: span 2; } }
+.mod--resume .kicker { margin: 0; font-size: 12px; color: var(--nx-primary-ink); font-weight: 560; display: flex; gap: 8px; align-items: center; }
+.mod--resume .kicker .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--nx-primary); box-shadow: 0 0 0 4px var(--nx-primary-soft); }
+.mod--resume .mod__link { font-size: 18px; }
+.mod--resume .ctx { margin: 0; font-size: 13px; color: var(--nx-muted-foreground); }
+.progress { display: grid; gap: 6px; align-self: end; }
+.progress__bar { height: 8px; border-radius: 4px; background: var(--nx-border-subtle); overflow: hidden; display: flex; gap: 2px; }
+.progress__bar i { display: block; height: 100%; background: var(--nx-primary); }
+.progress__bar i + i { background: color-mix(in oklch, var(--nx-primary) 35%, var(--nx-card)); }
+.progress__legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--nx-muted-foreground); font-variant-numeric: tabular-nums; }
+.progress__legend b { color: var(--nx-foreground); font-weight: 620; }
+
+/* ---------- Página del módulo ---------- */
+.back {
+  display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px 0 6px; margin-bottom: 14px;
+  border: 0; border-radius: var(--nx-radius-md); background: transparent; color: var(--nx-muted-foreground); font: inherit; font-size: 13px; cursor: pointer;
+}
+.back:hover { background: var(--nx-hover); color: var(--nx-foreground); }
+.back:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; }
+.back svg.i { width: 16px; height: 16px; }
+.mp__head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px;
+  padding: 20px; border-radius: var(--nx-radius-lg);
+  background: radial-gradient(90% 160% at 0% 0%, var(--nx-primary-soft), transparent 55%), var(--nx-card);
+  border: 1px solid var(--nx-border-subtle);
+}
+.mp__head .mod__icon { width: 52px; height: 52px; border-radius: 12px; }
+.mp__head .mod__icon svg.i { width: 26px; height: 26px; }
+.mp__title { flex: 1 1 260px; min-width: 0; display: grid; gap: 3px; }
+.mp__title h1 { outline: none; width: fit-content; }
+.mp__title p { margin: 0; color: var(--nx-muted-foreground); }
+.mp__head .mod__signal { border-top: 0; padding-top: 0; flex: 0 1 auto; }
+.tabs { display: flex; gap: 2px; margin: 16px 0 0; border-bottom: 1px solid var(--nx-border-subtle); overflow-x: auto; }
+.tabs button {
+  height: 38px; padding: 0 12px; border: 0; background: transparent; font: inherit; font-size: 13.5px; cursor: pointer;
+  color: var(--nx-muted-foreground); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.tabs button:hover { color: var(--nx-foreground); }
+.tabs button[aria-selected="true"] { color: var(--nx-primary-ink); border-bottom-color: var(--nx-primary); font-weight: 580; }
+.tabs button:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: -2px; border-radius: 4px; }
+.mp__body { padding-top: 16px; animation: rise 360ms var(--nx-ease-out) both 90ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+.mp__caption { margin: 0 0 10px; font-size: 12.5px; color: var(--nx-text-tertiary); }
+.rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: var(--nx-card); overflow: hidden; }
+.rows li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 11px 14px; }
+.rows li + li { border-top: 1px solid var(--nx-border-subtle); }
+.rows .id { font: 12.5px var(--nx-font-mono); color: var(--nx-text-tertiary); }
+.rows .t { font-weight: 560; overflow-wrap: anywhere; }
+.rows .m { display: block; font-size: 12.5px; color: var(--nx-text-tertiary); font-weight: 400; }
+.chip { font-size: 11.5px; line-height: 1; padding: 4px 8px; border-radius: 999px; white-space: nowrap; background: var(--nx-hover); color: var(--nx-muted-foreground); }
+.chip.warn { background: var(--nx-warning-soft); color: var(--nx-warning-ink); }
+.chip.danger { background: var(--nx-danger-soft); color: var(--nx-danger); }
+.chip.ok { background: var(--nx-success-soft); color: var(--nx-success); }
+@media (max-width: 560px) { .rows li { grid-template-columns: minmax(0, 1fr) auto; } .rows .id { grid-column: 1 / -1; } }
+.callout {
+  margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 16px;
+  border: 1px dashed var(--nx-primary-border); border-radius: var(--nx-radius-lg); background: var(--nx-primary-soft);
+}
+.callout p { margin: 0; flex: 1 1 280px; }
+.callout a { font-weight: 600; color: var(--nx-primary-ink); }
+
+/* ---------- La tarjeta se convierte en la página (View Transitions) ---------- */
+::view-transition-group(*) { animation-duration: 440ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+::view-transition-old(hero-name), ::view-transition-new(hero-name) { height: 100%; width: auto; }
+::view-transition-old(root) { animation: 200ms ease-out both fade-out; }
+::view-transition-new(root) { animation: 320ms ease-out 80ms both fade-in; }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes fade-in { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mod, .mod::before, .mod::after, .mod__desc, .mod__subs, .mod__go { transition: none; }
+  .mp__body { animation: none; }
+}
+</style>
+
+<div class="page">
+  <!-- Hub -->
+  <div id="hub">
+    <header class="hub-head">
+      <div class="hub-head__text">
+        <p class="eyebrow">&lt;nx-launcher&gt; · maqueta de tarjetas de navegación</p>
+        <h1>Compras</h1>
+        <p class="note">Pasa el puntero por un módulo para ver sus vistas y entrar directo a una. Al hacer clic, la tarjeta se convierte en la página; <kbd>Esc</kbd> vuelve. Escribe en cualquier parte para filtrar sin que nada cambie de lugar, y <kbd>Enter</kbd> abre la primera coincidencia. Datos de ejemplo.</p>
+      </div>
+      <div class="go">
+        <label for="go">Ir a</label>
+        <div class="go__box">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input id="go" type="search" placeholder="Módulo o vista…" autocomplete="off">
+        </div>
+        <span class="go__hint" id="hint" aria-live="polite"></span>
+      </div>
+      <button class="settings" type="button" data-open="config">
+        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+        Configuración
+      </button>
+    </header>
+    <div id="groups"></div>
+  </div>
+
+  <!-- Página del módulo -->
+  <div id="page" hidden></div>
+</div>
+
+<script>
+(() => {
+  const PROVEEDORES_URL = "https://claude.ai/artifact/Go18bne5J6Q6gGG5RL2jrv";
+  const ICONS = {
+    solicitudes: '<rect x="5.5" y="4" width="13" height="17" rx="2"/><path d="M9 4h6v3H9zM9 11.5h6M9 15.5h4"/>',
+    cotizaciones: '<path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8.5 8.5-9 9z"/><circle cx="8" cy="8" r="1.4"/>',
+    adjudicacion: '<path d="M12 4v16M6 20h12M5 7.5h14M5 7.5l-2.5 6a2.5 2.5 0 0 0 5 0zM19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>',
+    ordenes: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 14l2 2 4-4"/>',
+    recepcion: '<path d="M2.5 6h11v10h-11zM13.5 9.5h4l3.5 3.5v3h-7.5z"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+    facturas: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+    proveedores: '<path d="M3 9l2-5h14l2 5M4 9v11h16V9M3 9h18M9.5 20v-6h5v6"/>',
+    articulos: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+    obras: '<path d="M4 16a8 8 0 0 1 16 0M3 16h18v3H3zM10 8.5V5h4v3.5"/>',
+    reportes: '<path d="M3 20h18M6 20v-8M11 20V5M16 20v-6M21 20V9"/>',
+    config: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+    arrow: '<path d="M7 17L17 7M8.5 7H17v8.5"/>',
+    back: '<path d="M15 6l-6 6 6 6"/>',
+  };
+  const icon = (k) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+
+  // Cada módulo: nombre, para qué sirve, sus vistas (con conteo cuando lo hay) y una señal viva.
+  const MODS = [
+    { id: "solicitudes", name: "Solicitudes", desc: "Lo que piden las obras: aprobarlo y convertirlo en cotización.",
+      subs: [["Por aprobar", 7], ["Aprobadas"], ["Rechazadas"], ["Nueva solicitud"]],
+      signal: { n: 7, label: "por aprobar", x: "la más antigua, hace 3 días", tone: "warn" },
+      rows: [["SOL-1187", "Cemento gris 50 kg × 400 bultos", "Torres del Parque · Ing. Barrios", "Por aprobar", "warn"], ["SOL-1186", "Cable THHN 12 AWG × 1.500 m", "Torres del Parque · Ing. Barrios", "Por aprobar", "warn"], ["SOL-1183", "Pintura tipo 1 blanca × 60 galones", "Mirador de Alameda · Arq. Pineda", "Por aprobar", "warn"], ["SOL-1179", "Casco de seguridad × 40", "Bodega central · SST", "Aprobada", "ok"]] },
+    { id: "cotizaciones", name: "Cotizaciones", desc: "Pide precios a varios proveedores y compáralos lado a lado.",
+      subs: [["Abiertas", 4], ["Por cerrar", 2], ["Cerradas"], ["Nueva cotización"]],
+      signal: { n: 4, label: "abiertas", x: "2 cierran hoy", tone: "danger" },
+      rows: [["RFQ-0412", "Materiales Torres del Parque, 60 artículos", "10 proveedores invitados · 9 respondieron", "Cierra hoy", "danger"], ["RFQ-0415", "Iluminación LED zonas comunes", "4 invitados · 2 respondieron", "Cierra hoy", "danger"], ["RFQ-0417", "Hidrosanitario torre B", "6 invitados · 1 respondió", "Cierra el 2 oct", ""], ["RFQ-0418", "Impermeabilización cubiertas", "3 invitados · 0 respondieron", "Cierra el 6 oct", ""]] },
+    { id: "adjudicacion", name: "Adjudicación", desc: "Decide a quién comprarle cada artículo, con la sugerencia de la IA al lado.",
+      subs: [["Pendientes", 1], ["Escenarios"], ["Historial"]],
+      signal: { n: 1, label: "en curso", x: "RFQ-0412", tone: "" },
+      rows: [["RFQ-0412", "Materiales Torres del Parque", "38 de 60 artículos adjudicados · escenario B guardado", "En curso", "warn"], ["RFQ-0401", "Acero de refuerzo, fase 2", "Adjudicada a Aceros Malambo y Metales Unión", "Cerrada", "ok"], ["RFQ-0398", "Ferretería general, septiembre", "Adjudicada a Ferrecaribe", "Cerrada", "ok"]] },
+    { id: "ordenes", name: "Órdenes de compra", desc: "Emite, envía y sigue cada orden hasta que llega a la obra.",
+      subs: [["Borradores", 3], ["Enviadas"], ["En tránsito", 12], ["Cerradas"]],
+      signal: { n: 12, label: "en tránsito", x: "todas a tiempo", tone: "ok" },
+      rows: [["OC-2026-0941", "Hidráulicos 3R · tubería PVC presión", "Llega el 30 sep a Torres del Parque", "En tránsito", ""], ["OC-2026-0938", "Eléctricos del Norte · cableado", "Llega hoy a Torres del Parque", "En tránsito", ""], ["OC-2026-0935", "Pinturas Costa · vinilo tipo 1", "Llega el 1 oct a Mirador de Alameda", "En tránsito", ""], ["OC-2026-0944", "Ferrecaribe · tornillería", "Falta la firma del director de obra", "Borrador", "warn"]] },
+    { id: "recepcion", name: "Recepción en obra", desc: "Registra lo que llega, lo que falta y lo que vino dañado.",
+      subs: [["Hoy", 3], ["Con novedad", 1], ["Historial"]],
+      signal: { n: 3, label: "entregas hoy", x: "1 con novedad", tone: "warn" },
+      rows: [["OC-2026-0938", "Cable THHN 12 AWG · 1.500 m", "Eléctricos del Norte · 10:30 a. m.", "Por recibir", ""], ["OC-2026-0929", "Bloque #5 · 6.000 und", "Distri Sabana · llegaron 5.720", "Con novedad", "warn"], ["OC-2026-0931", "Guantes de nitrilo · 300 pares", "Ferrecaribe · 2:00 p. m.", "Por recibir", ""]] },
+    { id: "facturas", name: "Facturas", desc: "Cruza factura, orden y recepción antes de aprobar el pago.",
+      subs: [["Por revisar", 8], ["Con diferencia", 5], ["Aprobadas para pago"]],
+      signal: { n: 5, label: "con diferencia", x: "$ 14,6 M en juego", tone: "danger" },
+      rows: [["FE-88213", "Distri Sabana · $ 11,1 M", "Factura 6.000 bloques; se recibieron 5.720", "Diferencia", "danger"], ["FE-10492", "Aceros Malambo · $ 38,4 M", "Precio unitario distinto al de la orden", "Diferencia", "danger"], ["FE-55120", "Ferrecaribe · $ 6,2 M", "Cuadra con la orden y la recepción", "Por revisar", ""], ["FE-55118", "Hidráulicos 3R · $ 21,9 M", "Cuadra con la orden y la recepción", "Por revisar", ""]] },
+  ];
+  const MODS2 = [
+    { id: "proveedores", name: "Proveedores", desc: "Directorio, pólizas, documentos y desempeño de cada proveedor.",
+      subs: [["Directorio"], ["Pólizas", 9], ["Evaluaciones"]],
+      signal: { n: 9, label: "pólizas por vencer", x: "la primera, el 30 sep", tone: "warn" },
+      rows: [["900.412.118-3", "Metales Unión", "Póliza de cumplimiento vence el 30 sep", "Por vencer", "warn"], ["901.220.874-1", "Hidráulicos 3R", "★ 4,7 · 97 % de entregas a tiempo", "Al día", "ok"], ["800.931.552-0", "Ferrecaribe", "★ 4,6 · 95 % de entregas a tiempo", "Al día", "ok"]] },
+    { id: "articulos", name: "Artículos", desc: "Catálogo, unidades de medida y precios de referencia.",
+      subs: [["Catálogo"], ["Grupos"], ["Precios de referencia"]],
+      signal: { n: "1.284", label: "artículos", x: "32 sin precio de referencia", tone: "" },
+      rows: [["EL-0012", "Cable THHN 12 AWG", "Eléctricos · metro · ref. $ 3.200", "Activo", ""], ["OG-0001", "Cemento gris 50 kg", "Obra gris · bulto · ref. $ 32.800", "Activo", ""], ["PI-0044", "Estuco plástico 5 gal", "Pinturas · cuñete · sin precio de referencia", "Incompleto", "warn"]] },
+    { id: "obras", name: "Obras y presupuesto", desc: "Cuánto lleva comprado cada obra frente a su presupuesto.",
+      subs: [["Obras"], ["Presupuesto"], ["Centros de costo"]],
+      signal: { meter: 71, label: "Torres del Parque", x: "71 % del presupuesto", tone: "" },
+      rows: [["OB-014", "Torres del Parque", "$ 4.120 M de $ 5.800 M · 71 %", "En obra", ""], ["OB-016", "Mirador de Alameda", "$ 890 M de $ 3.100 M · 29 %", "En obra", ""], ["OB-011", "Bodega Malambo", "$ 1.950 M de $ 1.900 M · 103 %", "Excedida", "danger"]] },
+    { id: "reportes", name: "Reportes", desc: "Ahorro frente a la referencia, plazos y gasto por obra.",
+      subs: [["Ahorro"], ["Cumplimiento"], ["Gasto por obra"]],
+      signal: { spark: [18, 22, 19, 27, 31, 29, 35, 33, 41], n: "$ 312 M", label: "ahorrados en 2026", tone: "" },
+      rows: [["R-01", "Ahorro frente al precio de referencia", "Enero a septiembre de 2026", "Mensual", ""], ["R-02", "Entregas a tiempo por proveedor", "Últimos 12 meses", "Semanal", ""], ["R-03", "Gasto por obra y centro de costo", "Año en curso", "Diario", ""]] },
+  ];
+  const CONFIG = { id: "config", name: "Configuración de compras", desc: "Flujos de aprobación, topes por cargo y usuarios del módulo.",
+    subs: [["Aprobaciones"], ["Topes"], ["Usuarios"]],
+    signal: { n: "3", label: "flujos activos", x: "último cambio el 12 sep", tone: "" },
+    rows: [["FL-1", "Solicitudes hasta $ 5 M", "Aprueba el director de obra", "Activo", "ok"], ["FL-2", "Solicitudes de $ 5 M a $ 50 M", "Director de obra y gerente de compras", "Activo", "ok"], ["FL-3", "Más de $ 50 M", "Además, gerencia general", "Activo", "ok"]] };
+  const ALL = [...MODS, ...MODS2, CONFIG];
+  const byId = new Map(ALL.map((m) => [m.id, m]));
+  const slug = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+  function mini(values) {
+    const min = Math.min(...values) * 0.85, max = Math.max(...values), n = values.length - 1;
+    const pts = values.map((v, i) => `${(i / n * 100).toFixed(1)},${(22 - (v - min) / (max - min) * 19 - 1.5).toFixed(1)}`);
+    return `<span class="mini" aria-hidden="true"><svg viewBox="0 0 100 22" preserveAspectRatio="none"><path class="area" d="M${pts.join("L")}L100,22L0,22Z"/><path class="line" d="M${pts.join("L")}"/></svg></span>`;
+  }
+  function signalHTML(s) {
+    const x = s.x ? `<span class="x ${s.tone ? "tone-" + s.tone : ""}">${s.x}</span>` : "";
+    if (s.meter != null) return `<span>${s.label}</span>${x}<span class="meter"><i style="width:${s.meter}%"></i></span>`;
+    if (s.spark) return `<b>${s.n}</b><span>${s.label}</span>${mini(s.spark)}`;
+    return `<b data-n>${s.n}</b><span>${s.label}</span>${x}`;
+  }
+
+  function cardHTML(m) {
+    return `<div class="mod" data-id="${m.id}">
+      <div class="mod__top"><span class="mod__icon">${icon(m.id)}</span><span class="mod__go">${icon("arrow")}</span></div>
+      <a class="mod__link" href="#${m.id}" data-open="${m.id}"><span class="mod__name">${m.name}</span></a>
+      <div class="mod__swap">
+        <p class="mod__desc">${m.desc}</p>
+        <ul class="mod__subs" aria-label="Vistas de ${m.name}">
+          ${m.subs.map(([s, n], i) => `<li><a href="#${m.id}-${slug(s)}" data-open="${m.id}" data-sub="${i}">${s}${n ? `<span class="n">${n}</span>` : ""}</a></li>`).join("")}
+        </ul>
+      </div>
+      <div class="mod__signal">${signalHTML(m.signal)}</div>
+    </div>`;
+  }
+  const resumeHTML = `<div class="mod mod--resume" data-id="resume">
+      <p class="kicker"><span class="dot" aria-hidden="true"></span>Continuar donde ibas · hace 2 horas</p>
+      <a class="mod__link" href="#adjudicacion" data-open="adjudicacion">Adjudicación de la RFQ-0412</a>
+      <p class="ctx">Torres del Parque · 60 artículos cotizados por 10 proveedores. Guardaste el escenario B y quedaron 22 artículos sin decidir.</p>
+      <div class="progress">
+        <div class="progress__bar" aria-hidden="true"><i style="width:63%"></i><i style="width:12%"></i></div>
+        <div class="progress__legend"><span><b>38</b> adjudicados</span><span><b>7</b> con sugerencia de la IA</span><span><b>15</b> sin decidir</span></div>
+      </div>
+    </div>`;
+
+  const groups = document.getElementById("groups");
+  groups.innerHTML = `
+    <section class="group" aria-labelledby="g1"><h2 id="g1">Día a día</h2><div class="mods">${resumeHTML}${MODS.map(cardHTML).join("")}</div></section>
+    <section class="group" aria-labelledby="g2"><h2 id="g2">Datos y análisis</h2><div class="mods">${MODS2.map(cardHTML).join("")}</div></section>`;
+  const cards = new Map([...groups.querySelectorAll(".mod[data-id]")].map((el) => [el.dataset.id, el]));
+
+  // ---------- Filtrar escribiendo: nada se mueve, lo que no coincide se apaga ----------
+  const go = document.getElementById("go"), hint = document.getElementById("hint");
+  let firstTarget = null;
+  function filter() {
+    const term = norm(go.value.trim());
+    firstTarget = null;
+    for (const [id, el] of cards) {
+      el.classList.remove("is-first", "show-subs");
+      el.querySelectorAll(".mod__subs a").forEach((a) => a.classList.remove("hit"));
+      if (!term) { el.classList.remove("is-dim"); continue; }
+      const m = byId.get(id);
+      const text = id === "resume" ? "adjudicacion rfq-0412 torres del parque continuar" : norm(`${m.name} ${m.desc}`);
+      const hits = m ? m.subs.map(([s], i) => (norm(s).includes(term) ? i : -1)).filter((i) => i >= 0) : [];
+      const own = norm(m ? m.name : "").includes(term) || text.includes(term);
+      const match = own || hits.length > 0;
+      el.classList.toggle("is-dim", !match);
+      if (hits.length) {
+        el.classList.add("show-subs");
+        hits.forEach((i) => el.querySelectorAll(".mod__subs a")[i].classList.add("hit"));
+      }
+      if (match && !firstTarget && id !== "resume") {
+        firstTarget = { id, sub: own && !hits.length ? 0 : hits[0] ?? 0, label: hits.length && !norm(m.name).includes(term) ? `${m.name} › ${m.subs[hits[0]][0]}` : m.name };
+        el.classList.add("is-first");
+      }
+    }
+    hint.innerHTML = !term ? "" : firstTarget ? `<kbd>Enter</kbd> abre <b>${firstTarget.label}</b>` : "Ningún módulo coincide.";
+  }
+  go.addEventListener("input", filter);
+  go.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && firstTarget) { e.preventDefault(); open(firstTarget.id, firstTarget.sub); }
+    if (e.key === "Escape" && go.value) { e.stopPropagation(); go.value = ""; filter(); }
+  });
+
+  // ---------- La tarjeta se convierte en la página ----------
+  const hub = document.getElementById("hub"), page = document.getElementById("page");
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let current = null, hubScroll = 0;
+
+  function setNames(root, on) {
+    const set = (sel, name) => { const el = root?.querySelector(sel); if (el) el.style.viewTransitionName = on ? name : ""; };
+    if (!root) return;
+    root.style.viewTransitionName = on ? "hero" : "";
+    set(".mod__icon", "hero-icon");
+    set(".mod__name, h1", "hero-name");
+  }
+  function morph(update) {
+    if (!document.startViewTransition || reduced()) { update(); return Promise.resolve(); }
+    return document.startViewTransition(update).finished;
+  }
+
+  function pageHTML(m, sub) {
+    const tab = m.subs[sub][0];
+    return `<button class="back" type="button" data-back>${icon("back")}Compras</button>
+      <header class="mp__head">
+        <span class="mod__icon">${icon(m.id)}</span>
+        <div class="mp__title"><h1 tabindex="-1"><span class="mod__name">${m.name}</span></h1><p>${m.desc}</p></div>
+        <div class="mod__signal">${signalHTML(m.signal)}</div>
+      </header>
+      <div class="tabs" role="tablist" aria-label="Vistas de ${m.name}">
+        ${m.subs.map(([s, n], i) => `<button type="button" role="tab" aria-selected="${i === sub}" data-tab="${i}">${s}${n ? ` · ${n}` : ""}</button>`).join("")}
+      </div>
+      <div class="mp__body" role="tabpanel">
+        <p class="mp__caption">Vista «${tab}». En el producto aquí va la vista real del módulo; en la maqueta, unos registros de ejemplo.</p>
+        <ul class="rows">${m.rows.map(([id, t, meta, st, tone]) => `<li><span class="id">${id}</span><span class="t">${t}<span class="m">${meta}</span></span><span class="chip ${tone}">${st}</span></li>`).join("")}</ul>
+        ${m.id === "proveedores" ? `<div class="callout"><p>Este módulo abriría la vista de tarjetas con zoom semántico de la otra maqueta.</p><a href="${PROVEEDORES_URL}" target="_blank" rel="noopener">Abrir la maqueta de Proveedores ↗</a></div>` : ""}
+      </div>`;
+  }
+
+  function open(id, sub = 0, from) {
+    const m = byId.get(id);
+    if (!m) return;
+    const card = from ?? cards.get(id);
+    hubScroll = scrollY;
+    setNames(card, true);
+    morph(() => {
+      setNames(card, false);
+      page.innerHTML = pageHTML(m, sub);
+      setNames(page.querySelector(".mp__head"), true);
+      hub.hidden = true; page.hidden = false;
+      scrollTo(0, 0);
+      current = id;
+      page.querySelector("h1").focus({ preventScroll: true });
+    }).then(() => setNames(page.querySelector(".mp__head"), false));
+  }
+
+  function back() {
+    if (!current) return;
+    const card = cards.get(current);
+    const target = card?.querySelector(".mod__link") ?? document.querySelector(`[data-open="${current}"]`) ?? go;
+    setNames(page.querySelector(".mp__head"), true);
+    morph(() => {
+      page.hidden = true; hub.hidden = false; page.innerHTML = "";
+      scrollTo(0, hubScroll);
+      setNames(card, true);
+      current = null;
+      target.focus({ preventScroll: true });
+    }).then(() => setNames(card, false));
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-open], [data-back], [data-tab]");
+    if (!t) return;
+    if (t.matches("[data-open]")) { e.preventDefault(); open(t.dataset.open, +(t.dataset.sub ?? 0), t.closest(".mod") ?? undefined); }
+    else if (t.matches("[data-back]")) back();
+    else if (t.matches("[data-tab]")) {
+      const m = byId.get(current), i = +t.dataset.tab;
+      page.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b === t)));
+      const body = page.querySelector(".mp__body");
+      body.querySelector(".mp__caption").textContent = `Vista «${m.subs[i][0]}». En el producto aquí va la vista real del módulo; en la maqueta, unos registros de ejemplo.`;
+      body.getAnimations().forEach((a) => a.cancel());
+      if (!reduced()) body.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && current) { e.preventDefault(); back(); return; }
+    if (e.altKey && e.key === "ArrowLeft" && current) { e.preventDefault(); back(); return; }
+    // Escribir en cualquier parte del hub lleva al buscador.
+    if (!current && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && e.key !== " " && document.activeElement !== go && !e.target.matches?.("input, select, textarea")) go.focus();
+  });
+
+  // Luz que sigue al puntero
+  groups.addEventListener("pointermove", (e) => {
+    const c = e.target.closest(".mod");
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    c.style.setProperty("--my", `${e.clientY - r.top}px`);
+  });
+
+  // Señal viva: de vez en cuando llega una solicitud nueva y el número lo cuenta.
+  setInterval(() => {
+    if (current || document.hidden) return;
+    const m = byId.get("solicitudes");
+    if (m.signal.n >= 12) return;
+    m.signal.n += 1;
+    m.subs[0][1] = m.signal.n;
+    const card = cards.get("solicitudes");
+    const b = card.querySelector("[data-n]");
+    b.textContent = m.signal.n;
+    card.querySelector(".mod__subs a .n").textContent = m.signal.n;
+    if (!reduced()) {
+      b.animate([{ transform: "translateY(-6px)", opacity: 0, color: "var(--nx-primary-ink)" }, { transform: "none", opacity: 1, color: "var(--nx-primary-ink)", offset: 0.5 }, { color: "var(--nx-foreground)" }], { duration: 900, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+      card.animate([{ boxShadow: "0 0 0 0 var(--nx-primary-border)" }, { boxShadow: "0 0 0 6px transparent" }], { duration: 900, easing: "ease-out" });
+    }
+  }, 6500);
+})();
+</script>

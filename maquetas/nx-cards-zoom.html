@@ -1,0 +1,708 @@
+<title>Maqueta de nx-cards</title>
+<style>
+/* Tokens de nx-ui (src/styles/tokens.css), recortados a lo que usa la maqueta. */
+:root {
+  color-scheme: light dark;
+  --_h: 262; --_c: 0.19; --_l: 0.54; --_ld: 0.72; --_n: 260; --_t: 1;
+  --nx-canvas: light-dark(oklch(0.985 calc(0.002 * var(--_t)) var(--_n)), oklch(0.165 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-popover: light-dark(oklch(1 0 0), oklch(0.235 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-border-subtle: light-dark(oklch(0.925 calc(0.004 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 calc(0.005 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 calc(0.006 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.17));
+  --nx-foreground: light-dark(oklch(0.2 calc(0.008 * var(--_t)) var(--_n)), oklch(0.955 calc(0.003 * var(--_t)) var(--_n)));
+  --nx-muted-foreground: light-dark(oklch(0.44 calc(0.01 * var(--_t)) var(--_n)), oklch(0.76 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-text-tertiary: light-dark(oklch(0.51 calc(0.01 * var(--_t)) var(--_n)), oklch(0.64 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-text-quaternary: light-dark(oklch(0.66 calc(0.008 * var(--_t)) var(--_n)), oklch(0.53 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-primary: light-dark(oklch(var(--_l) var(--_c) var(--_h)), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h)));
+  --nx-primary-ink: light-dark(oklch(calc(var(--_l) - 0.07) var(--_c) var(--_h)), oklch(calc(var(--_ld) + 0.05) calc(var(--_c) * 0.7) var(--_h)));
+  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 calc(var(--_c) * 0.1) var(--_h)));
+  --nx-primary-soft: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.1), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.15));
+  --nx-primary-border: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.35), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.4));
+  --nx-hover: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.05), oklch(1 0 0 / 0.06));
+  --nx-ring: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.6), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.7));
+  --nx-success: light-dark(oklch(0.49 0.13 150), oklch(0.74 0.14 150));
+  --nx-success-soft: light-dark(oklch(0.55 0.14 150 / 0.1), oklch(0.74 0.14 150 / 0.14));
+  --nx-danger: light-dark(oklch(0.52 0.2 27), oklch(0.72 0.16 27));
+  --nx-danger-soft: light-dark(oklch(0.55 0.2 27 / 0.1), oklch(0.7 0.17 27 / 0.15));
+  /* No existe en nx-ui todavía: la maqueta lo necesita para «por vencer». */
+  --nx-warning: light-dark(oklch(0.74 0.15 70), oklch(0.8 0.14 78));
+  --nx-warning-ink: light-dark(oklch(0.5 0.12 60), oklch(0.84 0.13 80));
+  --nx-warning-soft: light-dark(oklch(0.75 0.15 70 / 0.16), oklch(0.8 0.14 78 / 0.15));
+  --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
+    0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
+  --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --nx-radius-sm: 5px; --nx-radius-md: 7px; --nx-radius-lg: 10px;
+  --nx-motion-fast: 140ms; --nx-motion-base: 220ms;
+  --nx-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--nx-canvas);
+  color: var(--nx-foreground);
+  font: 14px/1.45 var(--nx-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 1240px; margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 28px 72px; }
+
+/* Encabezado */
+.intro { display: grid; gap: 6px; margin-bottom: 18px; }
+.eyebrow { font: 12px/1.3 var(--nx-font-mono); color: var(--nx-primary-ink); letter-spacing: 0.02em; margin: 0; }
+h1 { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.intro p { margin: 0; max-width: 70ch; color: var(--nx-muted-foreground); }
+kbd { font: 12px var(--nx-font-mono); padding: 1px 5px; border: 1px solid var(--nx-border); border-bottom-width: 2px; border-radius: 4px; background: var(--nx-card); }
+
+/* Barra de herramientas */
+.toolbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px;
+  padding-block: 10px;
+  background: color-mix(in oklch, var(--nx-canvas) 90%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--nx-border-subtle);
+}
+.field { display: grid; gap: 4px; }
+.field > span, .seg legend { font-size: 12px; color: var(--nx-muted-foreground); }
+input[type="search"], select {
+  height: 34px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md);
+  background: var(--nx-card); color: inherit; font: inherit; padding: 0 10px;
+}
+input[type="search"] { width: 240px; max-width: 100%; }
+input[type="search"]:focus-visible, select:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; border-color: var(--nx-primary-border); }
+.seg { border: 0; margin: 0; padding: 0; display: grid; gap: 4px; margin-left: auto; }
+.seg legend { padding: 0; margin-bottom: 4px; float: left; width: 100%; }
+.seg__track { display: flex; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); background: var(--nx-card); padding: 2px; gap: 2px; clear: both; }
+.seg label { position: relative; display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 5px; cursor: pointer; color: var(--nx-muted-foreground); user-select: none; }
+.seg label:hover { background: var(--nx-hover); color: var(--nx-foreground); }
+.seg label:has(input:checked) { background: var(--nx-primary-soft); color: var(--nx-primary-ink); font-weight: 560; }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--nx-ring); outline-offset: 1px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg svg { width: 14px; height: 14px; flex: none; }
+.count { font-size: 12.5px; color: var(--nx-text-tertiary); align-self: center; font-variant-numeric: tabular-nums; }
+
+/* Leyenda del mapa */
+.legend { display: none; flex-wrap: wrap; gap: 8px 18px; margin: 16px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--nx-muted-foreground); }
+.view[data-level="1"] .legend { display: flex; }
+.legend li { display: flex; align-items: center; gap: 7px; }
+.legend b { color: var(--nx-foreground); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw--ramp { display: inline-flex; gap: 2px; }
+.sw--ramp i { width: 10px; height: 12px; border-radius: 2px; background: color-mix(in oklch, var(--nx-primary) var(--m), var(--nx-card)); }
+.sw--vence { background: var(--nx-warning); }
+.sw--bloqueado { background: var(--nx-danger); }
+.sw--revision { border: 1.5px dashed var(--nx-border-strong); }
+
+/* Estantes (grupos) */
+.zone { display: grid; gap: 30px; margin-top: 20px; }
+.view[data-level="1"] .zone { gap: 20px; }
+.shelf__head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--nx-border-subtle); }
+.shelf__head h2 { font-size: 14px; font-weight: 620; margin: 0; }
+.shelf__count { font-size: 12.5px; color: var(--nx-text-tertiary); }
+.shelf__total { margin-left: auto; font-size: 12.5px; color: var(--nx-muted-foreground); font-variant-numeric: tabular-nums; }
+.empty { padding: 48px 0; text-align: center; color: var(--nx-muted-foreground); }
+
+.grid { display: grid; grid-auto-flow: row dense; container: grid / inline-size; }
+.view[data-level="1"] .grid { grid-template-columns: repeat(auto-fill, minmax(22px, 1fr)); gap: 4px; }
+.view[data-level="2"] .grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 244px), 1fr)); gap: 12px; }
+.view[data-level="3"] .grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 336px), 1fr)); gap: 14px; }
+
+/* Tarjeta: un solo nodo por registro; cada nivel muestra una parte. */
+.card {
+  position: relative; min-width: 0;
+  container: card / inline-size;
+  background: var(--nx-card);
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  --ink: var(--nx-muted-foreground);
+}
+.card[data-state="vence"] { --ink: var(--nx-warning-ink); }
+.card[data-state="bloqueado"] { --ink: var(--nx-danger); }
+.card:hover { border-color: var(--nx-border); }
+.card.is-open { grid-column: 1 / -1; border-color: var(--nx-primary-border); box-shadow: var(--nx-shadow-popover); }
+
+/* Luz que sigue al puntero: un brillo tenue en el borde y un reflejo casi imperceptible adentro. */
+.card::before, .card::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  opacity: 0; transition: opacity var(--nx-motion-base) var(--nx-ease-out);
+}
+.card::before { background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--nx-primary) 6%, transparent), transparent 70%); }
+.card::after {
+  z-index: 2; padding: 1px;
+  background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--nx-primary) 75%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.card:hover::before, .card:hover::after { opacity: 1; }
+
+.card__hit {
+  position: absolute; inset: 0; z-index: 3; margin: 0; padding: 0; border: 0;
+  background: transparent; border-radius: inherit; cursor: pointer;
+}
+.card__hit:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+.card.is-open .card__hit { display: none; }
+
+.card__body { position: relative; z-index: 1; display: grid; gap: 14px; padding: 14px 14px 13px; }
+.card__main { display: grid; gap: 8px; min-width: 0; align-content: start; }
+.card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.card__name { margin: 0; font-size: 14.5px; font-weight: 610; line-height: 1.3; text-wrap: balance; overflow-wrap: anywhere; }
+.card__meta { margin: -4px 0 0; font-size: 12.5px; color: var(--nx-text-tertiary); }
+.card__note { margin: 0; font-size: 12.5px; color: var(--ink); display: flex; gap: 6px; align-items: baseline; }
+.card__note::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; transform: translateY(-1px); }
+
+.chip { flex: none; font-size: 11.5px; line-height: 1; padding: 4px 8px; border-radius: 999px; white-space: nowrap; font-weight: 520; }
+.chip--ok { background: var(--nx-success-soft); color: var(--nx-success); }
+.chip--vence { background: var(--nx-warning-soft); color: var(--nx-warning-ink); }
+.chip--revision { background: var(--nx-hover); color: var(--nx-muted-foreground); box-shadow: inset 0 0 0 1px var(--nx-border); }
+.chip--bloqueado { background: var(--nx-danger-soft); color: var(--nx-danger); }
+
+.kpi { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 14px; }
+.kpi__value { display: block; font-size: 20px; font-weight: 640; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi__label { display: block; font-size: 12px; color: var(--nx-text-tertiary); margin-top: 3px; white-space: nowrap; }
+.delta { font-variant-numeric: tabular-nums; margin-left: 4px; }
+.delta.up { color: var(--nx-success); }
+.delta.down { color: var(--nx-danger); }
+@container card (max-width: 230px) { .kpi { grid-template-columns: 1fr; } }
+
+.spark { position: relative; height: 30px; min-width: 0; }
+.spark svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.spark .area { fill: var(--nx-primary-soft); }
+.spark .line { fill: none; stroke: var(--nx-primary); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.spark .base { stroke: var(--nx-border-subtle); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.spark__dot { position: absolute; left: 100%; width: 7px; height: 7px; border-radius: 50%; background: var(--nx-primary); box-shadow: 0 0 0 2px var(--nx-card); transform: translate(-50%, -50%); }
+
+.brief { margin: 0; font-size: 12.5px; color: var(--nx-muted-foreground); font-variant-numeric: tabular-nums; }
+.facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; padding-top: 10px; border-top: 1px solid var(--nx-border-subtle); }
+.facts div { min-width: 0; }
+.facts dt { font-size: 12px; color: var(--nx-text-tertiary); }
+.facts dd { margin: 1px 0 0; font-size: 13.5px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.facts .sub { display: block; font-size: 12px; color: var(--nx-text-tertiary); }
+.bar { display: block; height: 5px; border-radius: 3px; background: var(--nx-border-subtle); margin-top: 5px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: inherit; background: var(--nx-success); }
+.bar.mid i { background: var(--nx-warning); }
+.bar.low i { background: var(--nx-danger); }
+
+.card__more { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card__more h4 { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--nx-muted-foreground); }
+.orders-wrap { overflow-x: auto; }
+.orders { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.orders td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--nx-border-subtle); white-space: nowrap; }
+.orders td:first-child { font-family: var(--nx-font-mono); font-size: 12.5px; }
+.orders td.num { text-align: right; }
+.orders .st { color: var(--nx-text-tertiary); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.btn {
+  height: 32px; padding: 0 12px; border-radius: var(--nx-radius-md); font: inherit; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--nx-border); background: var(--nx-card); color: var(--nx-foreground);
+}
+.btn:hover { background: var(--nx-hover); }
+.btn--primary { background: var(--nx-primary); border-color: transparent; color: var(--nx-primary-foreground); }
+.btn--primary:hover { background: color-mix(in oklch, var(--nx-primary) 88%, black); }
+.btn:focus-visible, .card__close:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+.card__close {
+  position: absolute; top: 10px; right: 10px; z-index: 4;
+  width: 30px; height: 30px; border-radius: var(--nx-radius-md); border: 0; background: transparent;
+  color: var(--nx-muted-foreground); cursor: pointer; display: grid; place-items: center;
+}
+.card__close:hover { background: var(--nx-hover); color: var(--nx-foreground); }
+.card.is-open .card__head { padding-right: 34px; }
+.card.is-open .card__body { padding: 20px; }
+.card.is-open .spark { height: 72px; }
+@container card (min-width: 700px) {
+  .card.is-open .card__body { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; }
+  .card.is-open .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Qué muestra cada nivel */
+.card:not(.is-open) .lvl-open { display: none; }
+.view[data-level="2"] .card:not(.is-open) .lvl-3 { display: none; }
+.view[data-level="2"] .card:not(.is-open) .chip--ok { display: none; }
+.view[data-level="3"] .lvl-2only, .card.is-open .lvl-2only { display: none; }
+.view[data-level="3"] .spark { height: 40px; }
+
+/* Nivel 2: el dato decide el tamaño (las de más compras ocupan dos columnas). */
+@container grid (min-width: 520px) {
+  .view[data-level="2"] .card.is-heavy:not(.is-open) { grid-column: span 2; }
+  .view[data-level="2"] .card.is-heavy:not(.is-open) .spark { height: 54px; }
+  .view[data-level="2"] .card.is-heavy:not(.is-open) .kpi__value { font-size: 24px; }
+}
+
+/* Nivel 1: mapa. Cada registro es un cuadro; el color dice el estado y la intensidad, las compras. */
+.view[data-level="1"] .card:not(.is-open) {
+  aspect-ratio: 1; border-radius: 4px; border-color: transparent;
+  background: color-mix(in oklch, var(--nx-primary) var(--mix, 30%), var(--nx-card));
+}
+.view[data-level="1"] .card[data-state="vence"]:not(.is-open) { background: var(--nx-warning); }
+.view[data-level="1"] .card[data-state="bloqueado"]:not(.is-open) { background: var(--nx-danger); }
+.view[data-level="1"] .card[data-state="revision"]:not(.is-open) { background: transparent; border: 1.5px dashed var(--nx-border-strong); }
+.view[data-level="1"] .card:not(.is-open) .card__body,
+.view[data-level="1"] .card:not(.is-open)::before,
+.view[data-level="1"] .card:not(.is-open)::after { display: none; }
+.view[data-level="1"] .card:not(.is-open):hover { outline: 2px solid var(--nx-foreground); outline-offset: 1px; }
+
+/* Globo del mapa y aviso */
+.tip {
+  position: fixed; z-index: 50; pointer-events: none; max-width: 260px;
+  background: var(--nx-popover); color: var(--nx-foreground); border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md); box-shadow: var(--nx-shadow-popover);
+  padding: 8px 10px; font-size: 12.5px; line-height: 1.35;
+}
+.tip b { display: block; font-size: 13px; font-weight: 610; }
+.tip span { color: var(--nx-muted-foreground); font-variant-numeric: tabular-nums; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
+  background: var(--nx-foreground); color: var(--nx-card); border-radius: var(--nx-radius-md);
+  padding: 9px 14px; font-size: 13px; box-shadow: var(--nx-shadow-popover);
+}
+
+@media (max-width: 640px) {
+  .seg { margin-left: 0; }
+  .field--search { flex: 1 1 100%; }
+  input[type="search"] { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card::before, .card::after { transition: none; }
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">&lt;nx-cards&gt; · maqueta del zoom semántico</p>
+    <h1>Proveedores</h1>
+    <p>La misma vista en tres niveles: <strong>Mapa</strong>, <strong>Tarjetas</strong> y <strong>Fichas</strong>. Cambia de nivel con el control, con <kbd>Ctrl</kbd> + rueda (o pellizcando en el trackpad) o con <kbd>+</kbd> / <kbd>−</kbd>: la tarjeta bajo el puntero se queda donde está. Haz clic en una para abrirla en su sitio. Los datos son de ejemplo.</p>
+  </header>
+
+  <main class="view" id="view" data-level="2">
+    <div class="toolbar" role="toolbar" aria-label="Opciones de la vista">
+      <label class="field field--search"><span>Buscar</span>
+        <input type="search" id="q" placeholder="Nombre, ciudad, NIT…" autocomplete="off">
+      </label>
+      <label class="field"><span>Agrupar por</span>
+        <select id="group">
+          <option value="cat">Categoría</option>
+          <option value="state">Estado</option>
+          <option value="city">Ciudad</option>
+          <option value="none">Sin agrupar</option>
+        </select>
+      </label>
+      <label class="field"><span>Ordenar por</span>
+        <select id="sort">
+          <option value="compras">Compras (mayor primero)</option>
+          <option value="cumpl">Cumplimiento (menor primero)</option>
+          <option value="rating">Calificación</option>
+          <option value="lead">Plazo de entrega</option>
+          <option value="name">Nombre</option>
+        </select>
+      </label>
+      <span class="count" id="count"></span>
+      <fieldset class="seg">
+        <legend>Detalle</legend>
+        <div class="seg__track">
+          <label><input type="radio" name="level" id="lv1" value="1">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="11" y="1" width="4" height="4" rx="1"/><rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/></g></svg>Mapa</label>
+          <label><input type="radio" name="level" id="lv2" value="2" checked>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.2"/></g></svg>Tarjetas</label>
+          <label><input type="radio" name="level" id="lv3" value="3">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="13" height="13" rx="1.6"/><path d="M4.5 5h7M4.5 8h7M4.5 11h4"/></g></svg>Fichas</label>
+        </div>
+      </fieldset>
+    </div>
+
+    <ul class="legend" id="legend" aria-label="Leyenda del mapa"></ul>
+    <div class="zone" id="zone"></div>
+    <div id="pool" hidden></div>
+  </main>
+</div>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  // ---------- Datos de ejemplo (semilla fija: siempre salen los mismos) ----------
+  let seed = 412;
+  const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const between = (a, b) => a + rnd() * (b - a);
+
+  const CATS = { el: "Eléctricos", hi: "Hidráulicos", og: "Obra gris", fe: "Ferretería", pi: "Pinturas y acabados" };
+  const STATES = { ok: "Al día", vence: "Póliza por vencer", revision: "En revisión", bloqueado: "Bloqueado" };
+  const STATE_ORDER = ["bloqueado", "vence", "revision", "ok"];
+  const CITIES = ["Barranquilla", "Soledad", "Malambo", "Cartagena", "Santa Marta", "Bogotá", "Medellín", "Bucaramanga", "Cali", "Valledupar", "Montería", "Sincelejo"];
+  const SEED = [
+    ["Ferrecaribe", "fe", 4.6, 5, "Barranquilla"], ["Suministros Andes", "og", 4.2, 8, "Bogotá"],
+    ["Eléctricos del Norte", "el", 4.4, 3, "Barranquilla"], ["Distri Sabana", "og", 3.9, 12, "Bogotá"],
+    ["Aceros Malambo", "og", 4.0, 6, "Malambo"], ["Hidráulicos 3R", "hi", 4.7, 4, "Soledad"],
+    ["Tornillos Rivera", "fe", 3.6, 10, "Barranquilla"], ["Metales Unión", "og", 4.3, 7, "Cartagena"],
+    ["Pinturas Costa", "pi", 3.8, 5, "Santa Marta"], ["Grupo Covial", "og", 4.1, 15, "Medellín"],
+  ];
+  const PRE = [["Ferretería", "fe"], ["Distribuidora", null], ["Suministros", null], ["Aceros", "og"], ["Eléctricos", "el"],
+    ["Hidráulicos", "hi"], ["Pinturas", "pi"], ["Tornillos", "fe"], ["Metales", "og"], ["Grupo", null], ["Comercial", null],
+    ["Depósito", "og"], ["Materiales", "og"], ["Cables", "el"], ["Tubos y Accesorios", "hi"], ["Acabados", "pi"], ["Iluminación", "el"], ["Maderas", "og"]];
+  const SUF = ["del Norte", "Caribe", "Andina", "La Sabana", "Costa Azul", "El Prado", "Atlántico", "del Valle", "Magdalena", "La 30",
+    "Central", "Puerto Colombia", "San José", "Santa Fe", "La Esperanza", "Oriente", "Pacífico", "Los Llanos", "El Rodadero",
+    "Bocagrande", "La Castellana", "Alameda", "Galerías", "Villa Country"];
+  const FIRST = ["Carolina", "Andrés", "Luisa", "Jorge", "Paola", "Camilo", "Natalia", "Hernán", "Daniela", "Óscar", "Mónica", "Felipe", "Yesenia", "Rafael", "Adriana", "Iván"];
+  const LAST = ["Pérez", "Rodríguez", "Gómez", "Martínez", "Barrios", "Charris", "De la Hoz", "Ospina", "Mejía", "Cantillo", "Pineda", "Rojas", "Orozco", "Villa"];
+  const NOTES = {
+    revision: ["RUT actualizado pendiente", "Certificación bancaria en revisión", "Proveedor nuevo: faltan referencias"],
+    bloqueado: ["Facturas con glosa sin resolver", "Incumplió dos entregas seguidas", "Póliza de cumplimiento vencida"],
+  };
+  const TODAY = new Date(2026, 8, 28);
+  const daysAgo = (n) => new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - n);
+
+  const nf = new Intl.NumberFormat("es-CO");
+  const nf1 = new Intl.NumberFormat("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const df = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short" });
+  const money = (v) => `$ ${(v < 1e8 ? nf1 : nf).format(v < 1e8 ? v / 1e6 : Math.round(v / 1e6))} M`;
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+  const used = new Set();
+  const rows = SEED.map(([name, cat, rating, lead, city]) => ({ name, cat, rating, lead, city }));
+  rows.forEach((r) => used.add(r.name));
+  while (rows.length < 142) {
+    const [p, pc] = pick(PRE); const name = `${p} ${pick(SUF)}`;
+    if (used.has(name)) continue;
+    used.add(name);
+    rows.push({ name, cat: pc ?? pick(Object.keys(CATS)), rating: +between(3.3, 4.9).toFixed(1), lead: 2 + Math.floor(rnd() * 15), city: pick(CITIES) });
+  }
+
+  const DATA = rows.map((r, i) => {
+    const heavyBoost = rnd() > 0.88 ? 0.45 : 0;
+    const compras = Math.round(30e6 * Math.pow(10, rnd() * 1.7 + heavyBoost));
+    const trend = (rnd() - 0.4) * 0.9;
+    const raw = Array.from({ length: 12 }, (_, m) => Math.max(0.06, (1 + trend * (m / 11 - 0.5)) * (1 + 0.12 * Math.sin(m * Math.PI / 3 + i)) * (1 + (rnd() - 0.5) * 0.5)));
+    const sum = raw.reduce((a, b) => a + b, 0);
+    const months = raw.map((v) => v / sum * compras);
+    const last3 = months.slice(9).reduce((a, b) => a + b, 0), prev3 = months.slice(6, 9).reduce((a, b) => a + b, 0);
+    const s = rnd();
+    let state = s < 0.045 ? "bloqueado" : s < 0.11 ? "vence" : s < 0.19 ? "revision" : "ok";
+    if (r.name === "Metales Unión") state = "vence";
+    if (r.name === "Hidráulicos 3R" || r.name === "Ferrecaribe") state = "ok";
+    const cumpl = Math.round(state === "bloqueado" ? between(58, 78) : state === "revision" ? between(76, 95) : between(84, 99.4));
+    const ago = state === "bloqueado" ? 60 + Math.floor(rnd() * 90) : 1 + Math.floor(rnd() * 40);
+    const note = state === "vence" ? `Póliza de cumplimiento vence el ${df.format(new Date(2026, 8, 30 + Math.floor(rnd() * 14)))}`
+      : NOTES[state] ? pick(NOTES[state]) : "";
+    const base = 800 + Math.floor(rnd() * 400);
+    const orders = [0, 1, 2].map((k) => ({
+      id: `OC-2026-${String(base - k * (7 + Math.floor(rnd() * 30))).padStart(4, "0")}`,
+      date: daysAgo(ago + k * (12 + Math.floor(rnd() * 25))),
+      value: compras / 12 * between(0.25, 1.3),
+      st: k === 0 ? (state === "bloqueado" ? "Retenida" : ago < 9 ? "En tránsito" : "Entregada") : "Entregada",
+    }));
+    const nitBody = 800000000 + Math.floor(rnd() * 101000000);
+    return {
+      id: `p${i}`, ...r, compras, months, state, cumpl, note, orders,
+      delta: prev3 ? (last3 / prev3 - 1) * 100 : 0,
+      last: daysAgo(ago),
+      nit: `${nf.format(nitBody)}-${Math.floor(rnd() * 10)}`,
+      contact: `${pick(FIRST)} ${pick(LAST)}`,
+      phone: `+57 3${10 + Math.floor(rnd() * 12)} ${100 + Math.floor(rnd() * 900)} ${1000 + Math.floor(rnd() * 9000)}`,
+    };
+  });
+
+  // Rango por compras: el 10 % más alto es «pesado» (bento) y la intensidad del mapa sale del percentil.
+  [...DATA].sort((a, b) => a.compras - b.compras).forEach((d, k, arr) => {
+    const q = k / (arr.length - 1);
+    d.mix = Math.round(14 + q * 68);
+    d.heavy = q >= 0.9;
+  });
+
+  // ---------- Tarjetas (un nodo persistente por registro) ----------
+  function spark(months) {
+    const min = Math.min(...months) * 0.85, max = Math.max(...months);
+    const pts = months.map((v, i) => [i / 11 * 100, 30 - (v - min) / (max - min || 1) * 26 - 2]);
+    const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join("");
+    const endY = pts[11][1];
+    return `<div class="spark" aria-hidden="true"><svg viewBox="0 0 100 30" preserveAspectRatio="none">
+      <line class="base" x1="0" y1="30" x2="100" y2="30"/><path class="area" d="${line}L100,30L0,30Z"/><path class="line" d="${line}"/></svg>
+      <span class="spark__dot" style="top:${(endY / 30 * 100).toFixed(1)}%"></span></div>`;
+  }
+  const barClass = (c) => (c >= 90 ? "" : c >= 80 ? "mid" : "low");
+
+  function cardHTML(d) {
+    const up = d.delta >= 0;
+    return `
+      <button class="card__hit" type="button" aria-expanded="false" aria-label="${d.name}, ${STATES[d.state]}"></button>
+      <div class="card__body">
+        <div class="card__main">
+          <div class="card__head"><h3 class="card__name">${d.name}</h3><span class="chip chip--${d.state}">${STATES[d.state]}</span></div>
+          <p class="card__meta">${CATS[d.cat]} · ${d.city}</p>
+          ${d.note ? `<p class="card__note">${d.note}</p>` : ""}
+          <div class="kpi">
+            <div><span class="kpi__value">${money(d.compras)}</span>
+              <span class="kpi__label">compras en 12 meses<span class="delta ${up ? "up" : "down"}" title="Último trimestre frente al anterior">${up ? "▲" : "▼"} ${nf.format(Math.abs(Math.round(d.delta)))} %</span></span></div>
+            ${spark(d.months)}
+          </div>
+          <p class="brief lvl-2only">★ ${nf1.format(d.rating)} · ${d.lead} días · ${d.cumpl} % a tiempo</p>
+          <dl class="facts lvl-3">
+            <div><dt>Calificación</dt><dd>★ ${nf1.format(d.rating)} <span class="sub">de 5</span></dd></div>
+            <div><dt>Plazo de entrega</dt><dd>${d.lead} días</dd></div>
+            <div><dt>Entregas a tiempo</dt><dd>${d.cumpl} %<span class="bar ${barClass(d.cumpl)}"><i style="width:${d.cumpl}%"></i></span></dd></div>
+            <div><dt>Última orden</dt><dd>${df.format(d.last)}</dd></div>
+            <div><dt>NIT</dt><dd>${d.nit}</dd></div>
+            <div><dt>Contacto</dt><dd>${d.contact}<span class="sub">${d.phone}</span></dd></div>
+          </dl>
+        </div>
+        <div class="card__more lvl-open">
+          <h4>Últimas órdenes de compra</h4>
+          <div class="orders-wrap"><table class="orders"><tbody>
+            ${d.orders.map((o) => `<tr><td>${o.id}</td><td>${df.format(o.date)}</td><td class="num">${money(o.value)}</td><td class="st">${o.st}</td></tr>`).join("")}
+          </tbody></table></div>
+          <div class="actions">
+            <button class="btn btn--primary" type="button" data-act="Nueva orden de compra"${d.state === "bloqueado" ? " disabled" : ""}>Nueva orden de compra</button>
+            <button class="btn" type="button" data-act="Ver cotizaciones">Ver cotizaciones</button>
+          </div>
+        </div>
+      </div>
+      <button class="card__close lvl-open" type="button" aria-label="Cerrar ficha de ${d.name}">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>`;
+  }
+
+  const byEl = new Map();
+  for (const d of DATA) {
+    const el = document.createElement("article");
+    el.className = "card" + (d.heavy ? " is-heavy" : "");
+    el.dataset.id = d.id;
+    el.dataset.state = d.state;
+    el.style.setProperty("--mix", d.mix + "%");
+    el.innerHTML = cardHTML(d);
+    d.el = el;
+    d.hay = norm(`${d.name} ${d.city} ${CATS[d.cat]} ${d.nit} ${d.contact}`);
+    byEl.set(el, d);
+  }
+
+  // ---------- Estado de la vista ----------
+  const $ = (id) => document.getElementById(id);
+  const view = $("view"), zone = $("zone"), pool = $("pool"), q = $("q"), groupSel = $("group"), sortSel = $("sort");
+  let level = 2, openCard = null;
+
+  const SORTS = {
+    compras: (a, b) => b.compras - a.compras,
+    cumpl: (a, b) => a.cumpl - b.cumpl,
+    rating: (a, b) => b.rating - a.rating,
+    lead: (a, b) => a.lead - b.lead,
+    name: (a, b) => a.name.localeCompare(b.name, "es"),
+  };
+  const GROUPS = {
+    cat: { key: (d) => d.cat, label: (k) => CATS[k], order: (a, b) => b.total - a.total },
+    state: { key: (d) => d.state, label: (k) => STATES[k], order: (a, b) => STATE_ORDER.indexOf(a.k) - STATE_ORDER.indexOf(b.k) },
+    city: { key: (d) => d.city, label: (k) => k, order: (a, b) => b.items.length - a.items.length },
+    none: null,
+  };
+
+  function layout() {
+    const term = norm(q.value.trim());
+    const items = DATA.filter((d) => !term || d.hay.includes(term)).sort(SORTS[sortSel.value]);
+    const g = GROUPS[groupSel.value];
+    const buckets = new Map();
+    for (const d of items) {
+      const k = g ? g.key(d) : "";
+      if (!buckets.has(k)) buckets.set(k, { k, items: [], total: 0 });
+      const b = buckets.get(k); b.items.push(d); b.total += d.compras;
+    }
+    const list = [...buckets.values()];
+    if (g) list.sort(g.order);
+
+    const shown = new Set(items);
+    for (const d of DATA) if (!shown.has(d)) { d.el.hidden = true; pool.append(d.el); }
+    if (openCard && openCard.hidden) closeCard(openCard, false);
+
+    const frag = document.createDocumentFragment();
+    for (const b of list) {
+      const shelf = document.createElement("section");
+      shelf.className = "shelf";
+      if (g) {
+        shelf.setAttribute("aria-label", g.label(b.k));
+        shelf.innerHTML = `<div class="shelf__head"><h2>${g.label(b.k)}</h2><span class="shelf__count">${b.items.length} ${b.items.length === 1 ? "proveedor" : "proveedores"}</span><span class="shelf__total">${money(b.total)}</span></div>`;
+      }
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      for (const d of b.items) { d.el.hidden = false; grid.append(d.el); }
+      shelf.append(grid);
+      frag.append(shelf);
+    }
+    zone.replaceChildren(frag);
+    if (!items.length) zone.innerHTML = `<p class="empty">Ningún proveedor coincide con «${q.value.trim().replace(/[<&]/g, "")}».</p>`;
+
+    $("count").textContent = items.length === DATA.length ? `${DATA.length} proveedores` : `${items.length} de ${DATA.length}`;
+    const c = { ok: 0, vence: 0, revision: 0, bloqueado: 0 };
+    items.forEach((d) => c[d.state]++);
+    $("legend").innerHTML = `
+      <li><span class="sw sw--ramp" aria-hidden="true"><i style="--m:16%"></i><i style="--m:45%"></i><i style="--m:80%"></i></span>Al día <b>${c.ok}</b> · más intenso, más compras</li>
+      <li><span class="sw sw--vence" aria-hidden="true"></span>Póliza por vencer <b>${c.vence}</b></li>
+      <li><span class="sw sw--revision" aria-hidden="true"></span>En revisión <b>${c.revision}</b></li>
+      <li><span class="sw sw--bloqueado" aria-hidden="true"></span>Bloqueado <b>${c.bloqueado}</b></li>`;
+  }
+
+  // ---------- Movimiento: FLIP sobre los nodos persistentes ----------
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
+
+  function transition(mutate, anchor) {
+    const cards = DATA.map((d) => d.el);
+    const before = new Map();
+    const anchorTop = anchor && !anchor.hidden ? anchor.getBoundingClientRect().top : null;
+    const animate = !reduced();
+    if (animate) {
+      // Se mide antes de cancelar: si ya había una animación en curso, se parte de donde se ve ahora.
+      for (const c of cards) if (!c.hidden && c.isConnected) before.set(c, c.getBoundingClientRect());
+      for (const c of cards) c.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+    }
+    mutate();
+    if (anchorTop != null && !anchor.hidden) window.scrollBy(0, anchor.getBoundingClientRect().top - anchorTop);
+    if (!animate) return;
+
+    const vh = innerHeight;
+    const inView = (r) => r.bottom > -40 && r.top < vh + 40;
+    const dur = 460;
+    for (const c of cards) {
+      if (c.hidden) continue;
+      const a = c.getBoundingClientRect();
+      const b = before.get(c);
+      if (!b) {
+        if (inView(a)) c.animate([{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: EASE });
+        continue;
+      }
+      if (!inView(a) && !inView(b)) continue;
+      const dx = b.left - a.left, dy = b.top - a.top, sx = b.width / a.width, sy = b.height / a.height;
+      const resized = Math.abs(sx - 1) > 0.04 || Math.abs(sy - 1) > 0.04;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && !resized) continue;
+      c.animate([
+        { transformOrigin: "0 0", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+        { transformOrigin: "0 0", transform: "none" },
+      ], { duration: resized ? dur : 360, easing: EASE });
+      if (resized) {
+        // El contenido estirado no se ve: aparece cuando la tarjeta ya casi tiene su forma nueva.
+        const body = c.querySelector(".card__body");
+        if (body && body.offsetParent) body.animate([{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }], { duration: dur, easing: "ease-out" });
+      }
+    }
+  }
+
+  // Ancla por defecto: la primera tarjeta que se ve debajo de la barra.
+  function anchorFromView() {
+    const top = document.querySelector(".toolbar").getBoundingClientRect().bottom;
+    for (const c of zone.querySelectorAll(".card")) if (c.getBoundingClientRect().bottom > top + 4) return c;
+    return null;
+  }
+
+  function setLevel(n, anchor) {
+    n = Math.max(1, Math.min(3, n));
+    if (n === level) return;
+    hideTip();
+    transition(() => {
+      level = n;
+      view.dataset.level = String(n);
+      $("lv" + n).checked = true;
+    }, openCard ?? anchor ?? anchorFromView());
+  }
+
+  function openCardEl(card) {
+    const prev = openCard;
+    transition(() => {
+      if (prev) setOpen(prev, false);
+      setOpen(card, true);
+      openCard = card;
+    }, card);
+    hideTip();
+    card.querySelector(".card__close").focus({ preventScroll: true });
+    const r = card.getBoundingClientRect();
+    const top = document.querySelector(".toolbar").getBoundingClientRect().bottom;
+    if (r.top < top || r.bottom > innerHeight) window.scrollBy({ top: r.top - top - 12, behavior: reduced() ? "auto" : "smooth" });
+  }
+  function closeCard(card, animate = true) {
+    const run = () => { setOpen(card, false); openCard = null; };
+    animate ? transition(run, card) : run();
+    if (animate) card.querySelector(".card__hit").focus({ preventScroll: true });
+  }
+  function setOpen(card, on) {
+    card.classList.toggle("is-open", on);
+    card.querySelector(".card__hit").setAttribute("aria-expanded", String(on));
+  }
+
+  // ---------- Eventos ----------
+  zone.addEventListener("click", (e) => {
+    const act = e.target.closest("[data-act]");
+    if (act) { toast(`«${act.dataset.act}»: en la maqueta no hace nada.`); return; }
+    const card = e.target.closest(".card");
+    if (!card) return;
+    if (e.target.closest(".card__close")) closeCard(card);
+    else if (e.target.closest(".card__hit")) openCardEl(card);
+  });
+
+  for (const r of document.querySelectorAll('input[name="level"]')) r.addEventListener("change", () => setLevel(+r.value));
+  groupSel.addEventListener("change", () => transition(layout, openCard));
+  sortSel.addEventListener("change", () => transition(layout, openCard));
+  let qTimer;
+  q.addEventListener("input", () => { clearTimeout(qTimer); qTimer = setTimeout(() => transition(layout, null), 140); });
+
+  // Ctrl + rueda (y el pellizco del trackpad, que llega igual): acercar = más detalle.
+  let acc = 0, lastStep = 0;
+  addEventListener("wheel", (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    acc += e.deltaY;
+    const now = performance.now();
+    if (Math.abs(acc) > 40 && now - lastStep > 380) {
+      const under = document.elementFromPoint(e.clientX, e.clientY)?.closest(".card");
+      setLevel(level + (acc < 0 ? 1 : -1), under);
+      acc = 0; lastStep = now;
+    }
+  }, { passive: false });
+
+  addEventListener("keydown", (e) => {
+    const t = e.target;
+    const typing = t.matches?.("input[type=search], select, textarea");
+    if (e.key === "Escape" && openCard && !typing) { closeCard(openCard); return; }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    const card = t.closest?.(".card");
+    if (e.key === "+" || e.key === "=") setLevel(level + 1, card);
+    else if (e.key === "-" || e.key === "_") setLevel(level - 1, card);
+  });
+
+  // Luz que sigue al puntero
+  zone.addEventListener("pointermove", (e) => {
+    const c = e.target.closest(".card");
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    c.style.setProperty("--my", `${e.clientY - r.top}px`);
+  });
+
+  // Globo del mapa
+  const tip = $("tip");
+  function showTip(card) {
+    if (level !== 1 || card.classList.contains("is-open")) return;
+    const d = byEl.get(card);
+    tip.innerHTML = `<b>${d.name}</b><span>${money(d.compras)} · ${STATES[d.state]}</span>`;
+    tip.hidden = false;
+    const r = card.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = r.left + r.width / 2 - w / 2, y = r.top - h - 8;
+    if (y < 8) y = r.bottom + 8;
+    tip.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, x))}px`;
+    tip.style.top = `${y}px`;
+  }
+  function hideTip() { tip.hidden = true; }
+  zone.addEventListener("pointerover", (e) => { const c = e.target.closest(".card"); c ? showTip(c) : hideTip(); });
+  zone.addEventListener("pointerleave", hideTip);
+  zone.addEventListener("focusin", (e) => { const c = e.target.closest(".card"); if (c) showTip(c); });
+  zone.addEventListener("focusout", hideTip);
+  addEventListener("scroll", hideTip, { passive: true });
+
+  const toastEl = $("toast");
+  let toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (toastEl.hidden = true), 2400);
+  }
+
+  layout();
+})();
+</script>
