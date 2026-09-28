@@ -28,6 +28,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
+| `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1612,6 +1613,47 @@ hijas directas del elemento.
 | Eventos | `nx-print-paginate` `{pages}`, `nx-print-before` `{pages}` (cancelable), `nx-print-after` `{pages}` |
 | En el documento | `slot="header"`, `slot="footer"`, `{page}`, `{pages}`, `data-print-page`, `data-print-keep`, `data-print-keep-with-next`, `data-print-break`, `data-print-sum` (`number` para cantidades), `data-currency`, `data-value` |
 | Funciones | `paginatePrint(blocks, {pageHeight, minRows?})`, `parsePrintSize()`, `parsePrintMargin()`, `fillPageText()`, `PRINT_SIZES`, `PRINT_LABELS` |
+
+## `<nx-signature>`
+
+**Firma a mano** para el recibido a satisfacción de una entrega, un acta o una autorización: en la
+pantalla con mouse, lápiz o dedo, o en el celular de quien recibe.
+
+- **Trazo que se ve como tinta:** Pointer Events con captura y eventos coalescidos, `touch-action:
+  none`, más fino cuanto más rápido y más grueso con más presión del lápiz, curvas suavizadas y nítido
+  a cualquier densidad de pantalla. La zona de firma es clara también en modo oscuro (una firma se
+  archiva sobre papel), con la línea, la «×» y «Firme aquí».
+- **Vector:** cada trazo es un `<path>` (su contorno relleno), recortado a lo firmado. El SVG es la
+  fuente de verdad: `toPNG(escala)` y el valor del formulario salen de él.
+- **Quién y qué:** nombre y cédula (`ask-name`, `ask-id`); con `document`, la huella SHA-256 del texto
+  firmado más la fecha (prueba qué se firmó; no es una firma electrónica certificada); con `geo`, la
+  ubicación si la persona la permite.
+- **Sin trazo:** «Escribir mi nombre» genera la firma con la cursiva del sistema, marcada
+  `typed: true`: el camino por teclado y para quien no puede firmar con el dedo.
+- **Formulario:** `name`, `required` (ni un punto ni una raya valen), `value-format` (`json` con
+  `{svg, meta}`, `svg` o `png`), `reset` la borra, `readonly` muestra una guardada.
+- **En el celular:** con `handoff`, «Firmar en el celular» muestra el QR de
+  `<nx-handoff kind="signature">`; el teléfono firma (a pantalla completa y en horizontal si se puede) y
+  la firma aparece aquí.
+
+```html
+<form method="post">
+  <article id="remision">…</article>
+  <nx-signature name="recibido" ask-name ask-id required document="remision" handoff="/api/handoff"></nx-signature>
+  <button>Registrar el recibido</button>
+</form>
+
+<!-- Una firma guardada -->
+<nx-signature readonly value='{"svg":"<svg …>","meta":{…}}'></nx-signature>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `name`, `required`, `readonly`, `disabled`, `ask-name`, `ask-id`, `document`, `geo`, `value-format` (`json`, `svg`, `png`), `auto`, `handoff`, `pen-color`, `height` (px, 180), `locale`, `labels` · `value` (`{svg, meta}`, su JSON o el SVG) · `strokes` (solo lectura) |
+| Métodos | `clear()`, `undo()` (también Ctrl/⌘+Z), `toSVG()`, `toPNG(escala?)` → `Promise<Blob \| null>`, `load(valor)` → `boolean`, `isEmpty()`, `checkValidity()` |
+| Eventos | `nx-signature-change` `{empty}`, `nx-signature-done` `{svg, meta}` |
+| `meta` | `{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}` |
+| Funciones | `signatureSVG(trazos, tinta?)`, `signaturePath(puntos, anchos)`, `signatureWidth(velocidad, presión, lápiz)`, `signatureStrokeWidths(trazo)`, `smoothSignaturePoints(puntos)`, `signatureBounds(trazos, margen)`, `signatureCheck(trazos, mínimo?)`, `signatureHash(texto, fecha)`, `typedSignatureSVG(nombre)`, `parseSignatureValue(valor)`, `cleanSignatureMeta(meta)`, `signatureDate(iso, locale)`, `normalizeSignedText(texto)`, `SIGNATURE_LABELS`, `SIGNATURE_MIN`, `SIGNATURE_PEN`, `SIGNATURE_INK`, `SIGNATURE_FONT` |
 
 ## Desarrollo
 

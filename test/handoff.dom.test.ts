@@ -238,6 +238,24 @@ describe("<nx-handoff> escritorio", () => {
     expect(change).toHaveBeenCalledTimes(1);
   });
 
+  it("una firma (`kind: data`) va a `load(data)` del destino (como <nx-signature>); el resumen dice «1 firma»", async () => {
+    const srv = server({ "POST /api/handoff": () => json(SESSION) });
+    const el = mount('endpoint="/api/handoff" kind="signature" for="firma"', '<div id="firma"></div>');
+    const target = document.getElementById("firma") as HTMLElement & { load: ReturnType<typeof vi.fn> };
+    target.load = vi.fn();
+    await open(el, srv);
+    expect(el.kind).toBe("signature");
+    expect(JSON.parse(String(srv.calls[0].init.body))).toEqual({ kind: "signature" });
+    const data = { svg: "<svg/>", meta: { signedAt: "2026-09-28T20:42:00.000Z" } };
+    srv.last().push({ type: "item", item: { kind: "data", id: "d1", data } });
+    await until(() => target.load.mock.calls.length === 1);
+    expect(target.load.mock.calls[0][0]).toEqual(data);
+    expect(status(el)).toBe("Recibiendo 1 firma…");
+    srv.last().push({ type: "done" });
+    await until(() => el.state === "done");
+    expect($(el, ".nx-ho__summary").textContent).toContain("1 firma desde el celular");
+  });
+
   it("`nx-handoff-item` cancelado: la app se encarga y no se entrega", async () => {
     const srv = server({ "POST /api/handoff": () => json(SESSION), "GET /api/handoff/s1/files/1": () => new Response(new Blob(["JPEG"])) });
     const el = mount('endpoint="/api/handoff" for="factura"', '<div id="factura"></div>');
@@ -494,6 +512,16 @@ function pickFiles(el: Element, files: File[]) {
   input.dispatchEvent(new Event("change"));
 }
 
+/** Una firma con el dedo sobre el canvas de un <nx-signature>: una onda a lo ancho. */
+function sign(pad: Element) {
+  const c = pad.querySelector("canvas")!;
+  const ev = (type: string, i: number) =>
+    c.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: "touch", clientX: 20 + i * 5, clientY: 60 + Math.sin(i / 3) * 20, bubbles: true, cancelable: true }));
+  ev("pointerdown", 0);
+  for (let i = 1; i < 50; i++) ev("pointermove", i);
+  ev("pointerup", 50);
+}
+
 describe("<nx-handoff side=phone>", () => {
   it("sesión vencida o ya usada: un mensaje claro y nada más", async () => {
     const srv = server({ "GET /api/handoff/s1": () => new Response("", { status: 410 }) });
@@ -607,6 +635,65 @@ describe("<nx-handoff side=phone>", () => {
     [...el.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === HANDOFF_PHONE_LABELS.finish)!.click();
     await until(() => el.textContent!.includes(HANDOFF_PHONE_LABELS.sent));
     expect(srv.calls.at(-1)!.url.pathname).toBe("/api/handoff/s1/done");
+  });
+
+  it("firmar: carga <nx-signature> aparte (nombre y cédula si se piden), manda {kind: data, data: {svg, meta}} y cierra la tanda", async () => {
+    const bodies: { kind: string; data: { svg: string; meta: Record<string, unknown> } }[] = [];
+    const srv = server({
+      "GET /api/handoff/s1": () => json({ kind: "signature", title: "Recibido REM-3391", askName: true, askId: true }),
+      "POST /api/handoff/s1/items": (c) => {
+        bodies.push(JSON.parse(String(c.init.body)));
+        return json({ item: { kind: "data", id: "d1", data: bodies[0].data } });
+      },
+      "POST /api/handoff/s1/done": () => json({}),
+    });
+    const el = phone();
+    const done: unknown[] = [];
+    el.addEventListener("nx-handoff-done", (e) => done.push(e.detail));
+    await until(() => el.querySelector("nx-signature"), 5000);
+    const pad = el.querySelector("nx-signature")!;
+    expect($(el, ".nx-ho__title").textContent).toBe("Recibido REM-3391");
+    expect([pad.required, pad.askName, pad.askId]).toEqual([true, true, true]);
+    expect(Number(pad.getAttribute("height"))).toBeGreaterThanOrEqual(140);
+    // Sin Fullscreen API (o en un computador) no se ofrece la pantalla completa.
+    const full = [...el.querySelectorAll<HTMLButtonElement>(".nx-ho__btn")].find((b) => b.textContent === HANDOFF_PHONE_LABELS.fullscreen)!;
+    expect(full.hidden).toBe(true);
+    const [name, id] = pad.querySelectorAll("input");
+    name.value = "Luz Mery Ortiz";
+    id.value = "32.456.789";
+    sign(pad);
+    $<HTMLButtonElement>(pad, '[data-a="confirm"]').click();
+    await until(() => el.textContent!.includes(HANDOFF_PHONE_LABELS.sent));
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].kind).toBe("data");
+    expect(bodies[0].data.svg).toMatch(/^<svg[^>]*><g fill="#1a2238"><path d="M/);
+    expect(bodies[0].data.meta).toMatchObject({ name: "Luz Mery Ortiz", id: "32.456.789", typed: false, strokes: 1, device: "touch" });
+    const items = srv.calls.find((c) => c.url.pathname.endsWith("/items"))!;
+    expect((items.init.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
+    expect(srv.calls.at(-1)!.url.pathname).toBe("/api/handoff/s1/done");
+    expect(done).toEqual([{ items: [{ kind: "data", id: "d1", data: bodies[0].data }] }]);
+  });
+
+  it("firmar sin red: lo dice y «Reintentar» manda la misma firma (sin volver a firmar)", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let ok = false;
+    let posts = 0;
+    server({
+      "GET /api/handoff/s1": () => json({ kind: "signature" }),
+      "POST /api/handoff/s1/items": () => (posts++, ok ? json({}) : new Response("", { status: 400 })),
+      "POST /api/handoff/s1/done": () => json({}),
+    });
+    const el = phone();
+    await until(() => el.querySelector("nx-signature"), 5000);
+    const pad = el.querySelector("nx-signature")!;
+    sign(pad);
+    $<HTMLButtonElement>(pad, '[data-a="confirm"]').click();
+    await until(() => el.textContent!.includes(HANDOFF_PHONE_LABELS.offline));
+    ok = true;
+    // La firma no se pierde: «Reintentar» la manda de nuevo sin volver a firmar.
+    [...el.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === HANDOFF_LABELS.retry)!.click();
+    await until(() => el.textContent!.includes(HANDOFF_PHONE_LABELS.sent));
+    expect(posts).toBe(2);
   });
 
   it("sin red al abrir: lo dice y deja reintentar", async () => {
