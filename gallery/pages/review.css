@@ -1,0 +1,307 @@
+/* Demo de <nx-review>: la orden de compra OC-2291 y los controles de la página. */
+
+.rv-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-block: 4px 14px;
+}
+.rv-try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  & > span:last-child {
+    display: contents;
+  }
+}
+.rv-try__label {
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.rv-chip {
+  padding: 5px 11px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-primary-ink);
+  font: 550 12.5px var(--nx-font-sans);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-primary-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.rv-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+
+  & legend {
+    float: left;
+    margin-inline-end: 4px;
+    padding: 0;
+    color: var(--nx-text-tertiary);
+    font-weight: 600;
+  }
+  & label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+}
+
+.rv-form {
+  display: grid;
+  gap: 18px;
+  max-inline-size: 920px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.rv-form__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding-block-end: 14px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+
+  & p {
+    margin: 0;
+  }
+}
+.rv-form__kicker {
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rv-form__title {
+  margin: 2px 0 0;
+  font-size: 17px;
+}
+.rv-form__meta {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.rv-dirty {
+  padding: 3px 10px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: 999px;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+
+  &[data-dirty] {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+    font-weight: 600;
+  }
+}
+
+.rv-sec {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  align-items: end;
+  gap: 14px 16px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  & > legend {
+    margin-block-end: 10px;
+    padding: 0;
+    color: var(--nx-foreground);
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+.rv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-inline-size: 0;
+
+  & > label {
+    color: var(--nx-muted-foreground);
+    font-size: 12.5px;
+    font-weight: 550;
+  }
+}
+.rv-field--wide {
+  grid-column: span 2;
+}
+.rv-field--full {
+  grid-column: 1 / -1;
+}
+.rv-form :is(input:not([type]), input[type="date"], select, textarea) {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-background);
+  color: var(--nx-foreground);
+  font: 14px var(--nx-font-sans);
+
+  &:focus {
+    border-color: var(--nx-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+}
+.rv-form textarea {
+  padding-block: 8px;
+  line-height: 1.45;
+  resize: vertical;
+}
+.rv-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 36px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.rv-sec--lines {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+.rv-table-wrap {
+  overflow-x: auto;
+}
+.rv-lines {
+  inline-size: 100%;
+  min-inline-size: 560px;
+  border-collapse: collapse;
+  font-size: 13px;
+  --nx-number-width: 100%;
+
+  & th {
+    padding: 0 8px 6px 0;
+    color: var(--nx-text-tertiary);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: start;
+  }
+  & td {
+    padding: 4px 8px 4px 0;
+    border-block-start: 1px solid var(--nx-border-subtle);
+    vertical-align: middle;
+  }
+  & th:nth-child(2),
+  & td:nth-child(2) {
+    inline-size: 110px;
+  }
+  & th:nth-child(3),
+  & td:nth-child(3) {
+    inline-size: 170px;
+  }
+  & th:last-child,
+  & td:last-child {
+    inline-size: 1%;
+    padding-inline-end: 0;
+  }
+  & .rv-num {
+    text-align: end;
+  }
+}
+.rv-del {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-muted-foreground);
+  font: 500 12.5px var(--nx-font-sans);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+.rv-add {
+  justify-self: start;
+}
+.rv-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.rv-form__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.rv-save {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font: 600 13px var(--nx-font-sans);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+/* El aviso de «confirm» de nx-guard, si se usa, en su fila. */
+.rv-form > .nx-guard__confirm {
+  justify-content: flex-end;
+}
+
+.rv-bitacora {
+  margin-block-start: 16px;
+
+  & pre {
+    max-block-size: 360px;
+    margin: 0;
+    padding: 12px 14px;
+    overflow: auto;
+    border: 1px solid var(--nx-border-subtle);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-canvas);
+    font: 12px/1.5 var(--nx-font-mono);
+  }
+}
+
+@media (max-width: 640px) {
+  .rv-field--wide {
+    grid-column: 1 / -1;
+  }
+}

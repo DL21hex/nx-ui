@@ -3175,6 +3175,423 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Agenda de recursos -->
+        <template id="page-planner">
+          <p class="eyebrow">Componentes</p>
+          <h1>Agenda de recursos <code class="tag">&lt;nx-planner&gt;</code></h1>
+          <p class="lead">
+            Los despachos de Aceros del Caribe: nueve camiones y tres montacargas en filas y la semana del festivo en columnas.
+            Arrastra una entrega a otra hora o a otro camión, estírala por los bordes o crea una arrastrando sobre un hueco: la
+            sombra dice la hora de inicio y fin y si chocaría. Se ve al instante; si el servidor no la acepta, vuelve a su lugar
+            y dice por qué.
+          </p>
+          <nx-planner id="planner-demo" view="week" date="2026-10-13" hours="06:00-18:00" holidays='["2026-10-12"]'
+            summary="equipos" endpoint="/demo/planner/reservas" locale="es-CO"></nx-planner>
+          <div class="dlg-row">
+            <button type="button" class="dlg-plain" id="planner-big">Cargar 300 recursos</button>
+          </div>
+          <p class="sel-tip">
+            Lleva una entrega al <strong>SXT-904</strong> el miércoles: está en mantenimiento y la API la rechaza. El jueves el
+            <strong>KLM-317</strong> tiene dos entregas a la vez (el choque marcado). <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace; con
+            <kbd>Ctrl</kbd> + rueda se acerca o aleja. Con el teclado: <kbd>Tab</kbd> hasta la rejilla, flechas por camión y
+            franja, <kbd>↵</kbd> abre la entrega o crea una; en la entrega, flechas la mueven y <kbd>Mayús</kbd>+flechas cambian
+            la duración.
+          </p>
+          <ol class="stage__log btn-events" id="planner-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Vistas</td><td><code>day</code> (franjas de 60, 30 o 15 min según el zoom), <code>week</code> y <code>month</code> (un día por columna; con <code>hours</code>, solo el horario laboral). Fines de semana, festivos y horas fuera del horario, sombreados; una línea marca «ahora».</td></tr>
+                <tr><td>Carriles y choques</td><td>Las reservas que se solapan en un recurso se apilan en carriles. Si pasan de su <code>capacity</code> (1), la fila y las barras se marcan y la barra dice cuántos recursos tienen choque. Un <code>block</code> (mantenimiento) ocupa el recurso entero.</td></tr>
+                <tr><td>Editar</td><td>Mover (en el tiempo y entre recursos), cambiar la duración por los bordes y crear sobre un hueco, ajustado a <code>snap</code>. Con el dedo, manteniendo pulsado. Soltar emite el evento (cancelable) y, con <code>endpoint</code>, el <code>PATCH</code>/<code>POST</code>/<code>DELETE</code>; si la app cancela o el servidor falla, vuelve con un aviso.</td></tr>
+                <tr><td>Deshacer</td><td>El último cambio, con el aviso, <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> o <code>undo()</code>: emite el evento inverso (<code>via: "undo"</code>) y su petición.</td></tr>
+                <tr><td>Datos grandes</td><td>Solo se pintan las filas y columnas visibles (y un margen). Con <code>source</code> pide cada período: <code>GET {source}?from=…&amp;to=…</code> → <code>{resources?, bookings}</code>, y aborta la petición anterior.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-planner id="despachos" view="week" hours="06:00-18:00" holidays='["2026-10-12"]'
+      summary="equipos" endpoint="/api/despachos/reservas"&gt;&lt;/nx-planner&gt;
+
+    despachos.resources = [
+      { id: "TKR-512", name: "TKR-512", detail: "Jorge Pérez · 10 t", icon: "truck", group: "Camiones" },
+      { id: "MC-01", name: "Montacargas 1", icon: "warehouse", group: "Montacargas", capacity: 1 },
+    ];
+    despachos.bookings = await (await fetch("/api/despachos?semana=2026-W42")).json();
+    // [{ id, resource, start: "2026-10-13T07:30", end: "2026-10-13T09:30", title, detail?, status? }]
+    despachos.addEventListener("nx-planner-change", (e) =&gt; {
+      if (e.detail.to.resource === "SXT-904") {
+        e.detail.message = "El SXT-904 está en mantenimiento";
+        e.preventDefault();
+      }
+    });</code></pre>
+            <pre role="tabpanel" hidden><code>import { Planner } from "nx-ui/solid";
+
+    &lt;Planner view="week" hours="06:00-18:00" resources={flota()} bookings={entregas()}
+      endpoint="/api/despachos/reservas" summary="equipos"
+      onSelect={(e) =&gt; abrirEntrega(e.detail.booking.id)}
+      onCreate={(e) =&gt; { e.preventDefault(); nuevaEntrega(e.detail); }} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>resources</code></td><td><code>[{id, name, detail?, avatar?, icon?, group?, capacity?}]</code>, en orden; <code>group</code> los agrupa bajo encabezados plegables.</td></tr>
+                <tr><td><code>bookings</code></td><td><code>[{id, resource, start, end, title, detail?, status?, color?, readonly?, data?}]</code>. <code>status</code>: <code>confirmed</code>, <code>tentative</code>, <code>active</code> o <code>block</code>. <code>start</code>/<code>end</code> sin zona son hora local de quien mira. Devuelve el estado actual, con los cambios aplicados.</td></tr>
+                <tr><td><code>view</code>, <code>date</code>, <code>snap</code></td><td><code>day</code>, <code>week</code> (por defecto) o <code>month</code>; el día a la vista (ISO); minutos de la rejilla (15 en día, 30 en semana; en mes, un día).</td></tr>
+                <tr><td><code>hours</code>, <code>workdays</code>, <code>holidays</code></td><td>Horario laboral (<code>"07:00-18:00"</code>), días laborables (<code>[1,2,3,4,5]</code>, lunes = 1) y festivos (<code>["2026-10-12"]</code>).</td></tr>
+                <tr><td><code>summary</code></td><td>Fila de ocupación por columna («7/12»); su valor, si lo tiene, nombra lo que se cuenta («equipos»).</td></tr>
+                <tr><td><code>source</code>, <code>endpoint</code></td><td>Carga por período (<code>GET ?from=&amp;to=</code>) y a dónde van los cambios (<code>PATCH</code>/<code>POST</code>/<code>DELETE {endpoint}/{id}</code>; si responde error con <code>{message}</code>, ese es el motivo del aviso). Mismo origen o <code>allowOrigins()</code>.</td></tr>
+                <tr><td><code>readonly</code>, <code>locale</code>, <code>labels</code></td><td>Solo mirar y seleccionar; formato de fechas; textos (<code>PLANNER_LABELS</code>).</td></tr>
+                <tr><td>Métodos</td><td><code>goTo(fecha)</code>, <code>today()</code>, <code>scrollToBooking(id)</code>, <code>undo()</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-planner-change</code> <code>{booking, from, to, via}</code>, <code>nx-planner-create</code> <code>{booking, resource, start, end, via}</code>, <code>nx-planner-delete</code> <code>{booking, via}</code> (los tres cancelables; <code>detail.message</code> es el motivo del aviso), <code>nx-planner-select</code> <code>{booking}</code>, <code>nx-planner-range</code> <code>{from, to, view}</code>.</td></tr>
+                <tr><td>Teclado</td><td>Rejilla: flechas por recurso y franja, <kbd>Inicio</kbd>/<kbd>Fin</kbd>, <kbd>↵</kbd> crea o abre. Reserva: flechas la mueven, <kbd>Mayús</kbd>+flechas cambian la duración, <kbd>Supr</kbd> la borra, <kbd>Esc</kbd> vuelve (o deshace lo que no se registró).</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+            <!-- ================================================================ Resumen antes de guardar -->
+            <template id="page-review">
+              <p class="eyebrow">Componentes</p>
+              <h1>Resumen antes de guardar <code class="tag">&lt;nx-review&gt;</code></h1>
+              <p class="lead">
+                Antes de guardar, lo que va a cambiar: «Vas a guardar 3 cambios», con el precio de antes y el de ahora, la
+                fecha que se movió, el estado que pasó de «Por aprobar» a «Aprobada» y las líneas nuevas y quitadas. Es el antes
+                de <code>&lt;nx-history&gt;</code>: la misma lista va al servidor como bitácora.
+              </p>
+
+              <div class="rv-tools" lang="es-CO">
+                <div class="rv-try" role="group" aria-labelledby="rv-try-label">
+                  <span class="rv-try__label" id="rv-try-label">Prueba esto</span>
+                  <span id="rv-try"></span>
+                </div>
+                <fieldset class="rv-mode">
+                  <legend>Mostrar el resumen</legend>
+                  <label><input type="radio" name="rv-mode" value="significant" checked /> Si hay algo importante</label>
+                  <label><input type="radio" name="rv-mode" value="always" /> Siempre</label>
+                  <label><input type="radio" name="rv-mode" value="never" /> Nunca (solo <code>review()</code>)</label>
+                </fieldset>
+              </div>
+
+              <nx-review id="rv-demo" lang="es-CO" mode="significant" empty="notice">
+                <nx-guard id="rv-guard">
+                  <form class="rv-form" id="rv-form">
+                    <header class="rv-form__head">
+                      <div>
+                        <p class="rv-form__kicker">Compras · Orden de compra</p>
+                        <h2 class="rv-form__title">OC-2291</h2>
+                        <p class="rv-form__meta">Creada el 21 sept 2026 por Diego Llinás · Bodega Malambo</p>
+                      </div>
+                      <p class="rv-dirty" id="rv-dirty" aria-live="polite">Sin cambios</p>
+                    </header>
+
+                    <fieldset class="rv-sec">
+                      <legend>Encabezado</legend>
+                      <div class="rv-field rv-field--wide">
+                        <label for="rv-proveedor">Proveedor</label>
+                        <input id="rv-proveedor" name="proveedor" value="Aceros del Caribe S.A.S." autocomplete="off" />
+                      </div>
+                      <div class="rv-field">
+                        <label for="rv-entrega">Fecha de entrega</label>
+                        <input id="rv-entrega" name="entrega" type="date" value="2026-10-12" />
+                      </div>
+                      <div class="rv-field">
+                        <label for="rv-pago">Condición de pago</label>
+                        <select id="rv-pago" name="pago">
+                          <option value="contado">Contado</option>
+                          <option value="c30" selected>Crédito 30 días</option>
+                          <option value="c60">Crédito 60 días</option>
+                        </select>
+                      </div>
+                      <div class="rv-field">
+                        <label for="rv-estado">Estado</label>
+                        <select id="rv-estado" name="estado">
+                          <option value="borrador">Borrador</option>
+                          <option value="por-aprobar" selected>Por aprobar</option>
+                          <option value="aprobada">Aprobada</option>
+                          <option value="anulada">Anulada</option>
+                        </select>
+                      </div>
+                      <label class="rv-check">
+                        <input type="checkbox" name="iva" checked /> Facturar con IVA
+                      </label>
+                      <div class="rv-field rv-field--full">
+                        <label for="rv-obs">Observaciones</label>
+                        <textarea id="rv-obs" name="observaciones" rows="3">Entregar en la bodega de Malambo de lunes a viernes, de 7:00 a. m. a 3:00 p. m. Traer remisión firmada y certificado de calidad de la colada.</textarea>
+                      </div>
+                    </fieldset>
+
+                    <fieldset class="rv-sec rv-sec--lines">
+                      <legend>Líneas</legend>
+                      <div class="rv-table-wrap">
+                        <table class="rv-lines" data-review-rows="lineas" data-label="Líneas de la orden">
+                          <thead>
+                            <tr><th>Descripción</th><th class="rv-num">Cantidad</th><th class="rv-num">Precio unitario</th><th><span class="rv-sr">Quitar</span></th></tr>
+                          </thead>
+                          <tbody id="rv-body"></tbody>
+                        </table>
+                      </div>
+                      <button type="button" class="btn rv-add" id="rv-add">Agregar línea</button>
+                    </fieldset>
+
+                    <div class="rv-form__foot">
+                      <button type="button" class="btn" id="rv-manual">Revisar sin enviar</button>
+                      <button type="submit" class="rv-save">Guardar orden</button>
+                    </div>
+                  </form>
+                </nx-guard>
+              </nx-review>
+
+              <p class="stage__loglabel">Eventos</p>
+              <ol class="stage__log btn-events" id="review-log"></ol>
+              <div class="rv-bitacora" id="rv-bitacora" hidden>
+                <p class="stage__loglabel">Esto es lo que va a la bitácora (<code>changes</code>)</p>
+                <pre><code id="rv-json"></code></pre>
+              </div>
+
+              <h2>Cómo funciona</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
+                  <tbody>
+                    <tr><td>Cargas el formulario</td><td>Guarda cómo está cada campo (o toma <code>initial</code>, o lo que haya cuando llamas <code>snapshot()</code> después de traer el registro).</td></tr>
+                    <tr><td>Escribes</td><td>Nada, salvo la cuenta de <code>dirty</code> con una pausa: <code>nx-review-dirty</code> <code>{dirty, count}</code>, para el «¿Salir sin guardar?».</td></tr>
+                    <tr><td>Envías</td><td>Si hay algo importante (un monto que cambió 20 % o más, una fecha que se movió más de 7 días, un estado, un campo <code>data-review="important"</code>, un aviso de <code>&lt;nx-guard&gt;</code>) o más de 5 cambios, el envío se detiene y el resumen se despliega encima del botón, agrupado por sección y con lo importante primero. Si no, pasa directo.</td></tr>
+                    <tr><td>«Guardar»</td><td>Vuelve a enviar con el mismo botón (<code>requestSubmit(submitter)</code>), avisa <code>nx-review-confirm</code> <code>{changes}</code> y, después del envío, lo guardado pasa a ser la base.</td></tr>
+                    <tr><td>«Seguir editando» o <kbd>Esc</kbd></td><td>Cierra y lleva el foco al primer campo cambiado. Cada línea del resumen es un botón que lleva a su campo.</td></tr>
+                    <tr><td>Envías sin cambios</td><td>Pasa; con <code>empty="notice"</code>, dice «No hay cambios que guardar» y no envía.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h2>Cómo lo dice</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Campo</th><th>Así</th></tr></thead>
+                  <tbody>
+                    <tr><td>Montos y números</td><td>«Precio unitario: $ 10.000 → $ 12.000 (+$ 2.000 · +20%)». El formato sale de <code>&lt;nx-number format currency&gt;</code> o de <code>data-format</code> / <code>data-currency</code>, con el <code>locale</code>.</td></tr>
+                    <tr><td>Fechas</td><td>«Fecha de entrega: 12 oct 2026 → 15 oct 2026 (+3 días)».</td></tr>
+                    <tr><td>Selects y radios</td><td>Por la etiqueta de la opción: «Estado: Por aprobar → Aprobada». También <code>&lt;nx-select&gt;</code>.</td></tr>
+                    <tr><td>Casillas</td><td>«Facturar con IVA: Sí → No».</td></tr>
+                    <tr><td>Textos largos</td><td>La diferencia por palabras: lo quitado tachado y lo agregado resaltado.</td></tr>
+                    <tr><td>Filas de detalle</td><td>Nombres como <code>lineas[0].cantidad</code>, <code>lineas[2][precio]</code> o <code>lineas.3.cantidad</code>, o un <code>data-review-row</code> por fila: «2 líneas nuevas · 1 quitada · 1 cambiada», con cada una. Las reconoce por su campo <code>id</code>; sin él, por posición.</td></tr>
+                    <tr><td>Nunca</td><td>Contraseñas y campos con <code>data-review="off"</code>.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h2>Uso</h2>
+              <div class="tabs" data-tabs>
+                <div role="tablist">
+                  <button role="tab" aria-selected="true">HTML</button>
+                  <button role="tab" aria-selected="false">SolidJS</button>
+                </div>
+                <pre role="tabpanel"><code>&lt;nx-review mode="significant" threshold="20"&gt;
+      &lt;form&gt;
+        &lt;fieldset&gt;&lt;legend&gt;Encabezado&lt;/legend&gt;
+          &lt;label&gt;Fecha de entrega &lt;input name="entrega" type="date" value="2026-10-12"&gt;&lt;/label&gt;
+          &lt;label&gt;Estado &lt;select name="estado"&gt;…&lt;/select&gt;&lt;/label&gt;
+        &lt;/fieldset&gt;
+        &lt;table data-label="Líneas de la orden"&gt;
+          &lt;tr&gt;&lt;td&gt;&lt;input type="hidden" name="lineas[0].id" value="L-101"&gt;
+              &lt;nx-number name="lineas[0].precio" format="money" currency="COP" value="1275000"&gt;&lt;/nx-number&gt;&lt;/td&gt;&lt;/tr&gt;
+        &lt;/table&gt;
+        &lt;button&gt;Guardar&lt;/button&gt;
+      &lt;/form&gt;
+    &lt;/nx-review&gt;
+    &lt;script&gt;
+      review.addEventListener("nx-review-confirm", (e) =&gt; bitacora.push(e.detail.changes));
+      // Sin formulario, con tu propio botón:
+      if (await review.review()) await guardar();
+    &lt;/script&gt;</code></pre>
+                <pre role="tabpanel" hidden><code>import { Review } from "nx-ui/solid";
+
+    &lt;Review mode="significant" initial={orden()} onConfirm={(e) =&gt; guardarBitacora(e.detail.changes)}
+      onDirty={(e) =&gt; setSucio(e.detail.dirty)}&gt;
+      &lt;form onSubmit={guardar}&gt;…&lt;/form&gt;
+    &lt;/Review&gt;</code></pre>
+              </div>
+
+              <h2>API</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+                  <tbody>
+                    <tr><td><code>mode</code></td><td><code>significant</code> (por defecto), <code>always</code> o <code>never</code> (solo con <code>review()</code>).</td></tr>
+                    <tr><td><code>threshold</code>, <code>max-silent</code></td><td>Desde qué porcentaje un monto es importante (20) y más de cuántos cambios se muestran aunque nada lo sea (5).</td></tr>
+                    <tr><td><code>empty</code></td><td><code>notice</code>: al enviar sin cambios, «No hay cambios que guardar» y no envía.</td></tr>
+                    <tr><td><code>initial</code></td><td>La base (JSON <code>{campo: valor}</code>, con filas anidadas <code>{lineas: [{id, cantidad}]}</code> o planas).</td></tr>
+                    <tr><td><code>rebase</code></td><td><code>false</code>: después de guardar, la base no cambia (tú llamas <code>snapshot()</code>).</td></tr>
+                    <tr><td><code>locale</code>, <code>labels</code>, <code>disabled</code></td><td>Formato de montos y fechas, textos (<code>REVIEW_LABELS</code>; «uno|varios» con <code>{n}</code>), apagarlo.</td></tr>
+                    <tr><td>En los campos</td><td><code>data-label</code>, <code>data-format</code> (<code>money</code>, <code>number</code>, <code>percent</code>, <code>date</code>, <code>text</code>), <code>data-currency</code>, <code>data-review="important|status|off"</code>, <code>data-review-section</code>; en el contenedor de filas, <code>data-review-rows</code> y <code>data-label</code>; <code>data-review-row="clave"</code> por fila.</td></tr>
+                    <tr><td><code>snapshot()</code>, <code>review()</code>, <code>reset()</code></td><td>Lo de ahora es la base; mostrar el resumen sin formulario (promesa <code>true</code>/<code>false</code>); volver cada campo a la base.</td></tr>
+                    <tr><td><code>changes</code>, <code>dirty</code></td><td>La lista <code>{field, label, section, from, to, fromText, toText, kind, significant, reason, delta, diff, rows, warnings}</code>; ¿hay algo distinto?</td></tr>
+                    <tr><td>Eventos</td><td><code>nx-review-open</code> <code>{changes}</code> (cancelable: cancelarlo envía directo), <code>nx-review-confirm</code> <code>{changes, silent}</code>, <code>nx-review-cancel</code>, <code>nx-review-dirty</code> <code>{dirty, count}</code>.</td></tr>
+                    <tr><td>Funciones</td><td><code>diffReview</code>, <code>describeReview</code>, <code>groupReview</code>, <code>reviewShouldOpen</code>, <code>flattenReview</code>…: la misma lógica, para armar la bitácora en un backend en JavaScript.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+
+        <!-- ================================================================ Dictar -->
+        <template id="page-voice">
+          <p class="eyebrow">Componentes</p>
+          <h1>Dictar <code class="tag">&lt;nx-voice&gt;</code></h1>
+          <p class="lead">
+            En bodega, en campo o con las manos ocupadas: «veinte láminas galvanizadas calibre catorce para Ferretería El
+            Tornillo, entrega el viernes» y el formulario se llena. Se dicta a un <code>&lt;nx-paste-fill&gt;</code>, que
+            reparte los datos con su confianza y su deshacer, o directamente en un campo de texto, con la puntuación dicha.
+          </p>
+          <p class="sel-tip" id="vc-support"></p>
+
+          <div class="vc-demo" lang="es-CO">
+            <section class="vc-card" aria-labelledby="vc-order-title">
+              <header class="vc-card__head">
+                <h2 class="vc-card__title" id="vc-order-title">Pedido rápido de bodega</h2>
+                <nx-voice id="vc-voice" for="vc-fill" hotkey="Alt+V" locale="es-CO"></nx-voice>
+              </header>
+              <nx-paste-fill
+                id="vc-fill"
+                endpoint="/demo/voice/fill"
+                locale="es-CO"
+                fields='[{"name":"cliente","kind":"company"},{"name":"cantidad","kind":"number"},{"name":"calibre","kind":"number"},{"name":"entrega","kind":"date"},{"name":"observaciones","kind":"text"}]'
+              >
+                <form class="vc-form" id="vc-form">
+                  <label class="vc-field vc-field--wide">Cliente <input name="cliente" autocomplete="off" /></label>
+                  <label class="vc-field">Producto
+                    <select name="producto">
+                      <option value="">Selecciona…</option>
+                      <option value="LAM-HR">Lámina HR</option>
+                      <option value="LAM-GALV">Lámina galvanizada</option>
+                      <option value="VAR-12">Varilla corrugada ½"</option>
+                      <option value="TUB-2">Tubo estructural 2"</option>
+                      <option value="ANG-18">Ángulo 1½" × ⅛"</option>
+                      <option value="MAL-15">Malla electrosoldada</option>
+                    </select>
+                  </label>
+                  <label class="vc-field">Cantidad <input name="cantidad" inputmode="numeric" autocomplete="off" /></label>
+                  <label class="vc-field">Calibre
+                    <select name="calibre">
+                      <option value="">—</option>
+                      <option value="12">12</option>
+                      <option value="14">14</option>
+                      <option value="16">16</option>
+                      <option value="18">18</option>
+                      <option value="20">20</option>
+                      <option value="22">22</option>
+                      <option value="24">24</option>
+                    </select>
+                  </label>
+                  <label class="vc-field">Fecha de entrega <input name="entrega" type="date" /></label>
+                  <label class="vc-field vc-field--wide">Observaciones <textarea name="observaciones" rows="2"></textarea></label>
+                  <div class="vc-form__foot"><button type="submit" class="dlg-plain">Crear pedido</button></div>
+                </form>
+              </nx-paste-fill>
+            </section>
+
+            <section class="vc-card" aria-labelledby="vc-notes-title">
+              <h2 class="vc-card__title" id="vc-notes-title">Novedades de la entrega</h2>
+              <p class="vc-card__hint">
+                Mantén presionado el botón (o la barra espaciadora sobre él) y di los signos: «coma», «punto», «punto y
+                aparte», «nueva línea», «signo de interrogación». «Borrar eso» quita lo último que dictaste.
+              </p>
+              <label class="vc-field">Novedades
+                <textarea id="vc-notes" rows="5" placeholder="Lo que pasó en el cargue o la entrega…"></textarea>
+              </label>
+              <nx-voice id="vc-notes-voice" for="vc-notes" hold layout="stacked" locale="es-CO"></nx-voice>
+            </section>
+          </div>
+
+          <section class="vc-sim" aria-labelledby="vc-sim-title">
+            <h2 class="vc-sim__title" id="vc-sim-title">Probar sin micrófono</h2>
+            <p class="sel-tip">
+              Cada frase recorre los mismos eventos que una toma real (parciales, final y la entrega), con una API de voz de
+              mentira y un audio sintético en lugar del micrófono, que es lo que mueve el anillo.
+            </p>
+            <div class="vc-sim__row">
+              <div class="vc-phrases" id="vc-phrases" role="group" aria-label="Frases de ejemplo"></div>
+              <label class="vc-server"><input type="checkbox" id="vc-server" /> Usar el servidor (<code>engine="server"</code>)</label>
+            </div>
+          </section>
+          <ol class="stage__log btn-events" id="vc-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Reconocimiento</td><td>La Web Speech API del navegador (<code>SpeechRecognition</code>), en el idioma del <code>locale</code> (es-CO por defecto), con resultados parciales que se ven en gris mientras se habla y el final en negro.</td></tr>
+                <tr><td>Con servidor</td><td>Sin esa API, o con <code>engine="server"</code>: graba con <code>MediaRecorder</code> (WebM u Ogg con Opus, o MP4 en Safari) y hace <code>POST {endpoint}</code> con el audio. Responde <code>{text}</code>, o NDJSON/SSE con <code>{partial}</code> mientras transcribe. Sin ninguna de las dos, el botón no aparece.</td></tr>
+                <tr><td>Cómo se habla</td><td>Tocar para hablar (un toque empieza; otro toque o 2 s de silencio terminan) o <code>hold</code>: mientras se mantiene el botón o la barra espaciadora, útil con guantes o ruido. <code>hotkey</code> («Alt+V») sirve en toda la página y no choca con el toque de Alt de <code>&lt;nx-keytips&gt;</code>. Escape cancela.</td></tr>
+                <tr><td>Entrega</td><td>A un <code>&lt;nx-paste-fill&gt;</code>: su <code>fill(text)</code> reparte los datos y queda «Llené 4 campos · Deshacer». A un <code>&lt;input&gt;</code> o <code>&lt;textarea&gt;</code>: se escribe en el cursor (o sobre lo seleccionado) y el campo recibe <code>input</code> y <code>change</code>.</td></tr>
+                <tr><td>Español hablado</td><td>Solo al dictar en un campo de texto: los signos dichos («coma», «punto y aparte», «dos puntos», «nueva línea», «abre paréntesis»…), la mayúscula al empezar la frase, el «¿» o «¡» de apertura al dictar el de cierre, y las órdenes «borrar eso» y «borra la última palabra» (<code>commands="false"</code> las apaga). «El punto de venta» o «la coma decimal» quedan como palabras.</td></tr>
+                <tr><td>Privacidad</td><td>El micrófono se apaga siempre al terminar, al ocultar la pestaña, al desconectar el elemento o a los <code>max-seconds</code> (30): se detienen todas las pistas y se cierra el <code>AudioContext</code> del medidor. Nunca graba en segundo plano.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="sel-tip">
+            <strong>Qué navegadores traen la API de voz.</strong> Chrome y Edge (escritorio y Android) la traen, y el audio se
+            reconoce en los servidores de Google o de Microsoft: necesita internet («Sin conexión» si no hay) y el audio sale
+            del equipo. Safari la trae en macOS y en iOS. Firefox no la trae, y Brave la tiene pero suele fallar. Donde no hay,
+            o si el audio no puede salir hacia un tercero, <code>endpoint</code> con <code>engine="server"</code> usa el
+            servidor propio de la app. En la galería, «Usar el servidor» graba de verdad y un servidor de mentira responde una
+            frase fija.
+          </p>
+
+          <h2>Cómo se usa</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-voice for="pedido-fill" hotkey="Alt+V"&gt;&lt;/nx-voice&gt;
+    &lt;nx-paste-fill id="pedido-fill" fields='[{"name":"cantidad","kind":"number"}]'&gt;
+      &lt;form&gt;…&lt;/form&gt;
+    &lt;/nx-paste-fill&gt;
+
+    &lt;!-- En un campo de texto, mantener para hablar --&gt;
+    &lt;textarea id="novedades"&gt;&lt;/textarea&gt;
+    &lt;nx-voice for="novedades" hold layout="stacked"&gt;&lt;/nx-voice&gt;
+
+    &lt;!-- Sin la API del navegador (o sin mandar audio a terceros): el servidor de la app --&gt;
+    &lt;nx-voice for="pedido-fill" engine="server" endpoint="/api/voz"&gt;&lt;/nx-voice&gt;</code></pre>
+            <pre role="tabpanel" hidden><code>import { Voice, PasteFill } from "nx-ui/solid";
+
+    &lt;Voice for="pedido-fill" hotkey="Alt+V" onText={(e) =&gt; registrar(e.detail.text)} /&gt;
+    &lt;PasteFill id="pedido-fill"&gt;&lt;form&gt;…&lt;/form&gt;&lt;/PasteFill&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>for</code></td><td>El <code>id</code> de un <code>&lt;nx-paste-fill&gt;</code> (recibe <code>fill(text)</code>), un <code>&lt;input&gt;</code> o un <code>&lt;textarea&gt;</code> (se dicta en el cursor). Sin él, solo el evento.</td></tr>
+                <tr><td><code>engine</code>, <code>endpoint</code></td><td><code>auto</code> (por defecto: el navegador, si no el servidor), <code>browser</code> o <code>server</code>. <code>endpoint</code> recibe <code>POST</code> con <code>FormData</code> (<code>audio</code>, <code>lang</code>); solo del mismo origen o de uno de <code>allowOrigins</code>.</td></tr>
+                <tr><td><code>hold</code>, <code>hotkey</code></td><td>Mantener para hablar; atajo de página («Alt+V», «Ctrl+Shift+D»).</td></tr>
+                <tr><td><code>max-seconds</code>, <code>silence</code></td><td>Tope de una toma (30 s) y el silencio que la termina (2000 ms; no aplica con <code>hold</code>).</td></tr>
+                <tr><td><code>commands</code>, <code>layout</code></td><td><code>commands="false"</code> apaga «borrar eso» y «borra la última palabra». <code>layout</code>: <code>inline</code> (la transcripción al lado) o <code>stacked</code> (debajo).</td></tr>
+                <tr><td><code>locale</code>, <code>labels</code>, <code>disabled</code></td><td>Idioma del reconocimiento (o el <code>lang</code> más cercano), textos (<code>VOICE_LABELS</code>) y apagarlo.</td></tr>
+                <tr><td>Métodos y propiedades</td><td><code>start()</code>, <code>stop()</code>, <code>cancel()</code>; <code>state</code> (<code>idle</code>, <code>asking</code>, <code>listening</code>, <code>processing</code>, <code>error</code>, <code>unavailable</code>), <code>supported</code>, <code>text</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-voice-start</code>, <code>nx-voice-partial</code> <code>{text}</code>, <code>nx-voice-text</code> <code>{text, confidence, final}</code> (cancelable: no se entrega), <code>nx-voice-end</code> <code>{text, canceled}</code>, <code>nx-voice-error</code> <code>{code, message}</code>, <code>nx-voice-unavailable</code>.</td></tr>
+                <tr><td>Funciones</td><td><code>applyDictation</code>, <code>parseDictation</code>, <code>pickVoiceMime</code>, <code>parseVoiceLine</code>, <code>parseVoiceHotkey</code>, <code>voiceHotkeyMatches</code>, <code>speechTranscript</code>, <code>voiceLevel</code>, <code>voiceErrorCode</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

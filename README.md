@@ -29,6 +29,9 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
+| `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
+| `<nx-review>` + núcleo (ESM) | ≈ 10,4 KB |
+| `<nx-voice>` + núcleo (ESM); el dictado en un campo y el servidor se cargan aparte | ≈ 5,9 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1654,6 +1657,153 @@ pantalla con mouse, lápiz o dedo, o en el celular de quien recibe.
 | Eventos | `nx-signature-change` `{empty}`, `nx-signature-done` `{svg, meta}` |
 | `meta` | `{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}` |
 | Funciones | `signatureSVG(trazos, tinta?)`, `signaturePath(puntos, anchos)`, `signatureWidth(velocidad, presión, lápiz)`, `signatureStrokeWidths(trazo)`, `smoothSignaturePoints(puntos)`, `signatureBounds(trazos, margen)`, `signatureCheck(trazos, mínimo?)`, `signatureHash(texto, fecha)`, `typedSignatureSVG(nombre)`, `parseSignatureValue(valor)`, `cleanSignatureMeta(meta)`, `signatureDate(iso, locale)`, `normalizeSignedText(texto)`, `SIGNATURE_LABELS`, `SIGNATURE_MIN`, `SIGNATURE_PEN`, `SIGNATURE_INK`, `SIGNATURE_FONT` |
+
+## `<nx-planner>`
+
+**Agenda de recursos.** Personas, vehículos, máquinas o salas en filas y el tiempo en columnas: para
+despachos, turnos, mantenimientos, citas y alquiler de equipos. Tres vistas: `day` (franjas de 60, 30
+o 15 minutos según el zoom), `week` y `month` (un día por columna; con `hours`, solo el horario
+laboral). Encabezado pegajoso, línea de «ahora», fines de semana y festivos sombreados, Hoy, ← →,
+selector de fecha y zoom con `Ctrl` + rueda.
+
+- **Reservas** como barras con título, detalle y el tono de su estado (`confirmed`, `tentative`,
+  `active`, `block`). Las que se solapan se apilan en carriles; si pasan de la `capacity` del recurso
+  (1), la fila y las barras se marcan como **choque** y la barra superior dice cuántos recursos lo tienen.
+- **Editar arrastrando**: mover en el tiempo y entre recursos, cambiar la duración por los bordes, y
+  crear sobre un hueco, ajustado a `snap`. La sombra dice «Mar, 13 oct, 7:30 – 9:00 a. m.» y si
+  chocaría. Con el dedo, manteniendo pulsado (deslizar sin esperar desplaza la agenda).
+- **Optimista**: soltar pinta el cambio y emite `nx-planner-change` (cancelable); con `endpoint`, el
+  `PATCH {endpoint}/{id}`. Si la app cancela (con `e.detail.message`) o el servidor responde error
+  (`{message}`), vuelve a su lugar con un aviso. El último cambio se deshace con el aviso o `Ctrl`/`⌘`+`Z`.
+- **Teclado**: la rejilla recibe el foco; flechas por recurso y franja, `Enter` crea o abre. En una
+  reserva, las flechas la mueven de a `snap`, `Mayús`+flechas cambian la duración, `Supr` la borra
+  (`nx-planner-delete`, cancelable). Cada reserva se anuncia entera («TKR-512 · Entrega Ferretería El
+  Tornillo · mar, 13 oct, 7:30 – 9:00 a. m.»).
+- **Ocupación** (`summary`): una fila con cuántos recursos tienen algo en cada columna («7/12»).
+- **Datos grandes**: 300 recursos × 2.000 reservas sin congelar: solo se pintan las filas y columnas
+  visibles, los carriles se calculan ordenando una vez y el arrastre solo mueve una sombra. Con
+  `source`, cada período se pide aparte: `GET {source}?from=…&to=…` → `{resources?, bookings}`.
+- **Fechas**: todo en la hora local de quien mira. `start`/`end` sin zona («2026-10-13T07:30») se toman
+  como locales; los eventos las devuelven con su desfase («2026-10-13T07:30:00-05:00»).
+
+```html
+<nx-planner id="despachos" view="week" hours="06:00-18:00" holidays='["2026-10-12"]'
+  summary="equipos" endpoint="/api/despachos/reservas"></nx-planner>
+<script>
+  despachos.resources = [
+    { id: "TKR-512", name: "TKR-512", detail: "Jorge Pérez · 10 t", icon: "truck", group: "Camiones" },
+    { id: "MC-01", name: "Montacargas 1", icon: "warehouse", group: "Montacargas" },
+  ];
+  despachos.bookings = [{ id: "E-101", resource: "TKR-512", start: "2026-10-13T07:30",
+    end: "2026-10-13T09:30", title: "Entrega Ferretería El Tornillo", detail: "Barranquilla · 6 t" }];
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `resources` (`{id, name, detail?, avatar?, icon?, group?, capacity?}`), `bookings` (`{id, resource, start, end, title, detail?, status?, color?, readonly?, data?}`), `view` (`day`, `week`, `month`), `date`, `snap` (min), `hours` (`"07:00-18:00"`), `workdays` (`[1,2,3,4,5]`), `holidays`, `summary`, `source`, `endpoint`, `readonly`, `locale`, `labels` |
+| Métodos | `goTo(fecha)`, `today()`, `scrollToBooking(id)`, `undo()` |
+| Eventos | `nx-planner-change` `{booking, from, to, via}`, `nx-planner-create` `{booking, resource, start, end, via}`, `nx-planner-delete` `{booking, via}` (los tres cancelables), `nx-planner-select` `{booking}`, `nx-planner-range` `{from, to, view}` |
+| Funciones | `plannerLanes()`, `plannerClashes()`, `plannerSnap()`, `plannerMove()`, `plannerResize()`, `plannerSpan()`, `plannerRange()`, `plannerColumns()`, `plannerX()`, `plannerTime()`, `plannerOccupancy()`, `plannerParse()`, `plannerISO()`, `PLANNER_LABELS` |
+
+## `<nx-review>`
+
+**Resumen antes de guardar.** Envuelve tu formulario y, al enviar, dice qué va a cambiar: «Vas a
+guardar 3 cambios», en un panel sobrio justo encima del botón (sin modales), con «Guardar» y «Seguir
+editando». Es el antes de `<nx-history>`: la misma lista (`changes`) va al servidor como bitácora.
+
+- **Qué compara**: cada campo contra como estaba al cargar (o contra `initial`, o contra lo que haya
+  cuando llamas `snapshot()` después de traer el registro). Inputs nativos, selects, radios, casillas,
+  `<nx-number>`, `<nx-select>` y cualquier elemento con `name` y `value`. Nunca contraseñas ni
+  `data-review="off"`.
+- **Cómo lo dice**, con el locale: «Precio unitario: $ 10.000 → $ 12.000 (+$ 2.000 · +20%)»,
+  «Fecha de entrega: 12 oct 2026 → 15 oct 2026 (+3 días)», «Estado: Por aprobar → Aprobada»,
+  «Facturar con IVA: Sí → No», los textos largos con la diferencia por palabras, agrupado por
+  `<fieldset>`.
+- **Filas de detalle** (`lineas[0].cantidad`, `lineas[2][precio]`, `lineas.3.cantidad` o un
+  `data-review-row` por fila): «2 líneas nuevas · 1 quitada · 1 cambiada», reconocidas por su `id`.
+- **Lo importante primero y marcado** (ícono y texto, no solo color): un monto que cambió 20 % o más
+  (`threshold`), una fecha que se movió más de 7 días, un estado, un campo `data-review="important"` y
+  los avisos de `<nx-guard>`.
+- **Cuándo aparece**: `significant` (por defecto: si hay algo importante o más de `max-silent`
+  cambios), `always` o `never` (solo con `review()`). «Guardar» reenvía con el mismo botón.
+- **`dirty`** y `nx-review-dirty` `{dirty, count}` para el «¿Salir sin guardar?».
+
+```html
+<nx-review mode="significant" empty="notice">
+  <form>
+    <fieldset><legend>Encabezado</legend>
+      <label>Fecha de entrega <input name="entrega" type="date" value="2026-10-12"></label>
+      <label>Estado <select name="estado">…</select></label>
+    </fieldset>
+    <table data-label="Líneas de la orden">
+      <tr><td><input type="hidden" name="lineas[0].id" value="L-101">
+        <nx-number name="lineas[0].precio" format="money" currency="COP" value="1275000"></nx-number></td></tr>
+    </table>
+    <button>Guardar</button>
+  </form>
+</nx-review>
+<script>
+  review.addEventListener("nx-review-confirm", (e) => bitacora(e.detail.changes));
+  if (await review.review()) await guardar(); // sin <form>, con tu propio botón
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `mode` (`significant`, `always`, `never`), `threshold` (20), `max-silent` (5), `empty` (`notice`), `initial`, `rebase`, `locale`, `labels`, `disabled` · en los campos: `data-label`, `data-format`, `data-currency`, `data-review` (`important`, `status`, `off`), `data-review-section`, `data-review-rows`, `data-review-row` |
+| Métodos | `snapshot()`, `review()` (promesa `true`/`false`), `reset()` |
+| Getters | `changes` (`{field, label, section, from, to, fromText, toText, kind, significant, reason, delta, diff, rows, warnings}`), `dirty` |
+| Eventos | `nx-review-open` `{changes}` (cancelable: cancelarlo envía directo), `nx-review-confirm` `{changes, silent}`, `nx-review-cancel`, `nx-review-dirty` `{dirty, count}` |
+| Funciones | `diffReview()`, `describeReview()`, `groupReview()`, `reviewShouldOpen()`, `flattenReview()`, `reviewRowName()`, `sameReviewValue()`, `REVIEW_LABELS` |
+
+## `<nx-voice>`
+
+**Dictar al formulario.** En bodega, en campo o manejando el montacargas: «veinte láminas calibre
+catorce para Ferretería El Tornillo, entrega el viernes» y el formulario se llena.
+
+- **Reconocimiento:** la Web Speech API del navegador (`SpeechRecognition`), en el idioma del
+  `locale` (es-CO por defecto), con los parciales en gris mientras se habla y el final en negro. Sin
+  ella, o con `engine="server"`, graba con `MediaRecorder` (WebM/Ogg con Opus, MP4 en Safari) y hace
+  `POST {endpoint}` con el audio (`FormData`: `audio`, `lang`); el servidor responde `{text}`, texto
+  plano, o NDJSON/SSE con `{partial}` y `{text}`. Sin ninguna de las dos, **el botón no aparece** y
+  `nx-voice-unavailable` avisa una vez: el formulario sigue igual.
+- **Cómo se habla:** tocar para hablar (otro toque o 2 s de silencio terminan) o `hold`: mientras se
+  mantiene el botón o la barra espaciadora (con guantes o ruido). `hotkey="Alt+V"` para toda la página,
+  sin chocar con el toque de Alt de `<nx-keytips>`. Escape cancela.
+- **Feedback:** el anillo alrededor del botón sigue el volumen real (`AnalyserNode` sobre el mismo
+  micrófono); con movimiento reducido, un punto que toma el color del acento. «Escuchando…»,
+  «Procesando…» y los errores con qué hacer: sin permiso, «No te entendí», «Sin conexión».
+- **Entrega:** a un `<nx-paste-fill>` le pasa el texto a `fill(text)` y muestra «Llené 4 campos ·
+  Deshacer». En un `<input>`/`<textarea>` escribe en el cursor (o sobre lo seleccionado), con
+  `input` y `change`: los signos dichos («coma», «punto y aparte», «nueva línea», «signo de
+  interrogación»…), mayúscula al empezar la frase, el «¿» de apertura, y «borrar eso» / «borra la
+  última palabra» (`commands="false"` las apaga). Sin `for`, solo el evento `nx-voice-text`
+  (cancelable).
+- **Privacidad:** el micrófono se apaga siempre al terminar, al ocultar la pestaña, al desconectar el
+  elemento y a los `max-seconds` (30), con todas las pistas detenidas y el `AudioContext` cerrado.
+  Nunca graba en segundo plano. **La voz de Chrome y Edge se reconoce en los servidores de Google o
+  Microsoft** (el audio sale del equipo); `engine="server"` usa el servidor propio de la app aunque el
+  navegador tenga la API. `endpoint` solo del mismo origen (o de `allowOrigins`).
+
+```html
+<nx-voice for="pedido-fill" hotkey="Alt+V"></nx-voice>
+<nx-paste-fill id="pedido-fill" fields='[{"name":"cantidad","kind":"number"}]'>
+  <form>…</form>
+</nx-paste-fill>
+
+<textarea id="novedades"></textarea>
+<nx-voice for="novedades" hold layout="stacked"></nx-voice>
+
+<nx-voice for="pedido-fill" engine="server" endpoint="/api/voz"></nx-voice>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `for`, `endpoint`, `engine` (`auto`, `browser`, `server`), `hold`, `hotkey`, `max-seconds` (30), `silence` (ms, 2000), `commands` (`"false"` las apaga), `layout` (`inline`, `stacked`), `locale`, `labels`, `disabled` · solo lectura: `state` (`idle`, `asking`, `listening`, `processing`, `error`, `unavailable`), `supported`, `text` |
+| Métodos | `start()`, `stop()`, `cancel()` |
+| Eventos | `nx-voice-start`, `nx-voice-partial` `{text}`, `nx-voice-text` `{text, confidence, final}` (cancelable), `nx-voice-end` `{text, canceled}`, `nx-voice-error` `{code, message}` (`not-allowed`, `no-speech`, `network`, `no-mic`, `server`, `failed`), `nx-voice-unavailable` |
+| Funciones | `applyDictation(valor, inicio, fin, dicho, {orders?, last?})` → `{value, caret, range}`, `parseDictation(dicho)`, `pickVoiceMime(isTypeSupported)`, `parseVoiceLine(línea)`, `voiceFileName(tipo)`, `parseVoiceHotkey("Alt+V")`, `voiceHotkeyMatches(atajo, evento)`, `speechTranscript(resultados)`, `voiceLevel(bytes)`, `voiceErrorCode(error)`, `VOICE_LABELS`, `VOICE_MIMES` |
 
 ## Desarrollo
 

@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -111,6 +111,15 @@ import type { PrintLabels, PrintOrientation, PrintPaginateDetail, PrintZoom } fr
 import "../components/signature/index";
 import type { NxSignature } from "../components/signature/signature";
 import type { SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMeta, SignatureValue } from "../components/signature/types";
+import "../components/planner/index";
+import type { NxPlanner } from "../components/planner/planner";
+import type { PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView } from "../components/planner/types";
+import "../components/review/index";
+import type { NxReview } from "../components/review/review";
+import type { ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail } from "../components/review/types";
+import "../components/voice/index";
+import type { NxVoice } from "../components/voice/voice";
+import type { VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail } from "../components/voice/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -145,6 +154,9 @@ export type { NxLauncher, LauncherItem, LauncherLabels, LauncherProgress, Launch
 export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
 export type { NxPrint, PrintLabels, PrintOrientation, PrintPaginateDetail, PrintZoom };
 export type { NxSignature, SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMeta, SignatureValue };
+export type { NxPlanner, PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView };
+export type { NxReview, ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail };
+export type { NxVoice, VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -152,6 +164,11 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      initial: Record<string, unknown> | null | undefined;
+      resources: PlannerResource[] | undefined;
+      bookings: PlannerBooking[] | undefined;
+      workdays: number[] | undefined;
+      holidays: string[] | undefined;
       query: string | undefined;
       layout: CardsLayout | null | undefined;
       actions: CardsAction[] | undefined;
@@ -171,7 +188,7 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -202,6 +219,19 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      engine: VoiceEngine | undefined;
+      "max-seconds": string | undefined;
+      silence: string | undefined;
+      commands: "false" | undefined;
+      threshold: string | undefined;
+      "max-silent": string | undefined;
+      empty: "notice" | undefined;
+      rebase: "false" | undefined;
+      view: PlannerView | undefined;
+      date: string | undefined;
+      snap: string | undefined;
+      hours: string | undefined;
+      summary: string | undefined;
       document: string | undefined;
       handoff: string | undefined;
       "value-format": SignatureFormat | undefined;
@@ -258,7 +288,7 @@ declare module "solid-js" {
       locale: string | undefined;
       heading: string | undefined;
       description: string | undefined;
-      mode: DialogMode | ScanMode | GuardMode | undefined;
+      mode: DialogMode | ScanMode | GuardMode | ReviewMode | undefined;
       size: DialogSize | string | undefined;
       url: string | undefined;
       hold: string | undefined;
@@ -295,6 +325,7 @@ declare module "solid-js" {
       "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
+      hold: boolean;
       "ask-name": boolean;
       "ask-id": boolean;
       geo: boolean;
@@ -323,6 +354,21 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-voice-start": CustomEvent<Record<string, never>>;
+      "nx-voice-partial": CustomEvent<{ text: string }>;
+      "nx-voice-text": CustomEvent<VoiceTextDetail>;
+      "nx-voice-end": CustomEvent<VoiceEndDetail>;
+      "nx-voice-error": CustomEvent<VoiceErrorDetail>;
+      "nx-voice-unavailable": CustomEvent<Record<string, never>>;
+      "nx-review-open": CustomEvent<ReviewOpenDetail>;
+      "nx-review-confirm": CustomEvent<ReviewConfirmDetail>;
+      "nx-review-cancel": CustomEvent<{ changes: ReviewChange[] }>;
+      "nx-review-dirty": CustomEvent<ReviewDirtyDetail>;
+      "nx-planner-change": CustomEvent<PlannerChangeDetail>;
+      "nx-planner-create": CustomEvent<PlannerCreateDetail>;
+      "nx-planner-delete": CustomEvent<PlannerDeleteDetail>;
+      "nx-planner-select": CustomEvent<{ booking: PlannerBooking }>;
+      "nx-planner-range": CustomEvent<PlannerRangeDetail>;
       "nx-signature-change": CustomEvent<{ empty: boolean }>;
       "nx-signature-done": CustomEvent<SignatureDoneDetail>;
       "nx-print-paginate": CustomEvent<PrintPaginateDetail>;
@@ -411,6 +457,9 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-voice": HTMLAttributes<NxVoice>;
+      "nx-review": HTMLAttributes<NxReview>;
+      "nx-planner": HTMLAttributes<NxPlanner>;
       "nx-signature": HTMLAttributes<NxSignature>;
       "nx-print": HTMLAttributes<NxPrint> & { heading?: string };
       "nx-award": HTMLAttributes<NxAward> & { heading?: string; endpoint?: string };
@@ -1933,6 +1982,167 @@ export function Signature(props: SignatureProps): JSX.Element {
       bool:auto={!!local.auto}
       on:nx-signature-change={(e) => local.onChange?.(e)}
       on:nx-signature-done={(e) => local.onDone?.(e)}
+    />
+  );
+}
+
+export interface PlannerProps extends Omit<JSX.HTMLAttributes<NxPlanner>, "onChange" | "onSelect"> {
+  resources: PlannerResource[];
+  bookings?: PlannerBooking[];
+  view?: PlannerView;
+  /** El día a la vista (ISO). Controlable: cambiarlo lleva la vista a ese período. */
+  date?: string;
+  /** Minutos de la rejilla (15 en día, 30 en semana; en mes, un día). */
+  snap?: number;
+  /** Horario laboral: "07:00-18:00". */
+  hours?: string;
+  workdays?: number[];
+  holidays?: string[];
+  /** Fila de ocupación; un texto nombra lo que se cuenta («equipos»). */
+  summary?: boolean | string;
+  source?: string;
+  endpoint?: string;
+  readonly?: boolean;
+  locale?: string;
+  labels?: Partial<PlannerLabels>;
+  /** Cancelable: vuelve a su lugar (con `e.detail.message` como motivo del aviso). */
+  onChange?: (e: CustomEvent<PlannerChangeDetail>) => void;
+  /** Cancelable: la reserva provisional se quita sin aviso (la app abre su formulario con el rango). */
+  onCreate?: (e: CustomEvent<PlannerCreateDetail>) => void;
+  onDelete?: (e: CustomEvent<PlannerDeleteDetail>) => void;
+  onSelect?: (e: CustomEvent<{ booking: PlannerBooking }>) => void;
+  onRange?: (e: CustomEvent<PlannerRangeDetail>) => void;
+}
+
+export function Planner(props: PlannerProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["resources", "bookings", "view", "date", "snap", "hours", "workdays", "holidays", "summary", "source", "endpoint", "readonly", "locale", "labels", "onChange", "onCreate", "onDelete", "onSelect", "onRange"]);
+  return (
+    <nx-planner
+      {...rest}
+      prop:resources={local.resources}
+      prop:bookings={local.bookings}
+      prop:workdays={local.workdays}
+      prop:holidays={local.holidays}
+      prop:labels={local.labels}
+      attr:view={local.view}
+      attr:date={local.date}
+      attr:snap={local.snap === undefined ? undefined : String(local.snap)}
+      attr:hours={local.hours}
+      attr:summary={local.summary === true ? "" : local.summary || undefined}
+      attr:source={local.source}
+      attr:endpoint={local.endpoint}
+      attr:locale={local.locale}
+      bool:readonly={!!local.readonly}
+      on:nx-planner-change={(e) => local.onChange?.(e)}
+      on:nx-planner-create={(e) => local.onCreate?.(e)}
+      on:nx-planner-delete={(e) => local.onDelete?.(e)}
+      on:nx-planner-select={(e) => local.onSelect?.(e)}
+      on:nx-planner-range={(e) => local.onRange?.(e)}
+    />
+  );
+}
+
+export interface ReviewProps extends Omit<JSX.HTMLAttributes<NxReview>, "onCancel"> {
+  /** `significant` (por defecto), `always` o `never` (solo con `review()`). */
+  mode?: ReviewMode;
+  /** Desde qué porcentaje un monto es importante (20). */
+  threshold?: number;
+  /** Más de cuántos cambios se muestra aunque nada sea importante (5). */
+  maxSilent?: number;
+  /** `notice`: al enviar sin cambios, «No hay cambios que guardar» y no envía. */
+  empty?: "notice";
+  /** La base: el registro como se cargó (`{campo: valor}`, filas anidadas o planas). */
+  initial?: Record<string, unknown> | null;
+  /** `false`: después de guardar, la base no cambia. */
+  rebase?: boolean;
+  locale?: string;
+  labels?: Partial<ReviewLabels>;
+  disabled?: boolean;
+  /** Cancelable: cancelarlo envía directo. */
+  onOpen?: (e: CustomEvent<ReviewOpenDetail>) => void;
+  onConfirm?: (e: CustomEvent<ReviewConfirmDetail>) => void;
+  onCancel?: (e: CustomEvent<{ changes: ReviewChange[] }>) => void;
+  onDirty?: (e: CustomEvent<ReviewDirtyDetail>) => void;
+  children?: JSX.Element;
+}
+
+export function Review(props: ReviewProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["mode", "threshold", "maxSilent", "empty", "initial", "rebase", "locale", "labels", "disabled", "onOpen", "onConfirm", "onCancel", "onDirty", "children"]);
+  return (
+    <nx-review
+      {...rest}
+      prop:initial={local.initial}
+      prop:labels={local.labels}
+      attr:mode={local.mode}
+      attr:threshold={local.threshold === undefined ? undefined : String(local.threshold)}
+      attr:max-silent={local.maxSilent === undefined ? undefined : String(local.maxSilent)}
+      attr:empty={local.empty}
+      attr:rebase={local.rebase === false ? "false" : undefined}
+      attr:locale={local.locale}
+      bool:disabled={!!local.disabled}
+      on:nx-review-open={(e) => local.onOpen?.(e)}
+      on:nx-review-confirm={(e) => local.onConfirm?.(e)}
+      on:nx-review-cancel={(e) => local.onCancel?.(e)}
+      on:nx-review-dirty={(e) => local.onDirty?.(e)}
+    >
+      {local.children}
+    </nx-review>
+  );
+}
+
+export interface VoiceProps extends Omit<JSX.HTMLAttributes<NxVoice>, "onError"> {
+  /** El `id` de un `<nx-paste-fill>`, un `<input>` o un `<textarea>` que recibe lo dictado. */
+  for?: string;
+  /** Recibe `POST` con el audio (`FormData`: `audio`, `lang`) y responde el texto. */
+  endpoint?: string;
+  /** `auto` (por defecto), `browser` o `server`. */
+  engine?: VoiceEngine;
+  /** Mantener para hablar (el botón o la barra espaciadora). */
+  hold?: boolean;
+  /** Atajo de página, p. ej. «Alt+V». */
+  hotkey?: string;
+  /** Tope de una toma, en segundos (30). */
+  maxSeconds?: number;
+  /** Silencio que termina una toma, en ms (2000). */
+  silence?: number;
+  /** `false` apaga «borrar eso» y «borra la última palabra». */
+  commands?: boolean;
+  layout?: VoiceLayout;
+  locale?: string;
+  labels?: Partial<VoiceLabels>;
+  disabled?: boolean;
+  onStart?: (e: CustomEvent<Record<string, never>>) => void;
+  onPartial?: (e: CustomEvent<{ text: string }>) => void;
+  /** Cancelable: no se entrega a `for`. */
+  onText?: (e: CustomEvent<VoiceTextDetail>) => void;
+  onEnd?: (e: CustomEvent<VoiceEndDetail>) => void;
+  onError?: (e: CustomEvent<VoiceErrorDetail>) => void;
+  onUnavailable?: (e: CustomEvent<Record<string, never>>) => void;
+}
+
+export function Voice(props: VoiceProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["for", "endpoint", "engine", "hold", "hotkey", "maxSeconds", "silence", "commands", "layout", "locale", "labels", "disabled", "onStart", "onPartial", "onText", "onEnd", "onError", "onUnavailable"]);
+  return (
+    <nx-voice
+      {...rest}
+      prop:labels={local.labels}
+      attr:for={local.for}
+      attr:endpoint={local.endpoint}
+      attr:engine={local.engine}
+      attr:hotkey={local.hotkey}
+      attr:max-seconds={local.maxSeconds === undefined ? undefined : String(local.maxSeconds)}
+      attr:silence={local.silence === undefined ? undefined : String(local.silence)}
+      attr:commands={local.commands === false ? "false" : undefined}
+      attr:layout={local.layout}
+      attr:locale={local.locale}
+      bool:hold={!!local.hold}
+      bool:disabled={!!local.disabled}
+      on:nx-voice-start={(e) => local.onStart?.(e)}
+      on:nx-voice-partial={(e) => local.onPartial?.(e)}
+      on:nx-voice-text={(e) => local.onText?.(e)}
+      on:nx-voice-end={(e) => local.onEnd?.(e)}
+      on:nx-voice-error={(e) => local.onError?.(e)}
+      on:nx-voice-unavailable={(e) => local.onUnavailable?.(e)}
     />
   );
 }
