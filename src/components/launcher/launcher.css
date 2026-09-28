@@ -119,6 +119,7 @@ nx-launcher input {
   border-radius: var(--nx-radius-lg);
   transition:
     border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-base) var(--nx-ease-out),
     opacity var(--nx-motion-base) var(--nx-ease-out),
     filter var(--nx-motion-base),
     scale var(--nx-motion-base) var(--nx-ease-out);
@@ -139,7 +140,10 @@ nx-launcher input {
     border-color: var(--nx-primary-border);
   }
 
-  /* Luz que sigue al puntero: un reflejo casi imperceptible adentro y un brillo tenue en el borde. */
+  /* Luz que sigue al puntero. En oscuro, el acento (claro) ilumina la tarjeta y su borde. En claro
+     no hay nada más claro que el blanco: un velo tenue baja el tono de la tarjeta salvo en el círculo
+     alrededor del puntero, que queda con su color (eso se lee como luz, también sobre el fondo de
+     una destacada); el borde brilla más suave y la tarjeta se levanta. */
   &::before,
   &::after {
     content: "";
@@ -151,12 +155,21 @@ nx-launcher input {
     transition: opacity var(--nx-motion-base) var(--nx-ease-out);
   }
   &::before {
-    background: radial-gradient(320px circle at var(--nx-launcher-x, 50%) var(--nx-launcher-y, 50%), color-mix(in oklch, var(--nx-primary) 6%, transparent), transparent 70%);
+    z-index: 0;
+    background: radial-gradient(
+      320px circle at var(--nx-launcher-x, 50%) var(--nx-launcher-y, 50%),
+      light-dark(transparent, color-mix(in oklch, var(--nx-primary) 6%, transparent)),
+      light-dark(color-mix(in oklch, var(--nx-foreground) 4%, transparent), transparent) 70%
+    );
   }
   &::after {
     z-index: 3;
     padding: 1px;
-    background: radial-gradient(200px circle at var(--nx-launcher-x, 50%) var(--nx-launcher-y, 50%), color-mix(in oklch, var(--nx-primary) 75%, transparent), transparent 70%);
+    background: radial-gradient(
+      200px circle at var(--nx-launcher-x, 50%) var(--nx-launcher-y, 50%),
+      light-dark(color-mix(in oklch, var(--nx-primary) 40%, transparent), color-mix(in oklch, var(--nx-primary) 75%, transparent)),
+      transparent 70%
+    );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -167,12 +180,23 @@ nx-launcher input {
   }
 }
 @media (hover: hover) {
+  .nx-launcher__card:hover {
+    box-shadow:
+      0 1px 2px light-dark(rgb(15 20 30 / 0.04), transparent),
+      0 10px 28px -14px light-dark(rgb(15 20 30 / 0.16), transparent);
+  }
   .nx-launcher__card:hover::before,
   .nx-launcher__card:hover::after {
     opacity: 1;
   }
 }
 
+/* El contenido, sobre el reflejo. El enlace no: su capa (que cubre toda la tarjeta) se ubica
+   contra la tarjeta; su texto sí. */
+.nx-launcher__card > :not(.nx-launcher__link),
+.nx-launcher__label {
+  position: relative;
+}
 .nx-launcher__top {
   display: flex;
   align-items: center;
