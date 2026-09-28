@@ -64,6 +64,9 @@ const BUDGET = [
   [lazy("signature-extras"), 0.75 * 1024, "extras de nx-signature: PNG, ubicación y <nx-handoff> (se cargan al usarlos)"],
   ["dist/planner.js", 14.5 * 1024, "planner + núcleo (ESM; el aviso con import())"],
   ["dist/review.js", 10.75 * 1024, "review + núcleo (ESM)"],
+  ["dist/voice.js", 6.25 * 1024, "voice + núcleo (ESM; el dictado en un campo y el servidor con import())"],
+  [lazy("voice-text"), 2 * 1024, "dictado en un campo de nx-voice: puntuación, órdenes, cursor (se carga al dictar en un campo)"],
+  [lazy("voice-server"), 2 * 1024, "grabación y transcripción con servidor de nx-voice (se carga con engine=\"server\")"],
   ["dist/bdui.js", 2.5 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/solid/index.jsx", 6 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
@@ -105,6 +108,7 @@ const BUDGET = [
   ["dist/signature.css", 1.25 * 1024, "signature (CSS)"],
   ["dist/planner.css", 3 * 1024, "planner (CSS)"],
   ["dist/review.css", 1.75 * 1024, "review (CSS)"],
+  ["dist/voice.css", 1.5 * 1024, "voice (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

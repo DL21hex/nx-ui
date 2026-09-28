@@ -31,6 +31,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
 | `<nx-review>` + núcleo (ESM) | ≈ 10,4 KB |
+| `<nx-voice>` + núcleo (ESM); el dictado en un campo y el servidor se cargan aparte | ≈ 5,9 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1755,6 +1756,54 @@ editando». Es el antes de `<nx-history>`: la misma lista (`changes`) va al serv
 | Getters | `changes` (`{field, label, section, from, to, fromText, toText, kind, significant, reason, delta, diff, rows, warnings}`), `dirty` |
 | Eventos | `nx-review-open` `{changes}` (cancelable: cancelarlo envía directo), `nx-review-confirm` `{changes, silent}`, `nx-review-cancel`, `nx-review-dirty` `{dirty, count}` |
 | Funciones | `diffReview()`, `describeReview()`, `groupReview()`, `reviewShouldOpen()`, `flattenReview()`, `reviewRowName()`, `sameReviewValue()`, `REVIEW_LABELS` |
+
+## `<nx-voice>`
+
+**Dictar al formulario.** En bodega, en campo o manejando el montacargas: «veinte láminas calibre
+catorce para Ferretería El Tornillo, entrega el viernes» y el formulario se llena.
+
+- **Reconocimiento:** la Web Speech API del navegador (`SpeechRecognition`), en el idioma del
+  `locale` (es-CO por defecto), con los parciales en gris mientras se habla y el final en negro. Sin
+  ella, o con `engine="server"`, graba con `MediaRecorder` (WebM/Ogg con Opus, MP4 en Safari) y hace
+  `POST {endpoint}` con el audio (`FormData`: `audio`, `lang`); el servidor responde `{text}`, texto
+  plano, o NDJSON/SSE con `{partial}` y `{text}`. Sin ninguna de las dos, **el botón no aparece** y
+  `nx-voice-unavailable` avisa una vez: el formulario sigue igual.
+- **Cómo se habla:** tocar para hablar (otro toque o 2 s de silencio terminan) o `hold`: mientras se
+  mantiene el botón o la barra espaciadora (con guantes o ruido). `hotkey="Alt+V"` para toda la página,
+  sin chocar con el toque de Alt de `<nx-keytips>`. Escape cancela.
+- **Feedback:** el anillo alrededor del botón sigue el volumen real (`AnalyserNode` sobre el mismo
+  micrófono); con movimiento reducido, un punto que toma el color del acento. «Escuchando…»,
+  «Procesando…» y los errores con qué hacer: sin permiso, «No te entendí», «Sin conexión».
+- **Entrega:** a un `<nx-paste-fill>` le pasa el texto a `fill(text)` y muestra «Llené 4 campos ·
+  Deshacer». En un `<input>`/`<textarea>` escribe en el cursor (o sobre lo seleccionado), con
+  `input` y `change`: los signos dichos («coma», «punto y aparte», «nueva línea», «signo de
+  interrogación»…), mayúscula al empezar la frase, el «¿» de apertura, y «borrar eso» / «borra la
+  última palabra» (`commands="false"` las apaga). Sin `for`, solo el evento `nx-voice-text`
+  (cancelable).
+- **Privacidad:** el micrófono se apaga siempre al terminar, al ocultar la pestaña, al desconectar el
+  elemento y a los `max-seconds` (30), con todas las pistas detenidas y el `AudioContext` cerrado.
+  Nunca graba en segundo plano. **La voz de Chrome y Edge se reconoce en los servidores de Google o
+  Microsoft** (el audio sale del equipo); `engine="server"` usa el servidor propio de la app aunque el
+  navegador tenga la API. `endpoint` solo del mismo origen (o de `allowOrigins`).
+
+```html
+<nx-voice for="pedido-fill" hotkey="Alt+V"></nx-voice>
+<nx-paste-fill id="pedido-fill" fields='[{"name":"cantidad","kind":"number"}]'>
+  <form>…</form>
+</nx-paste-fill>
+
+<textarea id="novedades"></textarea>
+<nx-voice for="novedades" hold layout="stacked"></nx-voice>
+
+<nx-voice for="pedido-fill" engine="server" endpoint="/api/voz"></nx-voice>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `for`, `endpoint`, `engine` (`auto`, `browser`, `server`), `hold`, `hotkey`, `max-seconds` (30), `silence` (ms, 2000), `commands` (`"false"` las apaga), `layout` (`inline`, `stacked`), `locale`, `labels`, `disabled` · solo lectura: `state` (`idle`, `asking`, `listening`, `processing`, `error`, `unavailable`), `supported`, `text` |
+| Métodos | `start()`, `stop()`, `cancel()` |
+| Eventos | `nx-voice-start`, `nx-voice-partial` `{text}`, `nx-voice-text` `{text, confidence, final}` (cancelable), `nx-voice-end` `{text, canceled}`, `nx-voice-error` `{code, message}` (`not-allowed`, `no-speech`, `network`, `no-mic`, `server`, `failed`), `nx-voice-unavailable` |
+| Funciones | `applyDictation(valor, inicio, fin, dicho, {orders?, last?})` → `{value, caret, range}`, `parseDictation(dicho)`, `pickVoiceMime(isTypeSupported)`, `parseVoiceLine(línea)`, `voiceFileName(tipo)`, `parseVoiceHotkey("Alt+V")`, `voiceHotkeyMatches(atajo, evento)`, `speechTranscript(resultados)`, `voiceLevel(bytes)`, `voiceErrorCode(error)`, `VOICE_LABELS`, `VOICE_MIMES` |
 
 ## Desarrollo
 
