@@ -4,8 +4,6 @@
  * probar en un campo aparte, el JSON que va al backend y el log de eventos.
  */
 import "./pages/recurrence.css";
-// Mientras `nx-ui.css` no lo importe (ver INTEGRATION.md); al unir, esta línea sobra.
-import "../src/components/recurrence/recurrence.css";
 import "../src/components/recurrence/index";
 import type { NxRecurrence, RecurrenceChangeDetail, RecurrenceErrorDetail } from "../src/components/recurrence/index";
 

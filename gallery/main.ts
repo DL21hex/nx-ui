@@ -25,6 +25,7 @@ import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
+import { mountRecurrenceDemo } from "./demo-recurrence";
 import { mountChecklistDemo } from "./demo-checklist";
 import "./pages/checklist.css";
 import { mountThreadDemo } from "./demo-thread";
@@ -154,6 +155,7 @@ const NAV: MenuItem[] = [
   { id: "voice", label: "Dictar", href: "#/voice", icon: "mic", section: "Componentes", badge: "Nuevo" },
   { id: "thread", label: "Conversación", href: "#/thread", icon: "message-circle", section: "Componentes", badge: "Nuevo" },
   { id: "checklist", label: "Procedimientos", href: "#/checklist", icon: "clipboard-check", section: "Componentes", badge: "Nuevo" },
+  { id: "recurrence", label: "Repeticiones", href: "#/recurrence", icon: "repeat", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -198,6 +200,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/voice": { template: "page-voice", mount: mountVoiceDemo },
   "#/thread": { template: "page-thread", mount: mountThreadDemo },
   "#/checklist": { template: "page-checklist", mount: mountChecklistDemo },
+  "#/recurrence": { template: "page-recurrence", mount: mountRecurrenceDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 
