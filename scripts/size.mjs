@@ -58,6 +58,7 @@ const BUDGET = [
   [lazy("lock"), 3.75 * 1024, "pantalla de bloqueo de nx-account (se carga al bloquear)"],
   [lazy("view-as"), 1.75 * 1024, "franja «Ver como» de nx-account (se carga al suplantar)"],
   ["dist/launcher.js", 8.25 * 1024, "launcher + núcleo (ESM)"],
+  ["dist/cards.js", 10.75 * 1024, "cards + núcleo (ESM)"],
   ["dist/bdui.js", 2 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/solid/index.jsx", 5 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
@@ -94,6 +95,7 @@ const BUDGET = [
   ["dist/award.css", 3.25 * 1024, "award (CSS)"],
   ["dist/account.css", 4.25 * 1024, "account (CSS)"],
   ["dist/launcher.css", 2.75 * 1024, "launcher (CSS)"],
+  ["dist/cards.css", 3.5 * 1024, "cards (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

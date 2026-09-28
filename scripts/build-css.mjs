@@ -33,6 +33,7 @@ const entries = {
   "number": "src/components/number/number.css",
   "account": "src/components/account/account.css",
   "launcher": "src/components/launcher/launcher.css",
+  "cards": "src/components/cards/cards.css",
   "handoff": "src/components/handoff/handoff.css",
   "award": "src/components/award/award.css",
   "guard": "src/components/guard/guard.css",

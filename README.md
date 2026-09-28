@@ -26,6 +26,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-award>` + núcleo (ESM) | ≈ 15,1 KB |
 | `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB), el bloqueo (≈ 3,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,3 KB |
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
+| `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1506,6 +1507,61 @@ un solo dato vivo, la señal: «3 de tu equipo por aprobar · el más antiguo, h
 | Eventos | `nx-launcher-select` `{item, view, href}` (cancelable; un clic con modificador es del navegador y no se anuncia) |
 | CSS | `--nx-launcher-min` (240px), `--nx-launcher-gap` (12px), `--nx-launcher-warn` / `--nx-launcher-ink`; `.nx-launcher-hero`, `.nx-launcher-hero-icon`, `.nx-launcher-hero-label` para la página de destino |
 | Funciones | `matchItem()`, `firstTarget()`, `fitColumns()`, `balanceColumns()`, `moveIndex()`, `sparkPaths()` |
+
+## `<nx-cards>`
+
+**Una vista de tarjetas con zoom semántico.** Los mismos registros en tres niveles, y al pasar de
+uno a otro cada tarjeta se transforma en su sitio:
+
+- **Mapa:** un cuadro por registro. El color dice el estado y la intensidad, el peso (cuánto se le
+  compra, el monto): cientos de un vistazo, para ver patrones. Al pasar el puntero, el nombre, el
+  dato y el estado; la leyenda cuenta cada estado.
+- **Tarjetas:** título, estado, subtítulo, una nota con el color del estado, el dato grande con su
+  cambio (▲ 12 %) y su minigráfica, y una línea corta. El 10 % de más peso ocupa dos columnas; el
+  estado normal (`quiet`) no se anuncia, para que resalten los demás.
+- **Fichas:** todos los datos; un porcentaje con `good` / `bad` lleva barra verde, ámbar o roja.
+- **Abrir en su sitio:** la tarjeta ocupa la fila con su lista relacionada («Últimas órdenes de
+  compra») y sus acciones. `Esc` la cierra.
+- **Todo se mueve:** cambiar de nivel, ordenar, agrupar (estantes con cuántos y el total) o buscar
+  mueve los mismos nodos desde donde estaban (FLIP), y el registro bajo el puntero se queda en su
+  sitio. Sin animación si se pidió menos movimiento.
+- **Zoom:** el selector, `Ctrl` + rueda (o el pellizco del trackpad) sobre la vista, o `+` / `−` con
+  el foco adentro. Las flechas pasan de una tarjeta a otra.
+- **Miles de registros:** el mapa no arma el cuerpo de las tarjetas (solo pinta cuadros) y, con más
+  de 300, las tarjetas fuera de la pantalla no se pintan (`content-visibility`).
+
+Los datos llegan tal como salen de la base de datos (`rows`); `fields` dice qué es cada campo y
+`layout`, dónde va en la tarjeta.
+
+```html
+<nx-cards id="prov" group="cat" sort="compras"></nx-cards>
+<script>
+  prov.fields = [
+    { key: "name", label: "Nombre", sort: "asc" },
+    { key: "cat", label: "Categoría", group: true },
+    { key: "state", label: "Estado", type: "status", group: true, options: [
+      { value: "ok", label: "Al día", tone: "success", quiet: true },
+      { value: "vence", label: "Póliza por vencer", tone: "warning" },
+      { value: "bloqueado", label: "Bloqueado", tone: "danger" }] },
+    { key: "compras", label: "Compras en 12 meses", type: "money", currency: "COP", sort: "desc" },
+    { key: "cumpl", label: "Entregas a tiempo", type: "percent", sort: "asc", good: 90, bad: 80 },
+    { key: "orders", label: "Últimas órdenes de compra" },
+  ];
+  prov.layout = { title: "name", subtitle: ["cat", "city"], status: "state", note: "note", value: "compras",
+    delta: "delta", trend: "months", brief: ["cumpl"], facts: ["cumpl", "city"], related: "orders" };
+  prov.actions = [{ id: "orden", label: "Nueva orden de compra", primary: true, disabledFor: ["bloqueado"] }];
+  prov.rows = await (await fetch("/api/proveedores")).json();
+  prov.addEventListener("nx-cards-action", (e) => nuevaOrden(e.detail.row.id));
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `fields` (`[{key, label, type?, currency?, compact?, unit?, options?, sort?, group?, search?, good?, bad?}]`; `type`: `text`, `number`, `money`, `percent`, `rating`, `date`, `status` con `options: [{value, label?, tone?, quiet?}]`), `layout` (`{title, subtitle?, status?, note?, value?, delta?, trend?, weight?, brief?, facts?, related?, href?}`), `rows`, `row-key` (`id`), `actions` (`[{id, label, primary?, disabledFor?}]`), `level` (`map`, `cards`, `detail`), `group`, `sort` (`campo` o `campo:asc`/`campo:desc`), `query`, `heading-level` (3), `locale`, `labels` · `openKey` (solo lectura) |
+| Métodos | `zoom(dir, anchor?)`, `openRow(key)` |
+| Eventos | `nx-cards-level` `{level}`, `nx-cards-open` `{row, open}`, `nx-cards-action` `{action, row}` |
+| CSS | `--nx-cards-top` (dónde se pega la barra), `--nx-cards-warn` / `--nx-cards-ink` |
+| Funciones | `formatCardsField()`, `groupCards()`, `matchCard()`, `sortCards()`, `stepLevel()`, `weightRanks()` |
 
 ## Desarrollo
 
