@@ -1,0 +1,106 @@
+    <!-- ================================================================ Repeticiones -->
+    <template id="page-recurrence">
+      <p class="eyebrow">Componentes</p>
+      <h1>Repeticiones <code class="tag">&lt;nx-recurrence&gt;</code></h1>
+      <p class="lead">
+        Lo que se repite, escrito como se dice: «el último día hábil de cada mes a las 6 pm», «los días 5, si cae festivo, el
+        día hábil siguiente». Debajo se ve cómo se entendió y las próximas fechas reales, con los festivos de Colombia; si
+        prefieres, «Ajustar a mano» abre los controles de siempre. Se guarda como una RRULE de iCalendar.
+      </p>
+
+      <div class="rec-cases" lang="es-CO">
+        <section class="rec-case" aria-labelledby="rec-t1">
+          <header>
+            <h2 class="rec-case__title" id="rec-t1">Enviar el informe de cartera</h2>
+            <p class="rec-case__sub">A gerencia y a los asesores comerciales · cartera vencida por edades</p>
+          </header>
+          <label class="rec-case__label" for="rec-report">Cuándo se envía</label>
+          <nx-recurrence id="rec-report" name="informe" value="el último día hábil de cada mes a las 6 pm"></nx-recurrence>
+        </section>
+        <section class="rec-case" aria-labelledby="rec-t2">
+          <header>
+            <h2 class="rec-case__title" id="rec-t2">Cobro de arriendo de la bodega</h2>
+            <p class="rec-case__sub">Bodega 14, Parque Industrial Juanchito · $ 8.400.000 + IVA</p>
+          </header>
+          <label class="rec-case__label" for="rec-rent">Día de cobro</label>
+          <nx-recurrence id="rec-rent" name="arriendo" value="los días 5 de cada mes, si cae festivo, el día hábil siguiente"></nx-recurrence>
+        </section>
+        <section class="rec-case" aria-labelledby="rec-t3">
+          <header>
+            <h2 class="rec-case__title" id="rec-t3">Mantenimiento preventivo del montacargas</h2>
+            <p class="rec-case__sub">Montacargas eléctrico MC-02 · revisión de frenos, mástil y batería</p>
+          </header>
+          <label class="rec-case__label" for="rec-forklift">Cuándo se programa</label>
+          <nx-recurrence id="rec-forklift" name="mantenimiento" value="cada 3 meses el primer lunes a las 7 am"></nx-recurrence>
+        </section>
+      </div>
+
+      <h2>Prueba esto</h2>
+      <p class="sel-tip">Haz clic en una frase: se escribe en el campo y ves al instante cómo se entendió y qué fechas da. También puedes escribir la tuya.</p>
+      <div class="rec-phrases" id="rec-phrases"></div>
+      <div class="rec-try" lang="es-CO">
+        <label class="rec-case__label" for="rec-try">Campo de prueba</label>
+        <nx-recurrence id="rec-try" name="prueba" value="de lunes a viernes a las 7 am"></nx-recurrence>
+      </div>
+
+      <h2>Lo que va al backend</h2>
+      <p class="sel-tip">La RRULE (con <code>X-NX-HOLIDAYS</code> para los festivos), la frase canónica y las próximas fechas en hora local: <code>toJSON()</code> de cada campo.</p>
+      <pre class="rec-json"><code id="rec-json"></code></pre>
+      <p class="stage__loglabel">Eventos</p>
+      <ol class="stage__log btn-events" id="recurrence-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Escribes</th><th>Entiende</th></tr></thead>
+          <tbody>
+            <tr><td>«todos los días a las 7», «de lunes a viernes a las 7 am», «los martes y jueves», «los fines de semana a mediodía»</td><td>Días y horas. «a las 5 de la tarde», «17:00», «5pm», «a las 7 y media», «12 m» valen lo mismo que se diría.</td></tr>
+            <tr><td>«cada 15 días desde el lunes», «cada 2 semanas los viernes», «día de por medio», «bimestral», «trimestral»</td><td>Cada cuánto, desde cuándo.</td></tr>
+            <tr><td>«los días 5 y 20 de cada mes», «el último viernes de cada mes», «el primer y tercer lunes», «el último día»</td><td>Días del mes y días de la semana con su ordinal.</td></tr>
+            <tr><td>«el primer lunes hábil del mes», «el último día hábil», «el quinto día hábil»</td><td>Hábil: lunes a viernes sin festivos; el ordinal cuenta después de quitarlos.</td></tr>
+            <tr><td>«cada año el 15 de enero», «cada año el primer lunes de marzo», «el 29 de febrero»</td><td>Fechas del año (el 29 de febrero, solo en bisiestos).</td></tr>
+            <tr><td>«cada 2 horas de 8 a 18», «de lunes a viernes cada hora de 8 am a 5 pm»</td><td>Horas dentro de un horario.</td></tr>
+            <tr><td>«hasta el 31 de diciembre», «10 veces», «durante 3 meses»</td><td>Cuándo termina.</td></tr>
+            <tr><td>«menos en festivos», «si cae festivo, el día hábil anterior / siguiente»</td><td>Festivos de Colombia (fijos, Ley Emiliani y los de Pascua), o los de <code>holidays</code>.</td></tr>
+            <tr><td>«quincenal los viernes»</td><td>Lo que no entiende lo dice: «no entiendo "quincenal los"».</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;label for="regla"&gt;Cuándo se envía&lt;/label&gt;
+&lt;nx-recurrence id="regla" name="regla" value="el último viernes de cada mes a las 5 pm"&gt;&lt;/nx-recurrence&gt;
+
+regla.addEventListener("nx-change", (e) =&gt; {
+  const { rrule, text, next } = e.detail;   // "DTSTART:…\nRRULE:FREQ=MONTHLY;BYDAY=-1FR;BYHOUR=17;…"
+  guardar(rrule);
+});</code></pre>
+        <pre role="tabpanel" hidden><code>import { Recurrence } from "nx-ui/solid";
+
+&lt;Recurrence name="regla" value={regla()} holidays={["2026-12-24"]}
+  onChange={(e) =&gt; setRegla(e.detail.rrule)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>value</code></td><td>Una frase («los lunes a las 8») o una RRULE (<code>DTSTART:…</code> + <code>RRULE:…</code>, <code>RRULE:…</code> o <code>FREQ=…</code>). Al leer, la RRULE.</td></tr>
+            <tr><td><code>rule</code>, <code>text</code>, <code>next</code></td><td>Solo lectura: la RRULE, la frase canónica y las próximas fechas (<code>Date[]</code>). <code>toJSON()</code> da <code>{rrule, text, holidays, next}</code>.</td></tr>
+            <tr><td><code>start</code></td><td>Desde cuándo (ISO; por defecto hoy): el <code>DTSTART</code> si la frase no dice «desde…».</td></tr>
+            <tr><td><code>holidays</code>, <code>holidays-mode</code></td><td>Festivos propios (JSON de fechas) que se suman a los de Colombia (<code>add</code>) o los reemplazan (<code>replace</code>).</td></tr>
+            <tr><td><code>count</code></td><td>Cuántas próximas fechas mostrar (5).</td></tr>
+            <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>readonly</code>, <code>value-format</code></td><td>Formulario: envía la RRULE (o el JSON con <code>value-format="json"</code>); validez nativa y <code>reset</code>.</td></tr>
+            <tr><td><code>locale</code>, <code>labels</code>, <code>label</code></td><td>Idioma de la frase (<code>en-US</code>: inglés básico) y de las fechas; textos de la interfaz; nombre accesible.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-change</code> <code>{value, rrule, text, next}</code> al confirmar lo escrito o cambiar un control; <code>nx-recurrence-error</code> <code>{message}</code>.</td></tr>
+            <tr><td>Lógica</td><td><code>parseRecurrence()</code>, <code>describeRecurrence()</code>, <code>toRRule()</code>, <code>parseRRule()</code>, <code>nextOccurrences()</code>, <code>colombiaHolidays(año)</code>: sin DOM, también para el backend en Node.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
