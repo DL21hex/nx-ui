@@ -25,6 +25,8 @@ import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
+import { mountThreadDemo } from "./demo-thread";
+import "./pages/thread.css";
 import { mountVoiceDemo } from "./demo-voice";
 import "./pages/voice.css";
 import { mountReviewDemo } from "./demo-review";
@@ -148,6 +150,7 @@ const NAV: MenuItem[] = [
   { id: "planner", label: "Agenda de recursos", href: "#/planner", icon: "calendar-range", section: "Componentes", badge: "Nuevo" },
   { id: "review", label: "Resumen antes de guardar", href: "#/review", icon: "list-checks", section: "Componentes", badge: "Nuevo" },
   { id: "voice", label: "Dictar", href: "#/voice", icon: "mic", section: "Componentes", badge: "Nuevo" },
+  { id: "thread", label: "Conversación", href: "#/thread", icon: "message-circle", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -190,6 +193,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/planner": { template: "page-planner", mount: mountPlannerDemo },
   "#/review": { template: "page-review", mount: mountReviewDemo },
   "#/voice": { template: "page-voice", mount: mountVoiceDemo },
+  "#/thread": { template: "page-thread", mount: mountThreadDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 

@@ -32,6 +32,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
 | `<nx-review>` + núcleo (ESM) | ≈ 10,4 KB |
 | `<nx-voice>` + núcleo (ESM); el dictado en un campo y el servidor se cargan aparte | ≈ 5,9 KB |
+| `<nx-thread>` + núcleo (ESM); las sugerencias, el stream y las anclas se cargan aparte | ≈ 11,9 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1804,6 +1805,46 @@ catorce para Ferretería El Tornillo, entrega el viernes» y el formulario se ll
 | Métodos | `start()`, `stop()`, `cancel()` |
 | Eventos | `nx-voice-start`, `nx-voice-partial` `{text}`, `nx-voice-text` `{text, confidence, final}` (cancelable), `nx-voice-end` `{text, canceled}`, `nx-voice-error` `{code, message}` (`not-allowed`, `no-speech`, `network`, `no-mic`, `server`, `failed`), `nx-voice-unavailable` |
 | Funciones | `applyDictation(valor, inicio, fin, dicho, {orders?, last?})` → `{value, caret, range}`, `parseDictation(dicho)`, `pickVoiceMime(isTypeSupported)`, `parseVoiceLine(línea)`, `voiceFileName(tipo)`, `parseVoiceHotkey("Alt+V")`, `voiceHotkeyMatches(atajo, evento)`, `speechTranscript(resultados)`, `voiceLevel(bytes)`, `voiceErrorCode(error)`, `VOICE_LABELS`, `VOICE_MIMES` |
+
+## `<nx-thread>`
+
+**La conversación dentro del registro.** En vez de «te mandé un correo sobre la OC-2291», los
+comentarios viven en el pedido, la factura o la orden de compra, y se pueden anclar a un campo
+(«¿por qué este descuento?»).
+
+- **Lista**: del más viejo al más nuevo, agrupada por día («Hoy», «Ayer», «lun 21 sept»), con avatar,
+  hora relativa (la exacta al pasar el cursor) y «(editado)». «Nuevos» marca el primer comentario de
+  otra persona desde la última visita. Con muchos comentarios pinta los últimos 50 y «Ver anteriores».
+- **Respuestas de un solo nivel**: responder cita arriba el comentario, en pequeño. Lo propio se edita
+  en su lugar y se borra con «Deshacer» (sin «¿Seguro?»).
+- **Anclas**: los campos con `data-thread` (o los de `anchors`) llevan junto a su etiqueta un globito
+  con los comentarios abiertos («3 comentarios sobre Descuento»); un clic filtra el hilo y deja el
+  redactor «Sobre: Descuento». Una conversación anclada se **resuelve** y queda plegada («Resuelto por
+  Laura · ver»).
+- **Redactor**: `@` menciona (lista de `people-source` con teclado), `#` o un código conocido
+  (`ref-patterns`: `FV-1873`) referencia un registro de `refs-source`, que se ve como ficha con su
+  tarjeta. El texto es siempre texto: solo se reconocen menciones, referencias, URL y saltos de línea.
+- **Envío optimista**, «No se envió · Reintentar» sin perder el texto (con `clientId`, sin duplicar) y
+  el borrador guardado por registro.
+- **En vivo** con `stream` (SSE o NDJSON: comentarios, ediciones, borrados y «escribiendo…»), con
+  reconexión; sin él, un sondeo suave. Con `<nx-presence>`: «Laura está viendo».
+- Cada mención nueva emite `nx-thread-mention` para que la app avise por su lado (correo, `<nx-inbox>`).
+
+```html
+<label for="desc">Descuento</label> <input id="desc" name="descuento" data-thread="descuento">
+
+<nx-thread record="OC-2291" endpoint="/api/comentarios" stream="/api/comentarios/stream"
+  people-source="/api/personas" refs-source="/api/referencias" ref-patterns='["OC-\\d{3,6}", "FV-\\d{3,6}"]'
+  me='{"id":"u7","name":"Diego Llinás"}'></nx-thread>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `record`, `endpoint`, `stream`, `poll` (s, 30; `0` no sondea), `people-source`, `refs-source`, `ref-patterns`, `me`, `anchors`, `presence` (`id` de un `<nx-presence>`), `readonly`, `disabled`, `locale`, `labels` · propiedad `comments` (sin `endpoint`, todo local) |
+| Métodos | `reload()`, `focusComposer(ancla?)`, `filter(ancla \| null)` |
+| Eventos | `nx-thread-post` `{record, text, anchor?, replyTo?, clientId}` (cancelable), `nx-thread-change` `{comments}`, `nx-thread-mention` `{comment, people}`, `nx-thread-error` `{action, message, id?}` |
+| Protocolo | `GET {endpoint}?record=` → `[{id, author, text, at, editedAt?, anchor?, replyTo?, resolved?, resolvedBy?}]` · `POST {endpoint}` · `PATCH {endpoint}/{id}` `{text}` o `{resolved}` · `DELETE {endpoint}/{id}` · `POST {endpoint}/typing` · stream `{type: "comment" \| "update" \| "delete" \| "typing", …}` |
+| Funciones | `parseThreadText()`, `threadPlainText()`, `threadMentions()`, `groupThreadByDay()`, `threadDayLabel()`, `threadRefPatterns()`, `threadFirstUnread()`, `threadAnchorCounts()`, `threadRoot()`, `cleanThreadComment(s)()`, `mergeThreadComments()`, `encodeThreadDraft()`, `decodeThreadDraft()`, `threadPick()`, `THREAD_LABELS`, `THREAD_MAX_TEXT` |
 
 ## Desarrollo
 

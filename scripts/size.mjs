@@ -67,8 +67,13 @@ const BUDGET = [
   ["dist/voice.js", 6.25 * 1024, "voice + núcleo (ESM; el dictado en un campo y el servidor con import())"],
   [lazy("voice-text"), 2 * 1024, "dictado en un campo de nx-voice: puntuación, órdenes, cursor (se carga al dictar en un campo)"],
   [lazy("voice-server"), 2 * 1024, "grabación y transcripción con servidor de nx-voice (se carga con engine=\"server\")"],
+  ["dist/thread.js", 12.5 * 1024, "thread + núcleo (ESM; sugerencias, stream, anclas y nxToast con import())"],
+  // Estos dos importan el chunk del hilo (ya cargado en la página): se mide todo lo que baja la página con ellos.
+  [lazy("thread-pick"), 13.75 * 1024, "nx-thread con sus sugerencias @/# y la tarjeta de registros (al primer foco en la caja)"],
+  [lazy("thread-live"), 13.75 * 1024, "nx-thread con su stream y «escribiendo…» (solo con stream)"],
+  [lazy("thread-anchors"), 1.5 * 1024, "campos anclables y globitos de nx-thread (solo si la página los tiene)"],
   ["dist/bdui.js", 2.5 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
-  ["dist/solid/index.jsx", 6 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
+  ["dist/solid/index.jsx", 7 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
   ["dist/sidemenu.css", 3 * 1024, "sidemenu (CSS)"],
@@ -109,6 +114,7 @@ const BUDGET = [
   ["dist/planner.css", 3 * 1024, "planner (CSS)"],
   ["dist/review.css", 1.75 * 1024, "review (CSS)"],
   ["dist/voice.css", 1.5 * 1024, "voice (CSS)"],
+  ["dist/thread.css", 2.25 * 1024, "thread (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];
