@@ -25,6 +25,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-handoff>` + QR + núcleo (ESM); el lado celular, ≈ 5 KB, se carga con `side="phone"` | ≈ 8,9 KB |
 | `<nx-award>` + núcleo (ESM) | ≈ 15,1 KB |
 | `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB), el bloqueo (≈ 3,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,3 KB |
+| `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1455,6 +1456,56 @@ compacto; en el celular, una hoja desde abajo):
 | Métodos | `show()`, `hide()`, `lock()`, `logout()` |
 | Eventos | `nx-account-switch` `{tenant}` (cancelable), `nx-account-status` `{status, until}`, `nx-account-theme` `{theme, palette}`, `nx-account-locale` `{locale}`, `nx-account-select` `{id}`, `nx-account-view-as` `{user}` (cancelable al entrar), `nx-account-extend` (cancelable), `nx-account-expired`, `nx-account-logout` `{pending}` (cancelable), `nx-open-change` `{open}` |
 | Funciones | `applyAccountPrefs(storage?)`, `accountCommands()`, `accountInitials()`, `sessionRemaining()`, `sessionPhase()`, `formatSessionRemaining()` («4:59»), `normalizePalettes()`, `pickTheme()`, `revealRadius()`, `accountStatusUntil()`, `BUILTIN_PALETTES` |
+
+## `<nx-launcher>`
+
+**Tarjetas para entrar a los módulos de un área.** Cada tarjeta dice para qué sirve el módulo y trae
+un solo dato vivo, la señal: «3 de tu equipo por aprobar · el más antiguo, hace 2 días».
+
+- **Vistas en la misma tarjeta:** con puntero, al pasar por ella (o al llegar con `Tab`) la
+  descripción cede su lugar a las vistas del módulo («Con salario», «Sin salario»), para entrar
+  directo a una sin cambiar el tamaño de la tarjeta. En pantallas táctiles se ven siempre. Llevan
+  contador y una pista corta («Última · 15 sep 2026»).
+- **Señal:** el dato (un número sale con el locale), su etiqueta y una nota con punto de color, una
+  barra (`meter`) o una minigráfica (`trend`). Si el dato cambia, pulsa; si solo cambia la señal, la
+  tarjeta no se rehace (conserva el puntero y el foco).
+- **Destacada:** `featured` ocupa dos columnas con el acento de fondo, una línea superior y una barra
+  por partes («Continuar donde ibas»).
+- **Columnas sin huérfanas:** las que caben con `--nx-launcher-min`, hasta `columns`; entre esas y
+  una menos, las que dejan menos tarjetas solas (4 módulos donde caben 3 van en 2 × 2).
+- **Buscador (`search`):** escribir con el foco en la página va a «Ir a». Lo que no coincide se apaga
+  en su sitio, sin reacomodar; `Enter` abre la primera coincidencia, que puede ser una vista.
+- **La tarjeta se convierte en la página:** la tarjeta abierta lleva los nombres de View Transitions
+  `nx-launcher-card`, `-icon` y `-label`. Si el encabezado de la página de destino usa los mismos
+  (`.nx-launcher-hero`, `.nx-launcher-hero-icon`, `.nx-launcher-hero-label`), el navegador anima el
+  paso: con `startViewTransition` en una SPA o entre documentos con `@view-transition { navigation: auto }`.
+  Al volver, `reveal()` (o solo, con `pagereveal`) devuelve los nombres a la tarjeta de la que se salió.
+- **Teclado:** las flechas pasan de una tarjeta a la vecina, también entre secciones; `Inicio`/`Fin`.
+
+```html
+<nx-launcher id="th"></nx-launcher>
+<script>
+  th.items = [
+    { id: "certificados", label: "Certificados laborales", icon: "file-text", href: "/talento/certificados",
+      description: "Genera tu certificado para bancos, arriendos o trámites.",
+      views: [{ label: "Con salario", href: "/talento/certificados?salario=1" }, { label: "Sin salario", href: "/talento/certificados?salario=0" }] },
+    { id: "permisos", label: "Permisos", icon: "calendar", href: "/talento/permisos",
+      views: [{ label: "Propias", href: "/talento/permisos/propias" }, { label: "De mis colaboradores", href: "/talento/permisos/equipo", badge: 3 }],
+      signal: { value: 3, label: "de tu equipo por aprobar", note: "el más antiguo, hace 2 días", tone: "warning" } },
+    { id: "desprendibles", label: "Desprendibles de pago", icon: "receipt",
+      views: [{ label: "Última", hint: "15 sep 2026", href: "/talento/desprendibles/ultima" }, { label: "Todas", href: "/talento/desprendibles" }] },
+    { id: "cesantias", label: "Cesantías", icon: "wallet", href: "/talento/cesantias", signal: { value: "$ 11.482.300", label: "en el fondo" } },
+  ];
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `items` (`[{id, label, href?, icon?, description?, section?, views?, signal?, featured?, eyebrow?, progress?, data?}]`; `views`: `[{label, href?, badge?, hint?}]`; `signal`: `{value?, label?, note?, tone?, meter?, trend?}`; `progress`: `[{label, value}]`), `search`, `query`, `columns` (4), `heading-level` (2), `locale`, `labels` |
+| Métodos | `focusItem(id?)`, `reveal(id?)` |
+| Eventos | `nx-launcher-select` `{item, view, href}` (cancelable; un clic con modificador es del navegador y no se anuncia) |
+| CSS | `--nx-launcher-min` (240px), `--nx-launcher-gap` (12px), `--nx-launcher-warn` / `--nx-launcher-ink`; `.nx-launcher-hero`, `.nx-launcher-hero-icon`, `.nx-launcher-hero-label` para la página de destino |
+| Funciones | `matchItem()`, `firstTarget()`, `fitColumns()`, `balanceColumns()`, `moveIndex()`, `sparkPaths()` |
 
 ## Desarrollo
 
