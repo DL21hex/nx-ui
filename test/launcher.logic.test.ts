@@ -77,6 +77,7 @@ describe("señal y barra", () => {
     const p = sparkPaths([10, 20, 15])!;
     expect(p.line).toBe("M0,20.5L50,1.5L100,11");
     expect(p.area).toBe(`${p.line}L100,22L0,22Z`);
+    expect(p.last).toBe(11);
     expect(sparkPaths([5, 5])!.line).toBe("M0,20.5L100,20.5");
     expect(sparkPaths([1, "x", NaN, 3] as unknown[])!.line).toBe("M0,20.5L100,1.5");
   });
