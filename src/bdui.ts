@@ -46,6 +46,7 @@ const registry = new Map<string, Entry>([
   ["Signature", { tag: "nx-signature", props: ["value", "name", "required", "readonly", "disabled", "askName", "askId", "document", "geo", "valueFormat", "auto", "handoff", "penColor", "height", "locale", "labels"] }],
   ["Planner", { tag: "nx-planner", props: ["resources", "bookings", "view", "date", "snap", "hours", "workdays", "holidays", "summary", "source", "endpoint", "readonly", "locale", "labels"] }],
   ["Review", { tag: "nx-review", props: ["mode", "threshold", "maxSilent", "empty", "initial", "rebase", "locale", "labels", "disabled"] }],
+  ["Voice", { tag: "nx-voice", props: ["for", "endpoint", "engine", "hold", "hotkey", "maxSeconds", "silence", "commands", "layout", "locale", "labels", "disabled"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

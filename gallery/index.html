@@ -3445,6 +3445,153 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
               </div>
             </template>
 
+        <!-- ================================================================ Dictar -->
+        <template id="page-voice">
+          <p class="eyebrow">Componentes</p>
+          <h1>Dictar <code class="tag">&lt;nx-voice&gt;</code></h1>
+          <p class="lead">
+            En bodega, en campo o con las manos ocupadas: «veinte láminas galvanizadas calibre catorce para Ferretería El
+            Tornillo, entrega el viernes» y el formulario se llena. Se dicta a un <code>&lt;nx-paste-fill&gt;</code>, que
+            reparte los datos con su confianza y su deshacer, o directamente en un campo de texto, con la puntuación dicha.
+          </p>
+          <p class="sel-tip" id="vc-support"></p>
+
+          <div class="vc-demo" lang="es-CO">
+            <section class="vc-card" aria-labelledby="vc-order-title">
+              <header class="vc-card__head">
+                <h2 class="vc-card__title" id="vc-order-title">Pedido rápido de bodega</h2>
+                <nx-voice id="vc-voice" for="vc-fill" hotkey="Alt+V" locale="es-CO"></nx-voice>
+              </header>
+              <nx-paste-fill
+                id="vc-fill"
+                endpoint="/demo/voice/fill"
+                locale="es-CO"
+                fields='[{"name":"cliente","kind":"company"},{"name":"cantidad","kind":"number"},{"name":"calibre","kind":"number"},{"name":"entrega","kind":"date"},{"name":"observaciones","kind":"text"}]'
+              >
+                <form class="vc-form" id="vc-form">
+                  <label class="vc-field vc-field--wide">Cliente <input name="cliente" autocomplete="off" /></label>
+                  <label class="vc-field">Producto
+                    <select name="producto">
+                      <option value="">Selecciona…</option>
+                      <option value="LAM-HR">Lámina HR</option>
+                      <option value="LAM-GALV">Lámina galvanizada</option>
+                      <option value="VAR-12">Varilla corrugada ½"</option>
+                      <option value="TUB-2">Tubo estructural 2"</option>
+                      <option value="ANG-18">Ángulo 1½" × ⅛"</option>
+                      <option value="MAL-15">Malla electrosoldada</option>
+                    </select>
+                  </label>
+                  <label class="vc-field">Cantidad <input name="cantidad" inputmode="numeric" autocomplete="off" /></label>
+                  <label class="vc-field">Calibre
+                    <select name="calibre">
+                      <option value="">—</option>
+                      <option value="12">12</option>
+                      <option value="14">14</option>
+                      <option value="16">16</option>
+                      <option value="18">18</option>
+                      <option value="20">20</option>
+                      <option value="22">22</option>
+                      <option value="24">24</option>
+                    </select>
+                  </label>
+                  <label class="vc-field">Fecha de entrega <input name="entrega" type="date" /></label>
+                  <label class="vc-field vc-field--wide">Observaciones <textarea name="observaciones" rows="2"></textarea></label>
+                  <div class="vc-form__foot"><button type="submit" class="dlg-plain">Crear pedido</button></div>
+                </form>
+              </nx-paste-fill>
+            </section>
+
+            <section class="vc-card" aria-labelledby="vc-notes-title">
+              <h2 class="vc-card__title" id="vc-notes-title">Novedades de la entrega</h2>
+              <p class="vc-card__hint">
+                Mantén presionado el botón (o la barra espaciadora sobre él) y di los signos: «coma», «punto», «punto y
+                aparte», «nueva línea», «signo de interrogación». «Borrar eso» quita lo último que dictaste.
+              </p>
+              <label class="vc-field">Novedades
+                <textarea id="vc-notes" rows="5" placeholder="Lo que pasó en el cargue o la entrega…"></textarea>
+              </label>
+              <nx-voice id="vc-notes-voice" for="vc-notes" hold layout="stacked" locale="es-CO"></nx-voice>
+            </section>
+          </div>
+
+          <section class="vc-sim" aria-labelledby="vc-sim-title">
+            <h2 class="vc-sim__title" id="vc-sim-title">Probar sin micrófono</h2>
+            <p class="sel-tip">
+              Cada frase recorre los mismos eventos que una toma real (parciales, final y la entrega), con una API de voz de
+              mentira y un audio sintético en lugar del micrófono, que es lo que mueve el anillo.
+            </p>
+            <div class="vc-sim__row">
+              <div class="vc-phrases" id="vc-phrases" role="group" aria-label="Frases de ejemplo"></div>
+              <label class="vc-server"><input type="checkbox" id="vc-server" /> Usar el servidor (<code>engine="server"</code>)</label>
+            </div>
+          </section>
+          <ol class="stage__log btn-events" id="vc-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Reconocimiento</td><td>La Web Speech API del navegador (<code>SpeechRecognition</code>), en el idioma del <code>locale</code> (es-CO por defecto), con resultados parciales que se ven en gris mientras se habla y el final en negro.</td></tr>
+                <tr><td>Con servidor</td><td>Sin esa API, o con <code>engine="server"</code>: graba con <code>MediaRecorder</code> (WebM u Ogg con Opus, o MP4 en Safari) y hace <code>POST {endpoint}</code> con el audio. Responde <code>{text}</code>, o NDJSON/SSE con <code>{partial}</code> mientras transcribe. Sin ninguna de las dos, el botón no aparece.</td></tr>
+                <tr><td>Cómo se habla</td><td>Tocar para hablar (un toque empieza; otro toque o 2 s de silencio terminan) o <code>hold</code>: mientras se mantiene el botón o la barra espaciadora, útil con guantes o ruido. <code>hotkey</code> («Alt+V») sirve en toda la página y no choca con el toque de Alt de <code>&lt;nx-keytips&gt;</code>. Escape cancela.</td></tr>
+                <tr><td>Entrega</td><td>A un <code>&lt;nx-paste-fill&gt;</code>: su <code>fill(text)</code> reparte los datos y queda «Llené 4 campos · Deshacer». A un <code>&lt;input&gt;</code> o <code>&lt;textarea&gt;</code>: se escribe en el cursor (o sobre lo seleccionado) y el campo recibe <code>input</code> y <code>change</code>.</td></tr>
+                <tr><td>Español hablado</td><td>Solo al dictar en un campo de texto: los signos dichos («coma», «punto y aparte», «dos puntos», «nueva línea», «abre paréntesis»…), la mayúscula al empezar la frase, el «¿» o «¡» de apertura al dictar el de cierre, y las órdenes «borrar eso» y «borra la última palabra» (<code>commands="false"</code> las apaga). «El punto de venta» o «la coma decimal» quedan como palabras.</td></tr>
+                <tr><td>Privacidad</td><td>El micrófono se apaga siempre al terminar, al ocultar la pestaña, al desconectar el elemento o a los <code>max-seconds</code> (30): se detienen todas las pistas y se cierra el <code>AudioContext</code> del medidor. Nunca graba en segundo plano.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="sel-tip">
+            <strong>Qué navegadores traen la API de voz.</strong> Chrome y Edge (escritorio y Android) la traen, y el audio se
+            reconoce en los servidores de Google o de Microsoft: necesita internet («Sin conexión» si no hay) y el audio sale
+            del equipo. Safari la trae en macOS y en iOS. Firefox no la trae, y Brave la tiene pero suele fallar. Donde no hay,
+            o si el audio no puede salir hacia un tercero, <code>endpoint</code> con <code>engine="server"</code> usa el
+            servidor propio de la app. En la galería, «Usar el servidor» graba de verdad y un servidor de mentira responde una
+            frase fija.
+          </p>
+
+          <h2>Cómo se usa</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-voice for="pedido-fill" hotkey="Alt+V"&gt;&lt;/nx-voice&gt;
+    &lt;nx-paste-fill id="pedido-fill" fields='[{"name":"cantidad","kind":"number"}]'&gt;
+      &lt;form&gt;…&lt;/form&gt;
+    &lt;/nx-paste-fill&gt;
+
+    &lt;!-- En un campo de texto, mantener para hablar --&gt;
+    &lt;textarea id="novedades"&gt;&lt;/textarea&gt;
+    &lt;nx-voice for="novedades" hold layout="stacked"&gt;&lt;/nx-voice&gt;
+
+    &lt;!-- Sin la API del navegador (o sin mandar audio a terceros): el servidor de la app --&gt;
+    &lt;nx-voice for="pedido-fill" engine="server" endpoint="/api/voz"&gt;&lt;/nx-voice&gt;</code></pre>
+            <pre role="tabpanel" hidden><code>import { Voice, PasteFill } from "nx-ui/solid";
+
+    &lt;Voice for="pedido-fill" hotkey="Alt+V" onText={(e) =&gt; registrar(e.detail.text)} /&gt;
+    &lt;PasteFill id="pedido-fill"&gt;&lt;form&gt;…&lt;/form&gt;&lt;/PasteFill&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>for</code></td><td>El <code>id</code> de un <code>&lt;nx-paste-fill&gt;</code> (recibe <code>fill(text)</code>), un <code>&lt;input&gt;</code> o un <code>&lt;textarea&gt;</code> (se dicta en el cursor). Sin él, solo el evento.</td></tr>
+                <tr><td><code>engine</code>, <code>endpoint</code></td><td><code>auto</code> (por defecto: el navegador, si no el servidor), <code>browser</code> o <code>server</code>. <code>endpoint</code> recibe <code>POST</code> con <code>FormData</code> (<code>audio</code>, <code>lang</code>); solo del mismo origen o de uno de <code>allowOrigins</code>.</td></tr>
+                <tr><td><code>hold</code>, <code>hotkey</code></td><td>Mantener para hablar; atajo de página («Alt+V», «Ctrl+Shift+D»).</td></tr>
+                <tr><td><code>max-seconds</code>, <code>silence</code></td><td>Tope de una toma (30 s) y el silencio que la termina (2000 ms; no aplica con <code>hold</code>).</td></tr>
+                <tr><td><code>commands</code>, <code>layout</code></td><td><code>commands="false"</code> apaga «borrar eso» y «borra la última palabra». <code>layout</code>: <code>inline</code> (la transcripción al lado) o <code>stacked</code> (debajo).</td></tr>
+                <tr><td><code>locale</code>, <code>labels</code>, <code>disabled</code></td><td>Idioma del reconocimiento (o el <code>lang</code> más cercano), textos (<code>VOICE_LABELS</code>) y apagarlo.</td></tr>
+                <tr><td>Métodos y propiedades</td><td><code>start()</code>, <code>stop()</code>, <code>cancel()</code>; <code>state</code> (<code>idle</code>, <code>asking</code>, <code>listening</code>, <code>processing</code>, <code>error</code>, <code>unavailable</code>), <code>supported</code>, <code>text</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-voice-start</code>, <code>nx-voice-partial</code> <code>{text}</code>, <code>nx-voice-text</code> <code>{text, confidence, final}</code> (cancelable: no se entrega), <code>nx-voice-end</code> <code>{text, canceled}</code>, <code>nx-voice-error</code> <code>{code, message}</code>, <code>nx-voice-unavailable</code>.</td></tr>
+                <tr><td>Funciones</td><td><code>applyDictation</code>, <code>parseDictation</code>, <code>pickVoiceMime</code>, <code>parseVoiceLine</code>, <code>parseVoiceHotkey</code>, <code>voiceHotkeyMatches</code>, <code>speechTranscript</code>, <code>voiceLevel</code>, <code>voiceErrorCode</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>
