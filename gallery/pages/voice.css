@@ -1,0 +1,136 @@
+/* Demo de <nx-voice>: el pedido de bodega, las novedades y «Probar sin micrófono». */
+
+.vc-demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  max-inline-size: none !important;
+  margin-block: 12px 18px;
+}
+@media (max-width: 899.98px) {
+  .vc-demo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.vc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.vc-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+
+  & nx-voice {
+    flex: 1 1 260px;
+    max-inline-size: 420px;
+  }
+}
+.vc-card__title {
+  margin: 0;
+  font-size: 16px;
+}
+.vc-card__hint {
+  margin: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.vc-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px 16px;
+}
+.vc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-weight: 500;
+
+  & :is(input, select, textarea) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-block-size: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-background);
+    color: var(--nx-foreground);
+    font: 14px var(--nx-font-sans);
+
+    &:focus {
+      border-color: var(--nx-primary);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--nx-primary-soft);
+    }
+  }
+  & textarea {
+    padding-block: 8px;
+    line-height: 1.45;
+    resize: vertical;
+  }
+}
+.vc-field--wide {
+  grid-column: 1 / -1;
+}
+.vc-form__foot {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+.vc-sim {
+  padding: 14px 16px;
+  border: 1px dashed var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+}
+.vc-sim__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.vc-sim__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-block-start: 10px;
+}
+.vc-phrases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vc-phrase {
+  padding: 6px 12px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-primary-ink);
+  font: 550 13px var(--nx-font-sans);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-primary-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.vc-server {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+  cursor: pointer;
+}

@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`, `<Thread>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -117,6 +117,12 @@ import type { PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerD
 import "../components/review/index";
 import type { NxReview } from "../components/review/review";
 import type { ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail } from "../components/review/types";
+import "../components/voice/index";
+import type { NxVoice } from "../components/voice/voice";
+import type { VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail } from "../components/voice/types";
+import "../components/thread/index";
+import type { NxThread } from "../components/thread/thread";
+import type { ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser } from "../components/thread/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -153,6 +159,8 @@ export type { NxPrint, PrintLabels, PrintOrientation, PrintPaginateDetail, Print
 export type { NxSignature, SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMeta, SignatureValue };
 export type { NxPlanner, PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView };
 export type { NxReview, ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail };
+export type { NxVoice, VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail };
+export type { NxThread, ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -160,6 +168,9 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      anchors: string[] | undefined;
+      refPatterns: string[] | undefined;
+      comments: ThreadComment[] | undefined;
       initial: Record<string, unknown> | null | undefined;
       resources: PlannerResource[] | undefined;
       bookings: PlannerBooking[] | undefined;
@@ -184,7 +195,7 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -215,6 +226,15 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      record: string | undefined;
+      poll: string | undefined;
+      presence: string | undefined;
+      "people-source": string | undefined;
+      "refs-source": string | undefined;
+      engine: VoiceEngine | undefined;
+      "max-seconds": string | undefined;
+      silence: string | undefined;
+      commands: "false" | undefined;
       threshold: string | undefined;
       "max-silent": string | undefined;
       empty: "notice" | undefined;
@@ -317,6 +337,7 @@ declare module "solid-js" {
       "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
+      hold: boolean;
       "ask-name": boolean;
       "ask-id": boolean;
       geo: boolean;
@@ -345,6 +366,16 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-thread-post": CustomEvent<ThreadPostDetail>;
+      "nx-thread-change": CustomEvent<{ comments: ThreadComment[] }>;
+      "nx-thread-mention": CustomEvent<ThreadMentionDetail>;
+      "nx-thread-error": CustomEvent<ThreadErrorDetail>;
+      "nx-voice-start": CustomEvent<Record<string, never>>;
+      "nx-voice-partial": CustomEvent<{ text: string }>;
+      "nx-voice-text": CustomEvent<VoiceTextDetail>;
+      "nx-voice-end": CustomEvent<VoiceEndDetail>;
+      "nx-voice-error": CustomEvent<VoiceErrorDetail>;
+      "nx-voice-unavailable": CustomEvent<Record<string, never>>;
       "nx-review-open": CustomEvent<ReviewOpenDetail>;
       "nx-review-confirm": CustomEvent<ReviewConfirmDetail>;
       "nx-review-cancel": CustomEvent<{ changes: ReviewChange[] }>;
@@ -442,6 +473,8 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-thread": HTMLAttributes<NxThread>;
+      "nx-voice": HTMLAttributes<NxVoice>;
       "nx-review": HTMLAttributes<NxReview>;
       "nx-planner": HTMLAttributes<NxPlanner>;
       "nx-signature": HTMLAttributes<NxSignature>;
@@ -2071,5 +2104,118 @@ export function Review(props: ReviewProps): JSX.Element {
     >
       {local.children}
     </nx-review>
+  );
+}
+
+export interface VoiceProps extends Omit<JSX.HTMLAttributes<NxVoice>, "onError"> {
+  /** El `id` de un `<nx-paste-fill>`, un `<input>` o un `<textarea>` que recibe lo dictado. */
+  for?: string;
+  /** Recibe `POST` con el audio (`FormData`: `audio`, `lang`) y responde el texto. */
+  endpoint?: string;
+  /** `auto` (por defecto), `browser` o `server`. */
+  engine?: VoiceEngine;
+  /** Mantener para hablar (el botón o la barra espaciadora). */
+  hold?: boolean;
+  /** Atajo de página, p. ej. «Alt+V». */
+  hotkey?: string;
+  /** Tope de una toma, en segundos (30). */
+  maxSeconds?: number;
+  /** Silencio que termina una toma, en ms (2000). */
+  silence?: number;
+  /** `false` apaga «borrar eso» y «borra la última palabra». */
+  commands?: boolean;
+  layout?: VoiceLayout;
+  locale?: string;
+  labels?: Partial<VoiceLabels>;
+  disabled?: boolean;
+  onStart?: (e: CustomEvent<Record<string, never>>) => void;
+  onPartial?: (e: CustomEvent<{ text: string }>) => void;
+  /** Cancelable: no se entrega a `for`. */
+  onText?: (e: CustomEvent<VoiceTextDetail>) => void;
+  onEnd?: (e: CustomEvent<VoiceEndDetail>) => void;
+  onError?: (e: CustomEvent<VoiceErrorDetail>) => void;
+  onUnavailable?: (e: CustomEvent<Record<string, never>>) => void;
+}
+
+export function Voice(props: VoiceProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["for", "endpoint", "engine", "hold", "hotkey", "maxSeconds", "silence", "commands", "layout", "locale", "labels", "disabled", "onStart", "onPartial", "onText", "onEnd", "onError", "onUnavailable"]);
+  return (
+    <nx-voice
+      {...rest}
+      prop:labels={local.labels}
+      attr:for={local.for}
+      attr:endpoint={local.endpoint}
+      attr:engine={local.engine}
+      attr:hotkey={local.hotkey}
+      attr:max-seconds={local.maxSeconds === undefined ? undefined : String(local.maxSeconds)}
+      attr:silence={local.silence === undefined ? undefined : String(local.silence)}
+      attr:commands={local.commands === false ? "false" : undefined}
+      attr:layout={local.layout}
+      attr:locale={local.locale}
+      bool:hold={!!local.hold}
+      bool:disabled={!!local.disabled}
+      on:nx-voice-start={(e) => local.onStart?.(e)}
+      on:nx-voice-partial={(e) => local.onPartial?.(e)}
+      on:nx-voice-text={(e) => local.onText?.(e)}
+      on:nx-voice-end={(e) => local.onEnd?.(e)}
+      on:nx-voice-error={(e) => local.onError?.(e)}
+      on:nx-voice-unavailable={(e) => local.onUnavailable?.(e)}
+    />
+  );
+}
+
+export interface ThreadProps extends Omit<JSX.HTMLAttributes<NxThread>, "onChange" | "onError"> {
+  /** El registro («OC-2291»): de él cuelgan los comentarios, el borrador y lo leído. */
+  record: string;
+  /** `GET ?record=`, `POST`, `PATCH /{id}`, `DELETE /{id}`. Sin él, todo es local (`comments`). */
+  endpoint?: string;
+  /** SSE o NDJSON con los cambios en vivo. */
+  stream?: string;
+  /** Sin `stream`: segundos entre consultas (30; `0` no sondea). */
+  poll?: number;
+  peopleSource?: string;
+  refsSource?: string;
+  refPatterns?: string[];
+  /** Quien escribe desde aquí. Sin él, solo se lee. */
+  me?: ThreadUser | null;
+  anchors?: string[];
+  /** `id` del `<nx-presence>` del que se lee quién está viendo. */
+  presence?: string;
+  comments?: ThreadComment[];
+  readonly?: boolean;
+  disabled?: boolean;
+  locale?: string;
+  labels?: Partial<ThreadLabels>;
+  onPost?: (e: CustomEvent<ThreadPostDetail>) => void;
+  onChange?: (e: CustomEvent<{ comments: ThreadComment[] }>) => void;
+  onMention?: (e: CustomEvent<ThreadMentionDetail>) => void;
+  onError?: (e: CustomEvent<ThreadErrorDetail>) => void;
+}
+
+export function Thread(props: ThreadProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "comments", "readonly", "disabled", "locale", "labels", "onPost", "onChange", "onMention", "onError"]);
+  return (
+    <nx-thread
+      {...rest}
+      prop:me={local.me}
+      prop:anchors={local.anchors}
+      prop:refPatterns={local.refPatterns}
+      prop:comments={local.comments}
+      prop:labels={local.labels}
+      attr:record={local.record}
+      attr:endpoint={local.endpoint}
+      attr:stream={local.stream}
+      attr:poll={local.poll === undefined ? undefined : String(local.poll)}
+      attr:people-source={local.peopleSource}
+      attr:refs-source={local.refsSource}
+      attr:presence={local.presence}
+      attr:locale={local.locale}
+      bool:readonly={!!local.readonly}
+      bool:disabled={!!local.disabled}
+      on:nx-thread-post={(e) => local.onPost?.(e)}
+      on:nx-thread-change={(e) => local.onChange?.(e)}
+      on:nx-thread-mention={(e) => local.onMention?.(e)}
+      on:nx-thread-error={(e) => local.onError?.(e)}
+    />
   );
 }

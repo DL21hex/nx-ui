@@ -3445,6 +3445,282 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
               </div>
             </template>
 
+        <!-- ================================================================ Dictar -->
+        <template id="page-voice">
+          <p class="eyebrow">Componentes</p>
+          <h1>Dictar <code class="tag">&lt;nx-voice&gt;</code></h1>
+          <p class="lead">
+            En bodega, en campo o con las manos ocupadas: «veinte láminas galvanizadas calibre catorce para Ferretería El
+            Tornillo, entrega el viernes» y el formulario se llena. Se dicta a un <code>&lt;nx-paste-fill&gt;</code>, que
+            reparte los datos con su confianza y su deshacer, o directamente en un campo de texto, con la puntuación dicha.
+          </p>
+          <p class="sel-tip" id="vc-support"></p>
+
+          <div class="vc-demo" lang="es-CO">
+            <section class="vc-card" aria-labelledby="vc-order-title">
+              <header class="vc-card__head">
+                <h2 class="vc-card__title" id="vc-order-title">Pedido rápido de bodega</h2>
+                <nx-voice id="vc-voice" for="vc-fill" hotkey="Alt+V" locale="es-CO"></nx-voice>
+              </header>
+              <nx-paste-fill
+                id="vc-fill"
+                endpoint="/demo/voice/fill"
+                locale="es-CO"
+                fields='[{"name":"cliente","kind":"company"},{"name":"cantidad","kind":"number"},{"name":"calibre","kind":"number"},{"name":"entrega","kind":"date"},{"name":"observaciones","kind":"text"}]'
+              >
+                <form class="vc-form" id="vc-form">
+                  <label class="vc-field vc-field--wide">Cliente <input name="cliente" autocomplete="off" /></label>
+                  <label class="vc-field">Producto
+                    <select name="producto">
+                      <option value="">Selecciona…</option>
+                      <option value="LAM-HR">Lámina HR</option>
+                      <option value="LAM-GALV">Lámina galvanizada</option>
+                      <option value="VAR-12">Varilla corrugada ½"</option>
+                      <option value="TUB-2">Tubo estructural 2"</option>
+                      <option value="ANG-18">Ángulo 1½" × ⅛"</option>
+                      <option value="MAL-15">Malla electrosoldada</option>
+                    </select>
+                  </label>
+                  <label class="vc-field">Cantidad <input name="cantidad" inputmode="numeric" autocomplete="off" /></label>
+                  <label class="vc-field">Calibre
+                    <select name="calibre">
+                      <option value="">—</option>
+                      <option value="12">12</option>
+                      <option value="14">14</option>
+                      <option value="16">16</option>
+                      <option value="18">18</option>
+                      <option value="20">20</option>
+                      <option value="22">22</option>
+                      <option value="24">24</option>
+                    </select>
+                  </label>
+                  <label class="vc-field">Fecha de entrega <input name="entrega" type="date" /></label>
+                  <label class="vc-field vc-field--wide">Observaciones <textarea name="observaciones" rows="2"></textarea></label>
+                  <div class="vc-form__foot"><button type="submit" class="dlg-plain">Crear pedido</button></div>
+                </form>
+              </nx-paste-fill>
+            </section>
+
+            <section class="vc-card" aria-labelledby="vc-notes-title">
+              <h2 class="vc-card__title" id="vc-notes-title">Novedades de la entrega</h2>
+              <p class="vc-card__hint">
+                Mantén presionado el botón (o la barra espaciadora sobre él) y di los signos: «coma», «punto», «punto y
+                aparte», «nueva línea», «signo de interrogación». «Borrar eso» quita lo último que dictaste.
+              </p>
+              <label class="vc-field">Novedades
+                <textarea id="vc-notes" rows="5" placeholder="Lo que pasó en el cargue o la entrega…"></textarea>
+              </label>
+              <nx-voice id="vc-notes-voice" for="vc-notes" hold layout="stacked" locale="es-CO"></nx-voice>
+            </section>
+          </div>
+
+          <section class="vc-sim" aria-labelledby="vc-sim-title">
+            <h2 class="vc-sim__title" id="vc-sim-title">Probar sin micrófono</h2>
+            <p class="sel-tip">
+              Cada frase recorre los mismos eventos que una toma real (parciales, final y la entrega), con una API de voz de
+              mentira y un audio sintético en lugar del micrófono, que es lo que mueve el anillo.
+            </p>
+            <div class="vc-sim__row">
+              <div class="vc-phrases" id="vc-phrases" role="group" aria-label="Frases de ejemplo"></div>
+              <label class="vc-server"><input type="checkbox" id="vc-server" /> Usar el servidor (<code>engine="server"</code>)</label>
+            </div>
+          </section>
+          <ol class="stage__log btn-events" id="vc-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Reconocimiento</td><td>La Web Speech API del navegador (<code>SpeechRecognition</code>), en el idioma del <code>locale</code> (es-CO por defecto), con resultados parciales que se ven en gris mientras se habla y el final en negro.</td></tr>
+                <tr><td>Con servidor</td><td>Sin esa API, o con <code>engine="server"</code>: graba con <code>MediaRecorder</code> (WebM u Ogg con Opus, o MP4 en Safari) y hace <code>POST {endpoint}</code> con el audio. Responde <code>{text}</code>, o NDJSON/SSE con <code>{partial}</code> mientras transcribe. Sin ninguna de las dos, el botón no aparece.</td></tr>
+                <tr><td>Cómo se habla</td><td>Tocar para hablar (un toque empieza; otro toque o 2 s de silencio terminan) o <code>hold</code>: mientras se mantiene el botón o la barra espaciadora, útil con guantes o ruido. <code>hotkey</code> («Alt+V») sirve en toda la página y no choca con el toque de Alt de <code>&lt;nx-keytips&gt;</code>. Escape cancela.</td></tr>
+                <tr><td>Entrega</td><td>A un <code>&lt;nx-paste-fill&gt;</code>: su <code>fill(text)</code> reparte los datos y queda «Llené 4 campos · Deshacer». A un <code>&lt;input&gt;</code> o <code>&lt;textarea&gt;</code>: se escribe en el cursor (o sobre lo seleccionado) y el campo recibe <code>input</code> y <code>change</code>.</td></tr>
+                <tr><td>Español hablado</td><td>Solo al dictar en un campo de texto: los signos dichos («coma», «punto y aparte», «dos puntos», «nueva línea», «abre paréntesis»…), la mayúscula al empezar la frase, el «¿» o «¡» de apertura al dictar el de cierre, y las órdenes «borrar eso» y «borra la última palabra» (<code>commands="false"</code> las apaga). «El punto de venta» o «la coma decimal» quedan como palabras.</td></tr>
+                <tr><td>Privacidad</td><td>El micrófono se apaga siempre al terminar, al ocultar la pestaña, al desconectar el elemento o a los <code>max-seconds</code> (30): se detienen todas las pistas y se cierra el <code>AudioContext</code> del medidor. Nunca graba en segundo plano.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="sel-tip">
+            <strong>Qué navegadores traen la API de voz.</strong> Chrome y Edge (escritorio y Android) la traen, y el audio se
+            reconoce en los servidores de Google o de Microsoft: necesita internet («Sin conexión» si no hay) y el audio sale
+            del equipo. Safari la trae en macOS y en iOS. Firefox no la trae, y Brave la tiene pero suele fallar. Donde no hay,
+            o si el audio no puede salir hacia un tercero, <code>endpoint</code> con <code>engine="server"</code> usa el
+            servidor propio de la app. En la galería, «Usar el servidor» graba de verdad y un servidor de mentira responde una
+            frase fija.
+          </p>
+
+          <h2>Cómo se usa</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-voice for="pedido-fill" hotkey="Alt+V"&gt;&lt;/nx-voice&gt;
+    &lt;nx-paste-fill id="pedido-fill" fields='[{"name":"cantidad","kind":"number"}]'&gt;
+      &lt;form&gt;…&lt;/form&gt;
+    &lt;/nx-paste-fill&gt;
+
+    &lt;!-- En un campo de texto, mantener para hablar --&gt;
+    &lt;textarea id="novedades"&gt;&lt;/textarea&gt;
+    &lt;nx-voice for="novedades" hold layout="stacked"&gt;&lt;/nx-voice&gt;
+
+    &lt;!-- Sin la API del navegador (o sin mandar audio a terceros): el servidor de la app --&gt;
+    &lt;nx-voice for="pedido-fill" engine="server" endpoint="/api/voz"&gt;&lt;/nx-voice&gt;</code></pre>
+            <pre role="tabpanel" hidden><code>import { Voice, PasteFill } from "nx-ui/solid";
+
+    &lt;Voice for="pedido-fill" hotkey="Alt+V" onText={(e) =&gt; registrar(e.detail.text)} /&gt;
+    &lt;PasteFill id="pedido-fill"&gt;&lt;form&gt;…&lt;/form&gt;&lt;/PasteFill&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>for</code></td><td>El <code>id</code> de un <code>&lt;nx-paste-fill&gt;</code> (recibe <code>fill(text)</code>), un <code>&lt;input&gt;</code> o un <code>&lt;textarea&gt;</code> (se dicta en el cursor). Sin él, solo el evento.</td></tr>
+                <tr><td><code>engine</code>, <code>endpoint</code></td><td><code>auto</code> (por defecto: el navegador, si no el servidor), <code>browser</code> o <code>server</code>. <code>endpoint</code> recibe <code>POST</code> con <code>FormData</code> (<code>audio</code>, <code>lang</code>); solo del mismo origen o de uno de <code>allowOrigins</code>.</td></tr>
+                <tr><td><code>hold</code>, <code>hotkey</code></td><td>Mantener para hablar; atajo de página («Alt+V», «Ctrl+Shift+D»).</td></tr>
+                <tr><td><code>max-seconds</code>, <code>silence</code></td><td>Tope de una toma (30 s) y el silencio que la termina (2000 ms; no aplica con <code>hold</code>).</td></tr>
+                <tr><td><code>commands</code>, <code>layout</code></td><td><code>commands="false"</code> apaga «borrar eso» y «borra la última palabra». <code>layout</code>: <code>inline</code> (la transcripción al lado) o <code>stacked</code> (debajo).</td></tr>
+                <tr><td><code>locale</code>, <code>labels</code>, <code>disabled</code></td><td>Idioma del reconocimiento (o el <code>lang</code> más cercano), textos (<code>VOICE_LABELS</code>) y apagarlo.</td></tr>
+                <tr><td>Métodos y propiedades</td><td><code>start()</code>, <code>stop()</code>, <code>cancel()</code>; <code>state</code> (<code>idle</code>, <code>asking</code>, <code>listening</code>, <code>processing</code>, <code>error</code>, <code>unavailable</code>), <code>supported</code>, <code>text</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-voice-start</code>, <code>nx-voice-partial</code> <code>{text}</code>, <code>nx-voice-text</code> <code>{text, confidence, final}</code> (cancelable: no se entrega), <code>nx-voice-end</code> <code>{text, canceled}</code>, <code>nx-voice-error</code> <code>{code, message}</code>, <code>nx-voice-unavailable</code>.</td></tr>
+                <tr><td>Funciones</td><td><code>applyDictation</code>, <code>parseDictation</code>, <code>pickVoiceMime</code>, <code>parseVoiceLine</code>, <code>parseVoiceHotkey</code>, <code>voiceHotkeyMatches</code>, <code>speechTranscript</code>, <code>voiceLevel</code>, <code>voiceErrorCode</code>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <!-- ================================================================ Conversación -->
+        <template id="page-thread">
+          <p class="eyebrow">Componentes</p>
+          <h1>Conversación <code class="tag">&lt;nx-thread&gt;</code></h1>
+          <p class="lead">
+            La conversación dentro del registro. En vez de «te mandé un correo sobre la OC-2291», los comentarios viven en la
+            orden, con menciones, referencias a otros registros y, si hace falta, anclados a un campo: «¿por qué este
+            descuento?».
+          </p>
+
+          <h2>Conversación en el registro</h2>
+          <div class="hilo" lang="es-CO">
+            <form class="hilo-card hilo-form" id="hilo-form" autocomplete="off" aria-labelledby="hilo-title">
+              <header class="hilo-form__head">
+                <div>
+                  <p class="hilo-form__kicker">Orden de compra · Por aprobar</p>
+                  <h3 class="hilo-form__title" id="hilo-title">OC-2291</h3>
+                </div>
+                <nx-presence id="hilo-presence" for="hilo-form" locale="es-CO"></nx-presence>
+              </header>
+              <div class="hilo-field hilo-field--wide">
+                <label for="hilo-prov">Proveedor</label>
+                <input id="hilo-prov" name="proveedor" value="Aceros del Caribe S.A.S." />
+              </div>
+              <div class="hilo-field">
+                <label for="hilo-desc">Descuento</label>
+                <input id="hilo-desc" name="descuento" value="12 %" inputmode="decimal" data-thread="descuento" />
+              </div>
+              <div class="hilo-field">
+                <label for="hilo-entrega">Fecha de entrega</label>
+                <input id="hilo-entrega" name="entrega" type="date" value="2026-10-05" data-thread="entrega" />
+              </div>
+              <div class="hilo-field hilo-field--wide">
+                <label for="hilo-obs">Observaciones</label>
+                <textarea id="hilo-obs" name="observaciones" rows="3">Entregar en la Planta Malambo, muelle 2. Varilla corrugada ½" × 6 m, 480 und.</textarea>
+              </div>
+            </form>
+
+            <nx-thread
+              class="hilo-card"
+              id="hilo-thread"
+              record="OC-2291"
+              endpoint="/demo/thread/comentarios"
+              stream="/demo/thread/stream"
+              people-source="/demo/thread/personas"
+              refs-source="/demo/thread/referencias"
+              ref-patterns='["OC-\\d{3,6}", "FV-\\d{3,6}", "REM-\\d{3,6}"]'
+              presence="hilo-presence"
+              me='{"id":"u7","name":"Diego Llinás"}'
+              locale="es-CO"
+            ></nx-thread>
+          </div>
+
+          <div class="hilo-tools">
+            <button type="button" class="dlg-plain" id="hilo-live" aria-pressed="false"><span>En vivo: apagado</span></button>
+            <button type="button" class="dlg-plain" id="hilo-fail" aria-pressed="false">Fallar el próximo envío</button>
+            <button type="button" class="dlg-plain" id="hilo-reset">Restaurar la conversación</button>
+          </div>
+          <p class="sel-tip">
+            Escribe <kbd>@</kbd> para mencionar (<kbd>↑</kbd> <kbd>↓</kbd> y <kbd>Enter</kbd>), <kbd>#</kbd> o un código como
+            <code>FV-1873</code> para referenciar un registro. Los globitos junto a «Descuento» y «Fecha de entrega» filtran la
+            conversación a ese campo. «En vivo» hace que Laura entre al registro y comente cada tanto; con «Fallar el próximo
+            envío» se ve el reintento sin duplicar.
+          </p>
+          <ol class="stage__log btn-events" id="hilo-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Lista</td><td>Del más viejo al más nuevo, agrupada por día («Hoy», «Ayer», «lun 21 sept»), con la hora relativa y la exacta al pasar el cursor. «Nuevos» marca el primer comentario de otra persona desde tu última visita (se recuerda por registro y persona). Con muchos comentarios pinta los últimos 50 y «Ver anteriores».</td></tr>
+                <tr><td>Respuestas</td><td>De un solo nivel: responder cita arriba, en pequeño, el comentario al que responde (un clic lleva a él). Nada de árboles.</td></tr>
+                <tr><td>Lo propio</td><td>Se edita en su lugar y se borra al instante, con «Deshacer» en un aviso (sin «¿Seguro?»).</td></tr>
+                <tr><td>Anclas</td><td>Los campos con <code>data-thread</code> (o los de <code>anchors</code>) llevan junto a su etiqueta un globito con los comentarios abiertos sobre ese campo. Es un botón propio, insertado sin mover nada del formulario. Clic: el hilo se filtra a ese campo y el redactor queda «Sobre: Descuento». Una conversación anclada se resuelve y queda plegada.</td></tr>
+                <tr><td>Redactor</td><td>Crece con lo que se escribe. <kbd>Enter</kbd> envía, <kbd>Mayús</kbd>+<kbd>Enter</kbd> es otra línea (en el celular, el botón Enviar). El borrador sobrevive a recargar la página.</td></tr>
+                <tr><td>Texto</td><td>Siempre texto: solo se reconocen las menciones, las referencias, las URL (<code>https://…</code>, en otra pestaña) y los saltos de línea. Nada de HTML de quien escribe.</td></tr>
+                <tr><td>Envío</td><td>Optimista: aparece al instante («Enviando…»); si falla, «No se envió · Reintentar» sin perder el texto. El <code>clientId</code> evita duplicados en el reintento.</td></tr>
+                <tr><td>En vivo</td><td>Con <code>stream</code> (SSE o NDJSON) llegan comentarios, ediciones, borrados y «escribiendo…», con reconexión de espera creciente. Sin stream, un sondeo suave con la pestaña visible.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;form&gt;
+      &lt;label for="desc"&gt;Descuento&lt;/label&gt;
+      &lt;input id="desc" name="descuento" data-thread="descuento"&gt;
+    &lt;/form&gt;
+
+    &lt;nx-thread record="OC-2291" endpoint="/api/comentarios" stream="/api/comentarios/stream"
+      people-source="/api/personas" refs-source="/api/referencias"
+      ref-patterns='["OC-\\d{3,6}", "FV-\\d{3,6}"]'
+      me='{"id":"u7","name":"Diego Llinás"}'&gt;&lt;/nx-thread&gt;
+
+    &lt;script type="module"&gt;
+      hilo.addEventListener("nx-thread-mention", (e) =&gt;
+        fetch("/api/avisos", { method: "POST", body: JSON.stringify(e.detail) }));
+    &lt;/script&gt;</code></pre>
+            <pre role="tabpanel" hidden><code>import { Thread } from "nx-ui/solid";
+
+    &lt;Thread record="OC-2291" endpoint="/api/comentarios" stream="/api/comentarios/stream"
+      peopleSource="/api/personas" refsSource="/api/referencias"
+      refPatterns={["OC-\\d{3,6}", "FV-\\d{3,6}"]} me={usuario()}
+      onMention={(e) =&gt; avisar(e.detail.people, e.detail.comment)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>record</code>, <code>endpoint</code></td><td>El registro y su API: <code>GET ?record=</code>, <code>POST</code> <code>{record, text, anchor?, replyTo?, clientId}</code>, <code>PATCH /{id}</code> <code>{text}</code> o <code>{resolved}</code>, <code>DELETE /{id}</code>. Sin <code>endpoint</code>, todo es local (propiedad <code>comments</code> y eventos).</td></tr>
+                <tr><td><code>stream</code>, <code>poll</code></td><td>SSE o NDJSON (<code>comment</code>, <code>update</code>, <code>delete</code>, <code>typing</code>); sin él, cada <code>poll</code> segundos (30; <code>0</code> no sondea).</td></tr>
+                <tr><td><code>people-source</code>, <code>refs-source</code>, <code>ref-patterns</code></td><td><code>?q=</code> → personas <code>{id, name, detail?, avatar?}</code> y registros <code>{id, label, detail?, href}</code>. Los patrones (JSON de expresiones regulares, con tope de largo; se descartan las que pueden colgar) reconocen códigos como <code>FV-1873</code> sin <kbd>#</kbd>.</td></tr>
+                <tr><td><code>me</code>, <code>anchors</code>, <code>presence</code></td><td>Quién escribe (sin él, solo se lee), campos anclables además de <code>[data-thread]</code> (<code>name</code> o selectores), y el <code>id</code> del <code>&lt;nx-presence&gt;</code> del que se lee «Laura está viendo».</td></tr>
+                <tr><td><code>readonly</code>, <code>disabled</code>, <code>locale</code>, <code>labels</code></td><td>Sin redactor ni acciones; redactor apagado; fechas y horas; textos (<code>THREAD_LABELS</code>).</td></tr>
+                <tr><td>Métodos</td><td><code>reload()</code>, <code>focusComposer(ancla?)</code>, <code>filter(ancla | null)</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-thread-post</code> (cancelable, antes de enviar), <code>nx-thread-change</code> <code>{comments}</code>, <code>nx-thread-mention</code> <code>{comment, people}</code> (la app avisa por su lado), <code>nx-thread-error</code> <code>{action, message, id?}</code>.</td></tr>
+                <tr><td>Teclado</td><td>En la lista de sugerencias: <kbd>↑</kbd> <kbd>↓</kbd>, <kbd>Enter</kbd> o <kbd>Tab</kbd> eligen, <kbd>Esc</kbd> cierra. Editando: <kbd>Enter</kbd> guarda, <kbd>Esc</kbd> cancela.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

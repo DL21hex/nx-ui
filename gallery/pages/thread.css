@@ -1,0 +1,103 @@
+/* ---------------------------------------------------------------- demo de <nx-thread> */
+
+.hilo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 20px;
+  align-items: start;
+
+  @media (width < 960px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.hilo-card {
+  min-inline-size: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--nx-border);
+  border-radius: calc(var(--nx-radius-lg) + 4px);
+  background: var(--nx-card);
+}
+nx-thread.hilo-card {
+  --nx-thread-height: 460px;
+}
+
+/* La orden: un formulario sobrio, dos columnas. */
+.hilo-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  align-content: start;
+
+  @media (width < 560px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.hilo-form__head {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block-end: 12px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.hilo-form__kicker {
+  margin: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.hilo-form__title {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+/* Etiqueta y globito en una línea; el campo debajo, a todo el ancho. */
+.hilo-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 0;
+  min-inline-size: 0;
+
+  & label {
+    color: var(--nx-muted-foreground);
+    font-size: 12.5px;
+    font-weight: 550;
+  }
+  & input,
+  & textarea {
+    flex: 1 0 100%;
+    min-inline-size: 0;
+    padding: 7px 10px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-background);
+    color: var(--nx-foreground);
+    font: inherit;
+    font-size: 13.5px;
+  }
+  & textarea {
+    resize: vertical;
+  }
+  & input:focus-visible,
+  & textarea:focus-visible {
+    border-color: var(--nx-primary-border);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+}
+.hilo-field--wide {
+  grid-column: 1 / -1;
+}
+.hilo-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 14px;
+
+  & [aria-pressed="true"] {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+}
