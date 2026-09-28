@@ -32,6 +32,8 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
 | `<nx-review>` + núcleo (ESM) | ≈ 10,4 KB |
 | `<nx-voice>` + núcleo (ESM); el dictado en un campo y el servidor se cargan aparte | ≈ 5,9 KB |
+| `<nx-thread>` + núcleo (ESM); las sugerencias, el stream y las anclas se cargan aparte | ≈ 11,9 KB |
+| `<nx-checklist>` + núcleo (ESM); los campos de evidencia, el resumen y la firma se cargan aparte | ≈ 11,8 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1804,6 +1806,91 @@ catorce para Ferretería El Tornillo, entrega el viernes» y el formulario se ll
 | Métodos | `start()`, `stop()`, `cancel()` |
 | Eventos | `nx-voice-start`, `nx-voice-partial` `{text}`, `nx-voice-text` `{text, confidence, final}` (cancelable), `nx-voice-end` `{text, canceled}`, `nx-voice-error` `{code, message}` (`not-allowed`, `no-speech`, `network`, `no-mic`, `server`, `failed`), `nx-voice-unavailable` |
 | Funciones | `applyDictation(valor, inicio, fin, dicho, {orders?, last?})` → `{value, caret, range}`, `parseDictation(dicho)`, `pickVoiceMime(isTypeSupported)`, `parseVoiceLine(línea)`, `voiceFileName(tipo)`, `parseVoiceHotkey("Alt+V")`, `voiceHotkeyMatches(atajo, evento)`, `speechTranscript(resultados)`, `voiceLevel(bytes)`, `voiceErrorCode(error)`, `VOICE_LABELS`, `VOICE_MIMES` |
+
+## `<nx-thread>`
+
+**La conversación dentro del registro.** En vez de «te mandé un correo sobre la OC-2291», los
+comentarios viven en el pedido, la factura o la orden de compra, y se pueden anclar a un campo
+(«¿por qué este descuento?»).
+
+- **Lista**: del más viejo al más nuevo, agrupada por día («Hoy», «Ayer», «lun 21 sept»), con avatar,
+  hora relativa (la exacta al pasar el cursor) y «(editado)». «Nuevos» marca el primer comentario de
+  otra persona desde la última visita. Con muchos comentarios pinta los últimos 50 y «Ver anteriores».
+- **Respuestas de un solo nivel**: responder cita arriba el comentario, en pequeño. Lo propio se edita
+  en su lugar y se borra con «Deshacer» (sin «¿Seguro?»).
+- **Anclas**: los campos con `data-thread` (o los de `anchors`) llevan junto a su etiqueta un globito
+  con los comentarios abiertos («3 comentarios sobre Descuento»); un clic filtra el hilo y deja el
+  redactor «Sobre: Descuento». Una conversación anclada se **resuelve** y queda plegada («Resuelto por
+  Laura · ver»).
+- **Redactor**: `@` menciona (lista de `people-source` con teclado), `#` o un código conocido
+  (`ref-patterns`: `FV-1873`) referencia un registro de `refs-source`, que se ve como ficha con su
+  tarjeta. El texto es siempre texto: solo se reconocen menciones, referencias, URL y saltos de línea.
+- **Envío optimista**, «No se envió · Reintentar» sin perder el texto (con `clientId`, sin duplicar) y
+  el borrador guardado por registro.
+- **En vivo** con `stream` (SSE o NDJSON: comentarios, ediciones, borrados y «escribiendo…»), con
+  reconexión; sin él, un sondeo suave. Con `<nx-presence>`: «Laura está viendo».
+- Cada mención nueva emite `nx-thread-mention` para que la app avise por su lado (correo, `<nx-inbox>`).
+
+```html
+<label for="desc">Descuento</label> <input id="desc" name="descuento" data-thread="descuento">
+
+<nx-thread record="OC-2291" endpoint="/api/comentarios" stream="/api/comentarios/stream"
+  people-source="/api/personas" refs-source="/api/referencias" ref-patterns='["OC-\\d{3,6}", "FV-\\d{3,6}"]'
+  me='{"id":"u7","name":"Diego Llinás"}'></nx-thread>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `record`, `endpoint`, `stream`, `poll` (s, 30; `0` no sondea), `people-source`, `refs-source`, `ref-patterns`, `me`, `anchors`, `presence` (`id` de un `<nx-presence>`), `readonly`, `disabled`, `locale`, `labels` · propiedad `comments` (sin `endpoint`, todo local) |
+| Métodos | `reload()`, `focusComposer(ancla?)`, `filter(ancla \| null)` |
+| Eventos | `nx-thread-post` `{record, text, anchor?, replyTo?, clientId}` (cancelable), `nx-thread-change` `{comments}`, `nx-thread-mention` `{comment, people}`, `nx-thread-error` `{action, message, id?}` |
+| Protocolo | `GET {endpoint}?record=` → `[{id, author, text, at, editedAt?, anchor?, replyTo?, resolved?, resolvedBy?}]` · `POST {endpoint}` · `PATCH {endpoint}/{id}` `{text}` o `{resolved}` · `DELETE {endpoint}/{id}` · `POST {endpoint}/typing` · stream `{type: "comment" \| "update" \| "delete" \| "typing", …}` |
+| Funciones | `parseThreadText()`, `threadPlainText()`, `threadMentions()`, `groupThreadByDay()`, `threadDayLabel()`, `threadRefPatterns()`, `threadFirstUnread()`, `threadAnchorCounts()`, `threadRoot()`, `cleanThreadComment(s)()`, `mergeThreadComments()`, `encodeThreadDraft()`, `decodeThreadDraft()`, `threadPick()`, `THREAD_LABELS`, `THREAD_MAX_TEXT` |
+
+## `<nx-checklist>`
+
+**Procedimientos con evidencia.** Cierre de mes, auditoría de inventario, recepción de mercancía,
+alistamiento de un vehículo, apertura de caja: cada paso con responsable, fecha límite y la evidencia
+que exige. Queda quién marcó cada paso y cuándo, y funciona sin señal en la bodega.
+
+- **Un solo diseño, sobrio**: el nombre del procedimiento, un único indicador de avance («7 de 12 · 2
+  vencidos») y los pasos por sección, cada uno con su casilla, responsable y vencimiento («vence hoy
+  5:00 p. m.»; lo vencido va en rojo, con ícono y texto).
+- **Evidencia en su lugar**: al abrir un paso (clic o <kbd>Enter</kbd>) se despliega ahí mismo, uno a
+  la vez: fotos (con la cámara del celular, o «Tomar con el celular» con `<nx-handoff>`), archivos,
+  firma (`<nx-signature>`), nota, un número con rango («2–8 °C») y opciones. «Marcar como hecho» se
+  habilita cuando está completa y dice qué falta. Un número fuera de rango o «No conforme» se pueden
+  cerrar, con aviso y nota obligatoria.
+- **Omitir** y **reabrir** piden motivo; todo queda en «Actividad» (quién, qué, cuándo, por qué).
+- **Orden**: `sequential` (todo, o algunas secciones) y `dependsOn` («Primero: Contar las láminas»).
+- **Optimista y sin conexión**: cada cambio se ve al instante y va al servidor en orden (las fotos
+  antes); sin red queda «pendiente de enviar» y se sigue trabajando. Un rechazo del servidor revierte
+  ese paso con un aviso.
+- **Al terminar**: «Procedimiento completo», quién y cuándo, y «Cerrar procedimiento» (solo lectura).
+- **Varios a la vez**: `mode="summary"` con su avance y sus vencidos («Cierre de septiembre · 18/24 · 3
+  vencidos»), ordenable.
+
+```html
+<nx-checklist endpoint="/api/procedimientos/recepcion-oc-2291"
+  me='{"id":"u7","name":"Diego Llinás"}' sequential='["Conteo"]' handoff="/api/handoff"></nx-checklist>
+
+<nx-checklist heading="Apertura de caja" steps='[
+  {"id":"base","title":"Contar la base","evidence":[{"type":"number","min":200000,"max":200000,"unit":"COP"}]},
+  {"id":"foto","title":"Foto del arqueo","evidence":[{"type":"photo"}]},
+  {"id":"firma","title":"Firma del cajero","dependsOn":["base"],"evidence":[{"type":"signature"}]}]'></nx-checklist>
+
+<nx-checklist mode="summary" items='[{"id":"cierre","title":"Cierre de septiembre","done":18,"total":24,"overdue":3,"href":"/cierre"}]'></nx-checklist>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `steps` (`{id, title, hint?, section?, assignee?, due?, required?, evidence?, dependsOn?, canSkip?}`), `state` (por `id`: `{status, by, at, evidence, reason?}`), `endpoint`, `me`, `sequential`, `handoff`, `mode` (`run`, `summary`), `items`, `heading`, `readonly`, `disabled`, `locale`, `labels` |
+| Evidencia | `{type: "photo"\|"file"\|"signature"\|"note"\|"number"\|"choice", label?, min?, max?, unit?, options?, count?, accept?, required?}` |
+| Métodos | `open(stepId)`, `reload()` |
+| Getters | `progress` (`{done, total, required, requiredDone, skipped, overdue, complete}`), `pending` (cambios sin enviar), `closed` |
+| Eventos | `nx-checklist-change` `{step, status, evidence, reason?, note?}`, `nx-checklist-complete` (cancelable), `nx-checklist-open` `{item}` (summary, cancelable), `nx-checklist-error` `{message, step?, status?}` |
+| Protocolo | `GET {endpoint}`, `POST {endpoint}/steps/{id}/files`, `PATCH {endpoint}/steps/{id}` `{status, evidence, reason?, clientId}`, `POST {endpoint}/close` |
+| Funciones | `checklistProgress()`, `checklistBlocks()`, `checklistDeps()`, `checklistMissing()`, `checklistInRange()`, `checklistOverdue()`, `checklistDueText()`, `CHECKLIST_LABELS` |
 
 ## Desarrollo
 

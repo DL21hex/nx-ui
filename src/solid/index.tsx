@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`, `<Thread>`, `<Checklist>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -120,6 +120,13 @@ import type { ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels
 import "../components/voice/index";
 import type { NxVoice } from "../components/voice/voice";
 import type { VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail } from "../components/voice/types";
+import "../components/thread/index";
+import type { NxThread } from "../components/thread/thread";
+import type { ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser } from "../components/thread/types";
+import "../components/checklist/index";
+import type { NxChecklist } from "../components/checklist/checklist";
+import type { ChecklistSequence } from "../components/checklist/logic";
+import type { ChecklistChangeDetail, ChecklistCompleteDetail, ChecklistErrorDetail, ChecklistLabels, ChecklistMode, ChecklistOpenDetail, ChecklistPerson, ChecklistState, ChecklistStep, ChecklistSummaryItem } from "../components/checklist/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -157,6 +164,8 @@ export type { NxSignature, SignatureDoneDetail, SignatureFormat, SignatureLabels
 export type { NxPlanner, PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView };
 export type { NxReview, ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail };
 export type { NxVoice, VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail };
+export type { NxThread, ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser };
+export type { NxChecklist, ChecklistChangeDetail, ChecklistCompleteDetail, ChecklistErrorDetail, ChecklistLabels, ChecklistMode, ChecklistOpenDetail, ChecklistPerson, ChecklistState, ChecklistStep, ChecklistSummaryItem };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -164,6 +173,12 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      steps: ChecklistStep[] | undefined;
+      state: ChecklistState | undefined;
+      sequential: ChecklistSequence | undefined;
+      anchors: string[] | undefined;
+      refPatterns: string[] | undefined;
+      comments: ThreadComment[] | undefined;
       initial: Record<string, unknown> | null | undefined;
       resources: PlannerResource[] | undefined;
       bookings: PlannerBooking[] | undefined;
@@ -186,9 +201,9 @@ declare module "solid-js" {
       series: WhatIfSeries[] | TrendSeries[] | undefined;
       outputs: WhatIfMetric[] | undefined;
       inputs: WhatIfInput[] | undefined;
-      me: PresenceUser | null | undefined;
-      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | undefined;
+      me: PresenceUser | ChecklistPerson | null | undefined;
+      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | ChecklistSummaryItem[] | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -219,6 +234,11 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      record: string | undefined;
+      poll: string | undefined;
+      presence: string | undefined;
+      "people-source": string | undefined;
+      "refs-source": string | undefined;
       engine: VoiceEngine | undefined;
       "max-seconds": string | undefined;
       silence: string | undefined;
@@ -288,7 +308,7 @@ declare module "solid-js" {
       locale: string | undefined;
       heading: string | undefined;
       description: string | undefined;
-      mode: DialogMode | ScanMode | GuardMode | ReviewMode | undefined;
+      mode: DialogMode | ScanMode | GuardMode | ReviewMode | ChecklistMode | undefined;
       size: DialogSize | string | undefined;
       url: string | undefined;
       hold: string | undefined;
@@ -354,6 +374,14 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-checklist-change": CustomEvent<ChecklistChangeDetail>;
+      "nx-checklist-complete": CustomEvent<ChecklistCompleteDetail>;
+      "nx-checklist-open": CustomEvent<ChecklistOpenDetail>;
+      "nx-checklist-error": CustomEvent<ChecklistErrorDetail>;
+      "nx-thread-post": CustomEvent<ThreadPostDetail>;
+      "nx-thread-change": CustomEvent<{ comments: ThreadComment[] }>;
+      "nx-thread-mention": CustomEvent<ThreadMentionDetail>;
+      "nx-thread-error": CustomEvent<ThreadErrorDetail>;
       "nx-voice-start": CustomEvent<Record<string, never>>;
       "nx-voice-partial": CustomEvent<{ text: string }>;
       "nx-voice-text": CustomEvent<VoiceTextDetail>;
@@ -457,6 +485,8 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-checklist": HTMLAttributes<NxChecklist>;
+      "nx-thread": HTMLAttributes<NxThread>;
       "nx-voice": HTMLAttributes<NxVoice>;
       "nx-review": HTMLAttributes<NxReview>;
       "nx-planner": HTMLAttributes<NxPlanner>;
@@ -2143,6 +2173,115 @@ export function Voice(props: VoiceProps): JSX.Element {
       on:nx-voice-end={(e) => local.onEnd?.(e)}
       on:nx-voice-error={(e) => local.onError?.(e)}
       on:nx-voice-unavailable={(e) => local.onUnavailable?.(e)}
+    />
+  );
+}
+
+export interface ThreadProps extends Omit<JSX.HTMLAttributes<NxThread>, "onChange" | "onError"> {
+  /** El registro («OC-2291»): de él cuelgan los comentarios, el borrador y lo leído. */
+  record: string;
+  /** `GET ?record=`, `POST`, `PATCH /{id}`, `DELETE /{id}`. Sin él, todo es local (`comments`). */
+  endpoint?: string;
+  /** SSE o NDJSON con los cambios en vivo. */
+  stream?: string;
+  /** Sin `stream`: segundos entre consultas (30; `0` no sondea). */
+  poll?: number;
+  peopleSource?: string;
+  refsSource?: string;
+  refPatterns?: string[];
+  /** Quien escribe desde aquí. Sin él, solo se lee. */
+  me?: ThreadUser | null;
+  anchors?: string[];
+  /** `id` del `<nx-presence>` del que se lee quién está viendo. */
+  presence?: string;
+  comments?: ThreadComment[];
+  readonly?: boolean;
+  disabled?: boolean;
+  locale?: string;
+  labels?: Partial<ThreadLabels>;
+  onPost?: (e: CustomEvent<ThreadPostDetail>) => void;
+  onChange?: (e: CustomEvent<{ comments: ThreadComment[] }>) => void;
+  onMention?: (e: CustomEvent<ThreadMentionDetail>) => void;
+  onError?: (e: CustomEvent<ThreadErrorDetail>) => void;
+}
+
+export function Thread(props: ThreadProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "comments", "readonly", "disabled", "locale", "labels", "onPost", "onChange", "onMention", "onError"]);
+  return (
+    <nx-thread
+      {...rest}
+      prop:me={local.me}
+      prop:anchors={local.anchors}
+      prop:refPatterns={local.refPatterns}
+      prop:comments={local.comments}
+      prop:labels={local.labels}
+      attr:record={local.record}
+      attr:endpoint={local.endpoint}
+      attr:stream={local.stream}
+      attr:poll={local.poll === undefined ? undefined : String(local.poll)}
+      attr:people-source={local.peopleSource}
+      attr:refs-source={local.refsSource}
+      attr:presence={local.presence}
+      attr:locale={local.locale}
+      bool:readonly={!!local.readonly}
+      bool:disabled={!!local.disabled}
+      on:nx-thread-post={(e) => local.onPost?.(e)}
+      on:nx-thread-change={(e) => local.onChange?.(e)}
+      on:nx-thread-mention={(e) => local.onMention?.(e)}
+      on:nx-thread-error={(e) => local.onError?.(e)}
+    />
+  );
+}
+
+export interface ChecklistProps extends Omit<JSX.HTMLAttributes<NxChecklist>, "onChange" | "onError"> {
+  /** Los pasos: `{id, title, hint?, section?, assignee?, due?, required?, evidence?, dependsOn?, canSkip?}`. */
+  steps?: ChecklistStep[];
+  /** El estado por `id`. Sin él (y con `endpoint`), `GET {endpoint}`. */
+  state?: ChecklistState;
+  endpoint?: string;
+  /** Quien usa la pantalla: el «por» de cada paso. */
+  me?: ChecklistPerson | null;
+  /** `true`: todo en orden; una lista: solo esas secciones. */
+  sequential?: boolean | string[];
+  /** La base de `<nx-handoff>`: «Tomar con el celular» en las fotos. */
+  handoff?: string;
+  mode?: ChecklistMode;
+  items?: ChecklistSummaryItem[];
+  heading?: string;
+  readonly?: boolean;
+  disabled?: boolean;
+  locale?: string;
+  labels?: Partial<ChecklistLabels>;
+  onChange?: (e: CustomEvent<ChecklistChangeDetail>) => void;
+  /** Cancelable: cancelarlo no cierra el procedimiento. */
+  onComplete?: (e: CustomEvent<ChecklistCompleteDetail>) => void;
+  /** `mode="summary"`, cancelable (cancelarlo no sigue el `href`). */
+  onOpen?: (e: CustomEvent<ChecklistOpenDetail>) => void;
+  onError?: (e: CustomEvent<ChecklistErrorDetail>) => void;
+}
+
+export function Checklist(props: ChecklistProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["steps", "state", "endpoint", "me", "sequential", "handoff", "mode", "items", "heading", "readonly", "disabled", "locale", "labels", "onChange", "onComplete", "onOpen", "onError"]);
+  return (
+    <nx-checklist
+      {...rest}
+      prop:steps={local.steps}
+      prop:state={local.state}
+      prop:me={local.me}
+      prop:items={local.items}
+      prop:labels={local.labels}
+      prop:sequential={local.sequential}
+      attr:endpoint={local.endpoint}
+      attr:handoff={local.handoff}
+      attr:mode={local.mode}
+      attr:heading={local.heading}
+      attr:locale={local.locale}
+      bool:readonly={!!local.readonly}
+      bool:disabled={!!local.disabled}
+      on:nx-checklist-change={(e) => local.onChange?.(e)}
+      on:nx-checklist-complete={(e) => local.onComplete?.(e)}
+      on:nx-checklist-open={(e) => local.onOpen?.(e)}
+      on:nx-checklist-error={(e) => local.onError?.(e)}
     />
   );
 }

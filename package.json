@@ -170,6 +170,14 @@
       "types": "./dist/types/components/voice/index.d.ts",
       "import": "./dist/voice.js"
     },
+    "./thread": {
+      "types": "./dist/types/components/thread/index.d.ts",
+      "import": "./dist/thread.js"
+    },
+    "./checklist": {
+      "types": "./dist/types/components/checklist/index.d.ts",
+      "import": "./dist/checklist.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -211,6 +219,8 @@
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
     "./number.css": "./dist/number.css",
+    "./checklist.css": "./dist/checklist.css",
+    "./thread.css": "./dist/thread.css",
     "./voice.css": "./dist/voice.css",
     "./review.css": "./dist/review.css",
     "./planner.css": "./dist/planner.css",

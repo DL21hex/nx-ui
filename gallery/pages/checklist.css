@@ -1,0 +1,87 @@
+/* Galería: la página de <nx-checklist>. */
+
+.cl-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-end: 14px;
+}
+.cl-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.cl-switch__track {
+  position: relative;
+  flex: none;
+  inline-size: 36px;
+  block-size: 22px;
+  border-radius: 999px;
+  background: var(--nx-border-strong);
+  transition: background-color var(--nx-motion-base);
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 3px;
+    inset-inline-start: 3px;
+    inline-size: 16px;
+    block-size: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: translate var(--nx-motion-base) var(--nx-ease-out);
+  }
+  [aria-checked="true"] > & {
+    background: var(--nx-primary);
+    &::after {
+      translate: 14px 0;
+    }
+  }
+}
+.cl-switch__text {
+  display: flex;
+  flex-direction: column;
+  & strong {
+    font-size: 13.5px;
+  }
+  & small {
+    color: var(--nx-text-tertiary);
+    font-size: 12px;
+  }
+}
+.cl-card {
+  max-inline-size: 760px;
+  margin-block-end: 12px;
+  padding: 20px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-background);
+}
+.cl-card--summary {
+  max-inline-size: 640px;
+}
+@media (max-width: 600px) {
+  .cl-card {
+    padding: 14px 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cl-switch__track,
+  .cl-switch__track::after {
+    transition: none;
+  }
+}
