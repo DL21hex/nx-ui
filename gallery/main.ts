@@ -25,6 +25,7 @@ import { mountHistoryDemo } from "./demo-history";
 import { mountKanbanDemo } from "./demo-kanban";
 import { mountNumberDemo } from "./demo-number";
 import "./pages/number.css";
+import { mountPlannerDemo } from "./demo-planner";
 import { mountSignatureDemo } from "./demo-signature";
 import "./pages/signature.css";
 import { mountPrintDemo } from "./demo-print";
@@ -140,6 +141,7 @@ const NAV: MenuItem[] = [
   { id: "cards", label: "Tarjetas con zoom", href: "#/cards", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
   { id: "print", label: "Imprimir documentos", href: "#/print", icon: "printer", section: "Componentes", badge: "Nuevo" },
   { id: "signature", label: "Firma", href: "#/signature", icon: "pen-line", section: "Componentes", badge: "Nuevo" },
+  { id: "planner", label: "Agenda de recursos", href: "#/planner", icon: "calendar-range", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -179,6 +181,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/account": { template: "page-account", mount: mountAccountDemo },
   "#/print": { template: "page-print", mount: mountPrintDemo },
   "#/signature": { template: "page-signature", mount: mountSignatureDemo },
+  "#/planner": { template: "page-planner", mount: mountPlannerDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
 

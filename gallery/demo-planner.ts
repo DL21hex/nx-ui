@@ -7,7 +7,6 @@
  */
 import "../src/components/planner/index";
 // Mientras `nx-ui.css` no lo importe (ver INTEGRATION.md); al unir, esta línea sobra.
-import "../src/components/planner/planner.css";
 import type { NxPlanner, PlannerBooking, PlannerResource } from "../src/components/planner/index";
 import { plannerParse } from "../src/components/planner/logic";
 import { addDemoRoute } from "./demo-api";

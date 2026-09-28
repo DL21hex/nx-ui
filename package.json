@@ -158,6 +158,10 @@
       "types": "./dist/types/components/signature/index.d.ts",
       "import": "./dist/signature.js"
     },
+    "./planner": {
+      "types": "./dist/types/components/planner/index.d.ts",
+      "import": "./dist/planner.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -199,6 +203,7 @@
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
     "./number.css": "./dist/number.css",
+    "./planner.css": "./dist/planner.css",
     "./signature.css": "./dist/signature.css",
     "./print.css": "./dist/print.css",
     "./keytips.css": "./dist/keytips.css",
