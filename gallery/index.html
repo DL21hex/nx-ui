@@ -3721,6 +3721,123 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+            <!-- ================================================================ Procedimientos -->
+            <template id="page-checklist">
+              <p class="eyebrow">Componentes</p>
+              <h1>Procedimientos <code class="tag">&lt;nx-checklist&gt;</code></h1>
+              <p class="lead">
+                Cierre de mes, auditoría de inventario, recepción de mercancía, alistamiento de un vehículo, apertura de caja:
+                cada paso con su responsable, su fecha límite y la evidencia que exige (fotos, archivos, firma, una nota, un
+                número con rango, una opción). Queda quién marcó cada paso y cuándo, y funciona sin señal en la bodega.
+              </p>
+
+              <div class="cl-tools" lang="es-CO">
+                <button type="button" role="switch" aria-checked="false" class="cl-switch" data-sim="offline">
+                  <span class="cl-switch__track" aria-hidden="true"></span>
+                  <span class="cl-switch__text"><strong>Simular sin conexión</strong><small>Sin señal en la bodega: los cambios esperan.</small></span>
+                </button>
+                <button type="button" role="switch" aria-checked="false" class="cl-switch" data-sim="reject">
+                  <span class="cl-switch__track" aria-hidden="true"></span>
+                  <span class="cl-switch__text"><strong>El servidor rechaza el próximo cambio</strong><small>El paso vuelve a como estaba, con un aviso.</small></span>
+                </button>
+              </div>
+
+              <div class="cl-card">
+                <nx-checklist id="cl-demo" lang="es-CO" endpoint="/demo/checklist/recepcion-oc-2291" sequential='["Conteo"]'
+                  me='{"id":"u7","name":"Diego Llinás"}'></nx-checklist>
+              </div>
+              <p class="sel-tip">
+                Abre «Foto del camión en el muelle» (vencida) y toma una foto; en «Contar láminas», escribe 110: se puede cerrar,
+                pero queda fuera de rango y pide la nota. En «Conteo» los pasos van en orden, y las firmas esperan el conteo.
+                Enciende «Simular sin conexión», marca dos pasos y apágalo: salen en orden.
+              </p>
+              <p class="stage__loglabel">Eventos</p>
+              <ol class="stage__log btn-events" id="checklist-log"></ol>
+
+              <h2>Varios procedimientos a la vez</h2>
+              <p>Con <code>mode="summary"</code>: una lista compacta, cada uno con su avance y sus vencidos, ordenable.</p>
+              <div class="cl-card cl-card--summary">
+                <nx-checklist id="cl-summary" lang="es-CO" mode="summary"></nx-checklist>
+              </div>
+
+              <h2>Cómo funciona</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
+                  <tbody>
+                    <tr><td>Abres un paso (clic o <kbd>Enter</kbd>)</td><td>Se despliega en su lugar, uno a la vez, con la ayuda y los campos de la evidencia que pide. Las flechas pasan de un paso a otro; <kbd>Esc</kbd> lo cierra.</td></tr>
+                    <tr><td>Entregas la evidencia</td><td>«Marcar como hecho» se habilita cuando está completa y, mientras tanto, dice qué falta («Falta: Foto del camión (2 fotos más)»). Un paso sin evidencia se marca con su casilla.</td></tr>
+                    <tr><td>Un número fuera de rango, o «No conforme»</td><td>Se puede cerrar, pero con un aviso claro y una nota obligatoria; el paso queda marcado «fuera de rango».</td></tr>
+                    <tr><td>Omitir o reabrir</td><td>Piden un motivo, y quedan en la actividad con quién y cuándo. Al reabrir, la evidencia queda como borrador.</td></tr>
+                    <tr><td>Orden</td><td><code>sequential</code> (todo, o solo algunas secciones) y <code>dependsOn</code>: los bloqueados se ven, dicen qué va primero y no se abren para editar.</td></tr>
+                    <tr><td>Sin conexión</td><td>El cambio se ve al instante y queda «pendiente de enviar»; se sigue trabajando. Al volver la red se envía en orden. Un error del servidor revierte ese paso con un aviso.</td></tr>
+                    <tr><td>Completas los requeridos</td><td>«Procedimiento completo», quién lo completó y cuándo, y «Cerrar procedimiento» (cancelable): queda en solo lectura.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h2>Protocolo</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Ruta</th><th>Forma</th></tr></thead>
+                  <tbody>
+                    <tr><td><code>GET {endpoint}</code></td><td><code>{title?, steps?, state?, closed?, log?}</code>. Solo si no pasas <code>state</code>; <code>reload()</code> la vuelve a pedir.</td></tr>
+                    <tr><td><code>POST {endpoint}/steps/{id}/files</code></td><td><code>FormData</code> con cada foto o archivo nuevo en <code>files</code>; responde <code>{files: [{url, id?}]}</code> en el mismo orden. Va antes del cambio.</td></tr>
+                    <tr><td><code>PATCH {endpoint}/steps/{id}</code></td><td><code>{status, evidence, reason?, note?, clientId}</code>: la evidencia son metadatos (<code>{name, type, size, url}</code>, la firma <code>{svg, meta}</code>, el valor). <code>clientId</code> sirve para no aplicar dos veces un reintento. Si responde un estado (<code>{status, …}</code>), ese queda.</td></tr>
+                    <tr><td><code>POST {endpoint}/close</code></td><td><code>{clientId, at}</code>: cerrar el procedimiento.</td></tr>
+                    <tr><td>Sin red, <code>408</code>, <code>429</code>, <code>502</code>–<code>504</code></td><td>El cambio espera y se reintenta (1 s, 2 s, 4 s… hasta 30 s, y al volver el evento <code>online</code>).</td></tr>
+                    <tr><td>Otro error</td><td>Ese paso vuelve a como estaba; <code>{message}</code> va en el aviso y en <code>nx-checklist-error</code>.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h2>Uso</h2>
+              <div class="tabs" data-tabs>
+                <div role="tablist">
+                  <button role="tab" aria-selected="true">HTML</button>
+                  <button role="tab" aria-selected="false">SolidJS</button>
+                </div>
+                <pre role="tabpanel"><code>&lt;nx-checklist endpoint="/api/procedimientos/recepcion-oc-2291"
+      me='{"id":"u7","name":"Diego Llinás"}' sequential='["Conteo"]' handoff="/api/handoff"&gt;&lt;/nx-checklist&gt;
+
+    &lt;!-- o con los datos en la página --&gt;
+    &lt;nx-checklist heading="Apertura de caja" steps='[
+      {"id":"base","title":"Contar la base","evidence":[{"type":"number","label":"Base","min":200000,"max":200000,"unit":"COP"}]},
+      {"id":"foto","title":"Foto del arqueo","evidence":[{"type":"photo","count":1}]},
+      {"id":"firma","title":"Firma del cajero","dependsOn":["base"],"evidence":[{"type":"signature"}]}
+    ]'&gt;&lt;/nx-checklist&gt;
+
+    &lt;nx-checklist mode="summary" items='[{"id":"cierre","title":"Cierre de septiembre","done":18,"total":24,"overdue":3,"href":"/cierre"}]'&gt;&lt;/nx-checklist&gt;</code></pre>
+                <pre role="tabpanel" hidden><code>import { Checklist } from "nx-ui/solid";
+
+    &lt;Checklist endpoint={`/api/procedimientos/${id()}`} me={usuario()} sequential={["Conteo"]}
+      onChange={(e) =&gt; console.log(e.detail.step, e.detail.status)}
+      onComplete={(e) =&gt; confirmarCierre(e)} /&gt;
+
+    &lt;Checklist mode="summary" items={procedimientos()} onOpen={(e) =&gt; navegar(e.detail.item.id)} /&gt;</code></pre>
+              </div>
+
+              <h2>API</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+                  <tbody>
+                    <tr><td><code>steps</code></td><td>JSON: <code>[{id, title, hint?, section?, assignee?: {id, name}, due?, required?, evidence?, dependsOn?, canSkip?}]</code>. <code>due</code>: con hora local («2026-09-28T17:00»), con zona, o solo el día (vence al terminar ese día).</td></tr>
+                    <tr><td><code>evidence</code></td><td><code>[{type: "photo"|"file"|"signature"|"note"|"number"|"choice", label?, min?, max?, unit?, options?, count?, accept?, required?}]</code>. En <code>options</code>, <code>{value, label, note: true}</code> exige nota; «No conforme» la exige sin decirlo.</td></tr>
+                    <tr><td><code>state</code></td><td>JSON por <code>id</code>: <code>{status: "todo"|"done"|"skipped"|"blocked", by, at, evidence, reason?, note?}</code>. Sin él, <code>GET {endpoint}</code>.</td></tr>
+                    <tr><td><code>endpoint</code>, <code>me</code>, <code>handoff</code></td><td>La base de las rutas; quién usa la pantalla (<code>{id, name}</code>); la base de <code>&lt;nx-handoff&gt;</code> para «Tomar con el celular».</td></tr>
+                    <tr><td><code>sequential</code></td><td>Vacío: todo en orden. Una lista JSON (o un nombre): solo esas secciones. Omitidos y opcionales no detienen a nadie.</td></tr>
+                    <tr><td><code>mode</code>, <code>items</code></td><td><code>run</code> (por defecto) o <code>summary</code> con <code>[{id, title, href?, done, total, overdue?, assignee?, due?}]</code>.</td></tr>
+                    <tr><td><code>heading</code>, <code>readonly</code>, <code>disabled</code>, <code>locale</code>, <code>labels</code></td><td>Nombre (si el servidor no manda <code>title</code>), solo lectura, textos (<code>CHECKLIST_LABELS</code>; «uno|varios» con <code>{n}</code>) y formato de fechas y números.</td></tr>
+                    <tr><td><code>open(stepId)</code>, <code>reload()</code></td><td>Abrir un paso; volver a traer el procedimiento (lo que falta por enviar queda encima).</td></tr>
+                    <tr><td><code>progress</code>, <code>pending</code>, <code>closed</code></td><td><code>{done, total, required, requiredDone, skipped, overdue, complete}</code>; los cambios sin enviar <code>[{clientId, step, status, at}]</code>; quién lo cerró.</td></tr>
+                    <tr><td>Eventos</td><td><code>nx-checklist-change</code> <code>{step, status, evidence, reason?, note?}</code>, <code>nx-checklist-complete</code> <code>{by, at, progress}</code> (cancelable), <code>nx-checklist-open</code> <code>{item}</code> (summary, cancelable), <code>nx-checklist-error</code> <code>{message, step?, status?}</code>.</td></tr>
+                    <tr><td>Funciones</td><td><code>checklistProgress</code>, <code>checklistBlocks</code>, <code>checklistDeps</code>, <code>checklistMissing</code>, <code>checklistInRange</code>, <code>checklistOverdue</code>, <code>checklistDueText</code>…: la misma lógica, para validar en un backend en JavaScript.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

@@ -13,7 +13,6 @@
  * envoltorio de `fetch` de esta página. No es parte de la librería.
  */
 import "../src/components/checklist/index";
-import "../src/components/checklist/checklist.css";
 import type { ChecklistChangeDetail, ChecklistLogEntry, ChecklistState, ChecklistStep, ChecklistSummaryItem, NxChecklist } from "../src/components/checklist/index";
 import { addDemoRoute, type DemoOut } from "./demo-api";
 
