@@ -7,7 +7,6 @@
  * Todo el marcado sale de constantes de la demo (nada viene de un usuario), por eso va como HTML.
  */
 import "../src/components/print/index";
-import "../src/components/print/print.css"; // sobra al unir: lo trae nx-ui.css
 import type { NxPrint } from "../src/components/print/index";
 import { numberToWords } from "../src/components/number/logic";
 import { nxFormat } from "../src/core/locale";
