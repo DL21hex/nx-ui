@@ -162,6 +162,10 @@
       "types": "./dist/types/components/planner/index.d.ts",
       "import": "./dist/planner.js"
     },
+    "./review": {
+      "types": "./dist/types/components/review/index.d.ts",
+      "import": "./dist/review.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -203,6 +207,7 @@
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
     "./number.css": "./dist/number.css",
+    "./review.css": "./dist/review.css",
     "./planner.css": "./dist/planner.css",
     "./signature.css": "./dist/signature.css",
     "./print.css": "./dist/print.css",
