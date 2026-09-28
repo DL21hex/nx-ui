@@ -182,6 +182,10 @@
       "types": "./dist/types/components/recurrence/index.d.ts",
       "import": "./dist/recurrence.js"
     },
+    "./jobs": {
+      "types": "./dist/types/components/jobs/index.d.ts",
+      "import": "./dist/jobs.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -223,6 +227,7 @@
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
     "./number.css": "./dist/number.css",
+    "./jobs.css": "./dist/jobs.css",
     "./recurrence.css": "./dist/recurrence.css",
     "./checklist.css": "./dist/checklist.css",
     "./thread.css": "./dist/thread.css",

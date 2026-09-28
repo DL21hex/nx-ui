@@ -11,7 +11,7 @@ const NAMES = [
   "shopping-cart", "package", "truck", "warehouse", "receipt", "wallet", "file-text", "folder",
   "clipboard-list", "calendar", "inbox", "bell", "shield", "shield-user", "factory", "hard-hat",
   "utensils-crossed", "map-pin", "building-2", "circle-help", "log-out", "smartphone", "keyboard", "upload",
-  "shield-alert", "scale", "printer", "pen-line", "calendar-range", "list-checks", "mic", "message-circle", "clipboard-check", "repeat", "layout-grid",
+  "shield-alert", "scale", "printer", "pen-line", "calendar-range", "list-checks", "mic", "message-circle", "clipboard-check", "repeat", "loader", "layout-grid",
 ];
 
 // Los atributos de trazo van una sola vez en el <svg> que arma el registro, no en cada path.

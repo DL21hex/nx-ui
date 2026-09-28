@@ -50,6 +50,7 @@ const registry = new Map<string, Entry>([
   ["Thread", { tag: "nx-thread", props: ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "readonly", "disabled", "locale", "labels", "comments"] }],
   ["Checklist", { tag: "nx-checklist", props: ["steps", "state", "endpoint", "me", "sequential", "handoff", "mode", "items", "heading", "readonly", "disabled", "locale", "labels"] }],
   ["Recurrence", { tag: "nx-recurrence", props: ["value", "name", "required", "disabled", "readonly", "start", "holidays", "holidaysMode", "count", "valueFormat", "locale", "label", "labels"] }],
+  ["Jobs", { tag: "nx-jobs", props: ["endpoint", "stream", "poll", "notify", "always", "recent", "locale", "labels", "disabled"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 

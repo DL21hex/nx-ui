@@ -1,0 +1,110 @@
+    <!-- ================================================================ Trabajos largos -->
+    <template id="page-jobs">
+      <p class="eyebrow">Componentes</p>
+      <h1>Trabajos largos <code class="tag">&lt;nx-jobs&gt;</code></h1>
+      <p class="lead">
+        Importar 10.000 filas, cerrar el mes, generar 500 facturas electrónicas: procesos de minutos que hoy dejan un
+        spinner eterno y, si alguien recarga, nadie sabe si terminaron. El trabajo vive en el servidor; una píldora
+        discreta en la barra dice cómo va, y al terminar avisa aunque estés en otra pantalla.
+      </p>
+      <div class="jobs-demo">
+        <div class="jobs-app">
+          <header class="jobs-app__bar" id="jobs-bar">
+            <div class="jobs-app__who">
+              <strong>Contabilidad</strong>
+              <small>Distribuidora del Caribe S.A.S. · Ana Restrepo</small>
+            </div>
+            <nx-jobs endpoint="/demo/jobs" stream="/demo/jobs/eventos" locale="es-CO" notify always></nx-jobs>
+          </header>
+          <ul class="jobs-list">
+            <li>
+              <div>
+                <strong>Importar 10.000 clientes</strong>
+                <small>Por etapas; termina con 12 filas con error y su descarga.</small>
+              </div>
+              <button type="button" class="dlg-plain" data-job="importar-clientes">Importar</button>
+            </li>
+            <li>
+              <div>
+                <strong>Cierre de septiembre</strong>
+                <small>Lento, con etapas. Se puede cancelar: lo ya guardado queda.</small>
+              </div>
+              <button type="button" class="dlg-plain" data-job="cierre-mes">Cerrar el mes</button>
+            </li>
+            <li>
+              <div>
+                <strong>Generar 500 facturas electrónicas</strong>
+                <small>Falla en la 317; «Reintentar» sigue desde ahí.</small>
+              </div>
+              <button type="button" class="dlg-plain" data-job="facturas">Generar</button>
+            </li>
+          </ul>
+          <footer class="jobs-app__foot">
+            <button type="button" class="dlg-plain" id="jobs-reload">Simular recarga</button>
+            <small>Desmonta el componente y lo vuelve a montar: retoma los trabajos donde iban.</small>
+          </footer>
+        </div>
+      </div>
+      <p class="sel-tip">
+        Lanza los tres y abre la píldora: cada trabajo con su etapa, su barra y cuánto falta. Cierra el panel y espera:
+        al terminar, la píldora dice «Listo» y aparece un aviso; si falla, queda en rojo hasta que la abras. Con <code>notify</code>, al lanzar
+        el primero se pide permiso; cambia de pestaña y llega una notificación del sistema.
+      </p>
+      <ol class="stage__log btn-events" id="jobs-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td>Sobrevive a recargar</td><td>Al conectar pide <code>GET {endpoint}?active=1</code> (en curso y recientes de las últimas 24 h). Los ids en curso también se guardan en <code>localStorage</code>: si el servidor no los lista, se piden uno por uno.</td></tr>
+            <tr><td>Una sola conexión</td><td><code>stream</code> (SSE o NDJSON) con los eventos de todos los trabajos, abierto solo mientras hay alguno en curso. Si se corta, reconecta a 1 s, 2 s, 4 s… hasta 30 s (o lo que diga <code>Retry-After</code>) y retoma con <code>Last-Event-ID</code> y <code>?after=</code>.</td></tr>
+            <tr><td>Sin stream</td><td>Sondeo de <code>GET {endpoint}/{id}</code> cada <code>poll</code> segundos (3), cada vez más espaciado si nada cambia y cada 30 s con la pestaña en segundo plano.</td></tr>
+            <tr><td>Tiempo restante</td><td>Una media móvil de la velocidad: un tramo lento o una ráfaga no lo hacen saltar. Sin total del servidor, la barra es indeterminada y no se estima.</td></tr>
+            <tr><td>Varias pestañas</td><td>Una sola mantiene la conexión (<code>BroadcastChannel</code> y <code>navigator.locks</code>) y comparte los eventos; al cerrarse, otra toma su lugar.</td></tr>
+            <tr><td>Al terminar</td><td><code>nx-jobs-done</code>, un aviso en la página si el panel está cerrado y, con <code>notify</code>, una notificación del sistema si la pestaña está oculta (el permiso se pide al lanzar, nunca al cargar).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-jobs id="trabajos" endpoint="/api/trabajos" stream="/api/trabajos/eventos" notify&gt;&lt;/nx-jobs&gt;
+
+const jobs = document.getElementById("trabajos");
+const job = await jobs.start({ type: "cierre-mes", title: "Cierre de septiembre", params: { mes: "2026-09" } });
+
+// Un trabajo que la app ya creó por su cuenta:
+jobs.track(respuesta.jobId);
+
+jobs.addEventListener("nx-jobs-done", (e) =&gt; bandeja.add(e.detail.job));</code></pre>
+        <pre role="tabpanel" hidden><code>import { Jobs, type NxJobs } from "nx-ui/solid";
+
+let jobs!: NxJobs;
+&lt;Jobs ref={jobs} endpoint="/api/trabajos" stream="/api/trabajos/eventos" notify
+  onDone={(e) =&gt; avisar(e.detail.job)} /&gt;
+
+const cerrar = () =&gt; jobs.start({ type: "cierre-mes", title: "Cierre de septiembre", params: { mes: "2026-09" } });</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>endpoint</code>, <code>stream</code>, <code>poll</code></td><td>La API de trabajos (del mismo origen), el stream de eventos y los segundos entre consultas sin stream (3).</td></tr>
+            <tr><td><code>notify</code>, <code>always</code>, <code>recent</code></td><td>Notificación del sistema al terminar con la pestaña oculta; la píldora (tenue) también sin trabajos; cuántos terminados quedan en «Recientes» (10).</td></tr>
+            <tr><td><code>labels</code>, <code>locale</code>, <code>disabled</code></td><td>Textos (<code>JOBS_LABELS</code>), formato de números y horas, y la píldora apagada.</td></tr>
+            <tr><td><code>start({type, title, params})</code></td><td><code>POST {endpoint}</code>: devuelve el trabajo y lo sigue.</td></tr>
+            <tr><td><code>track(id | job)</code>, <code>cancel(id)</code>, <code>retry(id)</code>, <code>dismiss(id)</code></td><td>Seguir uno creado por la app, cancelar (<code>POST /{id}/cancel</code>), reintentar lo que falló (<code>POST /{id}/retry</code>), quitar de la lista.</td></tr>
+            <tr><td><code>show()</code>, <code>hide()</code>, <code>jobs</code>, <code>active</code></td><td>El panel; todos los trabajos (en curso y recientes) y solo los en curso.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-jobs-change</code> <code>{jobs}</code>, <code>nx-jobs-done</code> <code>{job}</code>, <code>nx-jobs-error</code> <code>{action, message, id?, status?}</code>, <code>nx-open-change</code> <code>{open}</code>.</td></tr>
+            <tr><td>Teclado</td><td><kbd>Enter</kbd> en la píldora abre el panel; <kbd>Tab</kbd> recorre las acciones; <kbd>Esc</kbd> deshace una confirmación y después cierra.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>

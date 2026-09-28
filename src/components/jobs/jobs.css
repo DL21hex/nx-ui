@@ -1,0 +1,381 @@
+/*
+ * <nx-jobs>. Variables propias:
+ *   --nx-jobs-width (380px): ancho del panel
+ */
+
+nx-jobs {
+  display: inline-block;
+  color: var(--nx-foreground);
+  font: 13px/1.45 var(--nx-font-sans);
+  vertical-align: middle;
+}
+nx-jobs * {
+  box-sizing: border-box;
+}
+nx-jobs [hidden] {
+  display: none !important;
+}
+nx-jobs :is(button, a) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+nx-jobs :focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+nx-jobs .nx-glyph {
+  display: inline-flex;
+  flex: none;
+  inline-size: 1em;
+  block-size: 1em;
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+.nx-jobs__vh {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- la píldora */
+
+.nx-jobs__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-inline-size: 280px;
+  block-size: 30px;
+  padding: 0 12px 0 9px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-muted-foreground);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  &[aria-expanded="true"] {
+    border-color: var(--nx-border-strong);
+    box-shadow: 0 0 0 3px var(--nx-hover);
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+}
+.nx-jobs__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* El anillo: el avance agregado; un arco que gira si nadie da total. Terminado: su ícono. */
+.nx-jobs__ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  font-size: 16px;
+  & .nx-glyph {
+    display: none;
+    grid-area: 1 / 1;
+  }
+}
+nx-jobs[data-state="idle"] .nx-jobs__pill {
+  inline-size: 30px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: none;
+  color: var(--nx-text-tertiary);
+  & .nx-jobs__text {
+    display: none;
+  }
+}
+nx-jobs[data-state="idle"] .nx-glyph:nth-child(1),
+nx-jobs[data-state="done"] .nx-glyph:nth-child(2),
+nx-jobs[data-state="failed"] .nx-glyph:nth-child(3),
+nx-jobs[data-state="canceled"] .nx-glyph:nth-child(4) {
+  display: inline-flex;
+}
+nx-jobs[data-state="running"] .nx-jobs__pill {
+  border-color: var(--nx-primary-border);
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+}
+nx-jobs[data-state="running"] .nx-jobs__ring {
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: 50%;
+  background: conic-gradient(var(--nx-primary) var(--p, 0%), color-mix(in oklab, var(--nx-primary) 22%, transparent) 0);
+  mask: radial-gradient(circle, transparent 3.5px, #000 4px);
+}
+nx-jobs[data-state="running"][data-ind] .nx-jobs__ring {
+  background: conic-gradient(var(--nx-primary) 25%, color-mix(in oklab, var(--nx-primary) 22%, transparent) 0);
+  animation: nx-jobs-spin 0.9s linear infinite;
+}
+nx-jobs[data-state="done"] .nx-jobs__pill {
+  border-color: color-mix(in oklab, var(--nx-success) 35%, transparent);
+  background: var(--nx-success-soft);
+  color: var(--nx-success);
+  animation: nx-jobs-pop var(--nx-motion-base) var(--nx-ease-out);
+}
+nx-jobs[data-state="failed"] .nx-jobs__pill {
+  border-color: transparent;
+  background: var(--nx-danger);
+  color: var(--nx-danger-foreground);
+  animation: nx-jobs-pop var(--nx-motion-base) var(--nx-ease-out);
+}
+
+/* ---------------------------------------------------------------- el panel */
+
+.nx-jobs__pop {
+  position: fixed;
+  inset: auto;
+  inline-size: min(var(--nx-jobs-width, 380px), calc(100vw - 16px));
+  max-block-size: min(560px, calc(100dvh - 16px));
+  margin: 0;
+  padding: 0 0 6px;
+  overflow: auto;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  overscroll-behavior: contain;
+  &:popover-open {
+    animation: nx-jobs-in var(--nx-motion-fast) var(--nx-ease-out);
+  }
+  & p {
+    margin: 0;
+  }
+}
+.nx-jobs__head {
+  padding: 12px 14px 8px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  & h2 {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 650;
+    &:focus:not(:focus-visible) {
+      outline: none;
+    }
+  }
+}
+.nx-jobs__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-jobs__empty {
+  padding: 16px 14px;
+  color: var(--nx-muted-foreground);
+}
+.nx-jobs__job {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  padding: 11px 14px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  &:has(> .nx-glyph) {
+    grid-template-columns: 16px minmax(0, 1fr);
+    column-gap: 9px;
+    & > :not(.nx-glyph) {
+      grid-column: 2;
+    }
+  }
+  & > .nx-glyph {
+    grid-row: 1 / span 9;
+    margin-block-start: 2px;
+    font-size: 16px;
+    color: var(--nx-success);
+  }
+  &[data-status="failed"] > .nx-glyph,
+  &[data-status="failed"] .nx-jobs__msg {
+    color: var(--nx-danger);
+  }
+  &[data-status="canceled"] > .nx-glyph {
+    color: var(--nx-text-tertiary);
+  }
+}
+.nx-jobs__title {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  & strong {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+.nx-jobs__pct {
+  flex: none;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.nx-jobs__bar {
+  position: relative;
+  block-size: 6px;
+  margin-block: 3px 1px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--nx-hover);
+  & span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    inline-size: var(--p, 0%);
+    border-radius: inherit;
+    background: var(--nx-primary);
+    transition: inline-size 0.3s var(--nx-ease-out);
+  }
+  &[data-ind] span {
+    inline-size: 35%;
+    animation: nx-jobs-slide 1.3s ease-in-out infinite;
+  }
+}
+.nx-jobs__stage,
+.nx-jobs__meta,
+.nx-jobs__msg {
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-jobs__meta {
+  color: var(--nx-text-tertiary);
+}
+.nx-jobs__acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 5px;
+  &:empty {
+    display: none;
+  }
+}
+.nx-jobs__ask {
+  flex-basis: 100%;
+  color: var(--nx-danger);
+  font-size: 12px;
+  font-weight: 550;
+}
+.nx-jobs__btn {
+  display: inline-flex;
+  align-items: center;
+  block-size: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  font-size: 12.5px;
+  font-weight: 550;
+  text-decoration: none;
+  white-space: nowrap;
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &.is-primary {
+    border-color: transparent;
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+  }
+  &.is-danger {
+    border-color: transparent;
+    background: var(--nx-danger);
+    color: var(--nx-danger-foreground);
+  }
+  &:is(.is-primary, .is-danger):hover {
+    filter: brightness(0.94);
+  }
+  &.is-quiet {
+    margin-inline-start: auto;
+    border-color: transparent;
+    background: none;
+    color: var(--nx-muted-foreground);
+  }
+}
+.nx-jobs__rec {
+  & summary {
+    padding: 10px 14px;
+    color: var(--nx-muted-foreground);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  & .nx-jobs__job {
+    border-block-start: 1px solid var(--nx-border-subtle);
+    border-block-end: 0;
+  }
+}
+
+/* En el celular, una hoja desde abajo. */
+@media (max-width: 640px) {
+  .nx-jobs__pop {
+    inset: auto 0 0 !important;
+    inline-size: 100%;
+    max-block-size: 80dvh;
+    border-radius: var(--nx-radius-lg) var(--nx-radius-lg) 0 0;
+    padding-block-end: max(6px, env(safe-area-inset-bottom));
+    &:popover-open {
+      animation-name: nx-jobs-up;
+    }
+  }
+}
+
+@keyframes nx-jobs-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+@keyframes nx-jobs-up {
+  from {
+    translate: 0 100%;
+  }
+}
+@keyframes nx-jobs-pop {
+  40% {
+    scale: 1.05;
+  }
+}
+@keyframes nx-jobs-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+@keyframes nx-jobs-slide {
+  from {
+    translate: -100%;
+  }
+  to {
+    translate: 290%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  nx-jobs * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+  /* Sin movimiento, lo indeterminado se ve como una franja quieta. */
+  .nx-jobs__bar[data-ind] span {
+    inline-size: 100%;
+    opacity: 0.35;
+  }
+}
+@media (forced-colors: active) {
+  .nx-jobs__pill,
+  .nx-jobs__bar {
+    border: 1px solid CanvasText;
+  }
+  .nx-jobs__bar span {
+    background: Highlight;
+  }
+}
