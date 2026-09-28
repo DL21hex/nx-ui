@@ -1,0 +1,150 @@
+    <!-- ================================================================ Firma -->
+    <template id="page-signature">
+      <p class="eyebrow">Componentes</p>
+      <h1>Firma <code class="tag">&lt;nx-signature&gt;</code></h1>
+      <p class="lead">
+        El recibido a satisfacción de una entrega, un acta o una autorización, firmado en la pantalla con el mouse, el
+        lápiz o el dedo, o en el celular de quien recibe. La firma se guarda como vector (SVG) con quién firmó, cuándo, y
+        una huella de lo que se firmó.
+      </p>
+
+      <div class="sg-demo" lang="es-CO">
+        <form class="sg-card" id="sg-form" aria-labelledby="sg-title">
+          <article class="sg-doc" id="remision-texto">
+            <header class="sg-doc__head">
+              <div>
+                <p class="sg-doc__kicker">Remisión de entrega</p>
+                <h2 class="sg-doc__title" id="sg-title">REM-4471</h2>
+              </div>
+              <p class="sg-doc__meta">28 sep 2026 · Pedido PV-10382</p>
+            </header>
+            <dl class="sg-doc__parties">
+              <div><dt>Despacha</dt><dd>Aceros del Caribe S.A.S. · NIT 900.123.456-7<br />Vía 40 #85-120, Barranquilla</dd></div>
+              <div><dt>Recibe</dt><dd>Ferretería El Tornillo · NIT 802.004.911-3<br />Cra. 43 #72-15, Barranquilla</dd></div>
+              <div><dt>Transporte</dt><dd>Camión TSK-482 · Jhon Fredy Mejía</dd></div>
+            </dl>
+            <div class="table-wrap">
+              <table class="sg-doc__items">
+                <thead><tr><th>Código</th><th>Descripción</th><th class="sg-num">Cantidad</th></tr></thead>
+                <tbody>
+                  <tr><td>VAR-12</td><td>Varilla corrugada ½" × 6 m</td><td class="sg-num">120 und</td></tr>
+                  <tr><td>VAR-38</td><td>Varilla corrugada ⅜" × 6 m</td><td class="sg-num">200 und</td></tr>
+                  <tr><td>ALB-18</td><td>Alambre negro calibre 18</td><td class="sg-num">25 kg</td></tr>
+                  <tr><td>MAL-15</td><td>Malla electrosoldada 15 × 15 cm, 4 mm</td><td class="sg-num">18 und</td></tr>
+                  <tr><td>ANG-18</td><td>Ángulo 1½" × ⅛" × 6 m</td><td class="sg-num">30 und</td></tr>
+                  <tr><td>TUB-2</td><td>Tubo estructural 2" × 6 m</td><td class="sg-num">24 und</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="sg-doc__note">
+              Recibo a satisfacción la mercancía descrita, en la cantidad y el estado indicados. Las novedades se anotan antes
+              de firmar.
+            </p>
+          </article>
+
+          <nx-signature
+            id="sg-sign"
+            name="recibido"
+            ask-name
+            ask-id
+            required
+            document="remision-texto"
+            handoff="/demo/handoff"
+            locale="es-CO"
+          ></nx-signature>
+          <div class="sg-actions">
+            <button type="submit" class="dlg-plain">Registrar el recibido</button>
+          </div>
+        </form>
+
+        <aside class="ho-sim" aria-labelledby="sg-sim-title">
+          <h2 class="ho-sim__title" id="sg-sim-title">Celular simulado</h2>
+          <div class="ho-phone">
+            <div class="ho-phone__bar" aria-hidden="true"></div>
+            <div class="ho-phone__screen sg-phone" id="sg-screen"></div>
+          </div>
+          <div class="ho-sim__tools">
+            <button type="button" class="dlg-plain" id="sg-open">Abrir el enlace del QR</button>
+          </div>
+          <p class="sel-tip">
+            La API de sesiones es la de mentira de <code>&lt;nx-handoff&gt;</code> y vive en esta pestaña: un teléfono real
+            no la alcanza. Con un backend real, el QR se escanea con la cámara y el teléfono firma a pantalla completa, en
+            horizontal si lo deja.
+          </p>
+        </aside>
+      </div>
+
+      <section class="sg-result" id="sg-result" aria-labelledby="sg-result-title" hidden>
+        <h2 id="sg-result-title">Lo que queda guardado</h2>
+        <div class="sg-result__grid">
+          <figure class="sg-result__sig">
+            <img id="sg-svg" alt="La firma guardada (SVG)" />
+            <figcaption>SVG, <span id="sg-size"></span></figcaption>
+          </figure>
+          <dl class="sg-result__meta" id="sg-meta"></dl>
+        </div>
+        <details class="sg-result__raw">
+          <summary>El SVG y los metadatos (JSON)</summary>
+          <pre id="sg-raw"></pre>
+        </details>
+      </section>
+      <ol class="stage__log btn-events" id="sg-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td>Trazo</td><td>Pointer Events con captura y eventos coalescidos (mouse, lápiz y dedo por igual), <code>touch-action: none</code>. El ancho cambia con la velocidad (rápido, fino) y con la presión del lápiz; las curvas son cuadráticas por los puntos medios, y el canvas se pinta a la densidad de la pantalla.</td></tr>
+            <tr><td>Papel</td><td>La zona de firma es clara también en modo oscuro, con la línea, la «×» y «Firme aquí»: una firma se archiva sobre papel, con tinta oscura (<code>pen-color</code>).</td></tr>
+            <tr><td>Vector</td><td>Cada trazo es un <code>&lt;path&gt;</code> relleno (su contorno), recortado a lo firmado con un margen. El SVG es la fuente de verdad: <code>toPNG(escala)</code> y el valor del formulario salen de él, y se vuelve a pintar a cualquier tamaño.</td></tr>
+            <tr><td>Firmar</td><td>«Firmar» exige una firma de verdad (ni un punto ni una raya) y, con <code>required</code>, el nombre y la cédula que se pidan. Congela la firma, pone la fecha («Firmado el 28 sept 2026, 3:42 p. m.») y emite <code>nx-signature-done</code>.</td></tr>
+            <tr><td>Huella</td><td>Con <code>document</code> (un texto o el <code>id</code> de un elemento), SHA-256 del texto normalizado más la fecha, en hexadecimal: prueba qué se firmó. No es una firma electrónica certificada.</td></tr>
+            <tr><td>Sin trazo</td><td>«Escribir mi nombre» genera la firma con la cursiva del sistema (nada se descarga), marcada <code>typed: true</code>. Es el camino por teclado y para quien no puede firmar con el dedo.</td></tr>
+            <tr><td>En el celular</td><td>Con <code>handoff</code> (o un <code>&lt;nx-handoff for&gt;</code> que apunte aquí), «Firmar en el celular» muestra el QR de <code>&lt;nx-handoff kind="signature"&gt;</code>. El celular carga <code>&lt;nx-signature&gt;</code> aparte, manda <code>{svg, meta}</code> y la firma aparece aquí, con la huella calculada donde está el documento.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;form method="post" action="/remisiones/REM-4471/recibido"&gt;
+  &lt;article id="remision"&gt;…&lt;/article&gt;
+  &lt;nx-signature name="recibido" ask-name ask-id required document="remision"
+    handoff="/api/handoff"&gt;&lt;/nx-signature&gt;
+  &lt;button&gt;Registrar el recibido&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;!-- Mostrar una firma guardada --&gt;
+&lt;nx-signature readonly value='{"svg":"&lt;svg …&gt;","meta":{…}}'&gt;&lt;/nx-signature&gt;</code></pre>
+        <pre role="tabpanel" hidden><code>import { Signature } from "nx-ui/solid";
+
+&lt;Signature name="recibido" askName askId required document="remision" handoff="/api/handoff"
+  onDone={(e) =&gt; guardar(e.detail.svg, e.detail.meta)} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>name</code>, <code>required</code>, <code>value-format</code></td><td>Participa en el <code>&lt;form&gt;</code>. Envía <code>json</code> (por defecto: <code>{svg, meta}</code>), <code>svg</code> o <code>png</code> (un archivo). <code>required</code> exige una firma de verdad y los campos que se pidan. El <code>reset</code> del formulario la borra.</td></tr>
+            <tr><td><code>ask-name</code>, <code>ask-id</code></td><td>Nombre y cédula de quien firma (van en <code>meta.name</code> y <code>meta.id</code>).</td></tr>
+            <tr><td><code>document</code></td><td>El texto que se firma, o el <code>id</code> de un elemento cuyo texto se firma: con él sale <code>meta.hash</code>.</td></tr>
+            <tr><td><code>geo</code></td><td>Pide la ubicación una vez, con tope de tiempo; si la niegan, firma sin ella (<code>meta.geo</code>).</td></tr>
+            <tr><td><code>auto</code></td><td>Sin botón «Firmar»: la firma se da por hecha un momento después del último trazo.</td></tr>
+            <tr><td><code>handoff</code></td><td>La base de las rutas de <code>&lt;nx-handoff&gt;</code>: muestra «Firmar en el celular».</td></tr>
+            <tr><td><code>readonly</code>, <code>disabled</code>, <code>value</code></td><td>Mostrar una firma guardada (<code>value</code>: el JSON o el SVG); apagarla.</td></tr>
+            <tr><td><code>pen-color</code>, <code>height</code>, <code>locale</code>, <code>labels</code></td><td>Tinta (casi negro azulado), alto de la zona (180 px), formato de la fecha y textos (<code>SIGNATURE_LABELS</code>).</td></tr>
+            <tr><td>Métodos</td><td><code>clear()</code>, <code>undo()</code>, <code>toSVG()</code>, <code>toPNG(escala?)</code> → <code>Promise&lt;Blob | null&gt;</code>, <code>load(valor)</code>, <code>isEmpty()</code>, <code>checkValidity()</code>. Propiedad <code>strokes</code>: los puntos (x, y, t, presión).</td></tr>
+            <tr><td>Eventos</td><td><code>nx-signature-change</code> <code>{empty}</code>, <code>nx-signature-done</code> <code>{svg, meta}</code>.</td></tr>
+            <tr><td><code>meta</code></td><td><code>{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}</code>.</td></tr>
+            <tr><td>Funciones</td><td><code>signatureSVG</code>, <code>signaturePath</code>, <code>signatureWidth</code>, <code>smoothSignaturePoints</code>, <code>signatureBounds</code>, <code>signatureCheck</code>, <code>signatureHash</code>, <code>typedSignatureSVG</code>, <code>parseSignatureValue</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>

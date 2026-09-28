@@ -1,0 +1,154 @@
+/* ---------------------------------------------------------------- demo de <nx-signature> */
+
+.sg-demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  gap: 24px;
+  align-items: start;
+
+  @media (width < 900px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sg-card {
+  display: grid;
+  gap: 16px;
+  min-inline-size: 0;
+  padding: 18px 18px 20px;
+  border: 1px solid var(--nx-border);
+  border-radius: calc(var(--nx-radius-lg) + 4px);
+  background: var(--nx-background);
+}
+
+/* La remisión: un documento sobrio, como el impreso. */
+.sg-doc {
+  display: grid;
+  gap: 12px;
+
+  & p,
+  & h2,
+  & dl,
+  & dd {
+    margin: 0;
+  }
+}
+.sg-doc__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+.sg-doc__kicker {
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sg-doc__title {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.sg-doc__meta,
+.sg-doc__note {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.sg-doc__parties {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 10px 16px;
+  font-size: 12.5px;
+
+  & dt {
+    color: var(--nx-text-tertiary);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+}
+.sg-doc__items {
+  font-size: 12.5px;
+}
+.sg-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sg-actions {
+  display: flex;
+  justify-content: end;
+}
+
+/* En el celular simulado la pantalla es baja: la zona de firma, más corta que en un teléfono. */
+.sg-phone nx-signature .nx-sig__pad {
+  height: 190px !important;
+}
+
+/* ---------------------------------------------------------------- lo que queda guardado */
+
+.sg-result__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 20px;
+  align-items: start;
+
+  @media (width < 760px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sg-result__sig {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+
+  & img {
+    inline-size: 100%;
+    max-block-size: 180px;
+    padding: 12px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-lg);
+    /* El SVG va sobre papel, como en el componente. */
+    background: oklch(0.995 0.003 90);
+    object-fit: contain;
+  }
+  & figcaption {
+    color: var(--nx-text-tertiary);
+    font-size: 12px;
+  }
+}
+.sg-result__meta {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+
+  & div {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    gap: 12px;
+  }
+  & dt {
+    color: var(--nx-muted-foreground);
+  }
+  & dd {
+    margin: 0;
+  }
+}
+.sg-hash {
+  font-family: var(--nx-font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.sg-result__raw {
+  margin-block-start: 14px;
+  font-size: 13px;
+
+  & pre {
+    max-block-size: 260px;
+    overflow: auto;
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

@@ -1,8 +1,8 @@
 # `<nx-handoff>`: integración
 
 «Sigue en el celular». En el escritorio, «Usar el celular» muestra un QR; el teléfono lo abre, toma
-la foto (o escanea) y el resultado aparece solo en el formulario. El mismo tag con `side="phone"` es
-la página que abre el QR.
+la foto (o escanea, o firma) y el resultado aparece solo en el formulario. El mismo tag con
+`side="phone"` es la página que abre el QR.
 
 ## BDUI
 
@@ -22,11 +22,12 @@ con los `import()` fuera.
 
 | Pieza | Tamaño | Límite propuesto |
 |---|---|---|
-| `dist/handoff.js`: escritorio + QR + núcleo (`readLines`, `h`, `safeEndpoint`, `mergeLabels`) | **8,89 KB** (9 106 B) | 9,25 KB |
+| `dist/handoff.js`: escritorio + QR + núcleo (`readLines`, `h`, `safeEndpoint`, `mergeLabels`) | **8,89 KB** (9 106 B); con `kind="signature"`, +43 B | 9,25 KB |
 | Con el comando del brief (`--splitting`): solo `index.js`, sin los chunks compartidos que importa | 7,56 KB (7 738 B) | — |
-| Chunk del celular (`handoff-phone-*.js`), se carga solo con `side="phone"`. `scripts/size.mjs` lo mide con el de escritorio que importa (lo que baja la página del celular) | **4,93 KB** solo; **11,95 KB** con el escritorio | 12,5 KB |
+| Chunk del celular (`handoff-phone-*.js`), se carga solo con `side="phone"`. `scripts/size.mjs` lo mide con el de escritorio que importa (lo que baja la página del celular) | **4,93 KB** solo; **11,95 KB** con el escritorio. Con `kind="signature"`: +0,39 KB (~12,35 KB) | 12,5 KB |
 | `<nx-scan>` del celular (chunk `scan`, ya existente), solo con `kind="scan"` | 11,33 KB | — (el de scan) |
-| `dist/handoff.css` (los dos lados) | **1,42 KB** (1 453 B) | 1,75 KB |
+| `<nx-signature>` del celular (chunk `signature`), solo con `kind="signature"` | 6,88 KB | — (el de signature) |
+| `dist/handoff.css` (los dos lados) | **1,42 KB** (1 453 B); con la pantalla completa de la firma, 1,48 KB | 1,75 KB |
 
 El QR pesa ~2,3 KB de la entrada (las tablas de bloques van como cadenas: un tercio de lo que
 pesaban como arreglos). Para caber en 9 KB: los textos del celular (`HANDOFF_PHONE_LABELS`) viven en
@@ -110,9 +111,9 @@ export interface HandoffProps extends JSX.HTMLAttributes<NxHandoff> {
   side?: HandoffSide;
   /** Base de las rutas de la sesión (`/api/handoff`). Mismo origen o uno de `allowOrigins()`. */
   endpoint: string;
-  /** `id` del elemento que recibe: `<nx-doc-capture>`, `<nx-scan>`, `<input type=file>` o un campo de texto. */
+  /** `id` del elemento que recibe: `<nx-doc-capture>`, `<nx-scan>`, `<nx-signature>`, `<input type=file>` o un campo de texto. */
   for?: string;
-  /** `photo` (por defecto), `file` o `scan`. */
+  /** `photo` (por defecto), `file`, `scan` o `signature`. */
   kind?: HandoffKind;
   accept?: string;
   multiple?: boolean;
@@ -173,12 +174,13 @@ escanea) y el resultado aparece solo en el formulario.
   el panel se cierra solo y queda «2 fotos desde el celular · Recibir más».
 - **Entrega al destino** (`for`): un archivo se descarga y va a `extract(file)` de
   `<nx-doc-capture>` o a un `<input type=file>` (con `input` y `change`, como si lo hubieran elegido);
-  un código va a `add(código)` de `<nx-scan>` o a un campo de texto. Antes sale `nx-handoff-item`,
-  cancelable: la app puede encargarse ella.
+  un código va a `add(código)` de `<nx-scan>` o a un campo de texto; un dato (una firma) va a
+  `load(dato)` de `<nx-signature>`. Antes sale `nx-handoff-item`, cancelable: la app puede encargarse ella.
 - **Celular** (`side="phone"`, se carga aparte): una columna, botones grandes. «Tomar foto» (cámara
   trasera) o «Elegir de la galería», miniaturas, quitar, y «Enviar al computador». Las fotos se reducen
   en el teléfono (2000 px, JPEG 0,85) y suben una por una con reintento. Con `kind="scan"`, un
-  `<nx-scan>` en modo conteo manda cada código al leerlo.
+  `<nx-scan>` en modo conteo manda cada código al leerlo; con `kind="signature"`, un `<nx-signature>`
+  (a pantalla completa y en horizontal si el teléfono deja) manda la firma al confirmarla.
 - **Red:** SSE o NDJSON con reconexión de espera creciente y polling de respaldo. Nada queda abierto
   al cerrar el panel, al vencer la sesión o al sacar el componente de la página.
 - **Seguridad:** sesión de un solo uso con token opaco (lo único que va en el QR), vencimiento
@@ -195,7 +197,7 @@ escanea) y el resultado aparece solo en el formulario.
 
 | | |
 |---|---|
-| Propiedades / atributos | `side` (`desktop`, `phone`), `endpoint`, `for`, `kind` (`photo`, `file`, `scan`), `accept`, `multiple`, `context` (JSON), `session`, `token` (celular; si no, `?s=`/`?t=`), `labels`, `locale`, `disabled` · `state` (solo lectura: `idle`, `creating`, `waiting`, `connected`, `receiving`, `done`, `expired`, `error`) |
+| Propiedades / atributos | `side` (`desktop`, `phone`), `endpoint`, `for`, `kind` (`photo`, `file`, `scan`, `signature`), `accept`, `multiple`, `context` (JSON), `session`, `token` (celular; si no, `?s=`/`?t=`), `labels`, `locale`, `disabled` · `state` (solo lectura: `idle`, `creating`, `waiting`, `connected`, `receiving`, `done`, `expired`, `error`) |
 | Métodos | `start()`, `cancel()` |
 | Eventos | `nx-handoff-state` `{state}`, `nx-handoff-item` `{item, file?}` (cancelable), `nx-handoff-done` `{items}`, `nx-handoff-error` `{message}` |
 | Protocolo | `POST {endpoint}` → `{id, url, expiresIn, token}` · `GET …/{id}/events?after=` (SSE/NDJSON) · `GET …/{id}?after=` (polling) · `GET …/{id}?t=` (celular) · `POST …/{id}/items?t=` y `…/done?t=` · `DELETE …/{id}`. Detalle en `src/components/handoff/INTEGRATION.md` |
@@ -229,12 +231,20 @@ token es la única credencial y solo sirve para *mandar* a esa sesión, nunca pa
 | 1 | `POST /api/handoff` | escritorio | JSON `{kind, accept?, multiple?, context?}` | `200` `{id, url, expiresIn, token?}` (o `expiresAt`, ISO o epoch) |
 | 2 | `GET /api/handoff/{id}/events?after={seq}` | escritorio | — | `text/event-stream` (`data: {…}`) o `application/x-ndjson` (una línea por evento) |
 | 3 | `GET /api/handoff/{id}?after={seq}` | escritorio | — | `200` `{events: […]}` (polling de respaldo) |
-| 3′ | `GET /api/handoff/{id}?t={token}` | celular | — | `200` `{kind, accept?, multiple?, title?, hint?, expiresIn?}` |
-| 4 | `POST /api/handoff/{id}/items?t={token}` | celular | `multipart/form-data` (campo `file`, uno por petición) o JSON `{kind: "code", code, format?}` | `200` `{item}` |
+| 3′ | `GET /api/handoff/{id}?t={token}` | celular | — | `200` `{kind, accept?, multiple?, title?, hint?, expiresIn?, askName?, askId?}` |
+| 4 | `POST /api/handoff/{id}/items?t={token}` | celular | `multipart/form-data` (campo `file`, uno por petición), o JSON `{kind: "code", code, format?}` o `{kind: "data", data}` | `200` `{item}` |
 | 5 | `POST /api/handoff/{id}/done?t={token}` | celular | — | `200` |
 | 6 | `DELETE /api/handoff/{id}` | escritorio | — | `204` (no se espera: `keepalive`) |
 
 La 3 y la 3′ son la misma ruta: con `t` es el celular; sin `t`, el polling del escritorio.
+
+**Firmar (`kind: "signature"`):** el celular carga `<nx-signature>` y, al confirmar, manda en la 4 el
+JSON `{kind: "data", data: {svg, meta}}` (el SVG de la firma y sus metadatos: fecha, nombre, cédula,
+trazos, dispositivo) y luego la 5. El servidor lo reenvía tal cual como ítem
+`{kind: "data", id, data}`; en el escritorio va a `load(data)` del destino (el `<nx-signature>`, que
+calcula ahí la huella del documento). `askName`/`askId` en la 3′ hacen que el celular pida nombre y
+cédula: `<nx-signature handoff>` los manda en el `context` de la 1 (`{askName, askId}`) para que el
+servidor los devuelva. Conviene un tope al tamaño de `data` (una firma pesa 5–40 KB de SVG).
 
 **`url`** (la página del celular) es del mismo origen que la app o de uno de `allowOrigins()`; si no,
 el componente no muestra el QR (`nx-handoff-error`). Lleva solo el id y el token:
@@ -359,7 +369,8 @@ app.get("/api/handoff/:id", (c) => {
     emit(s, { type: "connected", device: device(c.req.header("user-agent")) });
   }
   c.header("Cache-Control", "no-store");
-  return c.json({ kind: s.kind, accept: s.accept, multiple: s.multiple, title: "Factura del proveedor", expiresIn: Math.round((s.exp - Date.now()) / 1000) });
+  const ask = s.kind === "signature" ? (s.context as { askName?: boolean; askId?: boolean } | undefined) : undefined;
+  return c.json({ kind: s.kind, accept: s.accept, multiple: s.multiple, title: "Factura del proveedor", expiresIn: Math.round((s.exp - Date.now()) / 1000), askName: ask?.askName === true, askId: ask?.askId === true });
 });
 
 app.post("/api/handoff/:id/items", async (c) => {
@@ -367,7 +378,12 @@ app.post("/api/handoff/:id/items", async (c) => {
   if (!s) return c.body(null, 410);
   if (s.events.filter((e) => e.type === "item").length >= MAX_ITEMS) return c.body(null, 409);
   let item;
-  if (c.req.header("content-type")?.startsWith("multipart/")) {
+  const json = c.req.header("content-type")?.startsWith("application/json") ? await c.req.json() : null;
+  if (json?.kind === "data") {
+    // Una firma (u otro dato): se reenvía tal cual, con tope de tamaño.
+    if (json.data === undefined || JSON.stringify(json.data).length > 256_000) return c.body(null, 413);
+    item = { kind: "data", id: rnd(), data: json.data };
+  } else if (c.req.header("content-type")?.startsWith("multipart/")) {
     const { file } = await c.req.parseBody();
     if (!(file instanceof File)) return c.body(null, 400);
     if (file.size > MAX_FILE) return c.body(null, 413);
@@ -375,7 +391,7 @@ app.post("/api/handoff/:id/items", async (c) => {
     s.files.set(key, file);
     item = { kind: "file", id: key, name: file.name, type: file.type, size: file.size, url: `/api/handoff/${s.id}/files/${key}` };
   } else {
-    const { code, format } = await c.req.json();
+    const { code, format } = json ?? {};
     if (typeof code !== "string" || !code.trim() || code.length > 200) return c.body(null, 400);
     item = { kind: "code", id: rnd(), code: code.trim(), format };
   }
@@ -441,6 +457,12 @@ el ejemplo quepa. En varias instancias, las sesiones y los eventos van a Redis o
   transparencia queda sobre blanco. `createImageBitmap(file, {imageOrientation: "from-image"})`
   respeta la orientación EXIF. Un HEIC que el navegador no decodifica va tal cual.
 - **Descargas:** 3 intentos por archivo; si fallan, `nx-handoff-error` y se sigue con los demás.
+- **`kind="signature"`** (lo agregó `<nx-signature>`): el celular carga `<nx-signature>` con `import()`
+  (chunk aparte: la entrada de escritorio solo sumó el tipo, dos textos y la entrega a `load()`, +43 B),
+  la zona de firma toma el alto de la pantalla, y «Firmar en pantalla completa» solo aparece con
+  puntero táctil y Fullscreen API (pide `landscape`; si no se puede, se firma en vertical). La firma
+  se manda al confirmarla y, sin red, «Reintentar» manda la misma (no hay que volver a firmar). Un
+  ítem `data` se entrega a `load()` de cualquier destino que lo tenga.
 
 ## Verificación del QR
 

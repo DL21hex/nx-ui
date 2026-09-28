@@ -17,13 +17,15 @@ import { addDemoRoute } from "./demo-api";
 import { SCAN_PRODUCTS } from "./demo-scan";
 
 type Ev = Record<string, unknown> & { seq: number };
-type Session = {
+export type Session = {
   id: string;
   token: string;
   kind: string;
   accept?: string;
   multiple?: boolean;
   demo: string;
+  /** Con `kind: "signature"`: si el celular pide nombre y cédula (lo manda `<nx-signature>` en `context`). */
+  ask?: { askName?: boolean; askId?: boolean };
   expiresAt: number;
   events: Ev[];
   seq: number;
@@ -36,7 +38,8 @@ const TTL = 5 * 60_000;
 const sessions = new Map<string, Session>();
 /** Los archivos que «guardó» el servidor, por clave. */
 const blobs = new Map<string, Blob>();
-const created = new Set<(s: Session) => void>();
+/** Quién se entera de cada sesión nueva (el celular simulado de cada página; `demo-signature.ts` también). */
+export const created = new Set<(s: Session) => void>();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const rid = () => Math.random().toString(36).slice(2, 10);
 const push = (s: Session, ev: Record<string, unknown>) => s.events.push({ ...ev, seq: ++s.seq });
@@ -51,10 +54,12 @@ const json = (s: string) => {
 const TITLES: Record<string, { title: string; hint: string }> = {
   factura: { title: "Factura del proveedor · OC-2291", hint: "Aceros del Caribe S.A.S. Que se lean el NIT, la fecha y el total." },
   conteo: { title: "Recepción OC-2291", hint: "Escanea cada caja o bulto: el conteo aparece en el computador." },
+  firma: { title: "Recibido a satisfacción · REM-4471", hint: "Aceros del Caribe → Ferretería El Tornillo. Firma con el dedo sobre la línea." },
 };
 
 let routed = false;
-function route(): void {
+/** Las rutas de mentira de las sesiones (una sola vez). La página de `<nx-signature>` las reutiliza. */
+export function route(): void {
   if (routed) return;
   routed = true;
   // Las seis rutas del protocolo (ver INTEGRATION.md), en memoria.
@@ -70,14 +75,15 @@ function route(): void {
     // POST /demo/handoff → crea la sesión.
     if (!id) {
       if (req.method !== "POST") return reply({ error: "método" }, 405);
-      const body = json(req.body) as { kind?: string; accept?: string; multiple?: boolean; context?: { demo?: string } };
+      const body = json(req.body) as { kind?: string; accept?: string; multiple?: boolean; context?: { demo?: string; askName?: boolean; askId?: boolean } };
       const s: Session = {
         id: rid(),
         token: rid() + rid(),
         kind: body.kind ?? "photo",
         accept: body.accept,
         multiple: body.multiple,
-        demo: body.context?.demo ?? "factura",
+        demo: body.context?.demo ?? (body.kind === "signature" ? "firma" : "factura"),
+        ask: body.kind === "signature" ? { askName: body.context?.askName, askId: body.context?.askId } : undefined,
         expiresAt: Date.now() + TTL,
         events: [],
         seq: 0,
@@ -87,7 +93,7 @@ function route(): void {
       sessions.set(s.id, s);
       await sleep(250);
       for (const fn of created) fn(s);
-      return reply({ id: s.id, url: `${location.origin}${location.pathname}?s=${s.id}&t=${s.token}#/handoff`, expiresIn: TTL / 1000, token: s.token });
+      return reply({ id: s.id, url: `${location.origin}${location.pathname}?s=${s.id}&t=${s.token}#/${s.kind === "signature" ? "signature" : "handoff"}`, expiresIn: TTL / 1000, token: s.token });
     }
     const s = sessions.get(id);
     const alive = !!s && !s.closed && Date.now() < s.expiresAt;
@@ -124,7 +130,7 @@ function route(): void {
         s!.phone = true;
         push(s!, { type: "connected", device: "Celular simulado" });
       }
-      return reply({ kind: s!.kind, accept: s!.accept, multiple: s!.multiple, ...TITLES[s!.demo] });
+      return reply({ kind: s!.kind, accept: s!.accept, multiple: s!.multiple, ...TITLES[s!.demo], ...s!.ask });
     }
     // GET … (sin token) → polling del escritorio.
     if (req.method === "GET" && !action) {
@@ -132,15 +138,17 @@ function route(): void {
       const after = Number(req.url.searchParams.get("after") ?? 0);
       return reply({ events: s!.events.filter((e) => e.seq > after) });
     }
-    // POST …/items?t= → una foto (ya guardada por la capa de abajo) o un código.
+    // POST …/items?t= → una foto (ya guardada por la capa de abajo), un código o un dato (una firma).
     if (req.method === "POST" && action === "items" && phone) {
-      const body = json(req.body) as { kind?: string; name?: string; type?: string; size?: number; key?: string; code?: string; format?: string };
+      const body = json(req.body) as { kind?: string; name?: string; type?: string; size?: number; key?: string; code?: string; format?: string; data?: unknown };
       await sleep(200);
       const n = s!.seq + 1;
       const item =
         body.kind === "file" && body.key
           ? { kind: "file", id: `f${n}`, name: body.name, type: body.type, size: body.size, url: `${req.url.pathname.replace(/\/items$/, "")}/files/${body.key}` }
-          : { kind: "code", id: `c${n}`, code: String(body.code ?? ""), ...(body.format ? { format: body.format } : {}) };
+          : body.kind === "data"
+            ? { kind: "data", id: `d${n}`, data: body.data }
+            : { kind: "code", id: `c${n}`, code: String(body.code ?? ""), ...(body.format ? { format: body.format } : {}) };
       push(s!, { type: "item", item });
       return reply({ item });
     }

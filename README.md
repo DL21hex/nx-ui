@@ -28,6 +28,8 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
+| `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
+| `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1612,6 +1614,95 @@ hijas directas del elemento.
 | Eventos | `nx-print-paginate` `{pages}`, `nx-print-before` `{pages}` (cancelable), `nx-print-after` `{pages}` |
 | En el documento | `slot="header"`, `slot="footer"`, `{page}`, `{pages}`, `data-print-page`, `data-print-keep`, `data-print-keep-with-next`, `data-print-break`, `data-print-sum` (`number` para cantidades), `data-currency`, `data-value` |
 | Funciones | `paginatePrint(blocks, {pageHeight, minRows?})`, `parsePrintSize()`, `parsePrintMargin()`, `fillPageText()`, `PRINT_SIZES`, `PRINT_LABELS` |
+
+## `<nx-signature>`
+
+**Firma a mano** para el recibido a satisfacción de una entrega, un acta o una autorización: en la
+pantalla con mouse, lápiz o dedo, o en el celular de quien recibe.
+
+- **Trazo que se ve como tinta:** Pointer Events con captura y eventos coalescidos, `touch-action:
+  none`, más fino cuanto más rápido y más grueso con más presión del lápiz, curvas suavizadas y nítido
+  a cualquier densidad de pantalla. La zona de firma es clara también en modo oscuro (una firma se
+  archiva sobre papel), con la línea, la «×» y «Firme aquí».
+- **Vector:** cada trazo es un `<path>` (su contorno relleno), recortado a lo firmado. El SVG es la
+  fuente de verdad: `toPNG(escala)` y el valor del formulario salen de él.
+- **Quién y qué:** nombre y cédula (`ask-name`, `ask-id`); con `document`, la huella SHA-256 del texto
+  firmado más la fecha (prueba qué se firmó; no es una firma electrónica certificada); con `geo`, la
+  ubicación si la persona la permite.
+- **Sin trazo:** «Escribir mi nombre» genera la firma con la cursiva del sistema, marcada
+  `typed: true`: el camino por teclado y para quien no puede firmar con el dedo.
+- **Formulario:** `name`, `required` (ni un punto ni una raya valen), `value-format` (`json` con
+  `{svg, meta}`, `svg` o `png`), `reset` la borra, `readonly` muestra una guardada.
+- **En el celular:** con `handoff`, «Firmar en el celular» muestra el QR de
+  `<nx-handoff kind="signature">`; el teléfono firma (a pantalla completa y en horizontal si se puede) y
+  la firma aparece aquí.
+
+```html
+<form method="post">
+  <article id="remision">…</article>
+  <nx-signature name="recibido" ask-name ask-id required document="remision" handoff="/api/handoff"></nx-signature>
+  <button>Registrar el recibido</button>
+</form>
+
+<!-- Una firma guardada -->
+<nx-signature readonly value='{"svg":"<svg …>","meta":{…}}'></nx-signature>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `name`, `required`, `readonly`, `disabled`, `ask-name`, `ask-id`, `document`, `geo`, `value-format` (`json`, `svg`, `png`), `auto`, `handoff`, `pen-color`, `height` (px, 180), `locale`, `labels` · `value` (`{svg, meta}`, su JSON o el SVG) · `strokes` (solo lectura) |
+| Métodos | `clear()`, `undo()` (también Ctrl/⌘+Z), `toSVG()`, `toPNG(escala?)` → `Promise<Blob \| null>`, `load(valor)` → `boolean`, `isEmpty()`, `checkValidity()` |
+| Eventos | `nx-signature-change` `{empty}`, `nx-signature-done` `{svg, meta}` |
+| `meta` | `{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}` |
+| Funciones | `signatureSVG(trazos, tinta?)`, `signaturePath(puntos, anchos)`, `signatureWidth(velocidad, presión, lápiz)`, `signatureStrokeWidths(trazo)`, `smoothSignaturePoints(puntos)`, `signatureBounds(trazos, margen)`, `signatureCheck(trazos, mínimo?)`, `signatureHash(texto, fecha)`, `typedSignatureSVG(nombre)`, `parseSignatureValue(valor)`, `cleanSignatureMeta(meta)`, `signatureDate(iso, locale)`, `normalizeSignedText(texto)`, `SIGNATURE_LABELS`, `SIGNATURE_MIN`, `SIGNATURE_PEN`, `SIGNATURE_INK`, `SIGNATURE_FONT` |
+
+## `<nx-planner>`
+
+**Agenda de recursos.** Personas, vehículos, máquinas o salas en filas y el tiempo en columnas: para
+despachos, turnos, mantenimientos, citas y alquiler de equipos. Tres vistas: `day` (franjas de 60, 30
+o 15 minutos según el zoom), `week` y `month` (un día por columna; con `hours`, solo el horario
+laboral). Encabezado pegajoso, línea de «ahora», fines de semana y festivos sombreados, Hoy, ← →,
+selector de fecha y zoom con `Ctrl` + rueda.
+
+- **Reservas** como barras con título, detalle y el tono de su estado (`confirmed`, `tentative`,
+  `active`, `block`). Las que se solapan se apilan en carriles; si pasan de la `capacity` del recurso
+  (1), la fila y las barras se marcan como **choque** y la barra superior dice cuántos recursos lo tienen.
+- **Editar arrastrando**: mover en el tiempo y entre recursos, cambiar la duración por los bordes, y
+  crear sobre un hueco, ajustado a `snap`. La sombra dice «Mar, 13 oct, 7:30 – 9:00 a. m.» y si
+  chocaría. Con el dedo, manteniendo pulsado (deslizar sin esperar desplaza la agenda).
+- **Optimista**: soltar pinta el cambio y emite `nx-planner-change` (cancelable); con `endpoint`, el
+  `PATCH {endpoint}/{id}`. Si la app cancela (con `e.detail.message`) o el servidor responde error
+  (`{message}`), vuelve a su lugar con un aviso. El último cambio se deshace con el aviso o `Ctrl`/`⌘`+`Z`.
+- **Teclado**: la rejilla recibe el foco; flechas por recurso y franja, `Enter` crea o abre. En una
+  reserva, las flechas la mueven de a `snap`, `Mayús`+flechas cambian la duración, `Supr` la borra
+  (`nx-planner-delete`, cancelable). Cada reserva se anuncia entera («TKR-512 · Entrega Ferretería El
+  Tornillo · mar, 13 oct, 7:30 – 9:00 a. m.»).
+- **Ocupación** (`summary`): una fila con cuántos recursos tienen algo en cada columna («7/12»).
+- **Datos grandes**: 300 recursos × 2.000 reservas sin congelar: solo se pintan las filas y columnas
+  visibles, los carriles se calculan ordenando una vez y el arrastre solo mueve una sombra. Con
+  `source`, cada período se pide aparte: `GET {source}?from=…&to=…` → `{resources?, bookings}`.
+- **Fechas**: todo en la hora local de quien mira. `start`/`end` sin zona («2026-10-13T07:30») se toman
+  como locales; los eventos las devuelven con su desfase («2026-10-13T07:30:00-05:00»).
+
+```html
+<nx-planner id="despachos" view="week" hours="06:00-18:00" holidays='["2026-10-12"]'
+  summary="equipos" endpoint="/api/despachos/reservas"></nx-planner>
+<script>
+  despachos.resources = [
+    { id: "TKR-512", name: "TKR-512", detail: "Jorge Pérez · 10 t", icon: "truck", group: "Camiones" },
+    { id: "MC-01", name: "Montacargas 1", icon: "warehouse", group: "Montacargas" },
+  ];
+  despachos.bookings = [{ id: "E-101", resource: "TKR-512", start: "2026-10-13T07:30",
+    end: "2026-10-13T09:30", title: "Entrega Ferretería El Tornillo", detail: "Barranquilla · 6 t" }];
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `resources` (`{id, name, detail?, avatar?, icon?, group?, capacity?}`), `bookings` (`{id, resource, start, end, title, detail?, status?, color?, readonly?, data?}`), `view` (`day`, `week`, `month`), `date`, `snap` (min), `hours` (`"07:00-18:00"`), `workdays` (`[1,2,3,4,5]`), `holidays`, `summary`, `source`, `endpoint`, `readonly`, `locale`, `labels` |
+| Métodos | `goTo(fecha)`, `today()`, `scrollToBooking(id)`, `undo()` |
+| Eventos | `nx-planner-change` `{booking, from, to, via}`, `nx-planner-create` `{booking, resource, start, end, via}`, `nx-planner-delete` `{booking, via}` (los tres cancelables), `nx-planner-select` `{booking}`, `nx-planner-range` `{from, to, view}` |
+| Funciones | `plannerLanes()`, `plannerClashes()`, `plannerSnap()`, `plannerMove()`, `plannerResize()`, `plannerSpan()`, `plannerRange()`, `plannerColumns()`, `plannerX()`, `plannerTime()`, `plannerOccupancy()`, `plannerParse()`, `plannerISO()`, `PLANNER_LABELS` |
 
 ## Desarrollo
 

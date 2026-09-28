@@ -55,6 +55,8 @@ export default defineConfig(({ command, mode }) => {
           history: "src/components/history/index.ts",
           kanban: "src/components/kanban/index.ts",
           number: "src/components/number/index.ts",
+          "planner": "src/components/planner/index.ts",
+          "signature": "src/components/signature/index.ts",
           "print": "src/components/print/index.ts",
           "account": "src/components/account/index.ts",
           "launcher": "src/components/launcher/index.ts",

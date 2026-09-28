@@ -203,6 +203,18 @@ nx-handoff {
     margin: 0;
   }
 }
+/* Firmar a pantalla completa (`kind="signature"`): todo el ancho, que en horizontal es la firma. */
+.nx-ho__phone:fullscreen {
+  max-inline-size: none;
+  align-content: start;
+  overflow: auto;
+  padding: 16px;
+  background: var(--nx-background);
+
+  & .nx-sig__pad {
+    height: max(140px, 100dvh - 190px) !important;
+  }
+}
 .nx-ho__title {
   margin: 0;
   font-size: 20px;

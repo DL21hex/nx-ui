@@ -1,0 +1,86 @@
+    <!-- ================================================================ Agenda de recursos -->
+    <template id="page-planner">
+      <p class="eyebrow">Componentes</p>
+      <h1>Agenda de recursos <code class="tag">&lt;nx-planner&gt;</code></h1>
+      <p class="lead">
+        Los despachos de Aceros del Caribe: nueve camiones y tres montacargas en filas y la semana del festivo en columnas.
+        Arrastra una entrega a otra hora o a otro camión, estírala por los bordes o crea una arrastrando sobre un hueco: la
+        sombra dice la hora de inicio y fin y si chocaría. Se ve al instante; si el servidor no la acepta, vuelve a su lugar
+        y dice por qué.
+      </p>
+      <nx-planner id="planner-demo" view="week" date="2026-10-13" hours="06:00-18:00" holidays='["2026-10-12"]'
+        summary="equipos" endpoint="/demo/planner/reservas" locale="es-CO"></nx-planner>
+      <div class="dlg-row">
+        <button type="button" class="dlg-plain" id="planner-big">Cargar 300 recursos</button>
+      </div>
+      <p class="sel-tip">
+        Lleva una entrega al <strong>SXT-904</strong> el miércoles: está en mantenimiento y la API la rechaza. El jueves el
+        <strong>KLM-317</strong> tiene dos entregas a la vez (el choque marcado). <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace; con
+        <kbd>Ctrl</kbd> + rueda se acerca o aleja. Con el teclado: <kbd>Tab</kbd> hasta la rejilla, flechas por camión y
+        franja, <kbd>↵</kbd> abre la entrega o crea una; en la entrega, flechas la mueven y <kbd>Mayús</kbd>+flechas cambian
+        la duración.
+      </p>
+      <ol class="stage__log btn-events" id="planner-log"></ol>
+
+      <h2>Cómo funciona</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td>Vistas</td><td><code>day</code> (franjas de 60, 30 o 15 min según el zoom), <code>week</code> y <code>month</code> (un día por columna; con <code>hours</code>, solo el horario laboral). Fines de semana, festivos y horas fuera del horario, sombreados; una línea marca «ahora».</td></tr>
+            <tr><td>Carriles y choques</td><td>Las reservas que se solapan en un recurso se apilan en carriles. Si pasan de su <code>capacity</code> (1), la fila y las barras se marcan y la barra dice cuántos recursos tienen choque. Un <code>block</code> (mantenimiento) ocupa el recurso entero.</td></tr>
+            <tr><td>Editar</td><td>Mover (en el tiempo y entre recursos), cambiar la duración por los bordes y crear sobre un hueco, ajustado a <code>snap</code>. Con el dedo, manteniendo pulsado. Soltar emite el evento (cancelable) y, con <code>endpoint</code>, el <code>PATCH</code>/<code>POST</code>/<code>DELETE</code>; si la app cancela o el servidor falla, vuelve con un aviso.</td></tr>
+            <tr><td>Deshacer</td><td>El último cambio, con el aviso, <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> o <code>undo()</code>: emite el evento inverso (<code>via: "undo"</code>) y su petición.</td></tr>
+            <tr><td>Datos grandes</td><td>Solo se pintan las filas y columnas visibles (y un margen). Con <code>source</code> pide cada período: <code>GET {source}?from=…&amp;to=…</code> → <code>{resources?, bookings}</code>, y aborta la petición anterior.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Uso</h2>
+      <div class="tabs" data-tabs>
+        <div role="tablist">
+          <button role="tab" aria-selected="true">HTML</button>
+          <button role="tab" aria-selected="false">SolidJS</button>
+        </div>
+        <pre role="tabpanel"><code>&lt;nx-planner id="despachos" view="week" hours="06:00-18:00" holidays='["2026-10-12"]'
+  summary="equipos" endpoint="/api/despachos/reservas"&gt;&lt;/nx-planner&gt;
+
+despachos.resources = [
+  { id: "TKR-512", name: "TKR-512", detail: "Jorge Pérez · 10 t", icon: "truck", group: "Camiones" },
+  { id: "MC-01", name: "Montacargas 1", icon: "warehouse", group: "Montacargas", capacity: 1 },
+];
+despachos.bookings = await (await fetch("/api/despachos?semana=2026-W42")).json();
+// [{ id, resource, start: "2026-10-13T07:30", end: "2026-10-13T09:30", title, detail?, status? }]
+despachos.addEventListener("nx-planner-change", (e) =&gt; {
+  if (e.detail.to.resource === "SXT-904") {
+    e.detail.message = "El SXT-904 está en mantenimiento";
+    e.preventDefault();
+  }
+});</code></pre>
+        <pre role="tabpanel" hidden><code>import { Planner } from "nx-ui/solid";
+
+&lt;Planner view="week" hours="06:00-18:00" resources={flota()} bookings={entregas()}
+  endpoint="/api/despachos/reservas" summary="equipos"
+  onSelect={(e) =&gt; abrirEntrega(e.detail.booking.id)}
+  onCreate={(e) =&gt; { e.preventDefault(); nuevaEntrega(e.detail); }} /&gt;</code></pre>
+      </div>
+
+      <h2>API</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td><code>resources</code></td><td><code>[{id, name, detail?, avatar?, icon?, group?, capacity?}]</code>, en orden; <code>group</code> los agrupa bajo encabezados plegables.</td></tr>
+            <tr><td><code>bookings</code></td><td><code>[{id, resource, start, end, title, detail?, status?, color?, readonly?, data?}]</code>. <code>status</code>: <code>confirmed</code>, <code>tentative</code>, <code>active</code> o <code>block</code>. <code>start</code>/<code>end</code> sin zona son hora local de quien mira. Devuelve el estado actual, con los cambios aplicados.</td></tr>
+            <tr><td><code>view</code>, <code>date</code>, <code>snap</code></td><td><code>day</code>, <code>week</code> (por defecto) o <code>month</code>; el día a la vista (ISO); minutos de la rejilla (15 en día, 30 en semana; en mes, un día).</td></tr>
+            <tr><td><code>hours</code>, <code>workdays</code>, <code>holidays</code></td><td>Horario laboral (<code>"07:00-18:00"</code>), días laborables (<code>[1,2,3,4,5]</code>, lunes = 1) y festivos (<code>["2026-10-12"]</code>).</td></tr>
+            <tr><td><code>summary</code></td><td>Fila de ocupación por columna («7/12»); su valor, si lo tiene, nombra lo que se cuenta («equipos»).</td></tr>
+            <tr><td><code>source</code>, <code>endpoint</code></td><td>Carga por período (<code>GET ?from=&amp;to=</code>) y a dónde van los cambios (<code>PATCH</code>/<code>POST</code>/<code>DELETE {endpoint}/{id}</code>; si responde error con <code>{message}</code>, ese es el motivo del aviso). Mismo origen o <code>allowOrigins()</code>.</td></tr>
+            <tr><td><code>readonly</code>, <code>locale</code>, <code>labels</code></td><td>Solo mirar y seleccionar; formato de fechas; textos (<code>PLANNER_LABELS</code>).</td></tr>
+            <tr><td>Métodos</td><td><code>goTo(fecha)</code>, <code>today()</code>, <code>scrollToBooking(id)</code>, <code>undo()</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-planner-change</code> <code>{booking, from, to, via}</code>, <code>nx-planner-create</code> <code>{booking, resource, start, end, via}</code>, <code>nx-planner-delete</code> <code>{booking, via}</code> (los tres cancelables; <code>detail.message</code> es el motivo del aviso), <code>nx-planner-select</code> <code>{booking}</code>, <code>nx-planner-range</code> <code>{from, to, view}</code>.</td></tr>
+            <tr><td>Teclado</td><td>Rejilla: flechas por recurso y franja, <kbd>Inicio</kbd>/<kbd>Fin</kbd>, <kbd>↵</kbd> crea o abre. Reserva: flechas la mueven, <kbd>Mayús</kbd>+flechas cambian la duración, <kbd>Supr</kbd> la borra, <kbd>Esc</kbd> vuelve (o deshace lo que no se registró).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
