@@ -1,0 +1,614 @@
+/*
+ * <nx-planner>. Variables propias:
+ *   --nx-planner-height (560px) · --nx-planner-resource (208px; 52px en angosto): columna de recursos
+ *   --nx-planner-warn: el ámbar de lo tentativo (por defecto `--nx-warning`, si existe)
+ *
+ * Las filas, las columnas y las barras se posicionan desde JS (solo lo visible); aquí, el aspecto.
+ */
+
+nx-planner {
+  --_warn: var(--nx-planner-warn, var(--nx-warning, light-dark(oklch(0.72 0.15 70), oklch(0.8 0.14 78))));
+  --_line: var(--nx-border-subtle);
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  block-size: var(--nx-planner-height, 560px);
+  min-inline-size: 0;
+  color: var(--nx-foreground);
+  font: 13px/1.35 var(--nx-font-sans);
+}
+nx-planner * {
+  box-sizing: border-box;
+}
+nx-planner [hidden] {
+  display: none !important;
+}
+nx-planner button,
+nx-planner input {
+  font: inherit;
+  color: inherit;
+}
+nx-planner .nx-glyph {
+  display: inline-flex;
+  inline-size: 14px;
+  block-size: 14px;
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+.nx-planner__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- barra */
+
+.nx-planner__bar {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.nx-planner__nav,
+.nx-planner__seg {
+  display: flex;
+  gap: 4px;
+}
+.nx-planner__btn,
+.nx-planner__pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-inline-size: 30px;
+  block-size: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+.nx-planner__btn[data-act="prev"],
+.nx-planner__btn[data-act="next"] {
+  padding: 0;
+}
+.nx-planner__btn[data-act="next"] .nx-glyph {
+  rotate: 180deg;
+}
+.nx-planner__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+.nx-planner__pick {
+  cursor: text;
+  font-variant-numeric: tabular-nums;
+}
+.nx-planner__clashes {
+  border-color: color-mix(in oklch, var(--nx-danger) 45%, transparent);
+  background: var(--nx-danger-soft);
+  color: var(--nx-danger);
+  font-weight: 560;
+}
+.nx-planner__seg {
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  &[role="group"] {
+    margin-inline-start: auto;
+  }
+  & .nx-planner__btn {
+    block-size: 26px;
+    border: 0;
+    border-radius: 5px;
+    background: none;
+  }
+  & [aria-pressed="true"] {
+    background: var(--nx-primary-soft) !important;
+    color: var(--nx-primary-ink);
+    font-weight: 560;
+  }
+}
+nx-planner[aria-busy="true"] .nx-planner__bar::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -6px;
+  block-size: 2px;
+  background: linear-gradient(90deg, transparent, var(--nx-primary), transparent) no-repeat;
+  background-size: 30% 100%;
+  animation: nx-planner-busy 1.1s linear infinite;
+}
+@keyframes nx-planner-busy {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+
+/* ---------------------------------------------------------------- rejilla */
+
+.nx-planner__scroll {
+  --_res: var(--nx-planner-resource, 208px);
+  position: relative;
+  flex: 1;
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-background);
+  scrollbar-width: thin;
+  outline: none;
+  &:focus-visible {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 2px var(--nx-ring);
+  }
+}
+.nx-planner__canvas {
+  position: relative;
+  min-inline-size: 100%;
+}
+.nx-planner__head {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 4;
+  display: flex;
+  border-block-end: 1px solid var(--nx-border);
+  background: var(--nx-card);
+}
+.nx-planner__corner {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: end;
+  inline-size: var(--_res);
+  padding: 0 12px 7px;
+  border-inline-end: 1px solid var(--nx-border);
+  background: inherit;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 560;
+}
+.nx-planner__hcols {
+  position: relative;
+  flex: 1;
+}
+.nx-planner__hc {
+  position: absolute;
+  inset-block: 0;
+  padding: 6px 6px 0;
+  border-inline-start: 1px solid var(--_line);
+  overflow: hidden;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  &[data-off] {
+    background: var(--nx-hover);
+  }
+  &[data-today] .nx-planner__hl {
+    color: var(--nx-primary-ink);
+    font-weight: 650;
+  }
+  & small {
+    display: block;
+    color: var(--nx-text-tertiary);
+    font-size: 10.5px;
+  }
+}
+nx-planner[data-view="day"] .nx-planner__hc:not([data-hour]) {
+  border-inline-start-color: transparent;
+}
+nx-planner[data-view="month"] .nx-planner__hc {
+  padding-inline: 0;
+  text-align: center;
+}
+.nx-planner__sum {
+  position: absolute;
+  inset: auto 3px 4px;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  block-size: 14px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--nx-hover);
+  color: var(--nx-text-tertiary);
+  font-size: 10.5px;
+  & i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: -1;
+    background: var(--nx-primary-soft);
+  }
+  &[data-full] {
+    color: var(--nx-danger);
+    font-weight: 600;
+    & i {
+      background: var(--nx-danger-soft);
+    }
+  }
+}
+
+.nx-planner__body {
+  position: relative;
+}
+.nx-planner__bg,
+.nx-planner__rows {
+  position: absolute;
+  inset: 0;
+}
+.nx-planner__bg {
+  inset-inline-start: var(--_res);
+  background: linear-gradient(to right, var(--_line) 1px, transparent 1px) 0 0 / var(--_cw) 100%;
+  pointer-events: none;
+}
+.nx-planner__off {
+  position: absolute;
+  inset-block: 0;
+  background: var(--nx-hover);
+}
+.nx-planner__now {
+  position: absolute;
+  inset-block: 0;
+  z-index: 1;
+  inline-size: 2px;
+  margin-inline-start: -1px;
+  background: var(--nx-danger);
+}
+.nx-planner__rows[data-empty]::before {
+  content: attr(data-empty-text);
+  display: block;
+  padding: 16px;
+  color: var(--nx-text-tertiary);
+}
+.nx-planner__row {
+  position: absolute;
+  inset-inline: 0;
+  display: flex;
+  border-block-end: 1px solid var(--_line);
+  &[data-clash]:not(.nx-planner__grp) > .nx-planner__res {
+    box-shadow: inset 3px 0 var(--nx-danger);
+  }
+}
+.nx-planner__res {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  inline-size: var(--_res);
+  min-inline-size: 0;
+  padding: 0 10px 0 12px;
+  border-inline-end: 1px solid var(--nx-border);
+  background: var(--nx-card);
+}
+.nx-planner__pic,
+nx-planner .nx-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+nx-planner .nx-icon {
+  border-radius: 8px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  & svg {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+}
+.nx-planner__who {
+  display: grid;
+  min-inline-size: 0;
+  line-height: 1.25;
+  & > * {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  & b {
+    font-weight: 560;
+  }
+  & span {
+    color: var(--nx-text-tertiary);
+    font-size: 11.5px;
+  }
+}
+.nx-planner__warn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 18px;
+  block-size: 18px;
+  margin-inline-start: auto;
+  border-radius: 50%;
+  background: var(--nx-danger);
+  color: var(--nx-danger-foreground);
+  font-size: 11px;
+  font-weight: 700;
+}
+.nx-planner__grp {
+  background: var(--nx-sidebar);
+}
+.nx-planner__grp > .nx-planner__res {
+  padding: 0 6px;
+  background: var(--nx-sidebar);
+}
+.nx-planner__fold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  inline-size: 100%;
+  block-size: 24px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+  }
+  & .nx-glyph {
+    transition: rotate var(--nx-motion-fast);
+  }
+  &[aria-expanded="true"] .nx-glyph {
+    rotate: 90deg;
+  }
+}
+.nx-planner__grp[data-clash] .nx-planner__fold::after {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--nx-danger);
+}
+.nx-planner__n {
+  color: var(--nx-text-tertiary);
+  font-weight: 400;
+}
+.nx-planner__lane {
+  position: relative;
+  flex: 1;
+}
+nx-planner:not([readonly]) .nx-planner__lane {
+  cursor: cell;
+}
+
+/* ---------------------------------------------------------------- reservas */
+
+.nx-planner__bk,
+.nx-planner__ghost {
+  --_c: var(--nx-primary);
+  position: absolute;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  block-size: 32px;
+  padding: 0 8px 0 10px;
+  overflow: clip;
+  border: 1px solid color-mix(in oklch, var(--_c) 38%, transparent);
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--_c) 13%, var(--nx-card));
+  box-shadow: inset 3px 0 var(--_c);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: grab;
+  user-select: none;
+  -webkit-touch-callout: none;
+  &[data-status="tentative"] {
+    --_c: var(--_warn);
+    border-style: dashed;
+  }
+  &[data-status="active"] {
+    --_c: var(--nx-success);
+  }
+  &[data-status="block"] {
+    --_c: var(--nx-text-tertiary);
+    background: repeating-linear-gradient(135deg, var(--nx-hover) 0 5px, transparent 5px 10px), var(--nx-card);
+    color: var(--nx-muted-foreground);
+  }
+  &[data-clash] {
+    border: 1px solid var(--nx-danger);
+    box-shadow: inset 3px 0 var(--nx-danger), 0 0 0 1px var(--nx-danger);
+  }
+}
+.nx-planner__bk {
+  transition: opacity var(--nx-motion-fast);
+  &:not(:has(.nx-planner__grip)) {
+    cursor: pointer;
+  }
+  &[data-selected] {
+    box-shadow: inset 3px 0 var(--_c), 0 0 0 2px var(--nx-primary);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+  &[data-drag] {
+    opacity: 0.35;
+  }
+  &[aria-busy="true"] {
+    opacity: 0.7;
+    cursor: progress;
+  }
+}
+.nx-planner__bt,
+.nx-planner__bd {
+  position: sticky;
+  inset-inline-start: calc(var(--_res) + 6px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nx-planner__bt {
+  font-weight: 560;
+}
+.nx-planner__bd {
+  color: var(--nx-muted-foreground);
+  font-size: 11px;
+}
+.nx-planner__grip {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 8px;
+  cursor: ew-resize;
+  &[data-edge="start"] {
+    inset-inline-start: 0;
+  }
+  &[data-edge="end"] {
+    inset-inline-end: 0;
+  }
+  .nx-planner__bk:hover > &::after {
+    content: "";
+    position: absolute;
+    inset: 9px 3px;
+    border-radius: 1px;
+    background: color-mix(in oklch, var(--_c) 65%, transparent);
+  }
+}
+.nx-planner__ghost {
+  inset: 0 auto auto 0;
+  z-index: 3;
+  border-style: solid;
+  background: color-mix(in oklch, var(--_c) 16%, var(--nx-popover));
+  box-shadow: inset 3px 0 var(--_c), var(--nx-shadow-popover);
+  pointer-events: none;
+  will-change: transform;
+  contain: layout paint;
+  & .nx-planner__bt,
+  & .nx-planner__bd {
+    position: static;
+  }
+  &[data-clash] .nx-planner__bd {
+    color: var(--nx-danger);
+    font-weight: 600;
+  }
+}
+.nx-planner__cur {
+  position: absolute;
+  inset-block-start: 0;
+  z-index: 1;
+  border: 2px solid var(--nx-ring);
+  border-radius: 4px;
+  background: var(--nx-primary-soft);
+  pointer-events: none;
+}
+nx-planner[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+nx-planner[data-dragging="start"],
+nx-planner[data-dragging="end"] {
+  cursor: ew-resize;
+}
+
+/* ---------------------------------------------------------------- angosto: solo avatar o iniciales */
+
+@container (max-width: 640px) {
+  .nx-planner__scroll {
+    --_res: var(--nx-planner-resource, 52px);
+  }
+  .nx-planner__res {
+    justify-content: center;
+    padding: 0;
+  }
+  .nx-planner__who {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .nx-planner__warn {
+    position: absolute;
+    inset: 3px 3px auto auto;
+    inline-size: 14px;
+    block-size: 14px;
+    font-size: 9px;
+  }
+  .nx-planner__corner,
+  .nx-planner__fold {
+    padding: 0;
+    font-size: 0;
+  }
+  .nx-planner__n {
+    font-size: 11px;
+  }
+  .nx-planner__title {
+    order: -1;
+    inline-size: 100%;
+  }
+  .nx-planner__seg[role="group"] {
+    margin-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-planner * {
+    transition-duration: 0s !important;
+  }
+  nx-planner[aria-busy="true"] .nx-planner__bar::after {
+    animation-duration: 3s;
+  }
+}
+
+@media (forced-colors: active) {
+  .nx-planner__bk,
+  .nx-planner__ghost {
+    border-color: CanvasText;
+  }
+  .nx-planner__bk[data-clash],
+  .nx-planner__bk[data-selected] {
+    border: 2px solid Highlight;
+  }
+  .nx-planner__cur,
+  .nx-planner__now {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+  }
+  .nx-planner__cur {
+    background: none;
+  }
+}
