@@ -1,0 +1,541 @@
+/*
+ * <nx-launcher>. Variables propias:
+ *   --nx-launcher-min (240px): ancho mínimo de una tarjeta (decide cuántas columnas caben)
+ *   --nx-launcher-gap (12px): espacio entre tarjetas
+ *   --nx-launcher-warn / --nx-launcher-ink: el ámbar de una nota (punto / texto); por defecto
+ *     `--nx-warning` y `--nx-warning-ink`, si existen
+ *
+ * Para que la tarjeta «se convierta» en la página de destino, el encabezado de esa página lleva
+ * los mismos nombres de View Transitions: `.nx-launcher-hero` (el bloque), `.nx-launcher-hero-icon`
+ * y `.nx-launcher-hero-label` (o `view-transition-name: nx-launcher-card | -icon | -label`).
+ */
+
+nx-launcher {
+  --nx-launcher-warn: var(--nx-warning, light-dark(oklch(0.7 0.15 70), oklch(0.8 0.14 75)));
+  --nx-launcher-ink: var(--nx-warning-ink, light-dark(oklch(0.5 0.12 65), oklch(0.83 0.13 80)));
+  --_min: var(--nx-launcher-min, 240px);
+  --_gap: var(--nx-launcher-gap, 12px);
+  container: nx-launcher / inline-size;
+  display: block;
+  color: var(--nx-foreground);
+  font: 14px/1.45 var(--nx-font-sans);
+}
+nx-launcher[hidden] {
+  display: none;
+}
+nx-launcher * {
+  box-sizing: border-box;
+}
+nx-launcher button,
+nx-launcher input {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------- buscador */
+
+.nx-launcher__search {
+  display: grid;
+  gap: 4px;
+  max-inline-size: 320px;
+  margin-block-end: 18px;
+}
+.nx-launcher__search-label {
+  font-size: 12px;
+  color: var(--nx-muted-foreground);
+}
+.nx-launcher__field {
+  position: relative;
+  & .nx-glyph {
+    position: absolute;
+    inset-inline-start: 10px;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    inline-size: 16px;
+    block-size: 16px;
+    color: var(--nx-text-tertiary);
+    pointer-events: none;
+  }
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+.nx-launcher__input {
+  inline-size: 100%;
+  block-size: 36px;
+  padding-inline: 32px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+    border-color: var(--nx-primary-border);
+  }
+}
+.nx-launcher__hint {
+  margin: 0;
+  min-block-size: 17px;
+  font-size: 12px;
+  color: var(--nx-text-tertiary);
+}
+
+/* ---------------------------------------------------------------- secciones */
+
+.nx-launcher__nav {
+  display: grid;
+  gap: 30px;
+}
+.nx-launcher__heading {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--nx-muted-foreground);
+}
+.nx-launcher__grid {
+  display: grid;
+  grid-auto-flow: row dense;
+  /* Sin JS (SSR) o antes de medir: las que quepan. Luego el componente fija las columnas. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--_min)), 1fr));
+  gap: var(--_gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------- tarjeta */
+
+.nx-launcher__card {
+  position: relative;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 16px 14px;
+  background: var(--nx-card);
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  transition:
+    border-color var(--nx-motion-fast),
+    opacity var(--nx-motion-base) var(--nx-ease-out),
+    filter var(--nx-motion-base),
+    scale var(--nx-motion-base) var(--nx-ease-out);
+  &:hover {
+    border-color: var(--nx-border);
+  }
+  &:has(.nx-launcher__link:focus-visible) {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+  /* Lo que no coincide con el buscador se apaga en su sitio. */
+  &.is-dim {
+    opacity: 0.3;
+    filter: saturate(0.3);
+    scale: 0.985;
+  }
+  &.is-first {
+    border-color: var(--nx-primary-border);
+  }
+
+  /* Luz que sigue al puntero: un reflejo casi imperceptible adentro y un brillo tenue en el borde. */
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--nx-motion-base) var(--nx-ease-out);
+  }
+  &::before {
+    background: radial-gradient(320px circle at var(--nx-launcher-x, 50%) var(--nx-launcher-y, 50%), color-mix(in oklch, var(--nx-primary) 6%, transparent), transparent 70%);
+  }
+  &::after {
+    z-index: 3;
+    padding: 1px;
+    background: radial-gradient(200px circle at var(--nx-launcher-x, 50%) var(--nx-launcher-y, 50%), color-mix(in oklch, var(--nx-primary) 75%, transparent), transparent 70%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+}
+@media (hover: hover) {
+  .nx-launcher__card:hover::before,
+  .nx-launcher__card:hover::after {
+    opacity: 1;
+  }
+}
+
+.nx-launcher__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nx-launcher__icon {
+  inline-size: 38px;
+  block-size: 38px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  & .nx-icon {
+    display: grid;
+    place-items: center;
+    inline-size: 20px;
+    block-size: 20px;
+    font-size: 12px;
+    font-weight: 650;
+  }
+  & svg {
+    inline-size: 20px;
+    block-size: 20px;
+    stroke-width: 1.7;
+  }
+}
+.nx-launcher__go {
+  inline-size: 16px;
+  block-size: 16px;
+  color: var(--nx-text-tertiary);
+  transition:
+    translate var(--nx-motion-base) var(--nx-ease-out),
+    color var(--nx-motion-fast);
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+.nx-launcher__card:hover .nx-launcher__go {
+  color: var(--nx-primary-ink);
+  translate: 2px -2px;
+}
+
+.nx-launcher__link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: start;
+  text-decoration: none;
+  font-size: 15.5px;
+  font-weight: 620;
+  line-height: 1.25;
+  cursor: pointer;
+  outline: none;
+  /* Toda la tarjeta es el enlace; las vistas quedan encima. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+  }
+}
+/* Una caja atómica: un nombre partido en líneas no puede llevar nombre de View Transition. */
+.nx-launcher__label {
+  display: inline-block;
+}
+
+/* La descripción y las vistas comparten el mismo lugar: con puntero se cambia una por otra y la
+   tarjeta no cambia de tamaño. */
+.nx-launcher__swap {
+  display: grid;
+  min-block-size: 58px;
+}
+.nx-launcher__desc,
+.nx-launcher__views {
+  grid-area: 1 / 1;
+  transition:
+    opacity var(--nx-motion-base) var(--nx-ease-out),
+    translate var(--nx-motion-base) var(--nx-ease-out),
+    visibility 0s;
+}
+.nx-launcher__desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--nx-muted-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nx-launcher__views {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-launcher__view {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  block-size: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-canvas, var(--nx-card));
+  color: var(--nx-foreground);
+  font-size: 12.5px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  &:hover,
+  &.is-hit {
+    background: var(--nx-primary-soft);
+    border-color: var(--nx-primary-border);
+    color: var(--nx-primary-ink);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+.nx-launcher__hint-text,
+.nx-launcher__badge {
+  color: var(--nx-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.nx-launcher__badge {
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .nx-launcher__card.has-views {
+    & .nx-launcher__views {
+      opacity: 0;
+      visibility: hidden;
+      translate: 0 6px;
+      transition-delay: 0s, 0s, var(--nx-motion-base);
+    }
+    &:hover,
+    &:focus-within,
+    &.is-found {
+      & .nx-launcher__desc {
+        opacity: 0;
+        translate: 0 -6px;
+      }
+      & .nx-launcher__views {
+        opacity: 1;
+        visibility: visible;
+        translate: none;
+        transition-delay: 0s;
+      }
+    }
+  }
+}
+/* En pantallas táctiles no hay «pasar el puntero»: las vistas se ven siempre, debajo. */
+@media (hover: none) {
+  .nx-launcher__swap {
+    gap: 10px;
+    min-block-size: 0;
+  }
+  .nx-launcher__desc,
+  .nx-launcher__views {
+    grid-area: auto;
+  }
+}
+
+/* ---------------------------------------------------------------- señal */
+
+/* Al pie de la tarjeta: en una fila, las señales quedan alineadas aunque las descripciones no. */
+.nx-launcher__signal {
+  margin-block-start: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 7px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.nx-launcher__value {
+  display: inline-block;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--nx-foreground);
+}
+.nx-launcher__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--nx-muted-foreground);
+  &::before {
+    content: "";
+    inline-size: 6px;
+    block-size: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  &[data-tone="success"] {
+    color: var(--nx-success);
+  }
+  &[data-tone="warning"] {
+    color: var(--nx-launcher-ink);
+    &::before {
+      background: var(--nx-launcher-warn);
+    }
+  }
+  &[data-tone="danger"] {
+    color: var(--nx-danger);
+  }
+}
+.nx-launcher__meter {
+  flex: 1 1 100%;
+  block-size: 5px;
+  margin-block-start: 2px;
+  border-radius: 3px;
+  background: var(--nx-border-subtle);
+  overflow: hidden;
+  & i {
+    display: block;
+    block-size: 100%;
+    border-radius: inherit;
+    background: var(--nx-primary);
+  }
+}
+.nx-launcher__trend {
+  flex: 1 1 80px;
+  align-self: center;
+  min-inline-size: 60px;
+  block-size: 22px;
+  overflow: visible;
+}
+.nx-launcher__trend-area {
+  fill: var(--nx-primary-soft);
+}
+.nx-launcher__trend-line {
+  fill: none;
+  stroke: var(--nx-primary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------------------------------------------------------------- destacada */
+
+.nx-launcher__card.is-featured {
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--nx-primary-soft), transparent 60%),
+    var(--nx-card);
+  border-color: var(--nx-primary-border);
+  & .nx-launcher__link {
+    font-size: 18px;
+  }
+}
+/* Dos columnas cuando hay al menos dos (con las columnas ya fijadas, o antes, si caben). */
+@container nx-launcher (min-width: 520px) {
+  .nx-launcher__card.is-featured {
+    grid-column: span 2;
+  }
+}
+.nx-launcher__grid[data-cols="1"] .nx-launcher__card.is-featured {
+  grid-column: auto;
+}
+.nx-launcher__eyebrow {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 560;
+  color: var(--nx-primary-ink);
+  &::before {
+    content: "";
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: 50%;
+    background: var(--nx-primary);
+    box-shadow: 0 0 0 4px var(--nx-primary-soft);
+  }
+}
+.nx-launcher__progress {
+  display: grid;
+  gap: 6px;
+  margin-block-start: auto;
+}
+.nx-launcher__bar {
+  display: flex;
+  gap: 2px;
+  block-size: 8px;
+  border-radius: 4px;
+  background: var(--nx-border-subtle);
+  overflow: hidden;
+  & i {
+    display: block;
+    block-size: 100%;
+    background: var(--nx-primary);
+  }
+  & i[data-part="1"] {
+    background: color-mix(in oklch, var(--nx-primary) 35%, var(--nx-card));
+  }
+  & i[data-part="2"] {
+    background: transparent;
+  }
+}
+.nx-launcher__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+  & b {
+    color: var(--nx-foreground);
+    font-weight: 620;
+  }
+}
+
+/* ---------------------------------------------------------------- la tarjeta se convierte en la página */
+
+.nx-launcher-hero {
+  view-transition-name: nx-launcher-card;
+}
+.nx-launcher-hero-icon {
+  view-transition-name: nx-launcher-icon;
+}
+.nx-launcher-hero-label {
+  view-transition-name: nx-launcher-label;
+  display: inline-block;
+}
+::view-transition-group(nx-launcher-card),
+::view-transition-group(nx-launcher-icon),
+::view-transition-group(nx-launcher-label) {
+  animation-duration: 0.44s;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* El nombre crece con su alto, sin estirarse. */
+::view-transition-old(nx-launcher-label),
+::view-transition-new(nx-launcher-label) {
+  block-size: 100%;
+  inline-size: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-launcher__card,
+  .nx-launcher__card::before,
+  .nx-launcher__card::after,
+  .nx-launcher__desc,
+  .nx-launcher__views,
+  .nx-launcher__go {
+    transition: none;
+  }
+}

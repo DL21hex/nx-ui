@@ -1,0 +1,109 @@
+/* ---------------------------------------------------------------- demo de <nx-launcher> */
+
+.la-demo {
+  margin-block: 12px 8px;
+}
+/* La «página» del módulo que aparece al elegir una tarjeta. */
+.la-page:not([hidden]) {
+  display: grid;
+  gap: 14px;
+}
+.la-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  block-size: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+.la-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background:
+    radial-gradient(90% 160% at 0% 0%, var(--nx-primary-soft), transparent 55%),
+    var(--nx-card);
+}
+.la-head__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 52px;
+  block-size: 52px;
+  border-radius: 12px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  & svg {
+    inline-size: 26px;
+    block-size: 26px;
+    stroke-width: 1.7;
+  }
+}
+.la-head__text {
+  display: grid;
+  gap: 3px;
+  min-inline-size: 0;
+  & p {
+    margin: 0;
+    color: var(--nx-muted-foreground);
+  }
+}
+.la-head__title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 650;
+  outline: none;
+}
+.la-tabs {
+  display: flex;
+  gap: 2px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  overflow-x: auto;
+}
+.la-tab {
+  block-size: 38px;
+  padding: 0 12px;
+  margin-block-end: -1px;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  &[aria-selected="true"] {
+    color: var(--nx-primary-ink);
+    border-block-end-color: var(--nx-primary);
+    font-weight: 580;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: -2px;
+  }
+}
+.la-body {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  color: var(--nx-muted-foreground);
+}
