@@ -1,0 +1,274 @@
+/* Demo de <nx-print>: los controles y el estilo de los documentos (factura y remisión). */
+
+.pr-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-block-end: 12px;
+}
+.pr-field {
+  display: grid;
+  gap: 4px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-weight: 500;
+
+  & select {
+    block-size: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-background);
+    color: var(--nx-foreground);
+    font: 14px var(--nx-font-sans);
+
+    &:focus-visible {
+      border-color: var(--nx-primary);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--nx-primary-soft);
+    }
+  }
+}
+.pr-add {
+  block-size: 34px;
+}
+#pr-rm {
+  margin-block-end: 12px;
+}
+
+/* ---------------------------------------------------------------- el documento (dentro de las hojas) */
+
+.fv {
+  --fv-ink: #1b1d21;
+  --fv-muted: #5b606b;
+  --fv-rule: #d5d8de;
+  --fv-band: #f1f3f6;
+  --fv-accent: #1f4e79;
+}
+.fv .nx-print__sheet {
+  font-size: 9pt;
+}
+.fv-label {
+  display: block;
+  color: var(--fv-muted);
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fv-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block-end: 4mm;
+  margin-block-end: 4mm;
+  border-block-end: 2px solid var(--fv-accent);
+}
+.fv-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  & strong {
+    display: block;
+    font-size: 12pt;
+    color: var(--fv-accent);
+  }
+  & span {
+    display: block;
+    color: var(--fv-muted);
+    font-size: 8pt;
+  }
+}
+.fv-logo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 13mm;
+  block-size: 13mm;
+  border-radius: 2mm;
+  background: var(--fv-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 10pt;
+  letter-spacing: 0.04em;
+}
+.fv-id {
+  text-align: end;
+
+  & strong {
+    display: block;
+    font-size: 13pt;
+    font-variant-numeric: tabular-nums;
+  }
+  & > span:last-child {
+    color: var(--fv-muted);
+    font-size: 8pt;
+  }
+}
+.fv-head--small {
+  padding-block-end: 2.5mm;
+  margin-block-end: 3mm;
+  & .fv-logo {
+    inline-size: 10mm;
+    block-size: 10mm;
+    font-size: 8pt;
+  }
+  & .fv-brand strong {
+    font-size: 10.5pt;
+  }
+}
+.fv-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block-start: 2.5mm;
+  margin-block-start: 3mm;
+  border-block-start: 1px solid var(--fv-rule);
+  color: var(--fv-muted);
+  font-size: 7pt;
+
+  & > span:last-child {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.fv-parties {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-block-end: 4mm;
+  padding: 3mm 4mm;
+  border: 1px solid var(--fv-rule);
+  border-radius: 1.5mm;
+
+  & strong,
+  & span:not(.fv-label) {
+    display: block;
+  }
+  & span:not(.fv-label) {
+    color: var(--fv-muted);
+  }
+  & dl {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 1px 10px;
+    margin: 0;
+  }
+  & dt {
+    color: var(--fv-muted);
+  }
+  & dd {
+    margin: 0;
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.fv-items {
+  inline-size: 100%;
+  border-collapse: collapse;
+  margin-block-end: 4mm;
+  font-variant-numeric: tabular-nums;
+
+  & th,
+  & td {
+    padding: 1.2mm 1.6mm;
+    border-block-end: 1px solid var(--fv-rule);
+    text-align: start;
+    vertical-align: top;
+  }
+  & thead th {
+    background: var(--fv-band);
+    border-block-end: 1.5px solid var(--fv-ink);
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  & .n {
+    text-align: end;
+    white-space: nowrap;
+  }
+  & .code {
+    color: var(--fv-muted);
+    font-size: 8pt;
+    white-space: nowrap;
+  }
+  & .nx-print__carry > * {
+    background: var(--fv-band);
+    border-block-end: 0;
+  }
+}
+.fv-totals {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  margin-block-end: 5mm;
+
+  & p {
+    margin: 0.5mm 0 2.5mm;
+  }
+}
+.fv-words {
+  flex: 1;
+  & p:first-of-type {
+    font-weight: 600;
+  }
+}
+.fv-sum {
+  flex: none;
+  min-inline-size: 72mm;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+
+  & th,
+  & td {
+    padding: 0.8mm 0;
+  }
+  & th {
+    padding-inline-end: 6mm;
+    color: var(--fv-muted);
+    font-weight: 400;
+    text-align: start;
+  }
+  & td {
+    text-align: end;
+    white-space: nowrap;
+  }
+  & .strong > * {
+    padding-block: 1.6mm;
+    border-block-start: 1px solid var(--fv-ink);
+    color: var(--fv-ink);
+    font-weight: 700;
+  }
+}
+.fv-h {
+  margin: 0 0 1mm;
+  font-size: 9.5pt;
+}
+.fv-note {
+  margin: 0 0 8mm;
+  color: var(--fv-muted);
+}
+.fv-signs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16mm;
+  padding-block-start: 10mm;
+  color: var(--fv-muted);
+  font-size: 8pt;
+
+  & span {
+    display: block;
+    margin-block-end: 1.5mm;
+    border-block-start: 1px solid var(--fv-ink);
+  }
+}
+.fv--compact .fv-parties--small {
+  padding: 2mm 3mm;
+  margin-block-end: 3mm;
+}
+.fv--compact .fv-signs {
+  padding-block-start: 8mm;
+}

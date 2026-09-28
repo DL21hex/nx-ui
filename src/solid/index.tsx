@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -105,6 +105,9 @@ import type { CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayo
 import "../components/launcher/index";
 import type { NxLauncher } from "../components/launcher/launcher";
 import type { LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView } from "../components/launcher/types";
+import "../components/print/index";
+import type { NxPrint } from "../components/print/print";
+import type { PrintLabels, PrintOrientation, PrintPaginateDetail, PrintZoom } from "../components/print/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -137,6 +140,7 @@ export type { NxHandoff, HandoffDoneDetail, HandoffItemDetail, HandoffKind, Hand
 export type { NxCards, CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayout, CardsLevel, CardsOpenDetail, CardsRow };
 export type { NxLauncher, LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView };
 export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
+export type { NxPrint, PrintLabels, PrintOrientation, PrintPaginateDetail, PrintZoom };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -163,7 +167,7 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -194,6 +198,10 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      orientation: PrintOrientation | undefined;
+      margin: string | undefined;
+      zoom: string | undefined;
+      toolbar: "false" | undefined;
       level: CardsLevel | undefined;
       group: string | undefined;
       sort: string | undefined;
@@ -243,7 +251,7 @@ declare module "solid-js" {
       heading: string | undefined;
       description: string | undefined;
       mode: DialogMode | ScanMode | GuardMode | undefined;
-      size: DialogSize | undefined;
+      size: DialogSize | string | undefined;
       url: string | undefined;
       hold: string | undefined;
       for: string | undefined;
@@ -303,6 +311,9 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-print-paginate": CustomEvent<PrintPaginateDetail>;
+      "nx-print-before": CustomEvent<PrintPaginateDetail>;
+      "nx-print-after": CustomEvent<PrintPaginateDetail>;
       "nx-launcher-select": CustomEvent<LauncherSelectDetail>;
       "nx-cards-open": CustomEvent<CardsOpenDetail>;
       "nx-cards-action": CustomEvent<CardsActionDetail>;
@@ -386,6 +397,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-print": HTMLAttributes<NxPrint> & { heading?: string };
       "nx-award": HTMLAttributes<NxAward> & { heading?: string; endpoint?: string };
       "nx-account": HTMLAttributes<NxAccount>;
       "nx-launcher": HTMLAttributes<NxLauncher>;
@@ -1809,5 +1821,48 @@ export function Cards(props: CardsProps): JSX.Element {
       on:nx-cards-action={(e) => local.onAction?.(e)}
       on:nx-cards-level={(e) => local.onLevel?.(e)}
     />
+  );
+}
+
+export interface PrintProps extends JSX.HTMLAttributes<NxPrint> {
+  /** `letter` (por defecto), `a4`, `a5`, `legal`, `oficio`, `half-letter` o «216mm 140mm». */
+  size?: string;
+  orientation?: PrintOrientation;
+  /** Uno a cuatro valores, como en CSS (12 mm). */
+  margin?: string;
+  /** Título del documento: el nombre sugerido del PDF. */
+  heading?: string;
+  currency?: string;
+  /** `"fit"` (por defecto) o un factor (1 = tamaño real). */
+  zoom?: PrintZoom;
+  locale?: string;
+  labels?: Partial<PrintLabels>;
+  toolbar?: boolean;
+  onPaginate?: (e: CustomEvent<PrintPaginateDetail>) => void;
+  onBeforePrint?: (e: CustomEvent<PrintPaginateDetail>) => void;
+  onAfterPrint?: (e: CustomEvent<PrintPaginateDetail>) => void;
+  children?: JSX.Element;
+}
+
+export function Print(props: PrintProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["size", "orientation", "margin", "heading", "currency", "zoom", "locale", "labels", "toolbar", "onPaginate", "onBeforePrint", "onAfterPrint", "children"]);
+  return (
+    <nx-print
+      {...rest}
+      prop:labels={local.labels}
+      attr:size={local.size}
+      attr:orientation={local.orientation}
+      attr:margin={local.margin}
+      attr:heading={local.heading}
+      attr:currency={local.currency}
+      attr:zoom={local.zoom === undefined ? undefined : String(local.zoom)}
+      attr:locale={local.locale}
+      attr:toolbar={local.toolbar === false ? "false" : undefined}
+      on:nx-print-paginate={(e) => local.onPaginate?.(e)}
+      on:nx-print-before={(e) => local.onBeforePrint?.(e)}
+      on:nx-print-after={(e) => local.onAfterPrint?.(e)}
+    >
+      {local.children}
+    </nx-print>
   );
 }
