@@ -1,0 +1,520 @@
+/*
+ * <nx-thread>. Variables propias:
+ *   --nx-thread-height (440px): alto máximo de la lista (se desplaza adentro)
+ * Cada persona trae su tono en `--h` (de su id, el mismo de <nx-presence>).
+ */
+
+nx-thread {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  color: var(--nx-foreground);
+  font: 13.5px/1.45 var(--nx-font-sans);
+
+  & *,
+  & *::before {
+    box-sizing: border-box;
+  }
+  & [hidden] {
+    display: none !important;
+  }
+  & :focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+  & button {
+    font: inherit;
+    color: inherit;
+  }
+}
+.nx-thread__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- encabezado y filtro */
+
+.nx-thread__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding-block-end: 8px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-thread__title {
+  display: inline;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+.nx-thread__count {
+  margin-inline-start: 6px;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-thread__here,
+.nx-thread__typing,
+.nx-thread__hint {
+  margin: 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+}
+.nx-thread__here::before {
+  display: inline-block;
+  inline-size: 7px;
+  block-size: 7px;
+  margin-inline-end: 6px;
+  border-radius: 50%;
+  background: var(--nx-success);
+  content: "";
+}
+.nx-thread__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 5px 8px;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  font-size: 12.5px;
+  font-weight: 550;
+  & span {
+    flex: 1;
+  }
+}
+
+/* Botones de texto: acciones, «ver», «Ver todos», «Reintentar». */
+.nx-thread__bar button,
+.nx-thread__acts button,
+.nx-thread__fold button,
+.nx-thread__state button,
+.nx-thread__msg button,
+.nx-thread__older,
+.nx-thread__about,
+.nx-thread__quote button {
+  padding: 1px 4px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+}
+.nx-thread__bar button,
+.nx-thread__fold button,
+.nx-thread__state button,
+.nx-thread__msg button,
+.nx-thread__older {
+  color: var(--nx-primary-ink);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- lista */
+
+.nx-thread__body {
+  position: relative;
+  flex: 1;
+  max-block-size: var(--nx-thread-height, 440px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.nx-thread__older {
+  display: block;
+  margin: 8px auto 0;
+}
+.nx-thread__days,
+.nx-thread__days ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-thread__day h3 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 10px 0 4px;
+  background: var(--nx-thread-bg, var(--nx-card));
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+.nx-thread__c {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 4px;
+  border-radius: var(--nx-radius-md);
+  &:hover,
+  &:focus-within {
+    background: var(--nx-hover);
+  }
+  &[data-state] {
+    opacity: 0.62;
+  }
+  &[data-state="failed"] {
+    opacity: 1;
+  }
+}
+.nx-thread__av {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: light-dark(oklch(0.92 0.05 var(--h)), oklch(0.38 0.07 var(--h)));
+  color: light-dark(oklch(0.38 0.1 var(--h)), oklch(0.93 0.04 var(--h)));
+  font-size: 11px;
+  font-weight: 650;
+  & img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+}
+.nx-thread__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  margin: 0;
+  & strong {
+    font-weight: 600;
+  }
+  & time,
+  & .nx-thread__edited {
+    color: var(--nx-text-tertiary);
+    font-size: 12px;
+  }
+}
+.nx-thread__about {
+  color: var(--nx-primary-ink);
+  font-size: 12px;
+}
+.nx-thread__quote {
+  margin: 2px 0 0;
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid var(--nx-border-strong);
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  & button {
+    display: block;
+    max-inline-size: 100%;
+    overflow: hidden;
+    color: inherit;
+    text-align: start;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.nx-thread__text {
+  margin: 1px 0 0;
+  overflow-wrap: anywhere;
+}
+.nx-thread__mention,
+.nx-thread__ref {
+  padding: 0 3px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  font-weight: 550;
+}
+.nx-thread__mention[data-me] {
+  box-shadow: inset 0 0 0 1px var(--nx-primary-border);
+}
+.nx-thread__ref {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--nx-border-strong);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  &:hover {
+    box-shadow: inset 0 0 0 1px var(--nx-primary-border);
+  }
+}
+.nx-thread__url {
+  color: var(--nx-primary-ink);
+}
+.nx-thread__state {
+  margin: 2px 0 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  [data-state="failed"] & {
+    color: var(--nx-danger);
+  }
+}
+.nx-thread__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 2px 0 0 -4px;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+}
+/* Con mouse, las acciones aparecen al pasar o enfocar; en pantallas táctiles, siempre. */
+@media (hover: hover) {
+  .nx-thread__c:not(:hover, :focus-within) > div > .nx-thread__acts {
+    opacity: 0;
+  }
+}
+.nx-thread__fold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  &::before {
+    color: var(--nx-success);
+    font-weight: 700;
+    content: "✓";
+  }
+}
+.nx-thread__unread {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  color: var(--nx-danger);
+  font-size: 11.5px;
+  font-weight: 650;
+  &::before,
+  &::after {
+    flex: 1;
+    block-size: 1px;
+    background: currentColor;
+    opacity: 0.45;
+    content: "";
+  }
+}
+.nx-thread__msg {
+  padding: 18px 8px;
+  color: var(--nx-muted-foreground);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- redactor */
+
+.nx-thread__typing {
+  padding-block-start: 4px;
+}
+.nx-thread__compose {
+  display: grid;
+  gap: 6px;
+  margin-block-start: 6px;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+.nx-thread__ctx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  &:empty {
+    display: none;
+  }
+}
+.nx-thread__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 8px;
+  border-radius: 999px;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  font-size: 12px;
+  font-weight: 550;
+  & button {
+    inline-size: 20px;
+    block-size: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    &:hover {
+      background: var(--nx-hover);
+    }
+  }
+}
+.nx-thread__box,
+.nx-thread__editbox {
+  position: relative;
+}
+.nx-thread__box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.nx-thread__on,
+.nx-thread__input {
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-background);
+  color: var(--nx-foreground);
+  font: inherit;
+}
+.nx-thread__on {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+.nx-thread__input {
+  flex: 1;
+  inline-size: 100%;
+  min-block-size: 36px;
+  max-block-size: 180px;
+  padding: 7px 10px;
+  resize: none;
+  &:focus {
+    border-color: var(--nx-primary-border);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+.nx-thread__send,
+.nx-thread__primary {
+  block-size: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground) !important;
+  font-weight: 600;
+  cursor: pointer;
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+.nx-thread__acts .nx-thread__primary {
+  block-size: 28px;
+  padding: 0 12px;
+}
+.nx-thread__hint {
+  color: var(--nx-text-tertiary);
+  font-size: 11.5px;
+  /* En pantallas táctiles Enter es salto de línea y se envía con el botón: la pista sobra. */
+  @media (pointer: coarse) {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- sugerencias, tarjeta y globito */
+
+.nx-thread__pick,
+.nx-thread__card {
+  position: absolute;
+  z-index: 10;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  box-shadow: var(--nx-shadow-popover);
+}
+.nx-thread__pick {
+  inset: auto auto calc(100% + 4px) 0;
+  inline-size: min(300px, 100%);
+  max-block-size: 260px;
+  margin: 0;
+  padding: 4px;
+  overflow: auto;
+  list-style: none;
+  & li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: var(--nx-radius-md);
+    cursor: pointer;
+  }
+  & [aria-selected="true"] {
+    background: var(--nx-nav-active-bg);
+  }
+  & .nx-thread__av {
+    inline-size: 24px;
+    block-size: 24px;
+    font-size: 10px;
+  }
+  & strong,
+  & small {
+    display: block;
+  }
+  & small,
+  & ~ * small {
+    color: var(--nx-muted-foreground);
+    font-size: 12px;
+  }
+}
+.nx-thread__card {
+  max-inline-size: 260px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  pointer-events: none;
+  & strong,
+  & span {
+    display: block;
+  }
+  & span {
+    color: var(--nx-muted-foreground);
+  }
+}
+.nx-thread__pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  block-size: 22px;
+  margin-inline: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-background);
+  color: var(--nx-text-tertiary);
+  font: 600 11.5px/1 var(--nx-font-sans);
+  vertical-align: middle;
+  cursor: pointer;
+  &:hover {
+    color: var(--nx-foreground);
+  }
+  &:not([data-n="0"]) {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  &[aria-pressed="true"] {
+    box-shadow: 0 0 0 2px var(--nx-primary-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+  & .nx-glyph {
+    display: inline-flex;
+    inline-size: 13px;
+    block-size: 13px;
+  }
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+  & span:empty {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nx-thread__acts {
+    transition: opacity var(--nx-motion-fast);
+  }
+}
