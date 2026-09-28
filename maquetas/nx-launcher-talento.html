@@ -1,0 +1,628 @@
+<title>Autoservicio de talento humano</title>
+<style>
+/* Tokens de nx-ui (src/styles/tokens.css), recortados a lo que usa la maqueta. */
+:root {
+  color-scheme: light dark;
+  --_h: 262; --_c: 0.19; --_l: 0.54; --_ld: 0.72; --_n: 260; --_t: 1;
+  --nx-canvas: light-dark(oklch(0.985 calc(0.002 * var(--_t)) var(--_n)), oklch(0.165 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-border-subtle: light-dark(oklch(0.925 calc(0.004 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 calc(0.005 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 calc(0.006 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.17));
+  --nx-foreground: light-dark(oklch(0.2 calc(0.008 * var(--_t)) var(--_n)), oklch(0.955 calc(0.003 * var(--_t)) var(--_n)));
+  --nx-muted-foreground: light-dark(oklch(0.44 calc(0.01 * var(--_t)) var(--_n)), oklch(0.76 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-text-tertiary: light-dark(oklch(0.51 calc(0.01 * var(--_t)) var(--_n)), oklch(0.64 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-primary: light-dark(oklch(var(--_l) var(--_c) var(--_h)), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h)));
+  --nx-primary-ink: light-dark(oklch(calc(var(--_l) - 0.07) var(--_c) var(--_h)), oklch(calc(var(--_ld) + 0.05) calc(var(--_c) * 0.7) var(--_h)));
+  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 calc(var(--_c) * 0.1) var(--_h)));
+  --nx-primary-soft: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.1), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.15));
+  --nx-primary-border: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.35), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.4));
+  --nx-hover: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.05), oklch(1 0 0 / 0.06));
+  --nx-ring: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.6), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.7));
+  --nx-success: light-dark(oklch(0.49 0.13 150), oklch(0.74 0.14 150));
+  --nx-success-soft: light-dark(oklch(0.55 0.14 150 / 0.1), oklch(0.74 0.14 150 / 0.14));
+  --nx-danger: light-dark(oklch(0.52 0.2 27), oklch(0.72 0.16 27));
+  --nx-danger-soft: light-dark(oklch(0.55 0.2 27 / 0.1), oklch(0.7 0.17 27 / 0.15));
+  --nx-warning: light-dark(oklch(0.74 0.15 70), oklch(0.8 0.14 78));
+  --nx-warning-ink: light-dark(oklch(0.5 0.12 60), oklch(0.84 0.13 80));
+  --nx-warning-soft: light-dark(oklch(0.75 0.15 70 / 0.16), oklch(0.8 0.14 78 / 0.15));
+  --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
+    0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
+  --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --nx-radius-md: 7px; --nx-radius-lg: 10px;
+  --nx-motion-fast: 140ms; --nx-motion-base: 220ms;
+  --nx-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--nx-canvas); color: var(--nx-foreground); font: 14px/1.45 var(--nx-font-sans); -webkit-font-smoothing: antialiased; }
+.page { max-width: 1180px; margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 28px 72px; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+kbd { font: 12px var(--nx-font-mono); padding: 1px 5px; border: 1px solid var(--nx-border); border-bottom-width: 2px; border-radius: 4px; background: var(--nx-card); }
+a { color: inherit; }
+
+/* ---------- Grupos y tarjetas ---------- */
+.group + .group { margin-top: 30px; }
+.group h2 { font-size: 12.5px; font-weight: 600; color: var(--nx-muted-foreground); margin: 0 0 10px; letter-spacing: 0.01em; }
+.group { container: group / inline-size; }
+.mods { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@container group (min-width: 500px) { .mods { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container group (min-width: 980px) { .mods { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.mod {
+  position: relative; min-width: 0;
+  display: grid; grid-template-rows: auto auto 1fr auto; gap: 8px;
+  padding: 16px 16px 14px;
+  background: var(--nx-card); border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg);
+  transition: border-color var(--nx-motion-fast), opacity var(--nx-motion-base) var(--nx-ease-out), filter var(--nx-motion-base), transform var(--nx-motion-base) var(--nx-ease-out);
+}
+.mod:hover { border-color: var(--nx-border); }
+.mod:has(.mod__link:focus-visible) { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+.mod.is-dim { opacity: 0.3; filter: saturate(0.3); transform: scale(0.985); }
+.mod.is-first { border-color: var(--nx-primary-border); }
+
+/* Luz que sigue al puntero (la misma de la maqueta de tarjetas) */
+.mod::before, .mod::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  opacity: 0; transition: opacity var(--nx-motion-base) var(--nx-ease-out);
+}
+.mod::before { background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--nx-primary) 6%, transparent), transparent 70%); }
+.mod::after {
+  z-index: 3; padding: 1px;
+  background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--nx-primary) 75%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.mod:hover::before, .mod:hover::after { opacity: 1; }
+
+.mod__top { display: flex; align-items: center; justify-content: space-between; }
+.mod__icon {
+  width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--nx-primary-soft); color: var(--nx-primary-ink);
+}
+.mod__go { color: var(--nx-text-tertiary); transition: transform var(--nx-motion-base) var(--nx-ease-out), color var(--nx-motion-fast); }
+.mod__go svg.i { width: 16px; height: 16px; }
+.mod:hover .mod__go { color: var(--nx-primary-ink); transform: translate(2px, -2px); }
+
+.mod__name { display: inline-block; }
+.mod__link { text-decoration: none; font-size: 15.5px; font-weight: 620; line-height: 1.25; outline: none; }
+.mod__link::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+
+/* La descripción y las subvistas comparten el mismo lugar: al pasar el puntero (o con el foco
+   dentro) se cambia una por otra y la tarjeta no cambia de tamaño. */
+.mod__swap { display: grid; min-height: 58px; }
+.mod__desc, .mod__subs { grid-area: 1 / 1; transition: opacity var(--nx-motion-base) var(--nx-ease-out), transform var(--nx-motion-base) var(--nx-ease-out), visibility 0s; }
+.mod__desc { margin: 0; font-size: 13px; color: var(--nx-muted-foreground); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mod__subs {
+  position: relative; z-index: 2; list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; align-content: start; gap: 6px;
+  opacity: 0; visibility: hidden; transform: translateY(6px);
+  transition-delay: 0s, 0s, var(--nx-motion-base);
+}
+.mod__subs a {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px;
+  font-size: 12.5px; text-decoration: none; white-space: nowrap;
+  border: 1px solid var(--nx-border); background: var(--nx-canvas); color: var(--nx-foreground);
+}
+.mod__subs a:hover, .mod__subs a.hit { background: var(--nx-primary-soft); border-color: var(--nx-primary-border); color: var(--nx-primary-ink); }
+.mod__subs a:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; }
+.mod__subs a .n { margin-left: 5px; font-variant-numeric: tabular-nums; color: var(--nx-text-tertiary); }
+
+@media (hover: hover) {
+  .mod:hover .mod__desc, .mod:focus-within .mod__desc, .mod.show-subs .mod__desc { opacity: 0; transform: translateY(-6px); }
+  .mod:hover .mod__subs, .mod:focus-within .mod__subs, .mod.show-subs .mod__subs { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+}
+/* En pantallas táctiles no hay «pasar el puntero»: las subvistas se ven siempre, debajo. */
+@media (hover: none) {
+  .mod__swap { gap: 10px; }
+  .mod__desc, .mod__subs { grid-area: auto; }
+  .mod__subs { opacity: 1; visibility: visible; transform: none; }
+}
+
+/* Señal: el único dato vivo de cada módulo */
+.mod__signal {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 7px;
+  padding-top: 10px; border-top: 1px solid var(--nx-border-subtle);
+  font-size: 12.5px; color: var(--nx-muted-foreground); font-variant-numeric: tabular-nums;
+}
+.mod__signal b { font-size: 19px; font-weight: 650; color: var(--nx-foreground); letter-spacing: -0.01em; display: inline-block; }
+.mod__signal .x { color: var(--tone-ink, var(--nx-muted-foreground)); display: inline-flex; align-items: center; gap: 5px; }
+.mod__signal .x::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tone-warn { --tone-ink: var(--nx-warning-ink); }
+.tone-danger { --tone-ink: var(--nx-danger); }
+.tone-ok { --tone-ink: var(--nx-success); }
+.meter { flex: 1 1 100%; height: 5px; border-radius: 3px; background: var(--nx-border-subtle); overflow: hidden; margin-top: 2px; }
+.meter i { display: block; height: 100%; border-radius: inherit; background: var(--nx-primary); }
+.mini { flex: 1 1 80px; height: 22px; min-width: 60px; align-self: center; }
+.mini svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.mini .area { fill: var(--nx-primary-soft); }
+.mini .line { fill: none; stroke: var(--nx-primary); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+
+/* ---------- Página del módulo ---------- */
+.back {
+  display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px 0 6px; margin-bottom: 14px;
+  border: 0; border-radius: var(--nx-radius-md); background: transparent; color: var(--nx-muted-foreground); font: inherit; font-size: 13px; cursor: pointer;
+}
+.back:hover { background: var(--nx-hover); color: var(--nx-foreground); }
+.back:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; }
+.back svg.i { width: 16px; height: 16px; }
+.mp__head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px;
+  padding: 20px; border-radius: var(--nx-radius-lg);
+  background: radial-gradient(90% 160% at 0% 0%, var(--nx-primary-soft), transparent 55%), var(--nx-card);
+  border: 1px solid var(--nx-border-subtle);
+}
+.mp__head .mod__icon { width: 52px; height: 52px; border-radius: 12px; }
+.mp__head .mod__icon svg.i { width: 26px; height: 26px; }
+.mp__title { flex: 1 1 260px; min-width: 0; display: grid; gap: 3px; }
+.mp__title h1 { outline: none; width: fit-content; }
+.mp__title p { margin: 0; color: var(--nx-muted-foreground); }
+.mp__head .mod__signal { border-top: 0; padding-top: 0; flex: 0 1 auto; }
+.tabs { display: flex; gap: 2px; margin: 16px 0 0; border-bottom: 1px solid var(--nx-border-subtle); overflow-x: auto; }
+.tabs button {
+  height: 38px; padding: 0 12px; border: 0; background: transparent; font: inherit; font-size: 13.5px; cursor: pointer;
+  color: var(--nx-muted-foreground); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.tabs button:hover { color: var(--nx-foreground); }
+.tabs button[aria-selected="true"] { color: var(--nx-primary-ink); border-bottom-color: var(--nx-primary); font-weight: 580; }
+.tabs button:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: -2px; border-radius: 4px; }
+.mp__body { padding-top: 16px; animation: rise 360ms var(--nx-ease-out) both 90ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+.mp__caption { margin: 0 0 10px; font-size: 12.5px; color: var(--nx-text-tertiary); }
+.rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: var(--nx-card); overflow: hidden; }
+.rows li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 11px 14px; }
+.rows li + li { border-top: 1px solid var(--nx-border-subtle); }
+.rows .id { font: 12.5px var(--nx-font-mono); color: var(--nx-text-tertiary); }
+.rows .t { font-weight: 560; overflow-wrap: anywhere; }
+.rows .m { display: block; font-size: 12.5px; color: var(--nx-text-tertiary); font-weight: 400; }
+.chip { font-size: 11.5px; line-height: 1; padding: 4px 8px; border-radius: 999px; white-space: nowrap; background: var(--nx-hover); color: var(--nx-muted-foreground); }
+.chip.warn { background: var(--nx-warning-soft); color: var(--nx-warning-ink); }
+.chip.danger { background: var(--nx-danger-soft); color: var(--nx-danger); }
+.chip.ok { background: var(--nx-success-soft); color: var(--nx-success); }
+@media (max-width: 560px) { .rows li { grid-template-columns: minmax(0, 1fr) auto; } .rows .id { grid-column: 1 / -1; } }
+.callout {
+  margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 16px;
+  border: 1px dashed var(--nx-primary-border); border-radius: var(--nx-radius-lg); background: var(--nx-primary-soft);
+}
+.callout p { margin: 0; flex: 1 1 280px; }
+.callout a { font-weight: 600; color: var(--nx-primary-ink); }
+
+/* ---------- La tarjeta se convierte en la página (View Transitions) ---------- */
+::view-transition-group(*) { animation-duration: 440ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+::view-transition-old(hero-name), ::view-transition-new(hero-name) { height: 100%; width: auto; }
+::view-transition-old(root) { animation: 200ms ease-out both fade-out; }
+::view-transition-new(root) { animation: 320ms ease-out 80ms both fade-in; }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes fade-in { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mod, .mod::before, .mod::after, .mod__desc, .mod__subs, .mod__go { transition: none; }
+  .mp__body { animation: none; }
+}
+/* Sin pestañas (Cesantías): la descripción no se esconde al pasar el puntero. */
+.mod:not(:has(.mod__subs)) .mod__desc { opacity: 1 !important; transform: none !important; }
+
+/* ---------- Encabezado del hub ---------- */
+.hub-head { display: grid; gap: 6px; margin-bottom: 24px; }
+.eyebrow { font: 12px/1.3 var(--nx-font-mono); color: var(--nx-primary-ink); letter-spacing: 0.02em; margin: 0; }
+h1 { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h2 { text-wrap: balance; }
+.hub-head p.note { margin: 0; max-width: 72ch; color: var(--nx-muted-foreground); }
+.mod__subs a .when { margin-left: 5px; color: var(--nx-text-tertiary); }
+
+/* ---------- Contenido de cada módulo ---------- */
+.mp__body { container: body / inline-size; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; padding: 0 14px; border-radius: var(--nx-radius-md); font: inherit; font-size: 13.5px; cursor: pointer;
+  border: 1px solid var(--nx-border); background: var(--nx-card); color: var(--nx-foreground);
+}
+.btn:hover { background: var(--nx-hover); }
+.btn--primary { background: var(--nx-primary); border-color: transparent; color: var(--nx-primary-foreground); }
+.btn--primary:hover { background: color-mix(in oklch, var(--nx-primary) 88%, black); }
+.btn--sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+.btn:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+.btn svg.i { width: 15px; height: 15px; }
+.bar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.bar-actions p { margin: 0; font-size: 13px; color: var(--nx-muted-foreground); }
+
+/* Certificado: la hoja a la izquierda y cómo sacarlo a la derecha */
+.cert { display: grid; gap: 20px; }
+@container body (min-width: 760px) { .cert { grid-template-columns: minmax(0, 1.7fr) minmax(250px, 1fr); align-items: start; } }
+.doc {
+  background: var(--nx-card); border: 1px solid var(--nx-border-subtle); border-radius: 4px;
+  box-shadow: 0 1px 2px light-dark(rgb(15 20 30 / 0.05), rgb(0 0 0 / 0.3)), 0 18px 40px -18px light-dark(rgb(15 20 30 / 0.18), rgb(0 0 0 / 0.6));
+  padding: clamp(22px, 5cqi, 44px); font-size: 14.5px; line-height: 1.65; max-width: 68ch;
+}
+.doc p { margin: 0 0 12px; }
+.doc__org { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--nx-text-tertiary); border-bottom: 1px solid var(--nx-border-subtle); padding-bottom: 12px; margin-bottom: 20px !important; }
+.doc__org b { color: var(--nx-foreground); font-weight: 620; }
+.doc h2 { font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; margin: 0 0 18px; font-weight: 640; }
+.doc .salary { background: var(--nx-primary-soft); border-radius: 3px; padding: 0 3px; }
+.doc__sign { margin-top: 28px !important; padding-top: 10px; border-top: 1px solid var(--nx-border); width: min(240px, 100%); font-size: 13px; color: var(--nx-muted-foreground); }
+.doc__code { font: 11.5px var(--nx-font-mono); color: var(--nx-text-tertiary); margin: 18px 0 0 !important; }
+.side { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: var(--nx-card); }
+.side h3 { margin: 0; font-size: 14px; font-weight: 620; }
+.side p { margin: 0; font-size: 12.5px; color: var(--nx-text-tertiary); }
+.fld { display: grid; gap: 4px; }
+.fld label { font-size: 12px; color: var(--nx-muted-foreground); }
+.fld input, .fld select {
+  height: 34px; padding: 0 10px; font: inherit; color: inherit; width: 100%;
+  border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); background: var(--nx-card);
+}
+.fld input:focus-visible, .fld select:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; border-color: var(--nx-primary-border); }
+
+/* Filas de solicitudes con acciones */
+.rows .acts { display: flex; gap: 6px; }
+.rows li.is-done { opacity: 0.55; }
+
+/* Desprendible */
+.slip { display: grid; gap: 14px; }
+.slip__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px 24px; padding: 16px 18px; border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: var(--nx-card); }
+.slip__head .lbl { font-size: 12px; color: var(--nx-text-tertiary); display: block; }
+.slip__head .period { font-size: 15px; font-weight: 600; }
+.slip__head .net { text-align: right; }
+.slip__head .net b { display: block; font-size: 28px; font-weight: 660; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.slip__cols { display: grid; gap: 14px; }
+@container body (min-width: 680px) { .slip__cols { grid-template-columns: 1fr 1fr; } }
+.ledger { border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: var(--nx-card); overflow: hidden; }
+.ledger h3 { margin: 0; padding: 10px 14px; font-size: 12.5px; font-weight: 600; color: var(--nx-muted-foreground); border-bottom: 1px solid var(--nx-border-subtle); }
+.ledger table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13.5px; }
+.ledger td { padding: 9px 14px; border-bottom: 1px solid var(--nx-border-subtle); }
+.ledger td + td { text-align: right; white-space: nowrap; }
+.ledger td .m { display: block; font-size: 12px; color: var(--nx-text-tertiary); }
+.ledger tr.total td { border-bottom: 0; font-weight: 620; background: var(--nx-hover); }
+.ledger--minus tr:not(.total) td + td { color: var(--nx-muted-foreground); }
+
+/* Cesantías */
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); margin-bottom: 14px; }
+.kpi { padding: 14px 16px; border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: var(--nx-card); display: grid; gap: 2px; }
+.kpi .lbl { font-size: 12px; color: var(--nx-text-tertiary); }
+.kpi b { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.kpi .m { font-size: 12.5px; color: var(--nx-muted-foreground); }
+.kpi--main { border-color: var(--nx-primary-border); background: radial-gradient(120% 160% at 0% 0%, var(--nx-primary-soft), transparent 60%), var(--nx-card); }
+.rows .amt { font-variant-numeric: tabular-nums; font-weight: 580; white-space: nowrap; }
+.rows .amt.neg { color: var(--nx-danger); }
+.section-title { font-size: 12.5px; font-weight: 600; color: var(--nx-muted-foreground); margin: 18px 0 8px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
+  background: var(--nx-foreground); color: var(--nx-card); border-radius: var(--nx-radius-md);
+  padding: 9px 14px; font-size: 13px; box-shadow: var(--nx-shadow-popover); max-width: calc(100% - 32px);
+}
+</style>
+
+<div class="page">
+  <div id="hub">
+    <header class="hub-head">
+      <p class="eyebrow">&lt;nx-launcher&gt; · autoservicio del colaborador</p>
+      <h1>Talento humano</h1>
+      <p class="note">Pasa el puntero por una tarjeta para ver sus pestañas y entrar directo a una. Al hacer clic, la tarjeta se convierte en la página; <kbd>Esc</kbd> vuelve. Datos de ejemplo.</p>
+    </header>
+    <section class="group" aria-label="Trámites"><div class="mods" id="mods"></div></section>
+  </div>
+  <div id="page" hidden></div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const ICONS = {
+    certificados: '<path d="M14 21H6V3h9l4 4v6"/><path d="M15 3v4h4M9 9h5M9 12.5h6M9 16h3"/><circle cx="17.5" cy="16.5" r="2.5"/><path d="M16.2 18.6l-.7 3 2-1 2 1-.7-3"/>',
+    permisos: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/>',
+    desprendibles: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M14.6 8.4c-.5-.7-1.4-1.1-2.6-1.1-1.4 0-2.4.7-2.4 1.7 0 2.4 5.1 1.2 5.1 3.7 0 1.1-1.1 1.8-2.6 1.8-1.2 0-2.1-.4-2.7-1.2M12 6v1.3M12 14.5v1.4"/>',
+    cesantias: '<rect x="3.5" y="4" width="17" height="15" rx="2"/><circle cx="12" cy="11.5" r="3.5"/><path d="M12 8v1M12 14v1M8.5 11.5h1M14.5 11.5h1M6.5 19v1.5M17.5 19v1.5"/>',
+    arrow: '<path d="M7 17L17 7M8.5 7H17v8.5"/>',
+    back: '<path d="M15 6l-6 6 6 6"/>',
+    download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+  };
+  const icon = (k) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+  const nf = new Intl.NumberFormat("es-CO");
+  const cop = (v) => `${v < 0 ? "−" : ""}$ ${nf.format(Math.abs(v))}`;
+
+  // ---------- Datos de ejemplo ----------
+  const EMP = { name: "Laura Gómez Charris", cc: "1.140.852.337", since: "3 de febrero de 2021", role: "Analista de compras", salary: 4200000, contract: "a término indefinido" };
+  const ORG = { name: "Constructora del Parque S.A.S.", nit: "900.412.118-3", city: "Barranquilla" };
+  const SLIP = {
+    period: "1 al 15 de septiembre de 2026", paid: "15 sep 2026", account: "cuenta de ahorros ····4412",
+    plus: [["Salario básico", "15 días", 2100000], ["Horas extra diurnas", "4 horas", 100000]],
+    minus: [["Salud", "4 %", 88000], ["Pensión", "4 %", 88000], ["Fondo de empleados", "Ahorro programado", 50000]],
+  };
+  const netOf = (s) => s.plus.reduce((a, r) => a + r[2], 0) - s.minus.reduce((a, r) => a + r[2], 0);
+  const HISTORY = [
+    ["15 sep 2026", "1 al 15 de septiembre", netOf(SLIP), ""],
+    ["30 ago 2026", "16 al 31 de agosto", 1924000, ""],
+    ["15 ago 2026", "1 al 15 de agosto", 1974000, "Incluye 4 horas extra"],
+    ["30 jul 2026", "16 al 31 de julio", 1924000, ""],
+    ["15 jul 2026", "1 al 15 de julio", 1924000, ""],
+    ["30 jun 2026", "16 al 30 de junio", 4024000, "Incluye la prima de servicios"],
+  ];
+  const OWN = [
+    ["PER-2302", "Día de la familia", "Viernes 17 de octubre · todo el día", "En revisión", "warn"],
+    ["PER-2291", "Cita médica", "Jueves 2 de octubre · 7:00 a 11:00 a. m.", "Aprobado", "ok"],
+    ["PER-2270", "Diligencia personal", "Viernes 19 de septiembre · 2:00 a 6:00 p. m.", "Aprobado", "ok"],
+    ["PER-2214", "Calamidad doméstica", "Lunes 11 de agosto · 2 días", "Aprobado", "ok"],
+  ];
+  const TEAM = [
+    ["PER-2310", "Carlos Rojas · Cita médica", "Miércoles 1 de octubre · 8:00 a 10:00 a. m."],
+    ["PER-2307", "Natalia Pineda · Diligencia personal", "Viernes 3 de octubre · 2:00 a 6:00 p. m."],
+    ["PER-2299", "Andrés Cantillo · Licencia por matrimonio", "Del 20 al 24 de octubre · 5 días hábiles"],
+  ];
+  const INCOMING = [["PER-2314", "Paola Orozco · Cita odontológica", "Lunes 6 de octubre · 7:00 a 9:00 a. m."], ["PER-2316", "Iván Mejía · Día de la familia", "Viernes 24 de octubre · todo el día"]];
+  const CES = {
+    balance: 11482300, balanceAt: "31 ago 2026", accrued: 3150000,
+    moves: [
+      ["13 feb 2026", "Consignación del empleador", "Cesantías de 2025", 3900000],
+      ["30 ene 2026", "Intereses sobre cesantías", "Pagados en nómina, no van al fondo", null],
+      ["20 jun 2025", "Retiro parcial", "Mejora de vivienda", -2000000],
+      ["12 feb 2025", "Consignación del empleador", "Cesantías de 2024", 3600000],
+    ],
+  };
+
+  const MODS = [
+    { id: "certificados", name: "Certificados laborales", desc: "Genera tu certificado para bancos, arriendos o trámites. Sale firmado al instante.",
+      tabs: ["Con salario", "Sin salario"],
+      signal: () => `<b>12 sep</b><span>tu último certificado</span>` },
+    { id: "permisos", name: "Permisos", desc: "Pide tus permisos y aprueba los de las personas a tu cargo.",
+      tabs: ["Propias", "De mis colaboradores"], counts: () => [0, TEAM.length],
+      signal: () => `<b data-n>${TEAM.length}</b><span>de tu equipo por aprobar</span><span class="x tone-warn">el más antiguo, hace 2 días</span>` },
+    { id: "desprendibles", name: "Desprendibles de pago", desc: "Lo que te pagaron cada quincena, con devengos y deducciones.",
+      tabs: ["Última", "Todas"], when: ["15 sep 2026", ""],
+      signal: () => `<b>${cop(netOf(SLIP))}</b><span>neto pagado el 15 sep</span>` },
+    { id: "cesantias", name: "Cesantías", desc: "Tu saldo en el fondo, lo causado este año y los retiros parciales.",
+      tabs: [],
+      signal: () => `<b>${cop(CES.balance)}</b><span>en el fondo</span><span class="x tone-ok">+ ${cop(CES.accrued)} causadas en 2026</span>` },
+  ];
+  const byId = new Map(MODS.map((m) => [m.id, m]));
+
+  // ---------- Tarjetas ----------
+  function tabLabel(m, i, sep = "") {
+    const n = m.counts?.()[i];
+    const when = m.when?.[i];
+    return `${m.tabs[i]}${when ? `${sep}<span class="when">${when}</span>` : ""}${n ? `<span class="n">${n}</span>` : ""}`;
+  }
+  function cardHTML(m) {
+    const subs = m.tabs.length
+      ? `<ul class="mod__subs" aria-label="Pestañas de ${m.name}">${m.tabs.map((_, i) => `<li><a href="#${m.id}-${i}" data-open="${m.id}" data-sub="${i}">${tabLabel(m, i)}</a></li>`).join("")}</ul>`
+      : "";
+    return `<div class="mod" data-id="${m.id}">
+      <div class="mod__top"><span class="mod__icon">${icon(m.id)}</span><span class="mod__go">${icon("arrow")}</span></div>
+      <a class="mod__link" href="#${m.id}" data-open="${m.id}"><span class="mod__name">${m.name}</span></a>
+      <div class="mod__swap"><p class="mod__desc">${m.desc}</p>${subs}</div>
+      <div class="mod__signal">${m.signal()}</div>
+    </div>`;
+  }
+  const modsEl = document.getElementById("mods");
+  modsEl.innerHTML = MODS.map(cardHTML).join("");
+  const cards = new Map([...modsEl.querySelectorAll(".mod")].map((el) => [el.dataset.id, el]));
+  function refreshCard(id) {
+    const fresh = document.createElement("div");
+    fresh.innerHTML = cardHTML(byId.get(id));
+    const el = cards.get(id);
+    el.querySelector(".mod__swap").replaceWith(fresh.querySelector(".mod__swap"));
+    el.querySelector(".mod__signal").replaceWith(fresh.querySelector(".mod__signal"));
+  }
+
+  // ---------- Contenido de cada pestaña ----------
+  const dl = (what) => `<button class="btn btn--primary" type="button" data-toast="Descargar ${what}">${icon("download")}Descargar PDF</button>`;
+
+  function certHTML(withSalary) {
+    return `<div class="cert">
+      <article class="doc" aria-label="Vista previa del certificado">
+        <p class="doc__org"><span><b>${ORG.name}</b> · NIT ${ORG.nit}</span><span>${ORG.city}, 28 de septiembre de 2026</span></p>
+        <h2>Certificado laboral</h2>
+        <p data-to>A quien interese:</p>
+        <p>Certificamos que <b>${EMP.name}</b>, identificada con cédula de ciudadanía ${EMP.cc}, trabaja en la empresa desde el <b>${EMP.since}</b>, con contrato ${EMP.contract}, en el cargo de <b>${EMP.role}</b>${withSalary ? `, con un salario básico mensual de <span class="salary"><b>${cop(EMP.salary)}</b></span>` : ""}.</p>
+        <p>Se expide a solicitud de la interesada.</p>
+        <p class="doc__sign">Dirección de Talento Humano</p>
+        <p class="doc__code">Verificable con el código CL-2026-${withSalary ? "48213" : "48214"}</p>
+      </article>
+      <aside class="side">
+        <h3>${withSalary ? "Con salario" : "Sin salario"}</h3>
+        <p>${withSalary ? "Incluye tu salario básico mensual. Es el que suelen pedir los bancos y las inmobiliarias." : "Solo confirma el cargo, la fecha de ingreso y el tipo de contrato."}</p>
+        <div class="fld"><label for="cert-to">Dirigido a</label><input id="cert-to" type="text" placeholder="A quien interese" autocomplete="off"></div>
+        ${dl("certificado laboral")}
+        <p>Sale con firma digital; quien lo reciba puede verificarlo con el código.</p>
+      </aside>
+    </div>`;
+  }
+
+  function ownHTML() {
+    return `<div class="bar-actions"><p>Tus solicitudes de este año.</p><button class="btn btn--primary" type="button" data-toast="Pedir permiso">${icon("plus")}Pedir permiso</button></div>
+      <ul class="rows">${OWN.map(([id, t, m, st, tone]) => `<li><span class="id">${id}</span><span class="t">${t}<span class="m">${m}</span></span><span class="chip ${tone}">${st}</span></li>`).join("")}</ul>`;
+  }
+  function teamHTML() {
+    if (!TEAM.length) return `<div class="bar-actions"><p>No tienes solicitudes por aprobar.</p></div>`;
+    return `<div class="bar-actions"><p>Solicitudes de las personas a tu cargo que esperan tu respuesta.</p></div>
+      <ul class="rows">${TEAM.map(([id, t, m]) => `<li data-req="${id}"><span class="id">${id}</span><span class="t">${t}<span class="m">${m}</span></span>
+        <span class="acts"><button class="btn btn--sm" type="button" data-decide="no">Rechazar</button><button class="btn btn--sm btn--primary" type="button" data-decide="yes">Aprobar</button></span></li>`).join("")}</ul>`;
+  }
+
+  function slipHTML() {
+    const plus = SLIP.plus.reduce((a, r) => a + r[2], 0), minus = SLIP.minus.reduce((a, r) => a + r[2], 0);
+    const rows = (list) => list.map(([k, m, v]) => `<tr><td>${k}<span class="m">${m}</span></td><td>${cop(v)}</td></tr>`).join("");
+    return `<div class="slip">
+      <div class="slip__head">
+        <div><span class="lbl">Periodo</span><span class="period">${SLIP.period}</span><span class="lbl">Pagado el ${SLIP.paid} a tu ${SLIP.account}</span></div>
+        <div class="net"><span class="lbl">Neto pagado</span><b>${cop(plus - minus)}</b></div>
+      </div>
+      <div class="slip__cols">
+        <section class="ledger"><h3>Devengos</h3><table><tbody>${rows(SLIP.plus)}<tr class="total"><td>Total devengado</td><td>${cop(plus)}</td></tr></tbody></table></section>
+        <section class="ledger ledger--minus"><h3>Deducciones</h3><table><tbody>${rows(SLIP.minus)}<tr class="total"><td>Total deducido</td><td>${cop(minus)}</td></tr></tbody></table></section>
+      </div>
+      <div>${dl("desprendible del 15 sep 2026")}</div>
+    </div>`;
+  }
+  function historyHTML() {
+    return `<div class="bar-actions"><p>Tus desprendibles de 2026.</p>
+        <div class="fld"><label for="year" hidden>Año</label><select id="year" aria-label="Año"><option>2026</option><option>2025</option></select></div></div>
+      <ul class="rows">${HISTORY.map(([d, p, v, note], i) => `<li><span class="id">${d}</span><span class="t">${p}<span class="m">${note || (i === 0 ? "Última quincena" : "Quincena")}</span></span>
+        <span class="acts"><span class="amt">${cop(v)}</span><button class="btn btn--sm" type="button" data-toast="Descargar el desprendible del ${d}" aria-label="Descargar el desprendible del ${d}">${icon("download")}</button></span></li>`).join("")}</ul>`;
+  }
+
+  function cesHTML() {
+    return `<div class="kpis">
+        <div class="kpi kpi--main"><span class="lbl">Saldo en el fondo</span><b>${cop(CES.balance)}</b><span class="m">al ${CES.balanceAt}</span></div>
+        <div class="kpi"><span class="lbl">Causadas en 2026</span><b>${cop(CES.accrued)}</b><span class="m">Se consignan al fondo antes del 14 de febrero de 2027</span></div>
+        <div class="kpi"><span class="lbl">Intereses sobre cesantías</span><b>12 %</b><span class="m">Te los paga la empresa en la nómina de enero</span></div>
+      </div>
+      <div class="bar-actions"><p>Puedes retirar una parte para vivienda o educación.</p><button class="btn btn--primary" type="button" data-toast="Solicitar retiro parcial">Solicitar retiro parcial</button></div>
+      <h3 class="section-title">Movimientos</h3>
+      <ul class="rows">${CES.moves.map(([d, t, m, v]) => `<li><span class="id">${d}</span><span class="t">${t}<span class="m">${m}</span></span><span class="amt ${v < 0 ? "neg" : ""}">${v == null ? "—" : (v > 0 ? "+ " : "") + cop(v)}</span></li>`).join("")}</ul>`;
+  }
+
+  const BODY = {
+    certificados: (i) => certHTML(i === 0),
+    permisos: (i) => (i === 0 ? ownHTML() : teamHTML()),
+    desprendibles: (i) => (i === 0 ? slipHTML() : historyHTML()),
+    cesantias: () => cesHTML(),
+  };
+
+  // ---------- La tarjeta se convierte en la página ----------
+  const hub = document.getElementById("hub"), page = document.getElementById("page");
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let current = null, tab = 0, hubScroll = 0;
+
+  function setNames(root, on) {
+    if (!root) return;
+    root.style.viewTransitionName = on ? "hero" : "";
+    const ic = root.querySelector(".mod__icon"), nm = root.querySelector("h1, .mod__name");
+    if (ic) ic.style.viewTransitionName = on ? "hero-icon" : "";
+    if (nm) nm.style.viewTransitionName = on ? "hero-name" : "";
+  }
+  function morph(update) {
+    if (!document.startViewTransition || reduced()) { update(); return Promise.resolve(); }
+    return document.startViewTransition(update).finished.catch(() => {});
+  }
+
+  function tabsHTML(m) {
+    if (!m.tabs.length) return "";
+    return `<div class="tabs" role="tablist" aria-label="Pestañas de ${m.name}">${m.tabs.map((_, i) =>
+      `<button type="button" role="tab" id="tab-${i}" aria-selected="${i === tab}" tabindex="${i === tab ? 0 : -1}" data-tab="${i}">${tabLabel(m, i, " · ").replace(/<span class="n">(\d+)<\/span>/, " · $1")}</button>`).join("")}</div>`;
+  }
+  function pageHTML(m) {
+    return `<button class="back" type="button" data-back>${icon("back")}Talento humano</button>
+      <header class="mp__head">
+        <span class="mod__icon">${icon(m.id)}</span>
+        <div class="mp__title"><h1 tabindex="-1">${m.name}</h1><p>${m.desc}</p></div>
+        <div class="mod__signal">${m.signal()}</div>
+      </header>
+      <div id="tabs">${tabsHTML(m)}</div>
+      <div class="mp__body" ${m.tabs.length ? 'role="tabpanel" aria-labelledby="tab-' + tab + '"' : ""}>${BODY[m.id](tab)}</div>`;
+  }
+
+  function open(id, sub = 0) {
+    const m = byId.get(id);
+    const card = cards.get(id);
+    hubScroll = scrollY;
+    tab = sub;
+    setNames(card, true);
+    morph(() => {
+      setNames(card, false);
+      page.innerHTML = pageHTML(m);
+      setNames(page.querySelector(".mp__head"), true);
+      hub.hidden = true; page.hidden = false;
+      scrollTo(0, 0);
+      current = id;
+      page.querySelector("h1").focus({ preventScroll: true });
+    }).then(() => setNames(page.querySelector(".mp__head"), false));
+  }
+  function back() {
+    if (!current) return;
+    const card = cards.get(current);
+    refreshCard(current);
+    setNames(page.querySelector(".mp__head"), true);
+    morph(() => {
+      page.hidden = true; hub.hidden = false; page.innerHTML = "";
+      scrollTo(0, hubScroll);
+      setNames(card, true);
+      current = null;
+      card.querySelector(".mod__link").focus({ preventScroll: true });
+    }).then(() => setNames(card, false));
+  }
+  function selectTab(i, focus) {
+    const m = byId.get(current);
+    tab = i;
+    page.querySelector("#tabs").innerHTML = tabsHTML(m);
+    const body = page.querySelector(".mp__body");
+    body.setAttribute("aria-labelledby", "tab-" + i);
+    body.innerHTML = BODY[m.id](i);
+    body.getAnimations().forEach((a) => a.cancel());
+    if (!reduced()) body.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+    if (focus) page.querySelector(`#tab-${i}`).focus();
+  }
+
+  // ---------- Eventos ----------
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-open], [data-back], [data-tab], [data-toast], [data-decide]");
+    if (!t) return;
+    if (t.matches("[data-open]")) { e.preventDefault(); open(t.dataset.open, +(t.dataset.sub ?? 0)); }
+    else if (t.matches("[data-back]")) back();
+    else if (t.matches("[data-tab]")) selectTab(+t.dataset.tab);
+    else if (t.matches("[data-toast]")) toast(`«${t.dataset.toast}»: en la maqueta no hace nada.`);
+    else if (t.matches("[data-decide]")) decide(t);
+  });
+  // Flechas entre pestañas, como en cualquier tablist
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && current && !e.target.matches?.("input, select")) { e.preventDefault(); back(); return; }
+    if (e.altKey && e.key === "ArrowLeft" && current) { e.preventDefault(); back(); return; }
+    if (e.target.matches?.('[role="tab"]') && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+      const n = byId.get(current).tabs.length;
+      selectTab((tab + (e.key === "ArrowRight" ? 1 : n - 1)) % n, true);
+    }
+  });
+  // «Dirigido a» cambia la hoja mientras escribes
+  document.addEventListener("input", (e) => {
+    if (e.target.id !== "cert-to") return;
+    const to = page.querySelector("[data-to]");
+    if (to) to.textContent = `${e.target.value.trim() || "A quien interese"}:`;
+  });
+
+  function decide(btn) {
+    const li = btn.closest("li");
+    const id = li.dataset.req;
+    const yes = btn.dataset.decide === "yes";
+    const i = TEAM.findIndex((r) => r[0] === id);
+    if (i >= 0) TEAM.splice(i, 1);
+    li.classList.add("is-done");
+    li.querySelector(".acts").outerHTML = `<span class="chip ${yes ? "ok" : "danger"}">${yes ? "Aprobado" : "Rechazado"}</span>`;
+    page.querySelector("#tabs").innerHTML = tabsHTML(byId.get("permisos"));
+    page.querySelector(".mp__head .mod__signal").innerHTML = byId.get("permisos").signal();
+    toast(yes ? "Aprobado. Le avisamos a la persona." : "Rechazado. Le avisamos a la persona.");
+  }
+
+  // Luz que sigue al puntero
+  modsEl.addEventListener("pointermove", (e) => {
+    const c = e.target.closest(".mod");
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    c.style.setProperty("--my", `${e.clientY - r.top}px`);
+  });
+
+  // Señal viva: llega una solicitud nueva de tu equipo y el número lo cuenta.
+  setInterval(() => {
+    if (current || document.hidden || !INCOMING.length) return;
+    TEAM.unshift(INCOMING.shift());
+    refreshCard("permisos");
+    const card = cards.get("permisos");
+    if (!reduced()) {
+      card.querySelector("[data-n]").animate([{ transform: "translateY(-6px)", opacity: 0, color: "var(--nx-primary-ink)" }, { transform: "none", opacity: 1, color: "var(--nx-primary-ink)", offset: 0.5 }, { color: "var(--nx-foreground)" }], { duration: 900, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+      card.animate([{ boxShadow: "0 0 0 0 var(--nx-primary-border)" }, { boxShadow: "0 0 0 6px transparent" }], { duration: 900, easing: "ease-out" });
+    }
+  }, 9000);
+
+  const toastEl = document.getElementById("toast");
+  let toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (toastEl.hidden = true), 2600);
+  }
+})();
+</script>
