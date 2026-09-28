@@ -103,6 +103,9 @@ describe("sesión y vencimiento", () => {
     expect(parsePhoneInfo({ kind: "scan", title: "OC-2291", multiple: "sí", accept: "" }, now)).toEqual({ kind: "scan", title: "OC-2291" });
     expect(parsePhoneInfo({ kind: "video", multiple: true, expiresIn: 30 }, now)).toEqual({ kind: "photo", multiple: true, expiresAt: now + 30_000 });
     expect(cleanKind("file")).toBe("file");
+    expect(cleanKind("signature")).toBe("signature");
+    // Firmar: nombre y cédula solo si vienen en `true`.
+    expect(parsePhoneInfo({ kind: "signature", askName: true, askId: "sí" }, now)).toEqual({ kind: "signature", askName: true });
     expect(cleanKind(undefined)).toBe("photo");
   });
 });
@@ -154,6 +157,8 @@ describe("textos", () => {
     expect(countText("photo", 2, HANDOFF_LABELS)).toBe("2 fotos");
     expect(countText("scan", 30, HANDOFF_LABELS)).toBe("30 códigos");
     expect(countText("file", 0, HANDOFF_LABELS)).toBe("0 archivos");
+    expect(countText("signature", 1, HANDOFF_LABELS)).toBe("1 firma");
+    expect(countText("signature", 2, HANDOFF_LABELS)).toBe("2 firmas");
     expect(fill(HANDOFF_LABELS.received, { what: "2 fotos" })).toBe("2 fotos desde el celular");
     expect(fill("{a} y {b}", { a: 1 })).toBe("1 y {b}");
   });

@@ -1,0 +1,211 @@
+/*
+ * <nx-signature>. Variables propias:
+ *   --nx-signature-paper: fondo de la zona de firma. Siempre claro, también en modo oscuro: una firma
+ *     se archiva sobre papel y la tinta (`pen-color`) es oscura.
+ *   --nx-signature-guide: la línea, la × y «Firme aquí» (sobre el papel, con contraste AA).
+ */
+
+nx-signature {
+  --nx-signature-paper: oklch(0.995 0.003 90);
+  --nx-signature-guide: oklch(0.5 0.012 260);
+  display: block;
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.4;
+
+  & *,
+  & *::before {
+    box-sizing: border-box;
+  }
+  & [hidden] {
+    display: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- nombre, cédula y firma escrita */
+
+.nx-sig__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+  margin-block-end: 10px;
+}
+.nx-sig__field {
+  display: grid;
+  gap: 4px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-weight: 550;
+
+  & input {
+    min-block-size: 34px;
+    padding: 6px 9px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-md);
+    background: var(--nx-card);
+    color: var(--nx-foreground);
+    font: 400 13.5px var(--nx-font-sans);
+    transition: border-color var(--nx-motion-fast), box-shadow var(--nx-motion-fast);
+  }
+  & input:focus-visible {
+    border-color: var(--nx-primary-border);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+  & input:read-only {
+    border-style: dashed;
+    background: transparent;
+  }
+}
+.nx-sig__typed {
+  margin-block-start: 10px;
+}
+
+/* ---------------------------------------------------------------- la zona de firma */
+
+.nx-sig__pad {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-signature-paper);
+  color-scheme: light;
+
+  &[data-live] {
+    cursor: crosshair;
+  }
+  &[data-off] {
+    opacity: 0.55;
+  }
+}
+.nx-sig__canvas,
+.nx-sig__img {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+.nx-sig__canvas {
+  touch-action: none;
+  user-select: none;
+}
+/* La firma escrita o cargada: apoyada en la línea, como en el papel. */
+.nx-sig__img {
+  inset: 10px 24px auto;
+  /* Un <img> absoluto no se estira con `inset`: el tamaño va explícito (hasta un 20 % del fondo). */
+  inline-size: calc(100% - 48px);
+  block-size: calc(80% - 10px);
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.nx-sig__line {
+  position: absolute;
+  inset-inline: 22px;
+  inset-block-end: 26%;
+  border-block-end: 1px solid var(--nx-signature-guide);
+  color: var(--nx-signature-guide);
+  pointer-events: none;
+
+  & span {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 5px;
+    font-size: 12px;
+  }
+  & .nx-sig__x {
+    top: auto;
+    bottom: 3px;
+    font-size: 20px;
+    line-height: 1;
+  }
+}
+
+/* ---------------------------------------------------------------- acciones */
+
+.nx-sig__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 10px;
+}
+.nx-sig__gap {
+  flex: 1;
+}
+.nx-sig__btn {
+  min-block-size: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: 550 13.5px var(--nx-font-sans);
+  cursor: pointer;
+  transition: background-color var(--nx-motion-fast);
+
+  &:hover:not(:disabled) {
+    background: var(--nx-hover);
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.nx-sig__btn[data-a="confirm"] {
+  border-color: transparent;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--nx-primary), black 10%);
+  }
+}
+
+/* ---------------------------------------------------------------- firmado, error y celular */
+
+.nx-sig__stamp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+
+  & .nx-sig__btn {
+    min-block-size: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--nx-primary-ink);
+    font-size: 12.5px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+.nx-sig__msg {
+  margin: 6px 0 0;
+  color: var(--nx-danger);
+  font-size: 12.5px;
+
+  &:empty {
+    display: none;
+  }
+}
+.nx-sig__ho:not(:empty) {
+  margin-block-start: 10px;
+}
+/* El `<nx-handoff>` propio solo muestra su panel: el botón es «Firmar en el celular» y el resumen es la fecha. */
+.nx-sig__ho :is(.nx-ho__start, .nx-ho__summary) {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-signature * {
+    transition: none !important;
+  }
+}

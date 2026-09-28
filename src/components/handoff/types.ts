@@ -7,8 +7,8 @@
 /** `desktop` (por defecto): el botón, el QR y la escucha. `phone`: la página que abre el QR. */
 export type HandoffSide = "desktop" | "phone";
 
-/** Qué se le pide al celular. */
-export type HandoffKind = "photo" | "file" | "scan";
+/** Qué se le pide al celular. `signature`: firmar con el dedo (`<nx-signature>`, se carga aparte). */
+export type HandoffKind = "photo" | "file" | "scan" | "signature";
 
 /** En qué va el lado escritorio. */
 export type HandoffState =
@@ -63,6 +63,9 @@ export interface HandoffPhoneInfo {
   title?: string;
   hint?: string;
   expiresAt?: number;
+  /** Con `signature`: pedir el nombre y la cédula de quien firma. */
+  askName?: boolean;
+  askId?: boolean;
 }
 
 /** `nx-handoff-item` (cancelable): lo recibido y, si es un archivo, ya descargado. */
@@ -110,6 +113,8 @@ export interface HandoffLabels {
   files: string;
   code1: string;
   codes: string;
+  signature1: string;
+  signatures: string;
 }
 
 /**
@@ -141,4 +146,7 @@ export interface HandoffPhoneLabels {
   codesSent: string;
   invalid: string;
   offline: string;
+  /** Con `signature`: firmar a pantalla completa (en horizontal si se puede), y mientras se envía. */
+  fullscreen: string;
+  signSending: string;
 }
