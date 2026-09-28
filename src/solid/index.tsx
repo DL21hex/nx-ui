@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`, `<Thread>`, `<Checklist>`, `<Recurrence>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`, `<Thread>`, `<Checklist>`, `<Recurrence>`, `<Jobs>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -130,6 +130,9 @@ import type { ChecklistChangeDetail, ChecklistCompleteDetail, ChecklistErrorDeta
 import "../components/recurrence/index";
 import type { NxRecurrence } from "../components/recurrence/recurrence";
 import type { RecurrenceChangeDetail, RecurrenceErrorDetail, RecurrenceHolidayMode, RecurrenceLabels, RecurrenceRule, RecurrenceValue, RecurrenceValueFormat } from "../components/recurrence/types";
+import "../components/jobs/index";
+import type { NxJobs } from "../components/jobs/jobs";
+import type { Job, JobEvent, JobResult, JobSpec, JobStatus, JobsErrorDetail, JobsLabels } from "../components/jobs/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -170,6 +173,7 @@ export type { NxVoice, VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabel
 export type { NxThread, ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser };
 export type { NxChecklist, ChecklistChangeDetail, ChecklistCompleteDetail, ChecklistErrorDetail, ChecklistLabels, ChecklistMode, ChecklistOpenDetail, ChecklistPerson, ChecklistState, ChecklistStep, ChecklistSummaryItem };
 export type { NxRecurrence, RecurrenceChangeDetail, RecurrenceErrorDetail, RecurrenceHolidayMode, RecurrenceLabels, RecurrenceRule, RecurrenceValue, RecurrenceValueFormat };
+export type { NxJobs, Job, JobEvent, JobResult, JobSpec, JobStatus, JobsErrorDetail, JobsLabels };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -207,7 +211,7 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | ChecklistPerson | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | ChecklistSummaryItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | Partial<RecurrenceLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | Partial<RecurrenceLabels> | Partial<JobsLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -238,6 +242,7 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      recent: string | undefined;
       "holidays-mode": "add" | "replace" | undefined;
       count: string | undefined;
       record: string | undefined;
@@ -351,6 +356,8 @@ declare module "solid-js" {
       "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
+      notify: boolean;
+      always: boolean;
       hold: boolean;
       "ask-name": boolean;
       "ask-id": boolean;
@@ -380,6 +387,9 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-jobs-change": CustomEvent<{ jobs: Job[] }>;
+      "nx-jobs-done": CustomEvent<{ job: Job }>;
+      "nx-jobs-error": CustomEvent<JobsErrorDetail>;
       "nx-recurrence-error": CustomEvent<RecurrenceErrorDetail>;
       "nx-checklist-change": CustomEvent<ChecklistChangeDetail>;
       "nx-checklist-complete": CustomEvent<ChecklistCompleteDetail>;
@@ -492,6 +502,7 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-jobs": HTMLAttributes<NxJobs>;
       "nx-recurrence": HTMLAttributes<NxRecurrence>;
       "nx-checklist": HTMLAttributes<NxChecklist>;
       "nx-thread": HTMLAttributes<NxThread>;
@@ -2337,6 +2348,50 @@ export function Recurrence(props: RecurrenceProps): JSX.Element {
       bool:readonly={!!local.readonly}
       on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<RecurrenceChangeDetail>)}
       on:nx-recurrence-error={(e) => local.onError?.(e)}
+    />
+  );
+}
+
+export interface JobsProps extends Omit<JSX.HTMLAttributes<NxJobs>, "onChange" | "onError"> {
+  /** Lista (`?active=1`), lanzar (`POST`), cada trabajo (`/{id}`), `/{id}/cancel`, `/{id}/retry`. */
+  endpoint: string;
+  /** SSE o NDJSON con los eventos de todos los trabajos. Sin él, sondeo. */
+  stream?: string;
+  /** Segundos entre consultas sin stream (3). */
+  poll?: number;
+  /** Notificación del sistema al terminar con la pestaña oculta (pide permiso al lanzar). */
+  notify?: boolean;
+  /** La píldora (tenue) también sin trabajos. */
+  always?: boolean;
+  /** Cuántos terminados quedan en «Recientes» (10). */
+  recent?: number;
+  locale?: string;
+  labels?: Partial<JobsLabels>;
+  disabled?: boolean;
+  onChange?: (e: CustomEvent<{ jobs: Job[] }>) => void;
+  onDone?: (e: CustomEvent<{ job: Job }>) => void;
+  onError?: (e: CustomEvent<JobsErrorDetail>) => void;
+  onOpenChange?: (e: CustomEvent<{ open: boolean }>) => void;
+}
+
+export function Jobs(props: JobsProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["endpoint", "stream", "poll", "notify", "always", "recent", "locale", "labels", "disabled", "onChange", "onDone", "onError", "onOpenChange"]);
+  return (
+    <nx-jobs
+      {...rest}
+      prop:labels={local.labels}
+      attr:endpoint={local.endpoint}
+      attr:stream={local.stream}
+      attr:poll={local.poll === undefined ? undefined : String(local.poll)}
+      attr:recent={local.recent === undefined ? undefined : String(local.recent)}
+      attr:locale={local.locale}
+      bool:notify={!!local.notify}
+      bool:always={!!local.always}
+      bool:disabled={!!local.disabled}
+      on:nx-jobs-change={(e) => local.onChange?.(e)}
+      on:nx-jobs-done={(e) => local.onDone?.(e)}
+      on:nx-jobs-error={(e) => local.onError?.(e)}
+      on:nx-open-change={(e) => local.onOpenChange?.(e as CustomEvent<{ open: boolean }>)}
     />
   );
 }

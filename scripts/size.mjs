@@ -79,6 +79,9 @@ const BUDGET = [
   ["dist/recurrence.js", 9.5 * 1024, "recurrence + núcleo (ESM; el intérprete y los controles con import())"],
   // El chunk importa el de recurrence (ya cargado en la página): se mide todo lo que baja la página al escribir.
   [lazy("recurrence-edit"), 15.75 * 1024, "nx-recurrence con su intérprete de frases y controles (se carga al acercarse al campo)"],
+  ["dist/jobs.js", 9.25 * 1024, "jobs + núcleo (ESM; el panel y nxToast con import())"],
+  // El chunk del panel importa el de jobs (ya cargado en la página): se mide todo lo que baja la página.
+  [lazy("jobs-panel"), 11.25 * 1024, "nx-jobs con su panel (se trae al apuntar a la píldora o al abrirla)"],
   ["dist/bdui.js", 2.5 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/solid/index.jsx", 7 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
@@ -124,6 +127,7 @@ const BUDGET = [
   ["dist/thread.css", 2.25 * 1024, "thread (CSS)"],
   ["dist/checklist.css", 3 * 1024, "checklist (CSS)"],
   ["dist/recurrence.css", 1.5 * 1024, "recurrence (CSS)"],
+  ["dist/jobs.css", 2.25 * 1024, "jobs (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

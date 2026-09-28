@@ -16,7 +16,6 @@
  */
 import { addDemoRoute, type DemoOut } from "./demo-api";
 import "../src/components/jobs/index";
-import "../src/components/jobs/jobs.css";
 import type { Job, JobsErrorDetail, NxJobs } from "../src/components/jobs/index";
 
 type Kind = "importar-clientes" | "cierre-mes" | "facturas";

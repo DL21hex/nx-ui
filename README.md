@@ -35,6 +35,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-thread>` + núcleo (ESM); las sugerencias, el stream y las anclas se cargan aparte | ≈ 11,9 KB |
 | `<nx-checklist>` + núcleo (ESM); los campos de evidencia, el resumen y la firma se cargan aparte | ≈ 11,8 KB |
 | `<nx-recurrence>` + núcleo (ESM); el intérprete de frases y los controles se cargan aparte | ≈ 9,1 KB |
+| `<nx-jobs>` + núcleo (ESM); el panel se carga aparte | ≈ 8,8 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1929,6 +1930,44 @@ período **antes** de `BYSETPOS` (así «el último día hábil» es `BYDAY=MO,T
 y `COUNT` no los cuenta; `before`/`after` corren una fecha que cae en festivo al día hábil (lunes a
 viernes, no festivo) anterior o siguiente. Un lector estándar la ignora y da las fechas sin saltar
 ni correr festivos.
+
+## `<nx-jobs>`
+
+**Trabajos largos que sobreviven a recargar.** Importar 10.000 filas, cerrar el mes, recalcular costos,
+generar 500 facturas electrónicas: en vez de un spinner eterno (y la duda de si terminó al recargar), el
+trabajo vive en el servidor y una píldora discreta en la barra dice cómo va.
+
+- **Píldora**: sin trabajos no se ve (o un ícono tenue con `always`); con trabajos, «2 trabajos en curso»
+  con un anillo del avance agregado; al terminar, «Listo: Cierre de septiembre» un rato; si falla, en rojo
+  hasta que se abra el panel.
+- **Panel** (hoja desde abajo en el celular): cada trabajo con su etapa («Guardando · 4.200 de 10.000 ·
+  faltan ~3 min»), barra real (indeterminada si el servidor no da total), hora y quién lo lanzó, y sus
+  acciones: Cancelar (con confirmación en línea: «Lo ya guardado queda»), Reintentar lo que falló,
+  Descargar, Ver filas con error, Ir al registro, Quitar. Los terminados quedan en «Recientes», plegados.
+- **Tiempo restante** con una media móvil de la velocidad: una ráfaga o un tramo lento no lo hacen saltar.
+- **Sobrevive a recargar y a cambiar de página**: al conectar pide los activos y recientes; los ids en
+  curso también se guardan en `localStorage`.
+- **Una sola conexión**: `stream` (SSE o NDJSON) abierto solo mientras hay trabajos en curso, con
+  reconexión creciente, `Retry-After` y `Last-Event-ID`/`?after=`; sin `stream`, un sondeo que se espacia
+  si nada cambia y en segundo plano. Con varias pestañas abiertas, una sola conecta y comparte los eventos.
+- **Avisa al terminar**: un aviso en la página si el panel está cerrado y, con `notify`, una notificación
+  del sistema si la pestaña está oculta (el permiso se pide al lanzar, nunca al cargar).
+
+```html
+<nx-jobs id="trabajos" endpoint="/api/trabajos" stream="/api/trabajos/eventos" notify></nx-jobs>
+<script type="module">
+  const jobs = document.getElementById("trabajos");
+  const job = await jobs.start({ type: "cierre-mes", title: "Cierre de septiembre", params: { mes: "2026-09" } });
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `endpoint`, `stream`, `poll` (s, 3), `notify`, `always`, `recent` (10), `locale`, `labels` (`JOBS_LABELS`), `disabled` · solo lectura: `jobs`, `active`, `open` |
+| Métodos | `start({type, title, params})`, `track(id \| job)`, `cancel(id)`, `retry(id)`, `dismiss(id)`, `show()`, `hide()` |
+| Eventos | `nx-jobs-change` `{jobs}`, `nx-jobs-done` `{job}` (terminado, fallido o cancelado), `nx-jobs-error` `{action, message, id?, status?}`, `nx-open-change` `{open}` |
+| Protocolo | `GET {endpoint}?active=1` → `[{id, type, title, status, stage?, done?, total?, startedAt, finishedAt?, by?, result?}]` · `POST {endpoint}` · `GET {endpoint}/{id}` · `POST {endpoint}/{id}/cancel` · `POST {endpoint}/{id}/retry` · stream `{id, status?, stage?, done?, total?, result?, seq?}` |
+| Funciones | `jobPace()`, `jobLeft()`, `jobsDuration()`, `mergeJob()`, `splitJobs()`, `cleanJob(s)()`, `isJobActive()`, `jobFraction()`, `jobsFraction()`, `jobsBackoff()`, `jobsRetryAfter()`, `jobsPollDelay()`, `jobUrl()`, `readJobsMemo()` |
 
 ## Desarrollo
 
