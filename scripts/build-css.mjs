@@ -31,6 +31,7 @@ const entries = {
   "history": "src/components/history/history.css",
   "kanban": "src/components/kanban/kanban.css",
   "number": "src/components/number/number.css",
+  "recurrence": "src/components/recurrence/recurrence.css",
   "checklist": "src/components/checklist/checklist.css",
   "thread": "src/components/thread/thread.css",
   "voice": "src/components/voice/voice.css",

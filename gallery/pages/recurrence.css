@@ -1,0 +1,79 @@
+/* ---------------------------------------------------------------- demo de <nx-recurrence> */
+
+.rec-cases {
+  display: grid;
+  gap: 12px;
+  max-inline-size: 760px;
+}
+.rec-case {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  & nx-recurrence {
+    --nx-recurrence-width: 100%;
+  }
+}
+.rec-case__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+.rec-case__sub {
+  margin: 2px 0 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+}
+.rec-case__label {
+  margin-block-start: 4px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-weight: 550;
+}
+.rec-phrases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-end: 12px;
+}
+.rec-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  &:hover {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+.rec-try {
+  display: grid;
+  gap: 6px;
+  max-inline-size: 760px;
+  & nx-recurrence {
+    --nx-recurrence-width: 100%;
+  }
+}
+.rec-json {
+  max-inline-size: 760px;
+  max-block-size: 360px;
+  overflow: auto;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-canvas);
+  font: 12px/1.5 var(--nx-font-mono);
+  white-space: pre;
+}

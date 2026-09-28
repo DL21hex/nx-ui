@@ -178,6 +178,10 @@
       "types": "./dist/types/components/checklist/index.d.ts",
       "import": "./dist/checklist.js"
     },
+    "./recurrence": {
+      "types": "./dist/types/components/recurrence/index.d.ts",
+      "import": "./dist/recurrence.js"
+    },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
       "import": "./dist/icons.js"
@@ -219,6 +223,7 @@
     "./history.css": "./dist/history.css",
     "./kanban.css": "./dist/kanban.css",
     "./number.css": "./dist/number.css",
+    "./recurrence.css": "./dist/recurrence.css",
     "./checklist.css": "./dist/checklist.css",
     "./thread.css": "./dist/thread.css",
     "./voice.css": "./dist/voice.css",

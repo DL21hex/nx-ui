@@ -23,6 +23,8 @@ export * from "./components/date-range/index";
 export * from "./components/history/index";
 export * from "./components/kanban/index";
 export * from "./components/number/index";
+export * from "./components/recurrence/index";
+export { parseRecurrence } from "./components/recurrence/parse";
 export * from "./components/checklist/index";
 export * from "./components/thread/index";
 export * from "./components/voice/index";
