@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`, `<Thread>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`, `<Thread>`, `<Checklist>`, `<Recurrence>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -123,6 +123,13 @@ import type { VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceL
 import "../components/thread/index";
 import type { NxThread } from "../components/thread/thread";
 import type { ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser } from "../components/thread/types";
+import "../components/checklist/index";
+import type { NxChecklist } from "../components/checklist/checklist";
+import type { ChecklistSequence } from "../components/checklist/logic";
+import type { ChecklistChangeDetail, ChecklistCompleteDetail, ChecklistErrorDetail, ChecklistLabels, ChecklistMode, ChecklistOpenDetail, ChecklistPerson, ChecklistState, ChecklistStep, ChecklistSummaryItem } from "../components/checklist/types";
+import "../components/recurrence/index";
+import type { NxRecurrence } from "../components/recurrence/recurrence";
+import type { RecurrenceChangeDetail, RecurrenceErrorDetail, RecurrenceHolidayMode, RecurrenceLabels, RecurrenceRule, RecurrenceValue, RecurrenceValueFormat } from "../components/recurrence/types";
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
@@ -161,6 +168,8 @@ export type { NxPlanner, PlannerBooking, PlannerChangeDetail, PlannerCreateDetai
 export type { NxReview, ReviewChange, ReviewConfirmDetail, ReviewDirtyDetail, ReviewLabels, ReviewMode, ReviewOpenDetail };
 export type { NxVoice, VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail };
 export type { NxThread, ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser };
+export type { NxChecklist, ChecklistChangeDetail, ChecklistCompleteDetail, ChecklistErrorDetail, ChecklistLabels, ChecklistMode, ChecklistOpenDetail, ChecklistPerson, ChecklistState, ChecklistStep, ChecklistSummaryItem };
+export type { NxRecurrence, RecurrenceChangeDetail, RecurrenceErrorDetail, RecurrenceHolidayMode, RecurrenceLabels, RecurrenceRule, RecurrenceValue, RecurrenceValueFormat };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
 type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
@@ -168,6 +177,9 @@ type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy:
 declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
+      steps: ChecklistStep[] | undefined;
+      state: ChecklistState | undefined;
+      sequential: ChecklistSequence | undefined;
       anchors: string[] | undefined;
       refPatterns: string[] | undefined;
       comments: ThreadComment[] | undefined;
@@ -193,9 +205,9 @@ declare module "solid-js" {
       series: WhatIfSeries[] | TrendSeries[] | undefined;
       outputs: WhatIfMetric[] | undefined;
       inputs: WhatIfInput[] | undefined;
-      me: PresenceUser | null | undefined;
-      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | undefined;
+      me: PresenceUser | ChecklistPerson | null | undefined;
+      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | ChecklistSummaryItem[] | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | Partial<RecurrenceLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -226,6 +238,8 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      "holidays-mode": "add" | "replace" | undefined;
+      count: string | undefined;
       record: string | undefined;
       poll: string | undefined;
       presence: string | undefined;
@@ -246,7 +260,7 @@ declare module "solid-js" {
       summary: string | undefined;
       document: string | undefined;
       handoff: string | undefined;
-      "value-format": SignatureFormat | undefined;
+      "value-format": SignatureFormat | RecurrenceValueFormat | undefined;
       "pen-color": string | undefined;
       orientation: PrintOrientation | undefined;
       margin: string | undefined;
@@ -300,7 +314,7 @@ declare module "solid-js" {
       locale: string | undefined;
       heading: string | undefined;
       description: string | undefined;
-      mode: DialogMode | ScanMode | GuardMode | ReviewMode | undefined;
+      mode: DialogMode | ScanMode | GuardMode | ReviewMode | ChecklistMode | undefined;
       size: DialogSize | string | undefined;
       url: string | undefined;
       hold: string | undefined;
@@ -366,6 +380,11 @@ declare module "solid-js" {
       readonly: boolean;
     }
     interface CustomEvents {
+      "nx-recurrence-error": CustomEvent<RecurrenceErrorDetail>;
+      "nx-checklist-change": CustomEvent<ChecklistChangeDetail>;
+      "nx-checklist-complete": CustomEvent<ChecklistCompleteDetail>;
+      "nx-checklist-open": CustomEvent<ChecklistOpenDetail>;
+      "nx-checklist-error": CustomEvent<ChecklistErrorDetail>;
       "nx-thread-post": CustomEvent<ThreadPostDetail>;
       "nx-thread-change": CustomEvent<{ comments: ThreadComment[] }>;
       "nx-thread-mention": CustomEvent<ThreadMentionDetail>;
@@ -436,7 +455,7 @@ declare module "solid-js" {
       "nx-toggle": CustomEvent<ToggleDetail>;
       "nx-open-change": CustomEvent<OpenChangeDetail>;
       "nx-done": CustomEvent<DoneDetail>;
-      "nx-change": CustomEvent<SelectChangeDetail | DateRangeChangeDetail>;
+      "nx-change": CustomEvent<SelectChangeDetail | DateRangeChangeDetail | RecurrenceChangeDetail>;
       "nx-ai-done": CustomEvent<AiDoneDetail>;
       "nx-ai-action": CustomEvent<AiActionDetail>;
       "nx-ai-feedback": CustomEvent<AiFeedbackDetail>;
@@ -473,6 +492,8 @@ declare module "solid-js" {
       "nx-paste-fill-undo": CustomEvent<{ values: Record<string, string> }>;
     }
     interface IntrinsicElements {
+      "nx-recurrence": HTMLAttributes<NxRecurrence>;
+      "nx-checklist": HTMLAttributes<NxChecklist>;
       "nx-thread": HTMLAttributes<NxThread>;
       "nx-voice": HTMLAttributes<NxVoice>;
       "nx-review": HTMLAttributes<NxReview>;
@@ -2216,6 +2237,106 @@ export function Thread(props: ThreadProps): JSX.Element {
       on:nx-thread-change={(e) => local.onChange?.(e)}
       on:nx-thread-mention={(e) => local.onMention?.(e)}
       on:nx-thread-error={(e) => local.onError?.(e)}
+    />
+  );
+}
+
+export interface ChecklistProps extends Omit<JSX.HTMLAttributes<NxChecklist>, "onChange" | "onError"> {
+  /** Los pasos: `{id, title, hint?, section?, assignee?, due?, required?, evidence?, dependsOn?, canSkip?}`. */
+  steps?: ChecklistStep[];
+  /** El estado por `id`. Sin él (y con `endpoint`), `GET {endpoint}`. */
+  state?: ChecklistState;
+  endpoint?: string;
+  /** Quien usa la pantalla: el «por» de cada paso. */
+  me?: ChecklistPerson | null;
+  /** `true`: todo en orden; una lista: solo esas secciones. */
+  sequential?: boolean | string[];
+  /** La base de `<nx-handoff>`: «Tomar con el celular» en las fotos. */
+  handoff?: string;
+  mode?: ChecklistMode;
+  items?: ChecklistSummaryItem[];
+  heading?: string;
+  readonly?: boolean;
+  disabled?: boolean;
+  locale?: string;
+  labels?: Partial<ChecklistLabels>;
+  onChange?: (e: CustomEvent<ChecklistChangeDetail>) => void;
+  /** Cancelable: cancelarlo no cierra el procedimiento. */
+  onComplete?: (e: CustomEvent<ChecklistCompleteDetail>) => void;
+  /** `mode="summary"`, cancelable (cancelarlo no sigue el `href`). */
+  onOpen?: (e: CustomEvent<ChecklistOpenDetail>) => void;
+  onError?: (e: CustomEvent<ChecklistErrorDetail>) => void;
+}
+
+export function Checklist(props: ChecklistProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["steps", "state", "endpoint", "me", "sequential", "handoff", "mode", "items", "heading", "readonly", "disabled", "locale", "labels", "onChange", "onComplete", "onOpen", "onError"]);
+  return (
+    <nx-checklist
+      {...rest}
+      prop:steps={local.steps}
+      prop:state={local.state}
+      prop:me={local.me}
+      prop:items={local.items}
+      prop:labels={local.labels}
+      prop:sequential={local.sequential}
+      attr:endpoint={local.endpoint}
+      attr:handoff={local.handoff}
+      attr:mode={local.mode}
+      attr:heading={local.heading}
+      attr:locale={local.locale}
+      bool:readonly={!!local.readonly}
+      bool:disabled={!!local.disabled}
+      on:nx-checklist-change={(e) => local.onChange?.(e)}
+      on:nx-checklist-complete={(e) => local.onComplete?.(e)}
+      on:nx-checklist-open={(e) => local.onOpen?.(e)}
+      on:nx-checklist-error={(e) => local.onError?.(e)}
+    />
+  );
+}
+
+export interface RecurrenceProps extends Omit<JSX.HTMLAttributes<NxRecurrence>, "onChange" | "onError"> {
+  /** Una frase («los lunes a las 8») o una RRULE. */
+  value?: string;
+  name?: string;
+  required?: boolean;
+  disabled?: boolean;
+  readonly?: boolean;
+  /** Desde cuándo (ISO); por defecto hoy. */
+  start?: string;
+  /** Festivos propios (ISO), sumados a los de Colombia o en su lugar. */
+  holidays?: string[];
+  holidaysMode?: "add" | "replace";
+  /** Cuántas próximas fechas mostrar (5). */
+  count?: number;
+  valueFormat?: RecurrenceValueFormat;
+  label?: string;
+  locale?: string;
+  labels?: Partial<RecurrenceLabels>;
+  /** Al confirmar lo escrito o cambiar un control: `{value, rrule, text, next}`. */
+  onChange?: (e: CustomEvent<RecurrenceChangeDetail>) => void;
+  onError?: (e: CustomEvent<RecurrenceErrorDetail>) => void;
+}
+
+export function Recurrence(props: RecurrenceProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["value", "name", "required", "disabled", "readonly", "start", "holidays", "holidaysMode", "count", "valueFormat", "label", "locale", "labels", "onChange", "onError"]);
+  return (
+    <nx-recurrence
+      {...rest}
+      prop:value={local.value}
+      prop:holidays={local.holidays}
+      prop:labels={local.labels}
+      attr:name={local.name}
+      attr:start={local.start}
+      attr:holidays-mode={local.holidaysMode}
+      attr:count={local.count === undefined ? undefined : String(local.count)}
+      attr:value-format={local.valueFormat}
+      attr:label={local.label}
+      attr:locale={local.locale}
+      bool:required={!!local.required}
+      bool:disabled={!!local.disabled}
+      bool:readonly={!!local.readonly}
+      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<RecurrenceChangeDetail>)}
+      on:nx-recurrence-error={(e) => local.onError?.(e)}
     />
   );
 }

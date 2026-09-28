@@ -33,6 +33,8 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-review>` + núcleo (ESM) | ≈ 10,4 KB |
 | `<nx-voice>` + núcleo (ESM); el dictado en un campo y el servidor se cargan aparte | ≈ 5,9 KB |
 | `<nx-thread>` + núcleo (ESM); las sugerencias, el stream y las anclas se cargan aparte | ≈ 11,9 KB |
+| `<nx-checklist>` + núcleo (ESM); los campos de evidencia, el resumen y la firma se cargan aparte | ≈ 11,8 KB |
+| `<nx-recurrence>` + núcleo (ESM); el intérprete de frases y los controles se cargan aparte | ≈ 9,1 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1845,6 +1847,88 @@ comentarios viven en el pedido, la factura o la orden de compra, y se pueden anc
 | Eventos | `nx-thread-post` `{record, text, anchor?, replyTo?, clientId}` (cancelable), `nx-thread-change` `{comments}`, `nx-thread-mention` `{comment, people}`, `nx-thread-error` `{action, message, id?}` |
 | Protocolo | `GET {endpoint}?record=` → `[{id, author, text, at, editedAt?, anchor?, replyTo?, resolved?, resolvedBy?}]` · `POST {endpoint}` · `PATCH {endpoint}/{id}` `{text}` o `{resolved}` · `DELETE {endpoint}/{id}` · `POST {endpoint}/typing` · stream `{type: "comment" \| "update" \| "delete" \| "typing", …}` |
 | Funciones | `parseThreadText()`, `threadPlainText()`, `threadMentions()`, `groupThreadByDay()`, `threadDayLabel()`, `threadRefPatterns()`, `threadFirstUnread()`, `threadAnchorCounts()`, `threadRoot()`, `cleanThreadComment(s)()`, `mergeThreadComments()`, `encodeThreadDraft()`, `decodeThreadDraft()`, `threadPick()`, `THREAD_LABELS`, `THREAD_MAX_TEXT` |
+
+## `<nx-checklist>`
+
+**Procedimientos con evidencia.** Cierre de mes, auditoría de inventario, recepción de mercancía,
+alistamiento de un vehículo, apertura de caja: cada paso con responsable, fecha límite y la evidencia
+que exige. Queda quién marcó cada paso y cuándo, y funciona sin señal en la bodega.
+
+- **Un solo diseño, sobrio**: el nombre del procedimiento, un único indicador de avance («7 de 12 · 2
+  vencidos») y los pasos por sección, cada uno con su casilla, responsable y vencimiento («vence hoy
+  5:00 p. m.»; lo vencido va en rojo, con ícono y texto).
+- **Evidencia en su lugar**: al abrir un paso (clic o <kbd>Enter</kbd>) se despliega ahí mismo, uno a
+  la vez: fotos (con la cámara del celular, o «Tomar con el celular» con `<nx-handoff>`), archivos,
+  firma (`<nx-signature>`), nota, un número con rango («2–8 °C») y opciones. «Marcar como hecho» se
+  habilita cuando está completa y dice qué falta. Un número fuera de rango o «No conforme» se pueden
+  cerrar, con aviso y nota obligatoria.
+- **Omitir** y **reabrir** piden motivo; todo queda en «Actividad» (quién, qué, cuándo, por qué).
+- **Orden**: `sequential` (todo, o algunas secciones) y `dependsOn` («Primero: Contar las láminas»).
+- **Optimista y sin conexión**: cada cambio se ve al instante y va al servidor en orden (las fotos
+  antes); sin red queda «pendiente de enviar» y se sigue trabajando. Un rechazo del servidor revierte
+  ese paso con un aviso.
+- **Al terminar**: «Procedimiento completo», quién y cuándo, y «Cerrar procedimiento» (solo lectura).
+- **Varios a la vez**: `mode="summary"` con su avance y sus vencidos («Cierre de septiembre · 18/24 · 3
+  vencidos»), ordenable.
+
+```html
+<nx-checklist endpoint="/api/procedimientos/recepcion-oc-2291"
+  me='{"id":"u7","name":"Diego Llinás"}' sequential='["Conteo"]' handoff="/api/handoff"></nx-checklist>
+
+<nx-checklist heading="Apertura de caja" steps='[
+  {"id":"base","title":"Contar la base","evidence":[{"type":"number","min":200000,"max":200000,"unit":"COP"}]},
+  {"id":"foto","title":"Foto del arqueo","evidence":[{"type":"photo"}]},
+  {"id":"firma","title":"Firma del cajero","dependsOn":["base"],"evidence":[{"type":"signature"}]}]'></nx-checklist>
+
+<nx-checklist mode="summary" items='[{"id":"cierre","title":"Cierre de septiembre","done":18,"total":24,"overdue":3,"href":"/cierre"}]'></nx-checklist>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `steps` (`{id, title, hint?, section?, assignee?, due?, required?, evidence?, dependsOn?, canSkip?}`), `state` (por `id`: `{status, by, at, evidence, reason?}`), `endpoint`, `me`, `sequential`, `handoff`, `mode` (`run`, `summary`), `items`, `heading`, `readonly`, `disabled`, `locale`, `labels` |
+| Evidencia | `{type: "photo"\|"file"\|"signature"\|"note"\|"number"\|"choice", label?, min?, max?, unit?, options?, count?, accept?, required?}` |
+| Métodos | `open(stepId)`, `reload()` |
+| Getters | `progress` (`{done, total, required, requiredDone, skipped, overdue, complete}`), `pending` (cambios sin enviar), `closed` |
+| Eventos | `nx-checklist-change` `{step, status, evidence, reason?, note?}`, `nx-checklist-complete` (cancelable), `nx-checklist-open` `{item}` (summary, cancelable), `nx-checklist-error` `{message, step?, status?}` |
+| Protocolo | `GET {endpoint}`, `POST {endpoint}/steps/{id}/files`, `PATCH {endpoint}/steps/{id}` `{status, evidence, reason?, clientId}`, `POST {endpoint}/close` |
+| Funciones | `checklistProgress()`, `checklistBlocks()`, `checklistDeps()`, `checklistMissing()`, `checklistInRange()`, `checklistOverdue()`, `checklistDueText()`, `CHECKLIST_LABELS` |
+
+## `<nx-recurrence>`
+
+**Repeticiones en tus palabras**: reportes que se envían solos, el cobro de un arriendo, un
+mantenimiento preventivo, un recordatorio de cierre.
+
+```html
+<nx-recurrence name="regla" value="el último viernes de cada mes a las 5 pm"></nx-recurrence>
+```
+
+- **Se escribe como se dice** (español de Colombia; inglés básico con `locale="en-US"`): «todos los
+  días a las 7», «de lunes a viernes a las 7 am», «cada 15 días desde el lunes», «los días 5 y 20 de
+  cada mes», «el primer lunes hábil del mes», «el último día hábil del mes», «cada año el 15 de
+  enero», «cada 2 horas de 8 a 18», «hasta el 31 de diciembre», «10 veces», «menos en festivos», «si
+  cae festivo, el día hábil siguiente». Tildes, mayúsculas, «5 de la tarde», «17:00», «5pm» y números
+  en letras dan igual; lo que no entiende lo dice («no entiendo "quincenal los"»).
+- **Cómo se entendió**: la frase canónica («El último viernes de cada mes, a las 5:00 p. m.») y las
+  próximas fechas reales («vie 30 oct 2026, 5:00 p. m. · vie 27 nov · …»), marcando las corridas por
+  festivo («lun 12 oct → mar 13 oct 2026, por festivo»).
+- **Ajustar a mano**: frecuencia, cada N, días (L M M J V S D), del mes («el día 5» / «el último
+  viernes»), hora u horario, desde, hasta o N veces, festivos. Los controles reescriben la frase; la
+  frase mueve los controles.
+- **Festivos de Colombia** incluidos (fijos, Ley Emiliani y los de Pascua, por año); `holidays` suma
+  los propios o los reemplaza (`holidays-mode="replace"`).
+- **Estándar**: una RRULE de iCalendar (RFC 5545) con `X-NX-HOLIDAYS=skip|before|after`.
+
+| | |
+|---|---|
+| Propiedades / atributos | `value` (frase o RRULE; al leer, la RRULE), `name`, `required`, `disabled`, `readonly`, `start` (ISO, hoy), `holidays` (JSON), `holidays-mode` (`add`, `replace`), `count` (5), `value-format` (`rrule`, `json`), `locale`, `label`, `labels` · solo lectura: `rule`, `text`, `next` (`Date[]`); `toJSON()` → `{rrule, text, holidays, next}` |
+| Eventos | `nx-change` `{value, rrule, text, next}` (al confirmar lo escrito o cambiar un control), `nx-recurrence-error` `{message}` |
+| Funciones | `parseRecurrence(frase, {start, locale})`, `describeRecurrence(regla)`, `toRRule()`, `parseRRule()`, `nextOccurrences(regla, desde, n, festivos)`, `recurrenceOccurrences()` (con `movedFrom`), `colombiaHolidays(año)`, `fillRecurrenceRule()`, `RECURRENCE_LABELS` |
+
+**`X-NX-HOLIDAYS`** (la RRULE no tiene festivos): `skip` quita los festivos del conjunto de cada
+período **antes** de `BYSETPOS` (así «el último día hábil» es `BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;X-NX-HOLIDAYS=skip`)
+y `COUNT` no los cuenta; `before`/`after` corren una fecha que cae en festivo al día hábil (lunes a
+viernes, no festivo) anterior o siguiente. Un lector estándar la ignora y da las fechas sin saltar
+ni correr festivos.
 
 ## Desarrollo
 

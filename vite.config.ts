@@ -55,6 +55,8 @@ export default defineConfig(({ command, mode }) => {
           history: "src/components/history/index.ts",
           kanban: "src/components/kanban/index.ts",
           number: "src/components/number/index.ts",
+          "recurrence": "src/components/recurrence/index.ts",
+          "checklist": "src/components/checklist/index.ts",
           "thread": "src/components/thread/index.ts",
           "voice": "src/components/voice/index.ts",
           "review": "src/components/review/index.ts",

@@ -1,0 +1,250 @@
+/*
+ * <nx-recurrence>. Variables propias:
+ *   --nx-recurrence-width (560px) · --nx-recurrence-height (38px)
+ */
+
+nx-recurrence {
+  --_moved: light-dark(oklch(0.5 0.12 60), oklch(0.82 0.11 75));
+  display: block;
+  max-inline-size: var(--nx-recurrence-width, 560px);
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 13.5px;
+  line-height: 1.4;
+  container-type: inline-size;
+
+  & *,
+  & *::before {
+    box-sizing: border-box;
+  }
+  & [hidden] {
+    display: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- el campo y lo que entendió */
+
+.nx-recurrence__field {
+  display: flex;
+  align-items: center;
+  block-size: var(--nx-recurrence-height, 38px);
+  padding-inline: 11px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-fast);
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  &:focus-within {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
+  }
+  &:has([aria-invalid]) {
+    border-color: var(--nx-danger);
+  }
+  &:has([aria-invalid]):focus-within {
+    box-shadow: 0 0 0 3px var(--nx-danger-soft);
+  }
+  &:has(:disabled) {
+    opacity: 0.55;
+  }
+}
+.nx-recurrence__input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  &::placeholder {
+    color: var(--nx-text-tertiary);
+    opacity: 1;
+  }
+}
+.nx-recurrence__said {
+  margin: 7px 0 0;
+  font-weight: 550;
+  &[data-state="hint"] {
+    color: var(--nx-text-tertiary);
+    font-weight: 400;
+  }
+  &[data-state="bad"] {
+    color: var(--nx-danger);
+    font-weight: 450;
+  }
+}
+
+/* «Próximas fechas vie 30 oct 2026, 5:00 p. m. · vie 27 nov · …» */
+.nx-recurrence__next {
+  margin-block-start: 3px;
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-recurrence__cap {
+  margin-inline-end: 6px;
+  color: var(--nx-text-tertiary);
+}
+.nx-recurrence__list {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  & li {
+    display: inline;
+  }
+  /* El separador es un punto dibujado, no texto: el lector de pantalla oye la lista, no «punto medio». */
+  & li + li::before {
+    content: "";
+    display: inline-block;
+    inline-size: 3px;
+    block-size: 3px;
+    margin: 0 7px;
+    border-radius: 50%;
+    background: var(--nx-text-quaternary);
+    vertical-align: middle;
+  }
+  & [data-moved] {
+    color: var(--_moved);
+  }
+}
+.nx-recurrence__live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- ajustar a mano */
+
+.nx-recurrence__manual {
+  margin-block-start: 8px;
+  & > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: var(--nx-radius-sm);
+    color: var(--nx-primary-ink);
+    font-size: 12.5px;
+    font-weight: 550;
+    list-style: none;
+    cursor: pointer;
+    &::-webkit-details-marker {
+      display: none;
+    }
+    /* Un chevrón que gira al abrir. */
+    &::before {
+      content: "";
+      inline-size: 6px;
+      block-size: 6px;
+      border-block-end: 1.5px solid;
+      border-inline-end: 1.5px solid;
+      rotate: -45deg;
+      transition: rotate var(--nx-motion-fast);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--nx-ring);
+      outline-offset: 2px;
+    }
+  }
+  &[open] > summary::before {
+    rotate: 45deg;
+  }
+}
+.nx-recurrence__grid {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 12px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  &:disabled {
+    opacity: 0.55;
+  }
+  & > * {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    align-items: center;
+    gap: 4px 12px;
+    & > span:first-child {
+      color: var(--nx-muted-foreground);
+      font-size: 12.5px;
+    }
+  }
+  & select,
+  & input {
+    block-size: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--nx-border);
+    border-radius: var(--nx-radius-sm);
+    background: var(--nx-card);
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    &:focus-visible {
+      border-color: var(--nx-primary-border);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--nx-primary-soft);
+    }
+  }
+  & [type="number"] {
+    inline-size: 76px;
+  }
+  & [data-k="md"],
+  & [data-k="wa"],
+  & [data-k="wb"] {
+    inline-size: 90px;
+  }
+}
+.nx-recurrence__pair,
+.nx-recurrence__days {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--nx-muted-foreground);
+}
+.nx-recurrence__days button {
+  inline-size: 32px;
+  block-size: 32px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-card);
+  color: var(--nx-muted-foreground);
+  font: 600 12px/1 var(--nx-font-sans);
+  cursor: pointer;
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  &[aria-pressed="true"] {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+
+/* Angosto: la etiqueta encima del control. */
+@container (max-width: 380px) {
+  .nx-recurrence__grid > * {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  nx-recurrence * {
+    transition-duration: 0s !important;
+  }
+}

@@ -37,7 +37,7 @@ const BUDGET = [
   ["dist/number.js", 9 * 1024, "number + núcleo (ESM)"],
   ["dist/kanban.js", 11 * 1024, "kanban + toast + núcleo (ESM; nxConfirm con import())"],
   ["dist/history.js", 11.5 * 1024, "history + toast + núcleo (ESM)"],
-  ["dist/date-range.js", 11 * 1024, "date-range + núcleo (ESM)"],
+  ["dist/date-range.js", 11.5 * 1024, "date-range + núcleo (ESM)"],
   ["dist/paste-fill.js", 18.75 * 1024, "paste-fill + extractor + núcleo (ESM)"],
   ["dist/presence.js", 7.5 * 1024, "presence + núcleo (ESM)"],
   ["dist/what-if.js", 11.25 * 1024, "what-if + núcleo (ESM)"],
@@ -72,6 +72,13 @@ const BUDGET = [
   [lazy("thread-pick"), 13.75 * 1024, "nx-thread con sus sugerencias @/# y la tarjeta de registros (al primer foco en la caja)"],
   [lazy("thread-live"), 13.75 * 1024, "nx-thread con su stream y «escribiendo…» (solo con stream)"],
   [lazy("thread-anchors"), 1.5 * 1024, "campos anclables y globitos de nx-thread (solo si la página los tiene)"],
+  ["dist/checklist.js", 12.25 * 1024, "checklist + núcleo (ESM; campos, resumen, firma, celular y aviso con import())"],
+  // Como el celular de handoff: estos chunks importan el de la entrada; se mide todo lo que baja la página.
+  [lazy("checklist-fields"), 13.75 * 1024, "nx-checklist con sus campos de evidencia (se piden en reposo)"],
+  [lazy("checklist-summary"), 13.25 * 1024, "nx-checklist mode=\"summary\" (se carga en ese modo)"],
+  ["dist/recurrence.js", 9.5 * 1024, "recurrence + núcleo (ESM; el intérprete y los controles con import())"],
+  // El chunk importa el de recurrence (ya cargado en la página): se mide todo lo que baja la página al escribir.
+  [lazy("recurrence-edit"), 15.75 * 1024, "nx-recurrence con su intérprete de frases y controles (se carga al acercarse al campo)"],
   ["dist/bdui.js", 2.5 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
   ["dist/solid/index.jsx", 7 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
@@ -115,6 +122,8 @@ const BUDGET = [
   ["dist/review.css", 1.75 * 1024, "review (CSS)"],
   ["dist/voice.css", 1.5 * 1024, "voice (CSS)"],
   ["dist/thread.css", 2.25 * 1024, "thread (CSS)"],
+  ["dist/checklist.css", 3 * 1024, "checklist (CSS)"],
+  ["dist/recurrence.css", 1.5 * 1024, "recurrence (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];
