@@ -3,7 +3,7 @@
  * `<Select>`, `<AIAnswer>`, `<DocCapture>`, `<Grid>`, `<Dialog>`, `<Agent>`, `<Command>`, `<Explain>`,
  * `<Inbox>`, `<Survey>`, `<NumberInput>`, `<Kanban>`, `<History>`, `<DateRange>`,
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
- * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`), y `nxToast` / `nxConfirm` / `nxSync`.
+ * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la
  * app (vite-plugin-solid) lo compila para SSR o para el navegador según corresponda.
@@ -99,6 +99,9 @@ import type { AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion,
 import "../components/account/index";
 import type { NxAccount } from "../components/account/account";
 import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
+import "../components/cards/index";
+import type { NxCards } from "../components/cards/cards";
+import type { CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayout, CardsLevel, CardsOpenDetail, CardsRow } from "../components/cards/types";
 import "../components/launcher/index";
 import type { NxLauncher } from "../components/launcher/launcher";
 import type { LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView } from "../components/launcher/types";
@@ -131,6 +134,7 @@ export type { NxKeytips, KeytipAssignment, KeytipDetail, KeytipsLabels };
 export type { NxGuard, GuardFields, GuardFinding, GuardLabels, GuardMode };
 export type { NxAward, AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier };
 export type { NxHandoff, HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, HandoffPhoneLabels, HandoffSide, HandoffState };
+export type { NxCards, CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayout, CardsLevel, CardsOpenDetail, CardsRow };
 export type { NxLauncher, LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView };
 export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
@@ -141,6 +145,8 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       query: string | undefined;
+      layout: CardsLayout | null | undefined;
+      actions: CardsAction[] | undefined;
       suppliers: AwardSupplier[] | undefined;
       quotes: AwardQuote[] | undefined;
       criteria: AwardCriterion[] | undefined;
@@ -157,13 +163,13 @@ declare module "solid-js" {
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
       progress: number | null | undefined;
       options: SelectOption[];
-      fields: SelectField[] | HistoryField[] | PasteFieldInput[] | SyncField[] | GuardFields | undefined;
+      fields: SelectField[] | HistoryField[] | PasteFieldInput[] | SyncField[] | GuardFields | CardsField[] | undefined;
       record: Record<string, unknown> | undefined;
       events: HistoryEvent[] | undefined;
       user: HistoryActor | AccountUser | null | undefined;
@@ -177,7 +183,7 @@ declare module "solid-js" {
       selection: SelectOption[] | undefined;
       columns: GridColumn[] | KanbanColumn[] | ImportColumnInput[];
       cards: KanbanCard[] | undefined;
-      rows: GridRow[] | undefined;
+      rows: GridRow[] | CardsRow[] | undefined;
       filters: GridFilter[] | undefined;
       sort: GridSort | null | undefined;
       selected: string[] | undefined;
@@ -188,6 +194,9 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      level: CardsLevel | undefined;
+      group: string | undefined;
+      sort: string | undefined;
       columns: string | undefined;
       "heading-level": string | undefined;
       scenario: string | undefined;
@@ -295,6 +304,9 @@ declare module "solid-js" {
     }
     interface CustomEvents {
       "nx-launcher-select": CustomEvent<LauncherSelectDetail>;
+      "nx-cards-open": CustomEvent<CardsOpenDetail>;
+      "nx-cards-action": CustomEvent<CardsActionDetail>;
+      "nx-cards-level": CustomEvent<{ level: CardsLevel }>;
       "nx-award-advise": CustomEvent<AwardAdviseDetail>;
       "nx-award-change": CustomEvent<AwardChangeDetail>;
       "nx-award-submit": CustomEvent<AwardSubmitDetail>;
@@ -377,6 +389,7 @@ declare module "solid-js" {
       "nx-award": HTMLAttributes<NxAward> & { heading?: string; endpoint?: string };
       "nx-account": HTMLAttributes<NxAccount>;
       "nx-launcher": HTMLAttributes<NxLauncher>;
+      "nx-cards": HTMLAttributes<NxCards>;
       "nx-handoff": HTMLAttributes<NxHandoff> & { endpoint?: string; for?: string };
       "nx-guard": HTMLAttributes<NxGuard> & { endpoint?: string };
       "nx-import": HTMLAttributes<NxImport> & { endpoint?: string };
@@ -1750,6 +1763,51 @@ export function Launcher(props: LauncherProps): JSX.Element {
       attr:locale={local.locale}
       bool:search={!!local.search}
       on:nx-launcher-select={(e) => local.onSelect?.(e)}
+    />
+  );
+}
+
+export interface CardsProps extends JSX.HTMLAttributes<NxCards> {
+  /** Los campos `{key, label, type?, currency?, unit?, options?, sort?, group?, search?, good?, bad?}`. */
+  fields: CardsField[];
+  /** Dónde va cada campo: `{title, subtitle?, status?, note?, value?, delta?, trend?, weight?, brief?, facts?, related?, href?}`. */
+  layout: CardsLayout;
+  rows: CardsRow[];
+  /** Botones de la tarjeta abierta → `onAction`. */
+  actions?: CardsAction[];
+  /** `map`, `cards` (por defecto) o `detail`. */
+  level?: CardsLevel;
+  group?: string;
+  /** `campo` o `campo:asc` / `campo:desc`. */
+  sort?: string;
+  rowKey?: string;
+  query?: string;
+  locale?: string;
+  labels?: Partial<CardsLabels>;
+  onOpen?: (e: CustomEvent<CardsOpenDetail>) => void;
+  onAction?: (e: CustomEvent<CardsActionDetail>) => void;
+  onLevel?: (e: CustomEvent<{ level: CardsLevel }>) => void;
+}
+
+export function Cards(props: CardsProps): JSX.Element {
+  const [local, rest] = splitProps(props, ["fields", "layout", "rows", "actions", "level", "group", "sort", "rowKey", "query", "locale", "labels", "onOpen", "onAction", "onLevel"]);
+  return (
+    <nx-cards
+      {...rest}
+      prop:fields={local.fields}
+      prop:layout={local.layout}
+      prop:rows={local.rows}
+      prop:actions={local.actions}
+      prop:query={local.query}
+      prop:labels={local.labels}
+      attr:level={local.level}
+      attr:group={local.group}
+      attr:sort={local.sort}
+      attr:row-key={local.rowKey}
+      attr:locale={local.locale}
+      on:nx-cards-open={(e) => local.onOpen?.(e)}
+      on:nx-cards-action={(e) => local.onAction?.(e)}
+      on:nx-cards-level={(e) => local.onLevel?.(e)}
     />
   );
 }

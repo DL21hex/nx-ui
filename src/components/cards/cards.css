@@ -1,0 +1,790 @@
+/*
+ * <nx-cards>. Variables propias:
+ *   --nx-cards-top (0px): dónde se pega la barra al desplazarse (bajo un encabezado fijo de la app)
+ *   --nx-cards-warn / --nx-cards-ink: el ámbar (cuadro / texto); por defecto `--nx-warning` y
+ *     `--nx-warning-ink`, si existen
+ *
+ * Un nodo por registro en los tres niveles: `[data-level]` en la raíz decide qué parte se ve.
+ */
+
+nx-cards {
+  --nx-cards-warn: var(--nx-warning, light-dark(oklch(0.74 0.15 70), oklch(0.8 0.14 78)));
+  --nx-cards-ink: var(--nx-warning-ink, light-dark(oklch(0.5 0.12 62), oklch(0.84 0.13 80)));
+  display: block;
+  color: var(--nx-foreground);
+  font: 14px/1.45 var(--nx-font-sans);
+}
+nx-cards[hidden] {
+  display: none;
+}
+nx-cards * {
+  box-sizing: border-box;
+}
+nx-cards button,
+nx-cards input,
+nx-cards select {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------- barra */
+
+.nx-cards__bar {
+  position: sticky;
+  inset-block-start: var(--nx-cards-top, 0px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px 14px;
+  padding-block: 10px;
+  background: color-mix(in oklch, var(--nx-canvas, var(--nx-background)) 90%, transparent);
+  backdrop-filter: blur(10px);
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-cards__field {
+  display: grid;
+  gap: 4px;
+}
+.nx-cards__label {
+  font-size: 12px;
+  color: var(--nx-muted-foreground);
+}
+.nx-cards__input,
+.nx-cards__select {
+  block-size: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+    border-color: var(--nx-primary-border);
+  }
+}
+.nx-cards__input {
+  inline-size: 240px;
+  max-inline-size: 100%;
+}
+.nx-cards__count {
+  align-self: center;
+  font-size: 12.5px;
+  color: var(--nx-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.nx-cards__levels {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  & legend {
+    float: inline-start;
+    inline-size: 100%;
+    margin-block-end: 4px;
+    padding: 0;
+  }
+}
+.nx-cards__track {
+  clear: both;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+}
+.nx-cards__level {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  block-size: 28px;
+  padding: 0 11px;
+  border-radius: 5px;
+  color: var(--nx-muted-foreground);
+  cursor: pointer;
+  user-select: none;
+  & .nx-glyph {
+    inline-size: 14px;
+    block-size: 14px;
+  }
+  & svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &:has(:checked) {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+    font-weight: 560;
+  }
+  &:has(:focus-visible) {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+}
+.nx-cards__radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .nx-cards__levels {
+    margin-inline-start: 0;
+  }
+  .nx-cards__field--search {
+    flex: 1 1 100%;
+  }
+  .nx-cards__input {
+    inline-size: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- leyenda del mapa */
+
+.nx-cards__legend {
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+  & li {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  & b {
+    color: var(--nx-foreground);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.nx-cards__root[data-level="map"] .nx-cards__legend {
+  display: flex;
+}
+.nx-cards__swatch {
+  display: inline-flex;
+  gap: 2px;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 3px;
+  &[data-tone="neutral"],
+  &[data-tone="success"] {
+    inline-size: auto;
+  }
+  & i {
+    inline-size: 10px;
+    block-size: 12px;
+    border-radius: 2px;
+    background: color-mix(in oklch, var(--nx-primary) var(--m), var(--nx-card));
+  }
+  &[data-tone="warning"] {
+    background: var(--nx-cards-warn);
+  }
+  &[data-tone="danger"] {
+    background: var(--nx-danger);
+  }
+  &[data-tone="info"] {
+    border: 1.5px dashed var(--nx-border-strong);
+  }
+}
+
+/* ---------------------------------------------------------------- estantes */
+
+.nx-cards__zone {
+  display: grid;
+  gap: 30px;
+  margin-block-start: 20px;
+}
+.nx-cards__root[data-level="map"] .nx-cards__zone {
+  gap: 20px;
+}
+.nx-cards__shelf-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-block-end: 10px;
+  padding-block-end: 6px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+}
+.nx-cards__shelf-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 620;
+}
+.nx-cards__shelf-count {
+  font-size: 12.5px;
+  color: var(--nx-text-tertiary);
+}
+.nx-cards__shelf-total {
+  margin-inline-start: auto;
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.nx-cards__empty {
+  margin: 0;
+  padding: 48px 0;
+  text-align: center;
+  color: var(--nx-muted-foreground);
+}
+.nx-cards__grid {
+  container: nx-cards-grid / inline-size;
+  display: grid;
+  grid-auto-flow: row dense;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 244px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-cards__root[data-level="map"] .nx-cards__grid {
+  grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
+  gap: 4px;
+}
+.nx-cards__root[data-level="detail"] .nx-cards__grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 336px), 1fr));
+  gap: 14px;
+}
+
+/* ---------------------------------------------------------------- tarjeta */
+
+.nx-cards__card {
+  container: nx-cards-card / inline-size;
+  position: relative;
+  min-inline-size: 0;
+  background: var(--nx-card);
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-lg);
+  transition:
+    border-color var(--nx-motion-fast),
+    box-shadow var(--nx-motion-base) var(--nx-ease-out);
+  &:hover {
+    border-color: var(--nx-border);
+  }
+  &.is-open {
+    grid-column: 1 / -1;
+    border-color: var(--nx-primary-border);
+    box-shadow: var(--nx-shadow-popover);
+  }
+
+  /* Luz que sigue al puntero (la misma de <nx-launcher>). En oscuro, el acento ilumina la tarjeta
+     y su borde; en claro, un velo tenue baja el tono salvo alrededor del puntero y el borde brilla
+     más suave. */
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--nx-motion-base) var(--nx-ease-out);
+  }
+  &::before {
+    background: radial-gradient(
+      320px circle at var(--nx-cards-x, 50%) var(--nx-cards-y, 50%),
+      light-dark(transparent, color-mix(in oklch, var(--nx-primary) 6%, transparent)),
+      light-dark(color-mix(in oklch, var(--nx-foreground) 4%, transparent), transparent) 70%
+    );
+  }
+  &::after {
+    z-index: 2;
+    padding: 1px;
+    background: radial-gradient(
+      200px circle at var(--nx-cards-x, 50%) var(--nx-cards-y, 50%),
+      light-dark(color-mix(in oklch, var(--nx-primary) 40%, transparent), color-mix(in oklch, var(--nx-primary) 75%, transparent)),
+      transparent 70%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+}
+@media (hover: hover) {
+  .nx-cards__root:not([data-level="map"]) .nx-cards__card:hover,
+  .nx-cards__card.is-open:hover {
+    &:not(.is-open) {
+      box-shadow:
+        0 1px 2px light-dark(rgb(15 20 30 / 0.04), transparent),
+        0 10px 28px -14px light-dark(rgb(15 20 30 / 0.16), transparent);
+    }
+    &::before,
+    &::after {
+      opacity: 1;
+    }
+  }
+}
+/* Con muchos registros, las tarjetas fuera de la pantalla no se pintan. */
+.nx-cards__root.is-many:not([data-level="map"]) .nx-cards__card:not(.is-open) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 170px;
+}
+
+/* Toda la tarjeta abre; la abierta se cierra con su botón. */
+.nx-cards__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.nx-cards__card.is-open > .nx-cards__hit {
+  display: none;
+}
+
+.nx-cards__body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  padding: 14px 14px 13px;
+}
+.nx-cards__main {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-inline-size: 0;
+}
+.nx-cards__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.nx-cards__title {
+  font-size: 14.5px;
+  font-weight: 610;
+  line-height: 1.3;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.nx-cards__sub {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  color: var(--nx-text-tertiary);
+}
+.nx-cards__note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+  &::before {
+    content: "";
+    flex: none;
+    inline-size: 6px;
+    block-size: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    translate: 0 -1px;
+  }
+}
+.nx-cards__card[data-tone="warning"] .nx-cards__note {
+  color: var(--nx-cards-ink);
+}
+.nx-cards__card[data-tone="danger"] .nx-cards__note {
+  color: var(--nx-danger);
+}
+.nx-cards__chip {
+  flex: none;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  line-height: 1;
+  font-weight: 520;
+  white-space: nowrap;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  &[data-tone="success"] {
+    background: var(--nx-success-soft);
+    color: var(--nx-success);
+  }
+  &[data-tone="warning"] {
+    background: color-mix(in oklch, var(--nx-cards-warn) 18%, transparent);
+    color: var(--nx-cards-ink);
+  }
+  &[data-tone="danger"] {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+  &[data-tone="info"] {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+  }
+}
+
+.nx-cards__kpi {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 14px;
+}
+@container nx-cards-card (max-width: 230px) {
+  .nx-cards__kpi {
+    grid-template-columns: 1fr;
+  }
+}
+.nx-cards__value {
+  display: block;
+  font-size: 20px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.nx-cards__value-label {
+  display: block;
+  margin-block-start: 3px;
+  font-size: 12px;
+  color: var(--nx-text-tertiary);
+  white-space: nowrap;
+}
+.nx-cards__delta {
+  margin-inline-start: 4px;
+  color: var(--nx-danger);
+  font-variant-numeric: tabular-nums;
+  &[data-up] {
+    color: var(--nx-success);
+  }
+}
+.nx-cards__spark {
+  position: relative;
+  block-size: 30px;
+  min-inline-size: 0;
+  & svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+  }
+}
+.nx-cards__spark-area {
+  fill: var(--nx-primary-soft);
+}
+.nx-cards__spark-line {
+  fill: none;
+  stroke: var(--nx-primary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.nx-cards__dot {
+  position: absolute;
+  inset-inline-start: 100%;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--nx-primary);
+  box-shadow: 0 0 0 2px var(--nx-card);
+  translate: -50% -50%;
+}
+.nx-cards__brief {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.nx-cards__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+  padding-block-start: 10px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  & div {
+    min-inline-size: 0;
+  }
+  & dt {
+    font-size: 12px;
+    color: var(--nx-text-tertiary);
+  }
+  & dd {
+    margin: 1px 0 0;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+}
+.nx-cards__bar {
+  display: block;
+  block-size: 5px;
+  margin-block-start: 5px;
+  border-radius: 3px;
+  background: var(--nx-border-subtle);
+  overflow: hidden;
+  & i {
+    display: block;
+    block-size: 100%;
+    border-radius: inherit;
+    background: var(--nx-primary);
+  }
+  &[data-tone="success"] i {
+    background: var(--nx-success);
+  }
+  &[data-tone="warning"] i {
+    background: var(--nx-cards-warn);
+  }
+  &[data-tone="danger"] i {
+    background: var(--nx-danger);
+  }
+}
+
+/* ---------------------------------------------------------------- tarjeta abierta */
+
+.nx-cards__more {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-inline-size: 0;
+}
+.nx-cards__more-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nx-muted-foreground);
+}
+.nx-cards__related {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  & li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 4px 12px;
+    padding-block: 7px;
+    border-block-end: 1px solid var(--nx-border-subtle);
+  }
+}
+.nx-cards__related-title {
+  font-family: var(--nx-font-mono);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.nx-cards__related-meta {
+  margin-inline-start: 8px;
+  font-family: var(--nx-font-sans);
+  color: var(--nx-text-tertiary);
+}
+.nx-cards__related-value {
+  text-align: end;
+  white-space: nowrap;
+}
+.nx-cards__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 4px;
+}
+.nx-cards__btn {
+  display: inline-flex;
+  align-items: center;
+  block-size: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &.is-primary {
+    border-color: transparent;
+    background: var(--nx-primary);
+    color: var(--nx-primary-foreground);
+    &:hover {
+      background: color-mix(in oklch, var(--nx-primary) 88%, black);
+    }
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.nx-cards__close {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  z-index: 4;
+  display: none;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: transparent;
+  color: var(--nx-muted-foreground);
+  cursor: pointer;
+  & .nx-glyph,
+  & svg {
+    inline-size: 15px;
+    block-size: 15px;
+  }
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+.nx-cards__card.is-open {
+  & .nx-cards__close {
+    display: grid;
+  }
+  & .nx-cards__head {
+    padding-inline-end: 34px;
+  }
+  & .nx-cards__body {
+    padding: 20px;
+  }
+  & .nx-cards__spark {
+    block-size: 72px;
+  }
+}
+@container nx-cards-card (min-width: 700px) {
+  .nx-cards__card.is-open .nx-cards__body {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 32px;
+  }
+  .nx-cards__card.is-open .nx-cards__facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---------------------------------------------------------------- qué muestra cada nivel */
+
+.nx-cards__card:not(.is-open) .nx-cards__more {
+  display: none;
+}
+.nx-cards__root[data-level="cards"] .nx-cards__card:not(.is-open) {
+  & .nx-cards__facts,
+  & .nx-cards__chip[data-quiet] {
+    display: none;
+  }
+}
+.nx-cards__root[data-level="detail"] .nx-cards__brief,
+.nx-cards__card.is-open .nx-cards__brief {
+  display: none;
+}
+.nx-cards__root[data-level="detail"] .nx-cards__spark {
+  block-size: 40px;
+}
+
+/* Tarjetas: las de más peso ocupan dos columnas (si hay al menos dos). */
+@container nx-cards-grid (min-width: 520px) {
+  .nx-cards__root[data-level="cards"] .nx-cards__card.is-heavy:not(.is-open) {
+    grid-column: span 2;
+    & .nx-cards__spark {
+      block-size: 54px;
+    }
+    & .nx-cards__value {
+      font-size: 24px;
+    }
+  }
+}
+
+/* Mapa: un cuadro por registro. El color dice el estado; la intensidad, el peso. */
+.nx-cards__root[data-level="map"] .nx-cards__card:not(.is-open) {
+  aspect-ratio: 1;
+  border-color: transparent;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--nx-primary) var(--nx-cards-mix, 30%), var(--nx-card));
+  &[data-tone="warning"] {
+    background: var(--nx-cards-warn);
+  }
+  &[data-tone="danger"] {
+    background: var(--nx-danger);
+  }
+  &[data-tone="info"] {
+    background: transparent;
+    border: 1.5px dashed var(--nx-border-strong);
+  }
+  & .nx-cards__body,
+  &::before,
+  &::after {
+    display: none;
+  }
+  &:hover {
+    outline: 2px solid var(--nx-foreground);
+    outline-offset: 1px;
+  }
+}
+
+/* Globo del mapa y anuncios */
+.nx-cards__tip {
+  position: fixed;
+  z-index: 50;
+  max-inline-size: 260px;
+  padding: 8px 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-popover, var(--nx-card));
+  box-shadow: var(--nx-shadow-popover);
+  font-size: 12.5px;
+  line-height: 1.35;
+  pointer-events: none;
+  & b {
+    display: block;
+    font-size: 13px;
+    font-weight: 610;
+  }
+  & span {
+    color: var(--nx-muted-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+  &[hidden] {
+    display: none;
+  }
+}
+.nx-cards__live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-cards__card,
+  .nx-cards__card::before,
+  .nx-cards__card::after {
+    transition: none;
+  }
+}

@@ -57,6 +57,7 @@ export default defineConfig(({ command, mode }) => {
           number: "src/components/number/index.ts",
           "account": "src/components/account/index.ts",
           "launcher": "src/components/launcher/index.ts",
+          "cards": "src/components/cards/index.ts",
           "handoff": "src/components/handoff/index.ts",
           "award": "src/components/award/index.ts",
           "guard": "src/components/guard/index.ts",

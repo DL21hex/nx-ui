@@ -2834,6 +2834,83 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           </div>
         </template>
 
+        <!-- ================================================================ Tarjetas con zoom -->
+        <template id="page-cards">
+          <p class="eyebrow">Componentes</p>
+          <h1>Tarjetas con zoom <code class="tag">&lt;nx-cards&gt;</code></h1>
+          <p class="lead">
+            142 proveedores en tres niveles de la misma vista: <strong>Mapa</strong> (un cuadro por proveedor: el color dice el
+            estado y la intensidad, cuánto se le compra), <strong>Tarjetas</strong> y <strong>Fichas</strong>. Al pasar de uno a
+            otro cada tarjeta se transforma en su sitio, y la que está bajo el puntero no se mueve.
+          </p>
+          <nx-cards id="cards-demo" locale="es-CO" group="cat" sort="compras"></nx-cards>
+          <p class="sel-tip">
+            Cambia de nivel con el selector, con <kbd>Ctrl</kbd> + rueda (o pellizcando en el trackpad) sobre las tarjetas, o
+            con <kbd>+</kbd> / <kbd>−</kbd> con el foco en una. Haz clic en una tarjeta para abrirla donde está; <kbd>Esc</kbd>
+            la cierra. Agrupa por estado u ordena por cumplimiento: las tarjetas se deslizan a su nuevo lugar.
+          </p>
+          <ol class="stage__log btn-events" id="cards-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Mapa</td><td>Un cuadro por registro. Los estados <code>neutral</code> y <code>success</code> usan el acento, más intenso cuanto más peso (<code>layout.weight</code>, o el dato grande); <code>warning</code> y <code>danger</code>, su color; <code>info</code> (en trámite), un contorno punteado. Al pasar el puntero, el nombre, el dato y el estado. La leyenda cuenta cada estado.</td></tr>
+                <tr><td>Tarjetas</td><td>Título, estado, subtítulo, una nota con el color del estado, el dato grande con su cambio y su minigráfica, y una línea corta. El 10 % de más peso ocupa dos columnas; el estado normal (<code>quiet</code>) no se anuncia, para que resalten los demás.</td></tr>
+                <tr><td>Fichas</td><td>Todos los datos de <code>layout.facts</code>; un porcentaje con <code>good</code> / <code>bad</code> lleva barra verde, ámbar o roja.</td></tr>
+                <tr><td>Abierta</td><td>Ocupa la fila, con la lista de <code>layout.related</code>, las acciones (<code>nx-cards-action</code>; deshabilitadas en los estados de <code>disabledFor</code>) y «Abrir» si hay <code>layout.href</code>.</td></tr>
+                <tr><td>Movimiento</td><td>Un nodo por registro en los tres niveles: cambiar de nivel, ordenar, agrupar o buscar los mueve desde donde estaban (FLIP). Sin animación si se pidió menos movimiento. El mapa no arma el cuerpo de las tarjetas: con miles de registros solo pinta cuadros.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-cards id="prov" group="cat" sort="compras"&gt;&lt;/nx-cards&gt;
+
+    prov.fields = [
+      { key: "name", label: "Nombre", sort: "asc" },
+      { key: "cat", label: "Categoría", group: true },
+      { key: "state", label: "Estado", type: "status", group: true, options: [
+        { value: "ok", label: "Al día", tone: "success", quiet: true },
+        { value: "bloqueado", label: "Bloqueado", tone: "danger" }] },
+      { key: "compras", label: "Compras en 12 meses", type: "money", currency: "COP", sort: "desc" },
+      { key: "cumpl", label: "Entregas a tiempo", type: "percent", good: 90, bad: 80 },
+    ];
+    prov.layout = { title: "name", subtitle: ["cat", "city"], status: "state", value: "compras",
+      trend: "months", brief: ["cumpl"], facts: ["cumpl", "city"] };
+    prov.rows = await (await fetch("/api/proveedores")).json();</code></pre>
+            <pre role="tabpanel" hidden><code>import { Cards } from "nx-ui/solid";
+
+    &lt;Cards fields={campos} layout={distribucion} rows={proveedores()} group="cat" sort="compras"
+      actions={[{ id: "orden", label: "Nueva orden de compra", primary: true, disabledFor: ["bloqueado"] }]}
+      onAction={(e) =&gt; navegar(`/ordenes/nueva?proveedor=${e.detail.row.id}`)} /&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>fields</code></td><td><code>[{key, label, type?, currency?, compact?, unit?, options?, sort?, group?, search?, good?, bad?}]</code>. <code>type</code>: <code>text</code>, <code>number</code>, <code>money</code>, <code>percent</code>, <code>rating</code>, <code>date</code> o <code>status</code> (con <code>options: [{value, label?, tone?, quiet?}]</code>).</td></tr>
+                <tr><td><code>layout</code></td><td>Dónde va cada campo (por su <code>key</code>): <code>{title, subtitle?, status?, note?, value?, delta?, trend?, weight?, brief?, facts?, related?, href?}</code>.</td></tr>
+                <tr><td><code>rows</code>, <code>row-key</code></td><td>Los registros tal como salen de la base de datos; el campo que los identifica (<code>id</code>).</td></tr>
+                <tr><td><code>actions</code></td><td><code>[{id, label, primary?, disabledFor?}]</code>: botones de la tarjeta abierta.</td></tr>
+                <tr><td><code>level</code>, <code>group</code>, <code>sort</code>, <code>query</code></td><td><code>map</code>, <code>cards</code> o <code>detail</code>; el campo de los estantes; <code>campo</code> o <code>campo:asc</code> / <code>campo:desc</code>; lo buscado.</td></tr>
+                <tr><td><code>locale</code>, <code>labels</code>, <code>heading-level</code></td><td>Formato, textos y nivel de los títulos de los estantes (3).</td></tr>
+                <tr><td><code>zoom(dir, anchor?)</code>, <code>openRow(key)</code>, <code>openKey</code></td><td>Acercar o alejar (con el registro <code>anchor</code> fijo), abrir o cerrar una tarjeta, la abierta.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-cards-level</code> <code>{level}</code>, <code>nx-cards-open</code> <code>{row, open}</code>, <code>nx-cards-action</code> <code>{action, row}</code>.</td></tr>
+                <tr><td>Teclado</td><td>Flechas entre tarjetas (también entre estantes), <kbd>Inicio</kbd>/<kbd>Fin</kbd>, <kbd>+</kbd>/<kbd>−</kbd> para el nivel, <kbd>↵</kbd> abre y <kbd>Esc</kbd> cierra.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
     <!-- ================================================================ Ejemplo: directorio de TH -->
     <template id="page-th">
       <p class="eyebrow">Ejemplos</p>

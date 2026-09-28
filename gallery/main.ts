@@ -30,6 +30,7 @@ import "./pages/account.css";
 import { mountHandoffDemo } from "./demo-handoff";
 import { mountAwardDemo } from "./demo-award";
 import { mountLauncherDemo } from "./demo-launcher";
+import { mountCardsDemo } from "./demo-cards";
 import "./pages/launcher.css";
 import "./pages/handoff.css";
 import { mountGuardDemo } from "./demo-guard";
@@ -132,6 +133,7 @@ const NAV: MenuItem[] = [
   { id: "award", label: "Adjudicación", href: "#/award", icon: "scale", section: "Componentes", badge: "Nuevo" },
   { id: "account", label: "Cuenta", href: "#/account", icon: "user", section: "Componentes", badge: "Nuevo" },
   { id: "launcher", label: "Launcher", href: "#/launcher", icon: "layout-grid", section: "Componentes", badge: "Nuevo" },
+  { id: "cards", label: "Tarjetas con zoom", href: "#/cards", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
   { id: "survey", label: "Encuesta", href: "#/survey", icon: "clipboard-list", section: "Componentes", badge: "Nuevo" },
   { id: "th", label: "Directorio de TH", href: "#/th", icon: "users", section: "Ejemplos", badge: "Nuevo" },
 ];
@@ -167,6 +169,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/handoff": { template: "page-handoff", mount: mountHandoffDemo },
   "#/award": { template: "page-award", mount: mountAwardDemo },
   "#/launcher": { template: "page-launcher", mount: mountLauncherDemo },
+  "#/cards": { template: "page-cards", mount: mountCardsDemo },
   "#/account": { template: "page-account", mount: mountAccountDemo },
   "#/th": { template: "page-th", mount: mountHrDemo },
 };
