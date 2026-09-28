@@ -47,6 +47,7 @@ const registry = new Map<string, Entry>([
   ["Planner", { tag: "nx-planner", props: ["resources", "bookings", "view", "date", "snap", "hours", "workdays", "holidays", "summary", "source", "endpoint", "readonly", "locale", "labels"] }],
   ["Review", { tag: "nx-review", props: ["mode", "threshold", "maxSilent", "empty", "initial", "rebase", "locale", "labels", "disabled"] }],
   ["Voice", { tag: "nx-voice", props: ["for", "endpoint", "engine", "hold", "hotkey", "maxSeconds", "silence", "commands", "layout", "locale", "labels", "disabled"] }],
+  ["Thread", { tag: "nx-thread", props: ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "readonly", "disabled", "locale", "labels", "comments"] }],
   ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
 ]);
 
@@ -58,7 +59,7 @@ const forbidden = (k: string) => FORBIDDEN.test(k) || isHandler(k);
 
 /** Props que llevan una URL a la que el componente pide datos o envía algo. El agente las quita de
  *  lo que muestra el modelo (`nx_show`): una respuesta del modelo no elige a dónde van los datos. */
-export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "source", "aiEndpoint", "nlEndpoint", "explainEndpoint", "channel", "stream", "ping", "href", "url", "handoff"]);
+export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "source", "aiEndpoint", "nlEndpoint", "explainEndpoint", "channel", "stream", "ping", "href", "url", "handoff", "peopleSource", "refsSource"]);
 
 /** Registra un componente propio (o un alias) para `render`. Solo elementos personalizados (con
  *  guion): un `<a>` o un `<iframe>` con props de un payload se saltarían el saneo de URLs. */
