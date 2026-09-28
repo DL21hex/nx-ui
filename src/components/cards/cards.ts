@@ -526,7 +526,7 @@ export class NxCards extends Base {
               "div",
               null,
               h("dt", null, f?.label ?? k),
-              h("dd", null, text(k), f?.type === "percent" && n !== null && (f.good !== undefined || f.bad !== undefined) ? h("span", { class: "nx-cards__bar", "data-tone": tone }, h("i", { style: `inline-size:${n}%` })) : null),
+              h("dd", null, text(k), f?.type === "percent" && n !== null && (f.good !== undefined || f.bad !== undefined) ? h("span", { class: "nx-cards__meter", "data-tone": tone }, h("i", { style: `inline-size:${n}%` })) : null),
             );
           }),
         ),

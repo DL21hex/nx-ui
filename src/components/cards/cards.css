@@ -528,7 +528,7 @@ nx-cards select {
     overflow-wrap: anywhere;
   }
 }
-.nx-cards__bar {
+.nx-cards__meter {
   display: block;
   block-size: 5px;
   margin-block-start: 5px;

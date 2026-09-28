@@ -91,6 +91,15 @@ describe("pintado", () => {
     expect(root(el).dataset.level).toBe("cards");
   });
 
+  it("la barra de herramientas no comparte clase con nada de la tarjeta (el CSS de una pisaría a la otra)", async () => {
+    const el = await mount();
+    el.level = "detail";
+    const barClasses = new Set([...el.querySelectorAll(".nx-cards__bar, .nx-cards__bar *")].flatMap((n) => [...n.classList]));
+    const cardClasses = new Set([...el.querySelectorAll(".nx-cards__card, .nx-cards__card *")].flatMap((n) => [...n.classList]));
+    expect([...barClasses].filter((c) => c.startsWith("nx-cards__") && cardClasses.has(c))).toEqual([]);
+    expect(el.querySelectorAll(".nx-cards__bar").length).toBe(1);
+  });
+
   it("la tarjeta: título, estado, subtítulo, nota, dato con cambio, minigráfica, línea corta y ficha", async () => {
     const el = await mount();
     const b = card(el, "b");
@@ -103,7 +112,7 @@ describe("pintado", () => {
     expect(b.querySelector(".nx-cards__delta")!.hasAttribute("data-up")).toBe(false);
     expect(b.querySelector(".nx-cards__brief")!.textContent).toBe("★ 4 · 6 días · 88 %");
     expect([...b.querySelectorAll(".nx-cards__facts dt")].map((d) => d.textContent)).toEqual(["Calificación", "Plazo de entrega", "Entregas a tiempo", "Ciudad"]);
-    expect(b.querySelector(".nx-cards__bar")!.getAttribute("data-tone")).toBe("warning");
+    expect(b.querySelector(".nx-cards__meter")!.getAttribute("data-tone")).toBe("warning");
     expect(card(el, "a").querySelectorAll(".nx-cards__spark path").length).toBe(2);
     expect(b.querySelector(".nx-cards__spark")).toBeNull();
     // El estado normal no se anuncia en las tarjetas (CSS con data-quiet).
