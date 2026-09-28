@@ -4,7 +4,6 @@
  * con la historia de precios de cada ítem. Al guardar se ve el resumen y, al confirmar, el JSON de
  * `changes` que iría a la bitácora. No es parte de la librería.
  */
-import "../src/components/review/review.css";
 import "../src/components/review/index";
 import type { NxReview, ReviewChange, ReviewMode } from "../src/components/review/index";
 
