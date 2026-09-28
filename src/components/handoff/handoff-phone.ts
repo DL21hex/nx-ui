@@ -1,6 +1,6 @@
 /**
  * `<nx-handoff side="phone">`: la página que abre el QR. Va en un chunk aparte (el escritorio no
- * la carga) y `<nx-scan>`, en otro más (solo si lo pedido es escanear).
+ * la carga) y `<nx-scan>` o `<nx-signature>`, en otro más (solo si lo pedido es escanear o firmar).
  *
  * Una columna, botones grandes y cero adornos: «Tomar foto» (cámara trasera), «Elegir de la
  * galería», las miniaturas con «Quitar» y «Enviar al computador». Las fotos se reducen antes de
@@ -32,6 +32,8 @@ export const HANDOFF_PHONE_LABELS: HandoffPhoneLabels = {
   codesSent: "Enviados: {n}",
   invalid: "Este enlace venció o ya se usó. Genera otro desde el computador.",
   offline: "Sin conexión con el computador",
+  fullscreen: "Firmar en pantalla completa",
+  signSending: "Enviando la firma…",
 };
 
 type Shot = { file: File; src: string; status: "queued" | "sending" | "uploaded" | "failed" };
@@ -143,6 +145,7 @@ export function mountPhone(host: PhoneHost): { destroy(): void } {
       info = parsePhoneInfo(await res.json());
       if (!info) throw new Error("respuesta inválida");
       if (info.kind === "scan") await scan();
+      else if (info.kind === "signature") await sign();
       else pick();
     } catch {
       if (!signal.aborted) offline(() => void load());
@@ -270,6 +273,7 @@ export function mountPhone(host: PhoneHost): { destroy(): void } {
       btn(L().more, "nx-ho__btn--big nx-ho__btn--quiet", () => {
         clear();
         if (info!.kind === "scan") void scan();
+        else if (info!.kind === "signature") void sign();
         else pick();
       }),
     );
@@ -313,6 +317,45 @@ export function mountPhone(host: PhoneHost): { destroy(): void } {
       });
     });
     screen(...heading(), reader, count, finish);
+  }
+
+  // ---------------------------------------------------------------- firmar
+
+  /**
+   * `<nx-signature>` (chunk aparte) a lo ancho de la pantalla; si el teléfono deja, a pantalla
+   * completa y en horizontal. Al confirmar, manda `{kind: "data", data: {svg, meta}}` y cierra la tanda.
+   */
+  async function sign(): Promise<void> {
+    await import("../signature/index");
+    if (signal.aborted) return;
+    const pad = document.createElement("nx-signature");
+    for (const [a, on] of [["required", 1], ["ask-name", info!.askName], ["ask-id", info!.askId]] as const) pad.toggleAttribute(a, !!on);
+    const locale = host.el.getAttribute("locale");
+    if (locale) pad.setAttribute("locale", locale);
+    // Alta según la pantalla (a pantalla completa, el CSS la ajusta al alto que quede).
+    pad.setAttribute("height", String(Math.max(140, Math.min(420, innerHeight - 230))));
+    const msg = h("p", { class: "nx-ho__msg", role: "status" });
+    const send = async (data: unknown): Promise<void> => {
+      msg.textContent = L().signSending;
+      const r = await post("/items", () => JSON.stringify({ kind: "data", data }), true);
+      const d = r.v === "ok" ? await post("/done", () => null) : r;
+      if (d.v === "gone") return gone();
+      // Sin red: «Reintentar» manda la misma firma (no hay que volver a firmar).
+      if (d.v !== "ok") return offline(() => void send(data));
+      sent.push(r.item ?? { kind: "data", data });
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      finished();
+    };
+    pad.addEventListener("nx-signature-done", (e) => void send(e.detail));
+    const full = btn(L().fullscreen, "nx-ho__btn--quiet", () => {
+      // `screen` aquí es la función que cambia de pantalla: la orientación es la de `globalThis.screen`.
+      Promise.resolve(root.requestFullscreen?.())
+        .then(() => (globalThis.screen?.orientation as { lock?(o: string): Promise<void> } | undefined)?.lock?.("landscape"))
+        .catch(() => {});
+    });
+    // Solo en un teléfono o tableta que lo permita: en un computador, pantalla completa estorba.
+    full.hidden = !document.fullscreenEnabled || !matchMedia("(pointer: coarse)").matches;
+    screen(...heading(), pad, full, msg);
   }
 
   void load();

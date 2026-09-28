@@ -1,0 +1,261 @@
+/*
+ * <nx-print>. Variables propias:
+ *   --nx-print-top (0px): dónde se pega la barra al desplazarse (bajo un encabezado fijo de la app)
+ *   --nx-print-desk: el fondo gris sobre el que van las hojas
+ *
+ * Las hojas son papel: blancas y con `color-scheme: light` también en modo oscuro (los tokens que
+ * use el documento se resuelven en claro), porque así saldrán impresas.
+ * Estiliza el documento con selectores de descendiente (`.factura td`), no de hijo directo
+ * (`nx-print > table`): las copias viven dentro de las hojas.
+ */
+
+nx-print {
+  --nx-print-desk: light-dark(oklch(0.935 0.004 260), oklch(0.15 0.004 260));
+  display: block;
+  position: relative;
+  color: var(--nx-foreground);
+  font: 14px/1.45 var(--nx-font-sans);
+}
+nx-print[hidden] {
+  display: none;
+}
+/* El documento del autor queda en su sitio, oculto a la vista y disponible para el lector de pantalla. */
+nx-print > :not(.nx-print__ui) {
+  position: absolute !important;
+  inline-size: 1px !important;
+  block-size: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+/* El pie y lo que lleva `data-print-page` son de paginación («Página {page} de {pages}»): solo en las
+   hojas. El lector de pantalla no oye las marcas. */
+nx-print > [slot="footer"],
+nx-print > :not(.nx-print__ui) [data-print-page] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- barra */
+
+.nx-print__bar {
+  position: sticky;
+  inset-block-start: var(--nx-print-top, 0px);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg) var(--nx-radius-lg) 0 0;
+  background: var(--nx-card);
+}
+.nx-print__bar[hidden] {
+  display: none;
+}
+.nx-print__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--nx-motion-fast), border-color var(--nx-motion-fast);
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+  &[aria-pressed="true"] {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-nav-active-bg);
+    color: var(--nx-primary-ink);
+  }
+}
+.nx-print__btn--primary {
+  border-color: transparent;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font-weight: 500;
+  &:hover {
+    background: color-mix(in oklch, var(--nx-primary) 88%, black);
+  }
+}
+.nx-print__btn--icon {
+  justify-content: center;
+  inline-size: 32px;
+  padding: 0;
+  font-size: 17px;
+}
+.nx-print__count {
+  margin-inline: 6px auto;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-print__zoom {
+  min-inline-size: 3.6em;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.nx-print__hint {
+  flex-basis: 100%;
+  margin: 0;
+  padding-inline: 4px;
+  color: var(--nx-primary-ink);
+  font-size: 12.5px;
+  &:empty {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- mesa y hojas */
+
+.nx-print__desk {
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--nx-border);
+  border-block-start: 0;
+  border-radius: 0 0 var(--nx-radius-lg) var(--nx-radius-lg);
+  background: var(--nx-print-desk);
+}
+.nx-print__bar[hidden] + .nx-print__desk {
+  border-block-start: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+}
+.nx-print__stack {
+  zoom: var(--nx-print-zoom, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  inline-size: max-content;
+  margin-inline: auto;
+}
+.nx-print__page {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+.nx-print__num {
+  margin: 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-print__sheet {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  inline-size: var(--nx-print-w, 215.9mm);
+  block-size: var(--nx-print-h, 279.4mm);
+  padding: var(--nx-print-m, 12mm);
+  overflow: hidden;
+  background: #fff;
+  color: #1b1d21;
+  color-scheme: light;
+  font: 10pt/1.4 var(--nx-font-sans);
+  text-align: start;
+  box-shadow:
+    0 1px 2px rgb(15 20 30 / 0.08),
+    0 8px 24px -8px rgb(15 20 30 / 0.22);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.nx-print__head,
+.nx-print__foot {
+  flex: none;
+  display: flow-root;
+}
+.nx-print__body {
+  flex: 1 1 auto;
+  display: flow-root;
+  min-block-size: 0;
+  overflow: hidden;
+  & > :first-child {
+    margin-block-start: 0;
+  }
+}
+.nx-print__slice {
+  overflow: hidden;
+  & > div {
+    display: flow-root;
+  }
+}
+.nx-print__carry > * {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.nx-print__carry > th {
+  text-align: end;
+}
+.nx-print__sum {
+  text-align: end;
+}
+
+/* La hoja de medir: mismo ancho y estilos, sin alto fijo, fuera de la vista. */
+.nx-print__measure {
+  block-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+  & .nx-print__sheet {
+    block-size: auto;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-print__btn {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- impresión */
+
+@media print {
+  nx-print[data-nx-printing] {
+    display: block;
+    margin: 0;
+    padding: 0;
+    & :is(.nx-print__bar, .nx-print__measure, .nx-print__num) {
+      display: none !important;
+    }
+    & .nx-print__desk {
+      overflow: visible;
+      padding: 0;
+      border: 0;
+      background: none;
+    }
+    & .nx-print__stack {
+      zoom: 1 !important;
+      display: block;
+      inline-size: auto;
+    }
+    & .nx-print__page {
+      display: block;
+    }
+    & .nx-print__sheet {
+      box-shadow: none;
+      break-after: page;
+      break-inside: avoid;
+    }
+    & .nx-print__page:last-child .nx-print__sheet {
+      break-after: auto;
+    }
+  }
+}

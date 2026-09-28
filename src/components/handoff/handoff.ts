@@ -1,8 +1,9 @@
 /**
  * `<nx-handoff>`: «sigue en el celular». En el escritorio, un botón muestra un QR con el enlace de
- * una sesión; el celular lo abre, toma la foto (o escanea) y lo que manda aparece solo en el
+ * una sesión; el celular lo abre, toma la foto (o escanea, o firma) y lo que manda aparece solo en el
  * formulario: se entrega al elemento `for` (`extract(file)` de `<nx-doc-capture>`, `add(code)` de
- * `<nx-scan>`, un `<input type=file>` o un campo de texto) después de un `nx-handoff-item` cancelable.
+ * `<nx-scan>`, `load(data)` de `<nx-signature>`, un `<input type=file>` o un campo de texto) después
+ * de un `nx-handoff-item` cancelable.
  *
  * El mismo tag con `side="phone"` es la página que abre el QR: se carga aparte con `import()` y
  * el escritorio no la paga. El protocolo (seis rutas) está en `INTEGRATION.md`.
@@ -45,6 +46,8 @@ export const HANDOFF_LABELS: HandoffLabels = {
   files: "{n} archivos",
   code1: "1 código",
   codes: "{n} códigos",
+  signature1: "1 firma",
+  signatures: "{n} firmas",
 };
 
 const PHONE = '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>';
@@ -69,7 +72,7 @@ export interface PhoneHost {
   emit(type: string, detail: unknown): void;
 }
 
-type Target = HTMLElement & { extract?: (f: File) => unknown; add?: (code: string, qty?: number, format?: string) => unknown };
+type Target = HTMLElement & { extract?: (f: File) => unknown; add?: (code: string, qty?: number, format?: string) => unknown; load?: (v: unknown) => unknown };
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -158,7 +161,7 @@ export class NxHandoff extends Base {
   // tal cual: sus accesores se definen abajo, una sola vez, en el prototipo.
   /** La base de las rutas de la sesión (`/api/handoff`). Mismo origen o uno de `allowOrigins()`. */
   declare endpoint: string | null;
-  /** El `id` del elemento que recibe: `<nx-doc-capture>`, `<nx-scan>`, `<input type=file>` o un campo de texto. */
+  /** El `id` del elemento que recibe: `<nx-doc-capture>`, `<nx-scan>`, `<nx-signature>`, `<input type=file>` o un campo de texto. */
   declare for: string | null;
   /** Tipos de archivo que acepta el celular (por defecto `image/*` para fotos). */
   declare accept: string | null;
@@ -167,7 +170,7 @@ export class NxHandoff extends Base {
   /** Lado celular: el token (si no viene, `?t=` de la página). */
   declare token: string | null;
   declare locale: string | null;
-  /** Qué se le pide al celular: `photo` (por defecto), `file` o `scan`. */
+  /** Qué se le pide al celular: `photo` (por defecto), `file`, `scan` o `signature`. */
   get kind(): HandoffKind {
     return cleanKind(this.getAttribute("kind"));
   }
@@ -532,7 +535,7 @@ export class NxHandoff extends Base {
         setValue(target, item.code);
         this.#changed(target);
       }
-    }
+    } else if (item.kind === "data") target.load?.(item.data); // `<nx-signature>`: la firma que llegó se pinta allí
   }
 
   #changed(el: HTMLElement): void {

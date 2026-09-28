@@ -1,0 +1,112 @@
+        <!-- ================================================================ Imprimir documentos -->
+        <template id="page-print">
+          <p class="eyebrow">Componentes</p>
+          <h1>Imprimir documentos <code class="tag">&lt;nx-print&gt;</code></h1>
+          <p class="lead">
+            Facturas, remisiones, órdenes de compra y actas desde HTML, bien a la primera: hojas del tamaño real, ninguna fila
+            partida a la mitad, el encabezado de la tabla en cada hoja, «Van» y «Vienen» con los subtotales y «Página 2 de 3».
+            Lo que sale del diálogo de impresión es exactamente la vista previa, no el resto de la app.
+          </p>
+
+          <h2>Factura electrónica de venta</h2>
+          <div class="pr-controls">
+            <label class="pr-field">Tamaño
+              <select data-pr="size">
+                <option value="letter" selected>Carta</option>
+                <option value="a4">A4</option>
+                <option value="oficio">Oficio (21,6 × 33 cm)</option>
+                <option value="legal">Legal (21,6 × 35,6 cm)</option>
+                <option value="half-letter">Media carta</option>
+              </select>
+            </label>
+            <label class="pr-field">Orientación
+              <select data-pr="orientation">
+                <option value="portrait" selected>Vertical</option>
+                <option value="landscape">Horizontal</option>
+              </select>
+            </label>
+            <label class="pr-field">Márgenes
+              <select data-pr="margin">
+                <option value="8mm">Estrechos (8 mm)</option>
+                <option value="12mm" selected>Normales (12 mm)</option>
+                <option value="20mm 18mm">Amplios (20 × 18 mm)</option>
+              </select>
+            </label>
+            <button type="button" class="btn pr-add" data-pr="add">Agregar 20 líneas</button>
+          </div>
+          <nx-print id="pr-fv" class="fv" size="letter" margin="12mm" heading="FV-2026-01873" currency="COP" locale="es-CO"></nx-print>
+
+          <h2>Remisión en media carta</h2>
+          <nx-print id="pr-rm" class="fv fv--compact" size="half-letter" orientation="landscape" margin="10mm" heading="RM-2026-00412" locale="es-CO"></nx-print>
+          <p class="sel-tip">
+            La remisión suma el peso: al pie de la primera hoja dice cuánto «Van» y la segunda empieza con «Vienen». Imprime
+            cualquiera de las dos con su botón, o con <kbd>Ctrl</kbd> <kbd>P</kbd> (toma la primera de la página); en el diálogo,
+            «Guardar como PDF» usa el número del documento como nombre del archivo.
+          </p>
+          <ol class="stage__log btn-events" id="pr-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Documento</td><td>Los hijos del elemento, en su sitio: quedan ocultos a la vista y disponibles para el lector de pantalla (el documento de verdad, sin repeticiones). Las hojas se arman con copias sin <code>id</code>, con <code>aria-hidden</code> e <code>inert</code>.</td></tr>
+                <tr><td>Encabezado y pie</td><td><code>slot="header"</code> y <code>slot="footer"</code> se repiten en cada hoja. <code>{page}</code> y <code>{pages}</code> se reemplazan allí y en cualquier elemento con <code>data-print-page</code>, que en el original queda oculto (el lector no oye las marcas).</td></tr>
+                <tr><td>Tablas</td><td>Una <code>&lt;table&gt;</code> hija directa se parte por filas, con su <code>&lt;thead&gt;</code> en cada hoja y los anchos de columna fijos; <code>&lt;caption&gt;</code> solo al comienzo y <code>&lt;tfoot&gt;</code> al final. Al menos dos filas a cada lado del corte.</td></tr>
+                <tr><td>Van / Vienen</td><td>Las columnas con <code>data-print-sum</code> en su <code>&lt;th&gt;</code> suman: montos con la moneda de <code>data-currency</code> (o del atributo <code>currency</code>), o números con <code>data-print-sum="number"</code>. El valor de cada celda sale de <code>data-value</code> o de su texto.</td></tr>
+                <tr><td>Cortes</td><td><code>data-print-keep</code> (o <code>break-inside: avoid</code>) no parte un bloque; <code>data-print-keep-with-next</code> (o <code>break-after: avoid</code>) pega un título al bloque siguiente; <code>data-print-break="before"</code> / <code>"after"</code> (o <code>break-before: page</code>) fuerza el salto. Un bloque más alto que una hoja se parte igual.</td></tr>
+                <tr><td>Paginar</td><td>Una sola lectura de alturas y un reparto puro (<code>paginatePrint</code>). Se repite solo si cambia el contenido, el tamaño, los márgenes, las fuentes o carga una imagen.</td></tr>
+                <tr><td>Imprimir</td><td>Se pone una hoja con <code>@page { size; margin: 0 }</code> que oculta todo menos las hojas de este elemento, y el título del documento pasa a <code>heading</code> (el nombre sugerido del PDF). Al cerrar el diálogo se quita todo.</td></tr>
+                <tr><td>PDF</td><td>«Guardar como PDF» abre el mismo diálogo con una pista. No hay un PDF propio: sin dependencias no se puede hacer bien (fuentes, texto seleccionable, acentos); el del navegador sí lo es.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-print class="factura" size="letter" margin="12mm" heading="FV-2026-01873" currency="COP"&gt;
+  &lt;header slot="header"&gt;…logo, NIT, número… &lt;span data-print-page&gt;Página {page} de {pages}&lt;/span&gt;&lt;/header&gt;
+  &lt;footer slot="footer"&gt;Resolución DIAN… · Página {page} de {pages}&lt;/footer&gt;
+
+  &lt;section data-print-keep&gt;…cliente, fechas…&lt;/section&gt;
+  &lt;table&gt;
+    &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Descripción&lt;/th&gt;&lt;th&gt;Cant.&lt;/th&gt;&lt;th data-print-sum&gt;Vr. total&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+    &lt;tbody&gt;…&lt;/tbody&gt;
+  &lt;/table&gt;
+  &lt;section data-print-keep&gt;…totales, valor en letras…&lt;/section&gt;
+  &lt;h3 data-print-keep-with-next&gt;Observaciones&lt;/h3&gt;
+  &lt;p&gt;…&lt;/p&gt;
+&lt;/nx-print&gt;
+
+/* Estilos del documento: con selectores de descendiente, no de hijo directo. */
+.factura td { padding: 3px 6px; }</code></pre>
+            <pre role="tabpanel" hidden><code>import { Print } from "nx-ui/solid";
+
+&lt;Print size="half-letter" orientation="landscape" heading={remision().numero}
+  onPaginate={(e) =&gt; setHojas(e.detail.pages)}&gt;
+  &lt;header slot="header"&gt;…&lt;/header&gt;
+  &lt;table&gt;…&lt;/table&gt;
+&lt;/Print&gt;</code></pre>
+          </div>
+
+          <h2>API</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
+              <tbody>
+                <tr><td><code>size</code></td><td><code>letter</code> (carta, por defecto), <code>a4</code>, <code>a5</code>, <code>legal</code>, <code>oficio</code>, <code>half-letter</code> (media carta) o dos medidas: <code>"216mm 140mm"</code>.</td></tr>
+                <tr><td><code>orientation</code>, <code>margin</code></td><td><code>portrait</code> / <code>landscape</code>; márgenes de uno a cuatro valores, como en CSS (12 mm).</td></tr>
+                <tr><td><code>heading</code>, <code>currency</code>, <code>locale</code></td><td>Título del documento (nombre sugerido del PDF); moneda de las sumas; formato de los números.</td></tr>
+                <tr><td><code>zoom</code>, <code>toolbar</code>, <code>labels</code></td><td><code>fit</code> (ajustar al ancho, sin pasar de 100 %) o un factor; <code>toolbar="false"</code> quita la barra; textos.</td></tr>
+                <tr><td><code>print()</code>, <code>paginate()</code>, <code>pages</code></td><td>Abrir el diálogo; paginar ya (devuelve las hojas); cuántas hay.</td></tr>
+                <tr><td><code>nx-print-paginate</code></td><td><code>{pages}</code> después de cada paginación.</td></tr>
+                <tr><td><code>nx-print-before</code>, <code>nx-print-after</code></td><td>Antes y después del diálogo. <code>before</code> es cancelable (con <kbd>Ctrl</kbd> <kbd>P</kbd>, cancelarlo deja imprimir la página tal cual).</td></tr>
+                <tr><td><code>paginatePrint(blocks, {pageHeight})</code></td><td>El reparto puro: alturas y reglas de corte → qué va en cada hoja.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </template>

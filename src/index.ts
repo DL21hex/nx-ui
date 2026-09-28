@@ -23,6 +23,8 @@ export * from "./components/date-range/index";
 export * from "./components/history/index";
 export * from "./components/kanban/index";
 export * from "./components/number/index";
+export * from "./components/signature/index";
+export * from "./components/print/index";
 export * from "./components/account/index";
 export * from "./components/launcher/index";
 export * from "./components/cards/index";

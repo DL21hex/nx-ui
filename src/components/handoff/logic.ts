@@ -3,7 +3,7 @@ import type { HandoffEvent, HandoffItem, HandoffKind, HandoffLabels, HandoffPhon
 
 const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v : undefined);
 const num = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
-const KINDS = new Set<HandoffKind>(["photo", "file", "scan"]);
+const KINDS = new Set<HandoffKind>(["photo", "file", "scan", "signature"]);
 
 /** Vigencia por defecto de una sesión que no dice cuándo vence (10 min). */
 export const DEFAULT_TTL = 10 * 60_000;
@@ -134,6 +134,8 @@ export function parsePhoneInfo(v: unknown, now = Date.now()): HandoffPhoneInfo |
   if (title) info.title = title;
   const hint = str(o.hint);
   if (hint) info.hint = hint;
+  if (o.askName === true) info.askName = true;
+  if (o.askId === true) info.askId = true;
   if (o.expiresAt !== undefined || o.expiresIn !== undefined) info.expiresAt = parseExpiry(o, now);
   return info;
 }
@@ -179,9 +181,9 @@ export function fill(text: string, vars: Record<string, string | number>): strin
   return text.replace(/\{(\w+)\}/g, (m, k: string) => (Object.hasOwn(vars, k) ? String(vars[k]) : m));
 }
 
-/** «1 foto», «3 fotos», «2 códigos»… según lo pedido. */
+/** «1 foto», «3 fotos», «2 códigos», «1 firma»… según lo pedido. */
 export function countText(kind: HandoffKind, n: number, L: HandoffLabels): string {
-  const [one, many] = kind === "photo" ? [L.photo1, L.photos] : kind === "scan" ? [L.code1, L.codes] : [L.file1, L.files];
+  const [one, many] = kind === "photo" ? [L.photo1, L.photos] : kind === "scan" ? [L.code1, L.codes] : kind === "signature" ? [L.signature1, L.signatures] : [L.file1, L.files];
   return fill(n === 1 ? one : many, { n });
 }
 

@@ -50,7 +50,7 @@ const BUDGET = [
   ["dist/guard.js", 9.25 * 1024, "guard + núcleo (ESM)"],
   ["dist/handoff.js", 9.25 * 1024, "handoff + QR + núcleo (ESM; el lado celular y nx-scan con import())"],
   // El chunk del celular importa el de escritorio (ya cargado en esa página): se mide todo lo que baja el celular.
-  [lazy("handoff-phone"), 12.5 * 1024, "página del celular de nx-handoff: handoff + su chunk (se carga con side=\"phone\")"],
+  [lazy("handoff-phone"), 13 * 1024, "página del celular de nx-handoff: handoff + su chunk (se carga con side=\"phone\")"],
   ["dist/award.js", 15.5 * 1024, "award + núcleo (ESM)"],
   ["dist/account.js", 9.75 * 1024, "account + núcleo (ESM; panel, bloqueo, ver como y nxSync con import())"],
   // Igual que el del celular de handoff: el chunk del panel importa el de la cuenta; se mide todo lo que baja la página.
@@ -59,8 +59,11 @@ const BUDGET = [
   [lazy("view-as"), 1.75 * 1024, "franja «Ver como» de nx-account (se carga al suplantar)"],
   ["dist/launcher.js", 8.25 * 1024, "launcher + núcleo (ESM)"],
   ["dist/cards.js", 10.75 * 1024, "cards + núcleo (ESM)"],
-  ["dist/bdui.js", 2 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
-  ["dist/solid/index.jsx", 5 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
+  ["dist/print.js", 8.25 * 1024, "print + núcleo (ESM)"],
+  ["dist/signature.js", 7.25 * 1024, "signature + núcleo (ESM; PNG, ubicación y el celular con import())"],
+  [lazy("signature-extras"), 0.75 * 1024, "extras de nx-signature: PNG, ubicación y <nx-handoff> (se cargan al usarlos)"],
+  ["dist/bdui.js", 2.5 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
+  ["dist/solid/index.jsx", 6 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
   ["dist/sidemenu.css", 3 * 1024, "sidemenu (CSS)"],
@@ -96,6 +99,8 @@ const BUDGET = [
   ["dist/account.css", 4.25 * 1024, "account (CSS)"],
   ["dist/launcher.css", 2.75 * 1024, "launcher (CSS)"],
   ["dist/cards.css", 3.5 * 1024, "cards (CSS)"],
+  ["dist/print.css", 1.75 * 1024, "print (CSS)"],
+  ["dist/signature.css", 1.25 * 1024, "signature (CSS)"],
   ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
   ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];

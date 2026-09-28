@@ -27,6 +27,8 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB), el bloqueo (≈ 3,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,3 KB |
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
+| `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
+| `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
 | `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
@@ -1562,6 +1564,96 @@ Los datos llegan tal como salen de la base de datos (`rows`); `fields` dice qué
 | Eventos | `nx-cards-level` `{level}`, `nx-cards-open` `{row, open}`, `nx-cards-action` `{action, row}` |
 | CSS | `--nx-cards-top` (dónde se pega la barra), `--nx-cards-warn` / `--nx-cards-ink` |
 | Funciones | `formatCardsField()`, `groupCards()`, `matchCard()`, `sortCards()`, `stepLevel()`, `weightRanks()` |
+
+## `<nx-print>`
+
+**Imprimir bien a la primera.** Facturas, remisiones, órdenes de compra, cotizaciones y actas desde
+HTML. `window.print()` corta filas a la mitad, pierde el encabezado de la tabla en la página 2 y no
+dice «Página 2 de 3»; `<nx-print>` mide el documento y lo reparte en hojas del tamaño real, y lo que
+sale del diálogo de impresión es exactamente esa vista previa, no el resto de la app.
+
+- **Hojas de verdad**: `letter` (carta, por defecto), `a4`, `a5`, `legal`, `oficio` (21,6 × 33 cm),
+  `half-letter` (media carta) o dos medidas («216mm 140mm»), en vertical u horizontal, con los
+  márgenes que digas. Sobre un fondo gris, con zoom (ajustar al ancho, 100 %, + y −).
+- **Encabezado y pie en cada hoja** (`slot="header"`, `slot="footer"`), con `{page}` y `{pages}`
+  (también en cualquier elemento con `data-print-page`).
+- **Tablas**: nunca una fila partida; `<thead>` en cada hoja; al menos dos filas a cada lado del
+  corte. Las columnas con `data-print-sum` en su `<th>` llevan «Van: $ 12.450.000» al pie de la hoja y
+  «Vienen» al comienzo de la siguiente.
+- **Cortes**: `data-print-keep` (o `break-inside: avoid`) no parte un bloque;
+  `data-print-keep-with-next` (o `break-after: avoid`) no deja un título solo al pie;
+  `data-print-break="before|after"` fuerza el salto.
+- **Siempre al día**: si el contenido cambia, carga una imagen o una fuente, o cambian tamaño y
+  márgenes, se vuelve a paginar, con espera y una sola lectura de alturas; si nada cambia, no trabaja.
+- **PDF**: «Guardar como PDF» abre el diálogo del navegador con una pista y el número del documento
+  como nombre del archivo. No hay un PDF propio: sin dependencias no se puede hacer bien.
+
+```html
+<nx-print class="factura" size="letter" margin="12mm" heading="FV-2026-01873" currency="COP">
+  <header slot="header">…logo, NIT, número… <span data-print-page>Página {page} de {pages}</span></header>
+  <footer slot="footer">Resolución DIAN… · Página {page} de {pages}</footer>
+  <section data-print-keep>…cliente…</section>
+  <table>
+    <thead><tr><th>Descripción</th><th>Cant.</th><th data-print-sum>Vr. total</th></tr></thead>
+    <tbody>…</tbody>
+  </table>
+  <h3 data-print-keep-with-next>Observaciones</h3>
+  <p>…</p>
+</nx-print>
+```
+
+Estiliza el documento con selectores de descendiente (`.factura td`), no de hijo directo
+(`nx-print > table`) ni por `id`: las hojas son copias sin `id`. Solo se parten las tablas que son
+hijas directas del elemento.
+
+| | |
+|---|---|
+| Atributos / propiedades | `size`, `orientation` (`portrait`, `landscape`), `margin`, `heading`, `currency`, `zoom` (`fit` o un factor), `locale`, `labels`, `toolbar` (`"false"` la quita) · `pages` (solo lectura) |
+| Métodos | `print()`, `paginate()` (devuelve el número de hojas) |
+| Eventos | `nx-print-paginate` `{pages}`, `nx-print-before` `{pages}` (cancelable), `nx-print-after` `{pages}` |
+| En el documento | `slot="header"`, `slot="footer"`, `{page}`, `{pages}`, `data-print-page`, `data-print-keep`, `data-print-keep-with-next`, `data-print-break`, `data-print-sum` (`number` para cantidades), `data-currency`, `data-value` |
+| Funciones | `paginatePrint(blocks, {pageHeight, minRows?})`, `parsePrintSize()`, `parsePrintMargin()`, `fillPageText()`, `PRINT_SIZES`, `PRINT_LABELS` |
+
+## `<nx-signature>`
+
+**Firma a mano** para el recibido a satisfacción de una entrega, un acta o una autorización: en la
+pantalla con mouse, lápiz o dedo, o en el celular de quien recibe.
+
+- **Trazo que se ve como tinta:** Pointer Events con captura y eventos coalescidos, `touch-action:
+  none`, más fino cuanto más rápido y más grueso con más presión del lápiz, curvas suavizadas y nítido
+  a cualquier densidad de pantalla. La zona de firma es clara también en modo oscuro (una firma se
+  archiva sobre papel), con la línea, la «×» y «Firme aquí».
+- **Vector:** cada trazo es un `<path>` (su contorno relleno), recortado a lo firmado. El SVG es la
+  fuente de verdad: `toPNG(escala)` y el valor del formulario salen de él.
+- **Quién y qué:** nombre y cédula (`ask-name`, `ask-id`); con `document`, la huella SHA-256 del texto
+  firmado más la fecha (prueba qué se firmó; no es una firma electrónica certificada); con `geo`, la
+  ubicación si la persona la permite.
+- **Sin trazo:** «Escribir mi nombre» genera la firma con la cursiva del sistema, marcada
+  `typed: true`: el camino por teclado y para quien no puede firmar con el dedo.
+- **Formulario:** `name`, `required` (ni un punto ni una raya valen), `value-format` (`json` con
+  `{svg, meta}`, `svg` o `png`), `reset` la borra, `readonly` muestra una guardada.
+- **En el celular:** con `handoff`, «Firmar en el celular» muestra el QR de
+  `<nx-handoff kind="signature">`; el teléfono firma (a pantalla completa y en horizontal si se puede) y
+  la firma aparece aquí.
+
+```html
+<form method="post">
+  <article id="remision">…</article>
+  <nx-signature name="recibido" ask-name ask-id required document="remision" handoff="/api/handoff"></nx-signature>
+  <button>Registrar el recibido</button>
+</form>
+
+<!-- Una firma guardada -->
+<nx-signature readonly value='{"svg":"<svg …>","meta":{…}}'></nx-signature>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `name`, `required`, `readonly`, `disabled`, `ask-name`, `ask-id`, `document`, `geo`, `value-format` (`json`, `svg`, `png`), `auto`, `handoff`, `pen-color`, `height` (px, 180), `locale`, `labels` · `value` (`{svg, meta}`, su JSON o el SVG) · `strokes` (solo lectura) |
+| Métodos | `clear()`, `undo()` (también Ctrl/⌘+Z), `toSVG()`, `toPNG(escala?)` → `Promise<Blob \| null>`, `load(valor)` → `boolean`, `isEmpty()`, `checkValidity()` |
+| Eventos | `nx-signature-change` `{empty}`, `nx-signature-done` `{svg, meta}` |
+| `meta` | `{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}` |
+| Funciones | `signatureSVG(trazos, tinta?)`, `signaturePath(puntos, anchos)`, `signatureWidth(velocidad, presión, lápiz)`, `signatureStrokeWidths(trazo)`, `smoothSignaturePoints(puntos)`, `signatureBounds(trazos, margen)`, `signatureCheck(trazos, mínimo?)`, `signatureHash(texto, fecha)`, `typedSignatureSVG(nombre)`, `parseSignatureValue(valor)`, `cleanSignatureMeta(meta)`, `signatureDate(iso, locale)`, `normalizeSignedText(texto)`, `SIGNATURE_LABELS`, `SIGNATURE_MIN`, `SIGNATURE_PEN`, `SIGNATURE_INK`, `SIGNATURE_FONT` |
 
 ## Desarrollo
 
