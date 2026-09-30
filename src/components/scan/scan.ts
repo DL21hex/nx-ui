@@ -13,7 +13,7 @@
  * cada lectura suma a una lista agrupada por código, con cantidad editable, lo esperado (de `source`)
  * con faltantes y sobrantes, deshacer y totales. La cámara se apaga sola cuando no se ve.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -109,7 +109,6 @@ const I_CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const I_MINUS = '<path d="M5 12h14"/>';
 const I_PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
 
-const PROPS = ["mode", "formats", "source", "muted", "autostart", "wedge", "items", "labels", "locale"] as const;
 /** Cada cuánto se le pregunta a `BarcodeDetector` por el cuadro actual. */
 const TICK_MS = 90;
 /** Lo que dura a la vista el recuadro sobre el código leído. */
@@ -351,14 +350,7 @@ export class NxScan extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     scanners.push(this);
     document.addEventListener("keydown", this.#onDocKey, true);

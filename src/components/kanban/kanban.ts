@@ -10,7 +10,7 @@
  * un arrastre distraído), una con `wip` avisa cuando se pasa de su límite, y cada una muestra
  * cuántas tarjetas tiene y cuánto suman.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -47,7 +47,6 @@ export const KANBAN_LABELS: KanbanLabels = {
 
 const PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
 const CAL = '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>';
-const PROPS = ["columns", "cards", "labels", "heading", "undo", "busy"] as const;
 /** El puntero tiene que moverse esto antes de levantar la tarjeta: un clic no es un arrastre. */
 const SLOP = 5;
 /** Con el dedo se levanta manteniendo pulsado; deslizar sin esperar sigue siendo hacer scroll. */
@@ -79,6 +78,10 @@ const edge = (p: number, lo: number, hi: number) => {
 };
 
 export class NxKanban extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = ["columns", "cards", "labels", "heading", "locale", "busy"];
 
   #uid = `nx-kanban${++uid}`;
@@ -174,14 +177,7 @@ export class NxKanban extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#render();
   }

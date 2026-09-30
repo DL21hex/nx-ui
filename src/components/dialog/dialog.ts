@@ -14,7 +14,7 @@
  * cierre) o el atributo `open`. Cerrar: el botón ×, Escape, clic fuera, `[data-nx-close]`,
  * `<form method="dialog">` o `dlg.close(valor)`.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -29,7 +29,6 @@ export const DIALOG_LABELS: DialogLabels = {
 };
 
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
-const PROPS = ["heading", "description", "mode", "size", "persistent", "url", "labels", "open"] as const;
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable="true"]';
 /** Cerrar arrastrando: esta distancia (px), o un gesto rápido. */
 const DRAG_CLOSE = 120;
@@ -312,14 +311,7 @@ export class NxDialog extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     wire();
     if (!this.#built) this.#build();
     this.#paint();

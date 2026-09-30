@@ -18,7 +18,7 @@
  * - **Las columnas no dejan huérfanas.** Entre las que caben y una menos, las que dejan menos
  *   tarjetas solas en la última fila (4 módulos van en 2 × 2, no en 3 + 1).
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -37,7 +37,6 @@ export const LAUNCHER_LABELS: LauncherLabels = {
 
 const ARROW = '<path d="M7 17 17 7"/><path d="M8.5 7H17v8.5"/>';
 const SVG = "http://www.w3.org/2000/svg";
-const PROPS = ["items", "labels", "search", "columns", "headingLevel", "locale", "query"] as const;
 const NAMES = ["nx-launcher-card", "nx-launcher-icon", "nx-launcher-label"] as const;
 const STORE = "nx-launcher:from";
 /** Cuánto duran los nombres de View Transitions en la tarjeta si nadie los usa. */
@@ -180,14 +179,7 @@ export class NxLauncher extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const value = self[p];
-        delete self[p];
-        self[p] = value;
-      }
-    }
+    upgrade(this);
     if (!this.#root) this.#root = h("div", { class: "nx-launcher__root" });
     if (this.#root.parentNode !== this) this.append(this.#root);
 

@@ -7,7 +7,7 @@
  * Con `compare` calcula y muestra contra qué se compara (el período anterior, o el mismo del año
  * anterior) y lo incluye en el valor. Participa en un <form> nativo: `name[start]` y `name[end]`.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -46,7 +46,6 @@ const CHEVRON = '<path d="m6 9 6 6 6-6"/>';
 const PREV = '<path d="m15 18-6-6 6-6"/>';
 const NEXT = '<path d="m9 18 6-6-6-6"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
-const PROPS = ["value", "start", "end", "phrase", "presets", "compare", "min", "max", "today", "fiscalStart", "weekStart", "name", "required", "disabled", "label", "placeholder", "labels"] as const;
 type Draft = { range: DateRange; clamped?: boolean } | { bad: "unknown" | "outOfRange" } | null;
 type Span = [number, number];
 
@@ -54,6 +53,10 @@ let uid = 0;
 
 export class NxDateRange extends Base {
   static formAssociated = true;
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = ["start", "end", "phrase", "presets", "compare", "min", "max", "today", "fiscal-start", "week-start", "name", "required", "disabled", "placeholder", "labels", "label", "locale"];
 
   #range: DateRange | null = null;
@@ -245,14 +248,7 @@ export class NxDateRange extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     if (!this.#dirty) this.#initial();
     this.#paint();

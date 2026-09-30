@@ -95,10 +95,10 @@ import type { NxHandoff } from "../components/handoff/handoff";
 import type { HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, HandoffPhoneLabels, HandoffSide, HandoffState } from "../components/handoff/types";
 import "../components/award/index";
 import type { NxAward } from "../components/award/award";
-import type { AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier } from "../components/award/types";
+import type { AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardFilter, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier } from "../components/award/types";
 import "../components/account/index";
 import type { NxAccount } from "../components/account/account";
-import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
+import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountSyncQueue, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
 import "../components/cards/index";
 import type { NxCards } from "../components/cards/cards";
 import type { CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayout, CardsLevel, CardsOpenDetail, CardsRow } from "../components/cards/types";
@@ -160,11 +160,11 @@ export type { NxSync, SyncChangeDetail, SyncField, SyncLabels, SyncOp };
 export type { NxImport, ImportColumnInput, ImportDoneDetail, ImportErrorDetail, ImportLabels, ImportMappedDetail, ImportParsedDetail, ImportState };
 export type { NxKeytips, KeytipAssignment, KeytipDetail, KeytipsLabels };
 export type { NxGuard, GuardFields, GuardFinding, GuardLabels, GuardMode };
-export type { NxAward, AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier };
+export type { NxAward, AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardFilter, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier };
 export type { NxHandoff, HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, HandoffPhoneLabels, HandoffSide, HandoffState };
 export type { NxCards, CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayout, CardsLevel, CardsOpenDetail, CardsRow };
 export type { NxLauncher, LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView };
-export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
+export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountSyncQueue, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
 export type { NxPrint, PrintLabels, PrintOrientation, PrintPaginateDetail, PrintZoom };
 export type { NxSignature, SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMeta, SignatureValue };
 export type { NxPlanner, PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView };
@@ -182,7 +182,7 @@ declare module "solid-js" {
   namespace JSX {
     interface ExplicitProperties {
       steps: ChecklistStep[] | undefined;
-      state: ChecklistState | undefined;
+      state: unknown;
       sequential: ChecklistSequence | undefined;
       anchors: string[] | undefined;
       refPatterns: string[] | undefined;
@@ -202,6 +202,8 @@ declare module "solid-js" {
       choices: AwardChoice[] | undefined;
       excluded: string[] | undefined;
       reasons: string[] | undefined;
+      weights: Record<string, number> | undefined;
+      filter: AwardFilter | undefined;
       formats: string[] | undefined;
       anomalies: TrendAnomaly[] | undefined;
       values: WhatIfValues | undefined;
@@ -226,6 +228,8 @@ declare module "solid-js" {
       locales: AccountLocale[] | undefined;
       session: AccountSession | null | undefined;
       viewAs: AccountPerson | null | undefined;
+      lockVerify: ((password: string) => Promise<boolean>) | undefined;
+      sync: AccountSyncQueue | null | undefined;
       value: string | string[] | number | DateRangeValue | SignatureValue | null | undefined;
       presets: DateRangePresetInput[] | undefined;
       selection: SelectOption[] | undefined;
@@ -235,6 +239,8 @@ declare module "solid-js" {
       filters: GridFilter[] | undefined;
       sort: GridSort | null | undefined;
       selected: string[] | undefined;
+      active: string | null | undefined;
+      dirty: boolean | undefined;
       tools: AguiTool[] | undefined;
       explanation: ExplainEvent[] | null | undefined;
       questions: SurveyQuestionInput[] | undefined;
@@ -338,6 +344,8 @@ declare module "solid-js" {
       "logout-url": string | undefined;
       agent: string | undefined;
       hotkey: string | undefined;
+      limit: string | undefined;
+      show: string | undefined;
       storage: string | undefined;
       undo: string | undefined;
       layout: string | undefined;
@@ -554,6 +562,8 @@ export interface SideMenuProps extends Omit<JSX.HTMLAttributes<NxSidemenu>, "onS
   collapsible?: boolean;
   /** Compacto automático en tablet (768–1023 px). */
   autoCollapse?: boolean;
+  /** Controlado: abre y cierra el drawer móvil (en escritorio no hace nada). */
+  open?: boolean;
   labels?: Partial<SidemenuLabels>;
   /** Cancelable: `e.preventDefault()` evita la navegación del enlace. */
   onSelect?: (e: CustomEvent<SelectDetail>) => void;
@@ -569,15 +579,23 @@ export function SideMenu(props: SideMenuProps): JSX.Element {
     "collapsed",
     "collapsible",
     "autoCollapse",
+    "open",
     "labels",
     "onSelect",
     "onToggle",
     "onOpenChange",
     "children",
   ]);
+  let el: NxSidemenu | undefined;
+  // Tras montar: el drawer es `popover` solo ya conectado, y sin `open` no se toca (lo abre la hamburguesa).
+  createEffect(() => {
+    const want = local.open;
+    if (el && want !== undefined && want !== el.open) el.open = want;
+  });
   return (
     <nx-sidemenu
       {...rest}
+      ref={(e: NxSidemenu) => (el = e)}
       prop:items={local.items}
       prop:labels={local.labels}
       attr:active={local.active}
@@ -671,6 +689,8 @@ export interface SelectProps extends Omit<JSX.HTMLAttributes<NxSelect>, "onChang
   disabled?: boolean;
   clearable?: boolean;
   avatar?: boolean;
+  /** Máximo de resultados a la vista (50). */
+  limit?: number;
   labels?: Partial<SelectLabels>;
   onChange?: (e: CustomEvent<SelectChangeDetail>) => void;
 }
@@ -690,6 +710,7 @@ export function Select(props: SelectProps): JSX.Element {
     "disabled",
     "clearable",
     "avatar",
+    "limit",
     "labels",
     "onChange",
   ]);
@@ -705,6 +726,7 @@ export function Select(props: SelectProps): JSX.Element {
       attr:placeholder={local.placeholder}
       attr:label={local.label}
       attr:name={local.name}
+      attr:limit={local.limit === undefined ? undefined : String(local.limit)}
       bool:multiple={!!local.multiple}
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
@@ -773,6 +795,10 @@ export interface DocCaptureProps extends Omit<JSX.HTMLAttributes<NxDocCapture>, 
   action?: string;
   /** Confianza por debajo de la cual un campo exige revisión (0–1). */
   reviewBelow?: number;
+  /** Tipos de archivo del selector (por defecto PDF e imágenes). */
+  accept?: string;
+  /** Tamaño máximo del archivo, en bytes (20 MB). */
+  maxSize?: number;
   labels?: Partial<CaptureLabels>;
   onDone?: (e: CustomEvent<{ values: CaptureValues; pending: string[] }>) => void;
   /** Cancelable: con `preventDefault()` la app registra por su cuenta. */
@@ -780,7 +806,7 @@ export interface DocCaptureProps extends Omit<JSX.HTMLAttributes<NxDocCapture>, 
 }
 
 export function DocCapture(props: DocCaptureProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["schema", "endpoint", "action", "reviewBelow", "labels", "onDone", "onSubmit"]);
+  const [local, rest] = splitProps(props, ["schema", "endpoint", "action", "reviewBelow", "accept", "maxSize", "labels", "onDone", "onSubmit"]);
   return (
     <nx-doc-capture
       {...rest}
@@ -789,6 +815,8 @@ export function DocCapture(props: DocCaptureProps): JSX.Element {
       attr:endpoint={local.endpoint}
       attr:action={local.action}
       attr:review-below={local.reviewBelow === undefined ? undefined : String(local.reviewBelow)}
+      attr:accept={local.accept}
+      attr:max-size={local.maxSize === undefined ? undefined : String(local.maxSize)}
       on:nx-capture-done={(e) => local.onDone?.(e)}
       on:nx-capture-submit={(e) => local.onSubmit?.(e)}
     />
@@ -873,6 +901,8 @@ export interface DialogProps extends Omit<JSX.HTMLAttributes<NxDialog>, "onClose
   persistent?: boolean;
   /** Entrada de historial al abrir («atrás» cierra). `""` = la URL actual. */
   url?: string;
+  /** Cambios sin guardar: al cerrar pide confirmación. Se marca solo al escribir; `false` al guardar. */
+  dirty?: boolean;
   labels?: Partial<DialogLabels>;
   onOpenChange?: (e: CustomEvent<{ open: boolean; value?: string; reason?: CloseReason }>) => void;
   /** Cancelable: `e.preventDefault()` lo deja abierto. */
@@ -881,7 +911,7 @@ export interface DialogProps extends Omit<JSX.HTMLAttributes<NxDialog>, "onClose
 }
 
 export function Dialog(props: DialogProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["open", "heading", "description", "mode", "size", "persistent", "url", "labels", "onOpenChange", "onClose", "children"]);
+  const [local, rest] = splitProps(props, ["open", "heading", "description", "mode", "size", "persistent", "url", "dirty", "labels", "onOpenChange", "onClose", "children"]);
   let el: NxDialog | undefined;
   createEffect(() => {
     const want = !!local.open;
@@ -900,6 +930,7 @@ export function Dialog(props: DialogProps): JSX.Element {
       attr:size={local.size}
       attr:url={local.url}
       bool:persistent={!!local.persistent}
+      prop:dirty={local.dirty}
       prop:labels={local.labels}
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
       on:nx-dialog-close={(e) => local.onClose?.(e)}
@@ -920,6 +951,10 @@ export interface AgentProps extends JSX.HTMLAttributes<NxAgent> {
   /** Herramientas propias de la app; se atienden en `onTool` llamando a `e.detail.respond(...)`. */
   tools?: AguiTool[];
   context?: AguiContext[];
+  /** Componentes BDUI que puede mostrar con `nx_show` (`["Trend", "Grid"]` o `"Trend, Grid"`). Sin él, todos. */
+  show?: string[] | string;
+  /** Estado compartido con el agente (`STATE_SNAPSHOT` / `STATE_DELTA`). */
+  state?: unknown;
   labels?: Partial<AgentLabels>;
   onTool?: (e: CustomEvent<AgentToolDetail>) => void;
   onState?: (e: CustomEvent<{ state: unknown }>) => void;
@@ -927,7 +962,7 @@ export interface AgentProps extends JSX.HTMLAttributes<NxAgent> {
 }
 
 export function Agent(props: AgentProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["endpoint", "for", "heading", "placeholder", "suggestions", "tools", "context", "labels", "onTool", "onState", "onEvent"]);
+  const [local, rest] = splitProps(props, ["endpoint", "for", "heading", "placeholder", "suggestions", "tools", "context", "show", "state", "labels", "onTool", "onState", "onEvent"]);
   return (
     <nx-agent
       {...rest}
@@ -935,9 +970,11 @@ export function Agent(props: AgentProps): JSX.Element {
       attr:for={local.for}
       attr:heading={local.heading}
       attr:placeholder={local.placeholder}
+      attr:show={Array.isArray(local.show) ? local.show.join(",") : local.show}
       prop:suggestions={local.suggestions}
       prop:tools={local.tools}
       prop:context={local.context}
+      prop:state={local.state}
       prop:labels={local.labels}
       on:nx-agent-tool={(e) => {
         // Quien pasa `onTool` atiende la herramienta: se marca para que no responda «no disponible».
@@ -961,10 +998,14 @@ export interface CommandProps extends Omit<JSX.HTMLAttributes<NxCommand>, "onSel
   source?: string;
   /** Id de un `<nx-agent>` al que se le pregunta lo que no se encuentra. */
   agent?: string;
+  /** Id de un `<nx-account>`: sus acciones entran en la paleta. */
+  account?: string;
   /** Atajo global (`"mod+k"`); `"none"` lo quita. */
   hotkey?: string;
   placeholder?: string;
   storage?: string;
+  /** Máximo de filas a la vista (50). */
+  limit?: number;
   labels?: Partial<CommandLabels>;
   /** Cancelable: la paleta se queda abierta y no navega. */
   onSelect?: (e: CustomEvent<CommandSelectDetail>) => void;
@@ -972,7 +1013,7 @@ export interface CommandProps extends Omit<JSX.HTMLAttributes<NxCommand>, "onSel
 }
 
 export function Command(props: CommandProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["items", "menu", "source", "agent", "hotkey", "placeholder", "storage", "labels", "onSelect", "onAsk"]);
+  const [local, rest] = splitProps(props, ["items", "menu", "source", "agent", "account", "hotkey", "placeholder", "storage", "limit", "labels", "onSelect", "onAsk"]);
   return (
     <nx-command
       {...rest}
@@ -981,9 +1022,11 @@ export function Command(props: CommandProps): JSX.Element {
       attr:menu={local.menu}
       attr:source={local.source}
       attr:agent={local.agent}
+      attr:account={local.account}
       attr:hotkey={local.hotkey}
       attr:placeholder={local.placeholder}
       attr:storage={local.storage}
+      attr:limit={local.limit === undefined ? undefined : String(local.limit)}
       on:nx-command-select={(e) => local.onSelect?.(e)}
       on:nx-command-ask={(e) => local.onAsk?.(e)}
     />
@@ -1026,6 +1069,10 @@ export interface InboxProps extends JSX.HTMLAttributes<NxInbox> {
   /** Milisegundos para deshacer (7000); 0 registra al instante. */
   undo?: number;
   requireReason?: boolean;
+  /** Ids marcados para decidir en lote. */
+  selected?: string[];
+  /** Id del elemento abierto en el detalle. */
+  active?: string | null;
   locale?: string;
   labels?: Partial<InboxLabels>;
   /** Cancelable: la decisión no se aplica. */
@@ -1037,11 +1084,13 @@ export interface InboxProps extends JSX.HTMLAttributes<NxInbox> {
 }
 
 export function Inbox(props: InboxProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["items", "heading", "undo", "requireReason", "locale", "labels", "onDecide", "onCommit", "onUndo", "onActive"]);
+  const [local, rest] = splitProps(props, ["items", "heading", "undo", "requireReason", "selected", "active", "locale", "labels", "onDecide", "onCommit", "onUndo", "onActive"]);
   return (
     <nx-inbox
       {...rest}
       prop:items={local.items}
+      prop:selected={local.selected}
+      prop:active={local.active}
       prop:labels={local.labels}
       attr:heading={local.heading}
       attr:undo={local.undo === undefined ? undefined : String(local.undo)}
@@ -1064,6 +1113,8 @@ export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmi
   /** Clave de `localStorage` para el borrador. */
   storage?: string;
   results?: SurveyResults | null;
+  /** Respuestas precargadas `{id: valor}`. */
+  answers?: SurveyAnswers;
   locale?: string;
   labels?: Partial<SurveyLabels>;
   /** Cancelable: no se envía a `action`. */
@@ -1072,12 +1123,13 @@ export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmi
 }
 
 export function Survey(props: SurveyProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["questions", "heading", "description", "action", "storage", "results", "locale", "labels", "onSubmit", "onChange"]);
+  const [local, rest] = splitProps(props, ["questions", "heading", "description", "action", "storage", "results", "answers", "locale", "labels", "onSubmit", "onChange"]);
   return (
     <nx-survey
       {...rest}
       prop:questions={local.questions}
       prop:results={local.results}
+      prop:answers={local.answers}
       prop:labels={local.labels}
       attr:heading={local.heading}
       attr:description={local.description}
@@ -1613,6 +1665,8 @@ export interface KeytipsProps extends JSX.HTMLAttributes<NxKeytips> {
   scope?: string;
   /** La tecla que los muestra: `Alt` (por defecto), `Control`, `Shift` o `Meta`; `none`: solo con `show()`. */
   trigger?: string;
+  /** Lo mismo que `trigger`, con el nombre del setter de la clase. */
+  key?: string;
   disabled?: boolean;
   labels?: Partial<KeytipsLabels>;
   /** Antes de ejecutar una acción: `{key, target, name}`. Cancelable. */
@@ -1622,13 +1676,13 @@ export interface KeytipsProps extends JSX.HTMLAttributes<NxKeytips> {
 
 /** `<nx-keytips>`: la tecla va como `trigger` (en JSX, `key` es de otros). */
 export function Keytips(props: KeytipsProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["scope", "trigger", "disabled", "labels", "onKeytip", "onOpenChange"]);
+  const [local, rest] = splitProps(props, ["scope", "trigger", "key", "disabled", "labels", "onKeytip", "onOpenChange"]);
   return (
     <nx-keytips
       {...rest}
       prop:labels={local.labels}
       attr:scope={local.scope}
-      attr:key={local.trigger}
+      attr:key={local.key ?? local.trigger}
       bool:disabled={!!local.disabled}
       on:nx-keytip={(e) => local.onKeytip?.(e)}
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
@@ -1743,6 +1797,10 @@ export interface AwardProps extends Omit<JSX.HTMLAttributes<NxAward>, "onChange"
   /** Los motivos que se sugieren al apartarse de la IA. */
   reasons?: string[];
   scenario?: string;
+  /** Los pesos `{criterio: peso}` (relativos). Cambiarlos vuelve a pedir la recomendación. */
+  weights?: Record<string, number>;
+  /** Qué filas se ven: `all` (por defecto), `alerts` o `changed`. */
+  filter?: AwardFilter;
   /** Lo que muestran las celdas: `price` (por defecto), `total`, `lead` o `score`. */
   lens?: AwardLens;
   /** `POST {weights, excluded}` → NDJSON. Sin él, `onAdvise`. */
@@ -1763,7 +1821,7 @@ export interface AwardProps extends Omit<JSX.HTMLAttributes<NxAward>, "onChange"
 }
 
 export function Award(props: AwardProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "scenario", "lens", "endpoint", "heading", "currency", "readonly", "requireReason", "requireReview", "locale", "labels", "onAdvise", "onChange", "onSubmit"]);
+  const [local, rest] = splitProps(props, ["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "scenario", "weights", "filter", "lens", "endpoint", "heading", "currency", "readonly", "requireReason", "requireReview", "locale", "labels", "onAdvise", "onChange", "onSubmit"]);
   return (
     <nx-award
       {...rest}
@@ -1775,6 +1833,8 @@ export function Award(props: AwardProps): JSX.Element {
       prop:choices={local.choices}
       prop:excluded={local.excluded}
       prop:reasons={local.reasons}
+      prop:weights={local.weights}
+      prop:filter={local.filter}
       prop:labels={local.labels}
       attr:scenario={local.scenario}
       attr:lens={local.lens}
@@ -1803,13 +1863,19 @@ export interface AccountProps extends Omit<JSX.HTMLAttributes<NxAccount>, "onSel
   storage?: string;
   applyLocale?: boolean;
   session?: AccountSession | null;
+  /** Vencimiento de la sesión (ISO o epoch ms); también sirve `session.expiresAt`. */
+  expiresAt?: string;
   warnBefore?: number;
   viewAs?: AccountPerson | null;
   viewAsSource?: string;
   lock?: boolean;
   lockEndpoint?: string;
   lockAfter?: number;
+  /** Sin `lockEndpoint`: la app verifica la clave de la pantalla de bloqueo. */
+  lockVerify?: (password: string) => Promise<boolean>;
   logoutUrl?: string;
+  /** Una cola de `nxSync` para contar lo pendiente y vaciarla antes de salir. */
+  sync?: AccountSyncQueue | null;
   labels?: Partial<AccountLabels>;
   locale?: string;
   disabled?: boolean;
@@ -1825,7 +1891,7 @@ export interface AccountProps extends Omit<JSX.HTMLAttributes<NxAccount>, "onSel
 }
 
 export function Account(props: AccountProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "applyLocale", "session", "warnBefore", "viewAs", "viewAsSource", "lock", "lockEndpoint", "lockAfter", "logoutUrl", "labels", "locale", "disabled", "onSwitch", "onStatus", "onTheme", "onLocale", "onSelect", "onViewAs", "onExtend", "onExpired", "onLogout"]);
+  const [local, rest] = splitProps(props, ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "applyLocale", "session", "expiresAt", "warnBefore", "viewAs", "viewAsSource", "lock", "lockEndpoint", "lockAfter", "lockVerify", "logoutUrl", "sync", "labels", "locale", "disabled", "onSwitch", "onStatus", "onTheme", "onLocale", "onSelect", "onViewAs", "onExtend", "onExpired", "onLogout"]);
   return (
     <nx-account
       {...rest}
@@ -1836,11 +1902,14 @@ export function Account(props: AccountProps): JSX.Element {
       prop:locales={local.locales}
       prop:session={local.session}
       prop:viewAs={local.viewAs}
+      prop:lockVerify={local.lockVerify}
+      prop:sync={local.sync}
       prop:labels={local.labels}
       attr:current={local.current}
       attr:status={local.status}
       attr:storage={local.storage}
       attr:apply-locale={local.applyLocale === false ? "false" : undefined}
+      attr:expires-at={local.expiresAt}
       attr:warn-before={local.warnBefore === undefined ? undefined : String(local.warnBefore)}
       attr:view-as-source={local.viewAsSource}
       attr:lock-endpoint={local.lockEndpoint}
@@ -1911,6 +1980,8 @@ export interface CardsProps extends JSX.HTMLAttributes<NxCards> {
   sort?: string;
   rowKey?: string;
   query?: string;
+  /** Nivel de los títulos de las tarjetas (3 por defecto). */
+  headingLevel?: number;
   locale?: string;
   labels?: Partial<CardsLabels>;
   onOpen?: (e: CustomEvent<CardsOpenDetail>) => void;
@@ -1919,7 +1990,7 @@ export interface CardsProps extends JSX.HTMLAttributes<NxCards> {
 }
 
 export function Cards(props: CardsProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["fields", "layout", "rows", "actions", "level", "group", "sort", "rowKey", "query", "locale", "labels", "onOpen", "onAction", "onLevel"]);
+  const [local, rest] = splitProps(props, ["fields", "layout", "rows", "actions", "level", "group", "sort", "rowKey", "query", "headingLevel", "locale", "labels", "onOpen", "onAction", "onLevel"]);
   return (
     <nx-cards
       {...rest}
@@ -1933,6 +2004,7 @@ export function Cards(props: CardsProps): JSX.Element {
       attr:group={local.group}
       attr:sort={local.sort}
       attr:row-key={local.rowKey}
+      attr:heading-level={local.headingLevel === undefined ? undefined : String(local.headingLevel)}
       attr:locale={local.locale}
       on:nx-cards-open={(e) => local.onOpen?.(e)}
       on:nx-cards-action={(e) => local.onAction?.(e)}

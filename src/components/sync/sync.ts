@@ -8,7 +8,7 @@
  * El elemento solo muestra y maneja la cola de la página; la app encola con `nxSync.enqueue()`.
  * Anuncia (`aria-live`) cuando se va y vuelve la conexión y cuando termina de sincronizar.
  */
-import { Base } from "../../core/define";
+import { Base, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -86,13 +86,16 @@ const X = '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6"/><path d="m9 9 6 6
 const OFF = '<path d="m2 2 20 20"/><path d="M5.8 5.8A7 7 0 0 0 7 19h11a4.5 4.5 0 0 0 1.9-.4M22 14.5A4.5 4.5 0 0 0 17.5 10h-1.8A7 7 0 0 0 9.4 5.4"/>';
 const BACK = '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>';
 const ICONS: Record<string, string> = { pending: CLOCK, waiting: CLOCK, sending: UP, conflict: ALERT, failed: X, sent: CHECK };
-const PROPS = ["labels", "fields", "ping"] as const;
 
 type View = { kind: "list" } | { kind: "resolve"; id: string; theirs: Set<string> } | { kind: "edit"; id: string };
 
 let uid = 0;
 
 export class NxSync extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = ["labels", "fields", "ping", "locale"];
 
   #uid = `nx-sync${++uid}`;
@@ -189,14 +192,7 @@ export class NxSync extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     if (this.ping) nxSync.configure({ ping: safeEndpoint(this.ping) ?? null });
     this.#off ??= nxSync.subscribe((s, e) => this.#onState(s, e));

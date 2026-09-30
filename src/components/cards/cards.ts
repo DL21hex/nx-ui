@@ -18,7 +18,7 @@
  *   la vista, o `+` / `−` con el foco adentro.
  * - **Light DOM.** Los textos del backend van siempre como texto; los estilos, en `cards.css`.
  */
-import { Base } from "../../core/define";
+import { Base, upgrade, attrProps } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -62,7 +62,6 @@ const SVG = "http://www.w3.org/2000/svg";
 const EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 /** Con más registros que esto, las tarjetas fuera de la pantalla no se pintan (`content-visibility`). */
 const MANY = 300;
-const PROPS = ["fields", "layout", "rows", "actions", "labels", "level", "query"] as const;
 
 let uid = 0;
 
@@ -87,6 +86,10 @@ const sig = (row: CardsRow) => {
 };
 
 export class NxCards extends Base {
+  static {
+    attrProps(this, ["headingLevel"]);
+  }
+  declare headingLevel: string | null;
   static observedAttributes = ["fields", "layout", "rows", "actions", "labels", "level", "group", "sort", "row-key", "heading-level", "locale"];
 
   #fields: CardsField[] = [];
@@ -239,14 +242,7 @@ export class NxCards extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const value = self[p];
-        delete self[p];
-        self[p] = value;
-      }
-    }
+    upgrade(this);
     if (!this.#root) {
       this.#root = h("div", { class: "nx-cards__root" });
       this.#legend = h("ul", { class: "nx-cards__legend", role: "list" });

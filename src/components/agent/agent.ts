@@ -13,7 +13,7 @@
  * Cada tramo de respuesta (pasos y texto) es un `<nx-ai-answer bare>`: el mismo pintado de la IA.
  */
 import { URL_PROPS, hasComponent, render, type BduiNode } from "../../bdui";
-import { Base } from "../../core/define";
+import { Base, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
@@ -56,7 +56,6 @@ const SEND = '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>';
 const STOP = '<rect x="7" y="7" width="10" height="10" rx="1.5"/>';
 const PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
-const PROPS = ["endpoint", "tools", "context", "suggestions", "labels", "state", "show"] as const;
 /** Cuánto espera un aviso con deshacer antes de dar la acción por buena. */
 const UNDO_MS = 7000;
 
@@ -66,6 +65,12 @@ let uid = 0;
 const id = (p: string) => `${p}-${Date.now().toString(36)}-${++uid}`;
 
 export class NxAgent extends Base {
+  static {
+    attrProps(this, ["for", "heading", "placeholder"]);
+  }
+  declare for: string | null;
+  declare heading: string | null;
+  declare placeholder: string | null;
   static observedAttributes = ["endpoint", "for", "heading", "placeholder", "labels", "suggestions", "show"];
 
   #labels: AgentLabels = AGENT_LABELS;
@@ -221,14 +226,7 @@ export class NxAgent extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#watchTarget();
     this.#paint();

@@ -12,7 +12,7 @@
  * - **Las hojas son `<a href>` reales.** El router de Solid las intercepta solo; en HTML plano
  *   navegan. `nx-select` (cancelable) es la puerta para quien quiera decidir otra cosa.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -33,7 +33,6 @@ export const DEFAULT_LABELS: SidemenuLabels = {
 const MOBILE = "(max-width: 767.98px)";
 const TABLET = "(min-width: 768px) and (max-width: 1023.98px)";
 const FINE_POINTER = "(pointer: fine)";
-const PROPS = ["items", "labels", "active", "collapsed", "collapsible", "autoCollapse", "open"] as const;
 
 let uid = 0;
 
@@ -135,14 +134,7 @@ export class NxSidemenu extends Base {
   connectedCallback(): void {
     // Una propiedad asignada antes de que el elemento se definiera (un framework que monta
     // antes de cargar la librería) quedó como propiedad propia y tapa el setter: se reaplica.
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const value = self[p];
-        delete self[p];
-        self[p] = value;
-      }
-    }
+    upgrade(this);
     if (!this.#body) {
       this.#body = h("div", { class: "nx-sidemenu__body" });
       this.#tools = h("div", { class: "nx-sidemenu__tools", hidden: true });

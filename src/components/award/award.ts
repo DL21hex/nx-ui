@@ -15,7 +15,7 @@
  * `{weights, excluded}` y la respuesta en NDJSON) o la app (`advice`, o respondiendo a
  * `nx-award-advise`). Mover los pesos o excluir a un proveedor la vuelve a pedir.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -89,7 +89,6 @@ export const AWARD_LABELS: AwardLabels = {
 /** Los motivos que se sugieren al apartarse de la IA (se puede escribir otro). */
 export const AWARD_REASONS: readonly string[] = ["Proveedor habitual", "Calidad comprobada", "Consolidar en menos órdenes", "Plazo de entrega", "Garantía o soporte"];
 
-const PROPS = ["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "labels", "weights", "scenario", "filter", "endpoint", "heading", "locale", "currency", "lens", "readonly", "requireReason", "requireReview"] as const;
 const JSON_ATTRS = new Set(["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "labels"]);
 const LENSES: readonly AwardLens[] = ["price", "total", "lead", "score"];
 const LENS_LABEL = { price: "lensPrice", total: "lensTotal", lead: "lensLead", score: "lensScore" } as const;
@@ -453,14 +452,7 @@ export class NxAward extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     if ((!this.#advised || this.#stale) && !this.#timer && !this.#ctrl) this.#request(0);
   }

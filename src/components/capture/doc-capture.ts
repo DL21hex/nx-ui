@@ -12,7 +12,7 @@
  * Las filas, las celdas y los recuadros son nodos persistentes que se actualizan en su lugar:
  * repintar por evento reiniciaría sus animaciones y robaría el foco a quien está corrigiendo.
  */
-import { Base } from "../../core/define";
+import { Base, upgrade } from "../../core/define";
 import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { formatElapsed } from "../../core/format";
@@ -54,7 +54,6 @@ const CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const MINUS = '<path d="M5 12h14"/>';
 const PLUS = '<path d="M5 12h14"/><path d="M12 5v14"/>';
 const ZOOMS = [1, 1.5, 2, 3];
-const PROPS = ["schema", "endpoint", "action", "reviewBelow", "labels", "accept", "maxSize"] as const;
 /** Tamaño máximo por defecto de un documento (20 MB). */
 const MAX_SIZE = 20 * 1024 * 1024;
 
@@ -283,14 +282,7 @@ export class NxDocCapture extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#paint();
   }

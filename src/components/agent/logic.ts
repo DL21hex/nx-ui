@@ -183,13 +183,14 @@ export const GRID_TOOLS: AguiTool[] = [
 /**
  * Las props que el modelo manda a `nx_show`, sin ninguna URL: un payload del modelo (quizá guiado
  * por un texto inyectado en los datos) no puede hacer que un componente pida o envíe datos a otro
- * lado (`endpoint`, `action`, `source`, `*Endpoint`…).
+ * lado (`endpoint`, `action`, `source`, `*Endpoint`, `*Source`, `*Url`…). El patrón cubre también las
+ * props que se agreguen después, sin esperar a que alguien las sume a la lista.
  */
 export function showProps(props: unknown, urlProps: ReadonlySet<string>): Record<string, unknown> {
   if (!props || typeof props !== "object" || Array.isArray(props)) return {};
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(props as Record<string, unknown>)) {
-    if (urlProps.has(k) || /endpoint$/i.test(k)) continue;
+    if (urlProps.has(k) || /(endpoint|source|url|href)$/i.test(k)) continue;
     out[k] = v;
   }
   return out;

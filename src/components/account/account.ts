@@ -12,7 +12,7 @@
  * - **Lo pesado va aparte:** la pantalla de bloqueo (`./lock`), la franja de «Ver como» (`./view-as`)
  *   y la cola de `nx-sync` se cargan con `import()` solo cuando se usan.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -138,7 +138,6 @@ const CLEAN: { [K in keyof Data]: (v: unknown) => Data[K] } = {
   viewAs: cleanPerson,
 };
 const JSON_ATTRS = ["user", "tenants", "items", "palettes", "locales", "view-as", "session", "labels"];
-const PROPS = ["user", "tenants", "current", "status", "items", "palettes", "locales", "session", "viewAs", "labels", "sync", "lockVerify", "disabled"] as const;
 const LOGOUT_WAIT = 10_000;
 
 type View = "main" | "tenant" | "locale" | "viewas";
@@ -192,6 +191,17 @@ function reveal(x: number, y: number, update: () => void): void {
 }
 
 export class NxAccount extends Base {
+  static {
+    // `lock` queda solo como atributo: `lock()` es el método que bloquea la pantalla.
+    attrProps(this, ["applyLocale", "expiresAt", "viewAsSource", "lockEndpoint", "lockAfter", "logoutUrl", "locale"]);
+  }
+  declare applyLocale: string | null;
+  declare expiresAt: string | null;
+  declare viewAsSource: string | null;
+  declare lockEndpoint: string | null;
+  declare lockAfter: string | null;
+  declare logoutUrl: string | null;
+  declare locale: string | null;
   static observedAttributes = [
     ...JSON_ATTRS,
     "current",
@@ -322,6 +332,9 @@ export class NxAccount extends Base {
     const n = Number(this.getAttribute("warn-before") ?? 5);
     return Number.isFinite(n) && n >= 0 ? n : 5;
   }
+  set warnBefore(v: number | null) {
+    this.#attr("warn-before", v == null ? null : String(v));
+  }
   /** Una cola de `nx-sync` (`nxSync`) para contar lo pendiente y vaciarla antes de salir. Sin ella,
    *  se escucha `nx-sync-change` de un `<nx-sync>` de la página. */
   get sync(): AccountSyncQueue | null {
@@ -415,14 +428,7 @@ export class NxAccount extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#card) this.#build();
     this.#ac?.abort();
     const signal = (this.#ac = new AbortController()).signal;

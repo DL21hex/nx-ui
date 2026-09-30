@@ -13,7 +13,7 @@
  * mover, así que no rompe la hidratación. Por dentro hay un `<button>` nativo: foco, teclado y
  * envío de formularios funcionan solos.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
 import { formatElapsed } from "../../core/format";
@@ -37,7 +37,6 @@ const TERMINAL = '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>';
 /** Cuánto se queda a la vista el resultado antes de volver a la etiqueta. */
 const RESULT_MS = { ok: 2200, error: 4000 };
 const MAX_LINES = 200;
-const PROPS = ["label", "icon", "variant", "type", "disabled", "busy", "logMode", "progress", "stream", "method", "labels", "hold"] as const;
 
 export class NxButton extends Base {
   static observedAttributes = ["label", "icon", "variant", "type", "disabled", "busy", "log-mode", "progress", "stream", "method", "labels", "hold"];
@@ -207,14 +206,7 @@ export class NxButton extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     // Con el <script> en el <head> (o un parser que conecta antes de leer los hijos), el texto de
     // <nx-button>Guardar</nx-button> todavía no existe: se vuelve a mirar cuando llegue.

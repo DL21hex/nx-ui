@@ -10,7 +10,7 @@
  * (ordenar arrastrando o con el teclado) y `slider`. Todo es JSON: el backend manda las preguntas,
  * recibe las respuestas en `action` y puede devolver los resultados (`aggregate()` los arma).
  */
-import { Base } from "../../core/define";
+import { Base, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -55,7 +55,6 @@ const LEFT = '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const STAR = '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>';
 const GRIP = '<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>';
-const PROPS = ["questions", "answers", "results", "labels", "heading", "description", "action", "storage"] as const;
 /** Con más respuestas que estas, las más viejas se pliegan (se ven las dos últimas). */
 const TRAIL_MAX = 3;
 /** Una elección simple pasa sola a la siguiente, tras este respiro (para ver lo que se eligió). */
@@ -66,6 +65,10 @@ let uid = 0;
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(TEXTAREA|SELECT)$/.test(t.tagName) || (t.tagName === "INPUT" && !/^(radio|checkbox|range)$/.test((t as HTMLInputElement).type)));
 
 export class NxSurvey extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = ["questions", "labels", "heading", "description", "locale"];
 
   #uid = `nx-survey${++uid}`;
@@ -275,14 +278,7 @@ export class NxSurvey extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     if (!this.heading && this.#screen === "intro") this.#screen = "question";
     this.#render();

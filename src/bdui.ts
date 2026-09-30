@@ -1,8 +1,11 @@
 /**
  * Adaptador BDUI (opcional): convierte nodos `{component, props}` —la forma que usa nx32— en
- * elementos de la librería. Cada componente declara qué props acepta: una clave que no está en
- * la lista se ignora, así un payload nunca asigna `innerHTML`, `__proto__` ni nada parecido.
+ * elementos de la librería. Las props que acepta cada componente salen de su propia clase: las que
+ * tienen setter. No hay una segunda lista que mantener, y una clave sin setter (`innerHTML`,
+ * `__proto__`, un error de tipeo) se ignora y se avisa por consola.
  */
+import { setterOf } from "./core/define";
+
 export interface BduiNode {
   component: string;
   props?: Record<string, unknown>;
@@ -10,49 +13,53 @@ export interface BduiNode {
 
 interface Entry {
   tag: string;
-  props: readonly string[];
+  /** Lista explícita (`registerComponent` con props); sin ella, los setters de la clase. */
+  props?: readonly string[];
 }
 
-const registry = new Map<string, Entry>([
-  ["SideMenu", { tag: "nx-sidemenu", props: ["items", "active", "collapsed", "collapsible", "autoCollapse", "labels"] }],
-  ["Select", { tag: "nx-select", props: ["options", "fields", "value", "selection", "multiple", "placeholder", "source", "name", "required", "disabled", "clearable", "avatar", "labels", "limit"] }],
-  ["DocCapture", { tag: "nx-doc-capture", props: ["schema", "endpoint", "action", "reviewBelow", "labels", "accept"] }],
-  ["Grid", { tag: "nx-grid", props: ["columns", "rows", "filters", "sort", "source", "clientMax", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale", "selectable", "selected", "labels"] }],
-  ["Agent", { tag: "nx-agent", props: ["endpoint", "tools", "context", "suggestions", "labels"] }],
-  ["AIAnswer", { tag: "nx-ai-answer", props: ["endpoint", "method", "question", "placeholder", "suggestions", "context", "labels", "feedback"] }],
-  ["Command", { tag: "nx-command", props: ["items", "menu", "source", "agent", "hotkey", "placeholder", "storage", "limit", "labels"] }],
-  ["Explain", { tag: "nx-explain", props: ["endpoint", "method", "explanation", "context", "labels"] }],
-  ["Inbox", { tag: "nx-inbox", props: ["items", "labels", "undo", "requireReason", "heading"] }],
-  ["Survey", { tag: "nx-survey", props: ["questions", "answers", "results", "labels", "heading", "description", "action", "storage"] }],
-  ["Number", { tag: "nx-number", props: ["value", "min", "max", "step", "format", "currency", "decimals", "words", "name", "required", "disabled", "readonly", "placeholder", "align", "label", "locale", "labels"] }],
-  ["Kanban", { tag: "nx-kanban", props: ["columns", "cards", "labels", "heading", "undo", "busy"] }],
-  ["History", { tag: "nx-history", props: ["record", "fields", "events", "source", "user", "undo", "heading", "labels"] }],
-  ["DateRange", { tag: "nx-date-range", props: ["value", "start", "end", "phrase", "presets", "compare", "min", "max", "today", "fiscalStart", "weekStart", "name", "required", "disabled", "label", "placeholder", "labels"] }],
-  ["PasteFill", { tag: "nx-paste-fill", props: ["fields", "endpoint", "reviewBelow", "for", "labels"] }],
-  ["Presence", { tag: "nx-presence", props: ["me", "channel", "source", "for", "idle", "max", "labels"] }],
-  ["WhatIf", { tag: "nx-what-if", props: ["inputs", "outputs", "series", "scenarios", "values", "endpoint", "debounce", "heading", "locale", "labels"] }],
-  ["Trend", { tag: "nx-trend", props: ["series", "anomalies", "heading", "kind", "format", "currency", "height", "detect", "explainEndpoint", "busy", "locale", "labels"] }],
-  ["Scan", { tag: "nx-scan", props: ["mode", "formats", "source", "muted", "autostart", "wedge", "items", "labels", "locale"] }],
-  ["Sync", { tag: "nx-sync", props: ["ping", "fields", "labels"] }],
-  ["Keytips", { tag: "nx-keytips", props: ["scope", "key", "disabled", "labels"] }],
-  ["Import", { tag: "nx-import", props: ["columns", "endpoint", "batch", "accept", "maxSize", "memory", "locale", "labels", "disabled"] }],
-  ["Guard", { tag: "nx-guard", props: ["fields", "mode", "endpoint", "locale", "labels", "disabled"] }],
-  ["Handoff", { tag: "nx-handoff", props: ["side", "endpoint", "for", "kind", "accept", "multiple", "context", "session", "token", "labels", "locale", "disabled"] }],
-  ["Award", { tag: "nx-award", props: ["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "weights", "scenario", "filter", "lens", "endpoint", "heading", "currency", "readonly", "requireReason", "requireReview", "locale", "labels"] }],
-  ["Account", { tag: "nx-account", props: ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "applyLocale", "session", "expiresAt", "warnBefore", "viewAs", "viewAsSource", "lock", "lockEndpoint", "lockAfter", "logoutUrl", "labels", "locale", "disabled"] }],
-  ["Launcher", { tag: "nx-launcher", props: ["items", "search", "columns", "headingLevel", "query", "locale", "labels"] }],
-  ["Cards", { tag: "nx-cards", props: ["fields", "layout", "rows", "actions", "level", "group", "sort", "rowKey", "query", "locale", "labels"] }],
-  ["Print", { tag: "nx-print", props: ["size", "orientation", "margin", "heading", "currency", "zoom", "locale", "labels", "toolbar"] }],
-  ["Signature", { tag: "nx-signature", props: ["value", "name", "required", "readonly", "disabled", "askName", "askId", "document", "geo", "valueFormat", "auto", "handoff", "penColor", "height", "locale", "labels"] }],
-  ["Planner", { tag: "nx-planner", props: ["resources", "bookings", "view", "date", "snap", "hours", "workdays", "holidays", "summary", "source", "endpoint", "readonly", "locale", "labels"] }],
-  ["Review", { tag: "nx-review", props: ["mode", "threshold", "maxSilent", "empty", "initial", "rebase", "locale", "labels", "disabled"] }],
-  ["Voice", { tag: "nx-voice", props: ["for", "endpoint", "engine", "hold", "hotkey", "maxSeconds", "silence", "commands", "layout", "locale", "labels", "disabled"] }],
-  ["Thread", { tag: "nx-thread", props: ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "readonly", "disabled", "locale", "labels", "comments"] }],
-  ["Checklist", { tag: "nx-checklist", props: ["steps", "state", "endpoint", "me", "sequential", "handoff", "mode", "items", "heading", "readonly", "disabled", "locale", "labels"] }],
-  ["Recurrence", { tag: "nx-recurrence", props: ["value", "name", "required", "disabled", "readonly", "start", "holidays", "holidaysMode", "count", "valueFormat", "locale", "label", "labels"] }],
-  ["Jobs", { tag: "nx-jobs", props: ["endpoint", "stream", "poll", "notify", "always", "recent", "locale", "labels", "disabled"] }],
-  ["Button", { tag: "nx-button", props: ["label", "icon", "variant", "type", "disabled", "logMode", "stream", "method", "labels"] }],
-]);
+/** Nombre BDUI → etiqueta (`nx-…`). */
+const registry = new Map<string, Entry>(
+  Object.entries({
+    SideMenu: "sidemenu",
+    Select: "select",
+    DocCapture: "doc-capture",
+    Grid: "grid",
+    Agent: "agent",
+    AIAnswer: "ai-answer",
+    Command: "command",
+    Explain: "explain",
+    Inbox: "inbox",
+    Survey: "survey",
+    Number: "number",
+    Kanban: "kanban",
+    History: "history",
+    DateRange: "date-range",
+    PasteFill: "paste-fill",
+    Presence: "presence",
+    WhatIf: "what-if",
+    Trend: "trend",
+    Scan: "scan",
+    Sync: "sync",
+    Keytips: "keytips",
+    Import: "import",
+    Guard: "guard",
+    Handoff: "handoff",
+    Award: "award",
+    Account: "account",
+    Launcher: "launcher",
+    Cards: "cards",
+    Print: "print",
+    Signature: "signature",
+    Planner: "planner",
+    Review: "review",
+    Voice: "voice",
+    Thread: "thread",
+    Checklist: "checklist",
+    Recurrence: "recurrence",
+    Jobs: "jobs",
+    Button: "button",
+  }).map(([name, tag]) => [name, { tag: `nx-${tag}` }]),
+);
 
 /** Props que nunca se aceptan, ni en un componente propio: HTML crudo, manejadores y prototipos. */
 const FORBIDDEN = /^(innerHTML|outerHTML|srcdoc|__proto__|constructor|prototype)$/i;
@@ -65,10 +72,11 @@ const forbidden = (k: string) => FORBIDDEN.test(k) || isHandler(k);
 export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "source", "aiEndpoint", "nlEndpoint", "explainEndpoint", "channel", "stream", "ping", "href", "url", "handoff", "peopleSource", "refsSource"]);
 
 /** Registra un componente propio (o un alias) para `render`. Solo elementos personalizados (con
- *  guion): un `<a>` o un `<iframe>` con props de un payload se saltarían el saneo de URLs. */
-export function registerComponent(name: string, tag: string, props: readonly string[]): void {
+ *  guion): un `<a>` o un `<iframe>` con props de un payload se saltarían el saneo de URLs. Sin
+ *  `props`, acepta los setters de la clase, igual que los de la librería. */
+export function registerComponent(name: string, tag: string, props?: readonly string[]): void {
   if (!/^[a-z][a-z0-9._]*-[a-z0-9._-]*$/.test(tag)) throw new Error(`[nx-ui] BDUI: "${tag}" no es un elemento personalizado`);
-  const bad = props.filter(forbidden);
+  const bad = props?.filter(forbidden) ?? [];
   if (bad.length) throw new Error(`[nx-ui] BDUI: props no permitidas: ${bad.join(", ")}`);
   registry.set(name, { tag, props });
 }
@@ -76,6 +84,27 @@ export function registerComponent(name: string, tag: string, props: readonly str
 /** El componente BDUI está registrado (`render` lo sabe pintar). */
 export function hasComponent(name: string): boolean {
   return registry.has(name);
+}
+
+/** Acepta `key`: está en la lista explícita o la clase tiene un setter propio (no uno de
+ *  `HTMLElement`: `textContent` o `id` no vienen de un payload). */
+function accepts(entry: Entry, ctor: CustomElementConstructor | undefined, key: string): boolean {
+  if (forbidden(key)) return false;
+  if (entry.props) return entry.props.includes(key);
+  return !!ctor && !!setterOf(ctor.prototype, key, HTMLElement.prototype);
+}
+
+/** Las props que acepta un componente registrado (vacío si su elemento aún no está definido). */
+export function propsOf(name: string): string[] {
+  const entry = registry.get(name);
+  if (!entry) return [];
+  if (entry.props) return entry.props.filter((k) => !forbidden(k));
+  const out = new Set<string>();
+  const ctor = typeof customElements !== "undefined" ? customElements.get(entry.tag) : undefined;
+  for (let p = ctor?.prototype; p && p !== HTMLElement.prototype; p = Object.getPrototypeOf(p)) {
+    for (const k of Object.getOwnPropertyNames(p)) if (accepts(entry, ctor, k)) out.add(k);
+  }
+  return [...out];
 }
 
 /** Pinta los nodos dentro de `target`, reemplazando lo que tuviera. Devuelve los elementos creados. */
@@ -87,13 +116,23 @@ export function render(node: BduiNode | BduiNode[], target: Element): Element[] 
       console.warn(`[nx-ui] componente BDUI desconocido: ${n?.component}`);
       continue;
     }
-    if (typeof customElements !== "undefined" && !customElements.get(entry.tag)) {
-      console.warn(`[nx-ui] <${entry.tag}> no está definido: importa su módulo (nx-ui/…) antes de pintar ${n.component}`);
-    }
-    const el = document.createElement(entry.tag) as unknown as Record<string, unknown> & Element;
-    for (const [k, v] of Object.entries(n.props ?? {})) {
-      if (entry.props.includes(k) && !forbidden(k)) el[k] = v;
-      else console.warn(`[nx-ui] ${n.component}: prop ignorada "${k}"`);
+    const el = document.createElement(entry.tag) as unknown as Record<string, unknown> & HTMLElement;
+    const assign = () => {
+      const ctor = customElements.get(entry.tag);
+      for (const [k, v] of Object.entries(n.props ?? {})) {
+        if (accepts(entry, ctor, k)) el[k] = v;
+        else console.warn(`[nx-ui] ${n.component}: prop ignorada "${k}"`);
+      }
+    };
+    const defined = !!customElements.get(entry.tag);
+    if (!defined) console.warn(`[nx-ui] <${entry.tag}> no está definido: importa su módulo (nx-ui/…) antes de pintar ${n.component}`);
+    if (defined || entry.props) assign();
+    else {
+      // Sin la clase no se sabe qué acepta: las props esperan a que el módulo se cargue.
+      void customElements.whenDefined(entry.tag).then(() => {
+        customElements.upgrade(el);
+        assign();
+      });
     }
     out.push(el);
   }

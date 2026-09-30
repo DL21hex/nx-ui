@@ -10,7 +10,7 @@
  * tabla equivalente («Ver como tabla») y las series se distinguen también por la forma del marcador.
  * `<nx-ai-answer>` se carga con `import()` la primera vez que se pregunta.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -48,7 +48,6 @@ const shape = (i: number, x = 0, y = 0) => {
   const [dx, dy, d] = SHAPES[i % SHAPES.length];
   return `M${r1(x + dx)} ${r1(y + dy)}${d}`;
 };
-const PROPS = ["series", "anomalies", "labels", "heading", "format", "currency", "kind", "height", "detect", "explainEndpoint", "busy", "locale"] as const;
 
 type Attrs = Record<string, string | number | null | undefined | false>;
 /** Un nodo SVG (los textos, siempre como nodos de texto). */
@@ -231,14 +230,7 @@ export class NxTrend extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#render();
     if (typeof ResizeObserver !== "undefined") {

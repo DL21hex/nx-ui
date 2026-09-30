@@ -13,7 +13,7 @@
  * El micrófono se apaga siempre: al terminar, al ocultar la pestaña, al desconectar el elemento y al
  * tope de `max-seconds`, con todas las pistas detenidas y el `AudioContext` cerrado.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { safeEndpoint } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
@@ -74,7 +74,6 @@ type Server = typeof import("./voice-server");
 
 const STR = ["for", "endpoint", "engine", "hotkey", "layout", "locale"];
 const BOOL = ["hold", "disabled"];
-const PROPS = [...STR, ...BOOL, "maxSeconds", "silence", "commands", "labels"];
 
 const MIC = '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>';
 // El marcado es SIEMPRE esta constante: los textos (que pueden venir de `labels`) van con `textContent`.
@@ -263,14 +262,7 @@ export class NxVoice extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     this.#build();
     document.addEventListener("keydown", this.#onKey, true);
     document.addEventListener("keyup", this.#onKeyUp, true);

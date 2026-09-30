@@ -12,7 +12,7 @@
  * Los nodos del autor nunca se mueven (hidratación de Solid): el panel es un nodo propio que se
  * inserta antes de la fila del botón y se quita al cerrar.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -21,7 +21,6 @@ import type { ReviewChange, ReviewLabels, ReviewMeta, ReviewMode, ReviewRow, Rev
 
 export { REVIEW_LABELS };
 
-const PROPS = ["mode", "threshold", "maxSilent", "empty", "initial", "rebase", "locale", "labels", "disabled"] as const;
 const SKIP = /^(submit|button|reset|image|file|password)$/;
 /** Pausa tras el último cambio antes de recalcular `dirty`. */
 const DEBOUNCE = 200;
@@ -201,14 +200,7 @@ export class NxReview extends Base {
   }
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.hasOwn(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     // Si el resumen va dentro del <form> (envolviendo un grupo), el envío no pasa por aquí.
     this.#outer = this.parentElement?.closest("form") ?? null;
     this.#outer?.addEventListener("submit", this.#onSubmit, true);

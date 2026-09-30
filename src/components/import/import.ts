@@ -12,7 +12,7 @@
  *    editable ahí mismo. Se corrigen o se omiten, y se importa: con `endpoint`, en lotes con avance,
  *    cancelable, y lo que el servidor rechaza vuelve a la revisión.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -108,7 +108,6 @@ export const IMPORT_LABELS: ImportLabels = {
 
 const UPLOAD = '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
-const PROPS = ["columns", "endpoint", "batch", "accept", "maxSize", "memory", "locale", "labels", "disabled"] as const;
 const ACCEPT = ".csv,.tsv,.txt,.xlsx,text/csv,text/tab-separated-values,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 /** Filas de la revisión que se pintan como mucho (las demás se cuentan: «y N más»). */
 const LIMIT = 200;
@@ -302,14 +301,7 @@ export class NxImport extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#paint();
   }
