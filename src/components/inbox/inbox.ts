@@ -9,7 +9,7 @@
  * y se puede deshacer mientras corre el tiempo (con el botón del aviso o Ctrl+Z). La app registra
  * en el backend cuando llega `nx-inbox-commit`.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { formatElapsed } from "../../core/format";
@@ -61,7 +61,6 @@ const CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const DONE = '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>';
 const LOCK = '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
-const PROPS = ["items", "labels", "undo", "requireReason", "heading"] as const;
 /** Espera antes de pedir el impacto del ítem activo: moverse rápido no dispara una petición por tecla. */
 const IMPACT_DELAY = 150;
 /** Cuántos impactos se piden a la vez al aprobar en lote. */
@@ -71,6 +70,10 @@ let uid = 0;
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 export class NxInbox extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = ["items", "labels", "heading", "locale"];
 
   #uid = `nx-inbox${++uid}`;
@@ -240,14 +243,7 @@ export class NxInbox extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#paint();
   }

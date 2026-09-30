@@ -82,7 +82,7 @@ const job = await jobs.start({ type: "cierre-mes", title: "Cierre de septiembre"
 jobs.track(respuesta.jobId);
 
 jobs.addEventListener("nx-jobs-done", (e) =&gt; bandeja.add(e.detail.job));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Jobs, type NxJobs } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Jobs, type NxJobs } from "nx-ui/solid/jobs";
 
 let jobs!: NxJobs;
 &lt;Jobs ref={jobs} endpoint="/api/trabajos" stream="/api/trabajos/eventos" notify

@@ -8,7 +8,7 @@
  * nativo: envía la RRULE (o el JSON con `value-format="json"`), con `required` y validez. El
  * intérprete y los controles llegan con `import()` (al acercarse al campo o si el valor es una frase).
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { dayOf, dayOfISO, isoOf, todayOf } from "../../core/days";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
@@ -68,7 +68,6 @@ export const RECURRENCE_LABELS: RecurrenceLabels = {
   holidaysAfter: "Día hábil siguiente",
 };
 
-const PROPS = ["value", "name", "required", "disabled", "readonly", "start", "holidays", "holidaysMode", "count", "valueFormat", "locale", "label", "labels"] as const;
 /** Lo que se anuncia espera a que se deje de escribir. */
 const SAY_MS = 800;
 const localISO = (o: RecurrenceOccurrence) => (o.time === null ? o.day : `${o.day}T${String(Math.floor(o.time / 60)).padStart(2, "0")}:${String(o.time % 60).padStart(2, "0")}`);
@@ -254,14 +253,7 @@ export class NxRecurrence extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#name();
     queueMicrotask(() => this.#name());

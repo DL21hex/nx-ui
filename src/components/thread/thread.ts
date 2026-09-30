@@ -17,7 +17,7 @@
  * mover nada del autor. En vivo por `stream` (SSE o NDJSON), o con un sondeo suave (`poll`).
  * El envío es optimista, con `clientId` para que un reintento no duplique.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
 import { initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -101,7 +101,6 @@ export const THREAD_LABELS: ThreadLabels = {
   you: "Tú",
 };
 
-const PROPS = ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "readonly", "disabled", "locale", "labels", "comments"] as const;
 const JSON_ATTRS: Record<string, string> = { me: "me", labels: "labels", anchors: "anchors", "ref-patterns": "refPatterns" };
 /** Cuántos comentarios se pintan (y cuántos más con «Ver anteriores»). */
 const PAGE = 50;
@@ -301,14 +300,7 @@ export class NxThread extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#start();
   }

@@ -13,7 +13,7 @@
  * pone al final.
  * La tarjeta es un popover (capa superior) que se crea al abrirse la primera vez.
  */
-import { Base } from "../../core/define";
+import { Base, upgrade } from "../../core/define";
 import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
@@ -43,7 +43,6 @@ const WARN = '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2
 const BACK = '<path d="m15 18-6-6 6-6"/>';
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
 const OP_SIGN: Record<string, string> = { "+": "+", "-": "−", "×": "×", "÷": "÷", "=": "=" };
-const PROPS = ["endpoint", "method", "explanation", "context", "labels"] as const;
 
 type Level = { title: string; url?: string; state: ExplainState; ctrl?: AbortController };
 
@@ -135,14 +134,7 @@ export class NxExplain extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#paint();
   }

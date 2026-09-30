@@ -15,7 +15,7 @@
  * - Al terminar: `nx-jobs-done`, un aviso (`nxToast`, cargado con `import()`) si el panel no está a
  *   la vista y, con `notify`, una notificación del sistema si la pestaña está oculta.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -278,14 +278,7 @@ export class NxJobs extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    const self = this as unknown as Record<string, unknown>;
-    for (const p of PROPS) {
-      if (Object.hasOwn(this, p)) {
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     if (this.#on) return;
     this.#on = true;

@@ -12,7 +12,7 @@
  * un popover abierto, solo cuenta lo de adentro. La capa de las etiquetas es decorativa
  * (`aria-hidden`) y va en la capa superior (`popover="manual"`), sobre los diálogos.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { assignKeytips, keytipChar } from "./logic";
@@ -22,7 +22,6 @@ export const KEYTIPS_LABELS: KeytipsLabels = {
   open: "Atajos visibles. Pulsa una letra o Esc para salir.",
 };
 
-const PROPS = ["scope", "key", "disabled", "labels"] as const;
 const CANDIDATES = "button,a[href],summary,input,select,textarea,[contenteditable],[role],[tabindex],[data-keytip]";
 /** Roles que se pulsan; los de `TYPING` reciben el foco. */
 const ROLES = /^(button|tab|menuitem(checkbox|radio)?|link|checkbox|radio|switch|option)$/;
@@ -196,14 +195,7 @@ export class NxKeytips extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#layer) {
       this.#layer = h("div", { class: "nx-keytips__layer", popover: "manual", "aria-hidden": "true", hidden: true });
       this.#status = h("div", { class: "nx-keytips__status", role: "status" });

@@ -16,7 +16,7 @@
  *
  * Los nodos del autor nunca se mueven (hidratación de Solid): lo propio va en un contenedor al final.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
 import { initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -140,7 +140,6 @@ type Op = { cid: string; step: string; at: string; next?: ChecklistStepState; pr
 type Draft = { ev: ChecklistEvidence[]; note: string };
 type Row = { li: HTMLLIElement; g: HTMLElement; btn: HTMLButtonElement; key: string };
 
-const PROPS = ["steps", "state", "items", "me", "labels", "sequential", "mode", "readonly", "disabled", "locale", "endpoint", "handoff", "heading"] as const;
 const JSON_ATTRS = ["steps", "state", "items", "me", "labels"];
 /** Cada cuánto se ponen al día «vence hoy…» y «hace 5 min». */
 const TICK = 60_000;
@@ -332,14 +331,7 @@ export class NxChecklist extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     this.#built = true;
     this.#render();
     this.#tick = setInterval(() => this.#update(), TICK);

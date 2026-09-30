@@ -11,7 +11,7 @@
  * Solo se pinta lo que se ve: las filas por su altura (una por carril de reservas solapadas) y las
  * columnas por su ancho, con un margen. Durante el arrastre solo se mueve una sombra con `transform`.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint, safeImageSrc } from "../../core/dom";
 import { glyph, hasIcon, icon, initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -83,7 +83,6 @@ export const PLANNER_LABELS: PlannerLabels = {
   expand: "Desplegar {group}",
 };
 
-const PROPS = ["resources", "bookings", "view", "date", "snap", "hours", "workdays", "holidays", "summary", "source", "endpoint", "readonly", "locale", "labels"] as const;
 const JSON_ATTRS = new Set(["resources", "bookings", "workdays", "holidays", "labels"]);
 /** Alto de un carril, relleno de la fila, fila de grupo y encabezado (con y sin la fila de ocupación). */
 const LANE = 38;
@@ -334,14 +333,7 @@ export class NxPlanner extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     if (typeof ResizeObserver !== "undefined" && !this.#ro) {
       this.#ro = new ResizeObserver(() => this.#measure());

@@ -9,7 +9,7 @@
  * Participa en un <form> nativo (`name`, `required`, validez con mensaje); `value` es un
  * `number` o `null`.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h } from "../../core/dom";
 import { resolveLocale } from "../../core/locale";
 import {
@@ -49,7 +49,6 @@ export const NUMBER_LABELS: NumberLabels = {
   words: "En letras",
 };
 
-const PROPS = ["value", "min", "max", "step", "format", "currency", "decimals", "words", "name", "required", "disabled", "readonly", "placeholder", "align", "label", "locale", "labels"] as const;
 /** Lo que dura a la vista el aviso de «se recortó al máximo». */
 const NOTICE_MS = 2600;
 
@@ -255,14 +254,7 @@ export class NxNumber extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#paint();
     this.#name();

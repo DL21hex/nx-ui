@@ -7,7 +7,7 @@
  * grandes, `source="/url"` busca en el servidor mientras se escribe (`?q=`). Participa en un
  * <form> nativo con `name` y `required`.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { listKeyStep } from "../../core/keys";
@@ -30,12 +30,15 @@ const CHEVRON = '<path d="m6 9 6 6 6-6"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
 const DEBOUNCE_MS = 250;
-const PROPS = ["options", "fields", "value", "selection", "multiple", "placeholder", "source", "name", "required", "disabled", "clearable", "avatar", "labels", "limit"] as const;
 
 let uid = 0;
 
 export class NxSelect extends Base {
   static formAssociated = true;
+  static {
+    attrProps(this, ["label"]);
+  }
+  declare label: string | null;
   static observedAttributes = ["options", "fields", "value", "multiple", "placeholder", "source", "name", "required", "disabled", "clearable", "avatar", "labels", "limit", "label"];
 
   #options: SelectOption[] = [];
@@ -196,14 +199,7 @@ export class NxSelect extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#paint();
   }

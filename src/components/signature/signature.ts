@@ -10,7 +10,7 @@
  * `ask-id`), la huella SHA-256 de lo firmado (`document`) y, con `handoff`, «Firmar en el celular»
  * con `<nx-handoff kind="signature">` (se carga aparte, al pedirlo).
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
 import {
@@ -60,7 +60,6 @@ type Action = "undo" | "clear" | "type" | "phone" | "confirm" | "again";
 /** Atributos de texto y booleanos: la propiedad en camelCase refleja el atributo (`askName` ↔ `ask-name`). */
 const STR = ["name", "document", "valueFormat", "handoff", "penColor", "locale"];
 const BOOL = ["required", "readonly", "disabled", "askName", "askId", "geo", "auto"];
-const PROPS = [...STR, ...BOOL, "height", "labels", "value"];
 const kebab = (k: string) => k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
 const btn = (a: Action) => `<button type="button" class="nx-sig__btn" data-a="${a}" data-l="${a}"></button>`;
@@ -232,14 +231,7 @@ export class NxSignature extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     this.#build();
     if (typeof ResizeObserver === "function") (this.#ro ??= new ResizeObserver(() => this.#resize())).observe(this.#pad);
     this.#resize();

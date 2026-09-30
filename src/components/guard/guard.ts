@@ -15,7 +15,7 @@
  * inserta después del campo (o de su `<label>`) y se quita. Al campo solo se le suma el aviso en
  * `aria-describedby` y `data-nx-guard`; nada de `aria-invalid`, porque no es un error.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -24,7 +24,6 @@ import type { GuardFields, GuardFinding, GuardLabels, GuardMode, GuardRemoteResp
 
 export { GUARD_LABELS };
 
-const PROPS = ["fields", "labels", "mode", "endpoint", "disabled"] as const;
 const SKIP = /^(hidden|password|file|submit|button|reset|image|checkbox|radio|range|color)$/;
 /** Espera tras el último cambio antes de preguntarle al servidor, y cuánto se le espera. */
 const DEBOUNCE = 300;
@@ -59,6 +58,10 @@ function describe(el: HTMLElement, id: string, on: boolean): void {
 }
 
 export class NxGuard extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = ["fields", "labels", "mode", "endpoint", "disabled", "locale"];
 
   #uid = `nx-guard${++uid}-`;
@@ -193,14 +196,7 @@ export class NxGuard extends Base {
   #onSubmit = (e: Event): void => this.#submit(e as SubmitEvent);
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     this.#outer = this.parentElement?.closest("form") ?? null;
     this.#outer?.addEventListener("submit", this.#onSubmit, true);
   }

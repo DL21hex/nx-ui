@@ -15,7 +15,7 @@
  * propio. Lo que hace la persona actual sale en `nx-presence-local`, para que la app lo mande a
  * su servidor. Latido cada 15 s; quien no da señales en 45 s se va solo.
  */
-import { Base } from "../../core/define";
+import { Base, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint, safeImageSrc } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { glyph, initials } from "../../core/icons";
@@ -51,7 +51,6 @@ export const PRESENCE_LABELS: PresenceLabels = {
 
 const WARN = '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>';
 const DOWN = '<path d="m6 9 6 6 6-6"/>';
-const PROPS = ["me", "labels", "channel", "source", "for", "idle", "max"] as const;
 const JSON_ATTRS = ["me", "labels"];
 /** Cada cuánto se revisa todo: latido propio, quién se fue, inactividad, «hace N min». */
 const TICK_MS = 5_000;
@@ -74,6 +73,10 @@ interface Mark {
 }
 
 export class NxPresence extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = [...JSON_ATTRS, "channel", "source", "for", "idle", "max", "locale"];
 
   #uid = `nx-presence${++uid}`;
@@ -191,14 +194,7 @@ export class NxPresence extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#start();
     this.#paint();

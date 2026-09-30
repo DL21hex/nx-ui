@@ -17,7 +17,7 @@
  * Las filas se virtualizan (solo existen en el DOM las visibles); todo el texto va por
  * `textContent`.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -147,7 +147,6 @@ const EXPORT_BLOCK = 5000;
 const EXPORT_MAX = 1_048_575;
 const WIDTH: Record<string, number> = { text: 180, number: 110, money: 140, date: 120, status: 130, ai: 220 };
 const OPS = new Set(["in", "notIn", "range", "contains"]);
-const PROPS = ["columns", "rows", "filters", "sort", "labels", "source", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale", "selectable", "selected"] as const;
 
 type Item = { g: GridGroup } | { r: GridRow };
 type Pos = { r: number; c: number };
@@ -171,6 +170,10 @@ function validFilters(v: unknown): GridFilter[] {
 }
 
 export class NxGrid extends Base {
+  static {
+    attrProps(this, ["height"]);
+  }
+  declare height: string | null;
   static observedAttributes = ["columns", "rows", "filters", "labels", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable"];
 
   #uid = `nx-grid${++uid}`;
@@ -564,14 +567,7 @@ export class NxGrid extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     const first = !this.#built;
     if (first) this.#build();
     if (typeof ResizeObserver !== "undefined" && !this.#ro) {

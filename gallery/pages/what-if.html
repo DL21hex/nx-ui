@@ -74,7 +74,7 @@ plan.addEventListener("nx-what-if-compute", (e) =&gt; {
   const { acero, volumen } = e.detail.inputs;
   e.detail.respond([{ type: "metric", id: "margen", value: margen(acero, volumen) }]);
 });</code></pre>
-        <pre role="tabpanel" hidden><code>import { WhatIf } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { WhatIf } from "nx-ui/solid/what-if";
 
 &lt;WhatIf heading="Plan de compras 2027" endpoint="/finanzas/plan-2027/simular"
   inputs={supuestos} outputs={metricas} scenarios={escenarios()}

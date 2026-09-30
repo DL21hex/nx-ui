@@ -41,7 +41,7 @@ const BUDGET = [
   ["dist/history.js", 11.5 * 1024, "history + toast + núcleo (ESM)"],
   ["dist/date-range.js", 11.5 * 1024, "date-range + núcleo (ESM)"],
   ["dist/paste-fill.js", 18.75 * 1024, "paste-fill + extractor + núcleo (ESM)"],
-  ["dist/presence.js", 7.5 * 1024, "presence + núcleo (ESM)"],
+  ["dist/presence.js", 7.75 * 1024, "presence + núcleo (ESM)"],
   ["dist/what-if.js", 11.25 * 1024, "what-if + núcleo (ESM)"],
   ["dist/trend.js", 10.75 * 1024, "trend + núcleo (ESM; nx-ai-answer se carga aparte)"],
   ["dist/scan.js", 12.5 * 1024, "scan + núcleo (ESM; el toast se carga aparte)"],
@@ -85,7 +85,8 @@ const BUDGET = [
   // El chunk del panel importa el de jobs (ya cargado en la página): se mide todo lo que baja la página.
   [lazy("jobs-panel"), 11.25 * 1024, "nx-jobs con su panel (se trae al apuntar a la píldora o al abrirla)"],
   ["dist/bdui.js", 2.5 * 1024, "adaptador BDUI (el registro crece con cada componente)"],
-  ["dist/solid/index.jsx", 7 * 1024, "adaptador Solid (JSX; importa los componentes de dist/, no los copia)"],
+  ["dist/solid/index.jsx", 0.75 * 1024, "adaptador Solid, índice (solo reexporta los de cada componente)"],
+  ["dist/solid/grid.jsx", 1 * 1024, "adaptador Solid de grid (JSX; importa el componente de dist/, no lo copia)"],
   ["dist/tokens.css", 1.2 * 1024, "tokens"],
   ["dist/palettes.css", 1024, "paletas (opcional)"],
   ["dist/sidemenu.css", 3 * 1024, "sidemenu (CSS)"],

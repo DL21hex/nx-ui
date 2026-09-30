@@ -3,7 +3,7 @@
 // Sobre el paquete CONSTRUIDO (`npm run build` antes; si no hay dist/, se omite). Cubre lo que
 // las pruebas de src/ no ven: que el bundler no descarte el registro de los elementos por
 // considerarlo "sin efectos" (`sideEffects` del package.json).
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 
@@ -27,14 +27,25 @@ describe.skipIf(!hasDist)("dist/", () => {
     expect(out.outputFiles[0].text).toContain("customElements.define");
   });
 
+  const solid = () => readdirSync("dist/solid").filter((f) => f.endsWith(".jsx"));
+
   it("el adaptador Solid importa los componentes de dist/ y no trae su propia copia", () => {
-    const jsx = readFileSync("dist/solid/index.jsx", "utf8");
-    expect(jsx).toContain('from "../sync.js"');
-    expect(jsx).not.toMatch(/customElements\.define|extends Base/);
+    expect(readFileSync("dist/solid/index.jsx", "utf8")).toContain('from "../sync.js"');
+    for (const f of solid()) expect(readFileSync(`dist/solid/${f}`, "utf8"), f).not.toMatch(/customElements\.define|extends Base/);
+  });
+
+  it("cada componente de Solid trae solo el suyo: nx-ui/solid/grid no arrastra la librería", () => {
+    for (const f of solid().filter((f) => f !== "index.jsx")) {
+      const imports = [...readFileSync(`dist/solid/${f}`, "utf8").matchAll(/(?:from |import )"(\.\.?\/[\w-]+\.jsx?)"/g)].map((m) => m[1]);
+      expect(imports, f).toEqual([`../${f.replace(".jsx", ".js")}`]);
+    }
+    const index = readFileSync("dist/solid/index.jsx", "utf8");
+    expect(index).toContain('export * from "./grid.jsx"');
+    expect(index).not.toMatch(/splitProps/);
   });
 
   it("cada nombre que el adaptador Solid importa de dist/ existe en ese módulo", async () => {
-    const jsx = readFileSync("dist/solid/index.jsx", "utf8");
+    const jsx = solid().map((f) => readFileSync(`dist/solid/${f}`, "utf8")).join("\n");
     for (const [, names, file] of jsx.matchAll(/import\s*\{([^}]+)\}\s*from\s*"\.\.\/([\w-]+\.js)"/g)) {
       const src = readFileSync(`dist/${file}`, "utf8");
       for (const n of names.split(",").map((x) => x.trim().split(/\s+as\s+/)[0])) {

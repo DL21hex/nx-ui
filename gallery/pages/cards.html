@@ -49,7 +49,7 @@
     prov.layout = { title: "name", subtitle: ["cat", "city"], status: "state", value: "compras",
       trend: "months", brief: ["cumpl"], facts: ["cumpl", "city"] };
     prov.rows = await (await fetch("/api/proveedores")).json();</code></pre>
-            <pre role="tabpanel" hidden><code>import { Cards } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Cards } from "nx-ui/solid/cards";
 
     &lt;Cards fields={campos} layout={distribucion} rows={proveedores()} group="cat" sort="compras"
       actions={[{ id: "orden", label: "Nueva orden de compra", primary: true, disabledFor: ["bloqueado"] }]}

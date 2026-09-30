@@ -16,7 +16,7 @@
  * - **Light DOM.** Estilos en `print.css`; la hoja de impresión (`@page`, ocultar lo demás) se pone
  *   al imprimir y se quita después.
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale, type NxFormat } from "../../core/locale";
@@ -39,7 +39,6 @@ export const PRINT_LABELS: PrintLabels = {
   carriedIn: "Vienen",
 };
 
-const PROPS = ["size", "orientation", "margin", "heading", "currency", "zoom", "locale", "labels", "toolbar"] as const;
 const SKIP = /^(SCRIPT|STYLE|TEMPLATE|LINK|META|NOSCRIPT)$/;
 const PAD = 24;
 
@@ -202,14 +201,7 @@ export class NxPrint extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const value = self[p];
-        delete self[p];
-        self[p] = value;
-      }
-    }
+    upgrade(this);
     if (!this.#ui) {
       this.#desk = h("div", { class: "nx-print__desk" });
       this.#stack = h("div", { class: "nx-print__stack", "aria-hidden": "true", inert: true });

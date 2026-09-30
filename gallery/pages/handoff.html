@@ -98,7 +98,7 @@
 
 &lt;!-- La página del celular (la del url del QR: lee ?s= y ?t=) --&gt;
 &lt;nx-handoff side="phone" endpoint="/api/handoff"&gt;&lt;/nx-handoff&gt;</code></pre>
-        <pre role="tabpanel" hidden><code>import { Handoff } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Handoff } from "nx-ui/solid/handoff";
 
 &lt;Handoff endpoint="/api/handoff" for="conteo" kind="scan"
   onItem={(e) =&gt; console.log(e.detail.item)} onDone={(e) =&gt; guardar(e.detail.items)} /&gt;

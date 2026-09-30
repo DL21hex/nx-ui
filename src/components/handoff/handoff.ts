@@ -12,7 +12,7 @@
  * disponible, polling. Nada queda abierto al cerrar el panel, al vencer la sesión o al salir el
  * elemento de la página (un `AbortController` por escucha y otro por las descargas).
  */
-import { Base, boolAttr } from "../../core/define";
+import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { lineData, readLines } from "../../core/stream";
@@ -52,7 +52,6 @@ export const HANDOFF_LABELS: HandoffLabels = {
 
 const PHONE = '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
-const PROPS = ["side", "endpoint", "for", "kind", "accept", "multiple", "context", "session", "token", "labels", "locale", "disabled"] as const;
 /** Cada cuánto se consulta cuando no hay stream. */
 const POLL_MS = 2000;
 /** Fallos seguidos del stream antes de pasar a polling. */
@@ -271,14 +270,7 @@ export class NxHandoff extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (this.#built !== this.side) this.#build();
     // Vuelve a la página (se movió en el DOM): la sesión sigue si no venció.
     else if (this.side === "desktop" && this.#session && (this.#state === "waiting" || this.#state === "connected" || this.#state === "receiving")) {

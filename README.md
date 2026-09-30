@@ -126,11 +126,14 @@ import { lucide } from "nx-ui/icons"; // opcional: ~28 íconos Lucide
 registerIcons(lucide);
 ```
 
-**SolidJS:** `nx-ui/solid` trae un envoltorio y los tipos JSX. Se publica como JSX sin compilar
-bajo la condición de export `"solid"`, así que vite-plugin-solid lo compila para SSR o navegador.
+**SolidJS:** cada componente tiene su envoltorio con los tipos JSX en `nx-ui/solid/<componente>`
+(`nx-ui/solid/grid`, `nx-ui/solid/sidemenu`…). Así la app carga solo lo que usa. `nx-ui/solid` los
+reexporta todos, pero importa la librería entera: sirve para prototipos, no para producción. Se
+publica como JSX sin compilar bajo la condición de export `"solid"`, así que vite-plugin-solid lo
+compila para SSR o navegador.
 
 ```tsx
-import { SideMenu } from "nx-ui/solid";
+import { SideMenu } from "nx-ui/solid/sidemenu";
 
 <SideMenu items={menu()} active={useLocation().pathname} collapsible collapsed={compact()}
   onToggle={(e) => { e.preventDefault(); setCompact(e.detail.collapsed); }} />
@@ -147,9 +150,13 @@ import { render } from "nx-ui/bdui";
 render({ component: "SideMenu", props: { items, active: "/ventas/pedidos" } }, contenedor);
 ```
 
-Cada componente declara qué props acepta. Una clave que no está en la lista se ignora y se avisa
-por consola. `registerComponent` solo acepta elementos personalizados (con guion) y nunca props como
-`innerHTML`, `srcdoc` u `on*`.
+Las props que acepta cada componente salen de su propia clase: las que tienen setter. No hay una
+segunda lista que mantener: una prop nueva del componente llega sola a BDUI, y una clave sin setter
+(un error de tipeo, `textContent`, `__proto__`) se ignora y se avisa por consola. `propsOf("Grid")`
+devuelve la lista. `registerComponent(nombre, etiqueta)` hace lo mismo con un componente propio (o
+se le pasa la lista explícita); solo acepta elementos personalizados (con guion) y nunca props como
+`innerHTML`, `srcdoc` u `on*`. Si el módulo del componente aún no está cargado, las props esperan a
+que se defina.
 
 **Orígenes permitidos.** Todo `endpoint`, `source`, `action` o canal que llega en un payload se usa
 solo si es del mismo origen que la página. Así un payload no puede mandar filas, textos pegados ni
@@ -489,7 +496,7 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 | `nx_confirm` | Tarjeta de aprobación con impacto (`tone: "danger"` → mantener pulsado) | `{approved}` |
 | `nx_ask` | Pregunta con opciones o texto libre | `{answer}` |
 | `nx_notify` | Un resultado; con `undo`, espera 7 s por si la persona lo deshace | `{undone}` |
-| `nx_show` | Pinta un componente de nx-ui (nodo BDUI, con su lista de props permitidas). Nunca pasan las props con URL (`endpoint`, `action`, `source`, `*Endpoint`…); con `show="Trend, Grid"`, solo esos componentes | `{shown}` |
+| `nx_show` | Pinta un componente de nx-ui (nodo BDUI, con su lista de props permitidas). Nunca pasan las props con URL (`endpoint`, `action`, `source`, `*Endpoint`, `*Source`, `*Url`…); con `show="Trend, Grid"`, solo esos componentes | `{shown}` |
 | `nx_tour` | Un recorrido guiado sobre la pantalla («¿cómo…?»): cada paso señala un elemento. Los `[data-tour]` visibles viajan en el contexto para que el modelo sepa qué puede señalar | `{completed, step}` |
 | `nx_grid_filter`, `nx_grid_select` | Filtra o selecciona en la tabla de `for` (y la tabla viaja como contexto) | `{rows}`, `{selected}` |
 
@@ -2023,7 +2030,7 @@ servidor estático y se abre `/examples/html/`.
 src/core/            h() y safeHref(), registro de íconos, define() seguro para SSR
 src/components/      un directorio por componente: lógica pura, render y CSS
 src/styles/          tokens.css y nx-ui.css (tokens + todos los componentes)
-src/solid/           adaptador para SolidJS
+src/solid/           adaptador para SolidJS (un archivo por componente; jsx.ts, los tipos JSX)
 src/bdui.ts          adaptador BDUI
 gallery/             la galería (usa <nx-sidemenu> como su propia navegación)
 ```

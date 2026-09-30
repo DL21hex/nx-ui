@@ -16,7 +16,7 @@
  * Las marcas sobre los campos van en una capa propia, encima del formulario: no se inserta nada
  * dentro del formulario del autor (solo `data-nx-fill` y la descripción accesible del campo).
  */
-import { Base } from "../../core/define";
+import { Base, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
@@ -65,7 +65,6 @@ const UNDO = '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
 const TEXT = '<path d="M17 6H3"/><path d="M21 12H3"/><path d="M15 18H3"/>';
 const WARN = '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>';
-const PROPS = ["fields", "endpoint", "reviewBelow", "labels", "for"] as const;
 /** Un color por campo (tono OKLCH): la marca en el texto y el campo comparten el suyo. */
 const HUES = [262, 150, 25, 75, 200, 330, 110, 290, 50, 180];
 const SKIP = /^(hidden|password|file|submit|button|reset|image|checkbox|radio|range|color)$/;
@@ -115,6 +114,10 @@ function writeValue(el: Control, v: string): void {
 }
 
 export class NxPasteFill extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = ["endpoint", "review-below", "labels", "fields", "for", "locale"];
 
   #uid = `nx-pf${++uid}`;
@@ -325,14 +328,7 @@ export class NxPasteFill extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     for (const [name, el] of this.#controls()) if (el instanceof HTMLSelectElement && !this.#initial.has(name)) this.#initial.set(name, el.value);
     if (typeof ResizeObserver !== "undefined") {

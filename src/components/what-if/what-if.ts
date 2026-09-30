@@ -10,7 +10,7 @@
  * espera entre cambios y la petición anterior se cancela. Los escenarios se guardan con nombre y
  * se comparan lado a lado con la base, con la mejor celda de cada métrica resaltada.
  */
-import { Base } from "../../core/define";
+import { Base, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -67,7 +67,6 @@ export const WHAT_IF_LABELS: WhatIfLabels = {
   scenario: "Escenario",
 };
 
-const PROPS = ["inputs", "outputs", "series", "scenarios", "values", "labels", "endpoint", "debounce", "heading", "locale"] as const;
 const RESET = '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>';
 const SAVE = '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>';
 const LOAD = '<path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/>';
@@ -244,14 +243,7 @@ export class NxWhatIf extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     this.#request(0);
   }

@@ -12,7 +12,7 @@
  * Todo es JSON: `record` (hoy), `fields` y `events`, o `source`, una URL que los devuelve y pagina
  * hacia atrás con `?before=<id>` cuando se llega al final.
  */
-import { Base } from "../../core/define";
+import { Base, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
@@ -61,7 +61,6 @@ export const HISTORY_LABELS: HistoryLabels = {
 
 const UNDO = '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>';
 const CLOCK = '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>';
-const PROPS = ["record", "fields", "events", "labels", "user", "source", "heading", "undo"] as const;
 const JSON_ATTRS = ["record", "fields", "events", "labels", "user"];
 
 let uid = 0;
@@ -80,6 +79,10 @@ function undoToast(opts: Parameters<typeof nxToast>[0] & object): { result: Retu
 }
 
 export class NxHistory extends Base {
+  static {
+    attrProps(this, ["locale"]);
+  }
+  declare locale: string | null;
   static observedAttributes = [...JSON_ATTRS, "source", "heading", "locale"];
 
   #uid = `nx-history${++uid}`;
@@ -267,14 +270,7 @@ export class NxHistory extends Base {
   // ---------------------------------------------------------------- ciclo de vida
 
   connectedCallback(): void {
-    for (const p of PROPS) {
-      if (Object.prototype.hasOwnProperty.call(this, p)) {
-        const self = this as unknown as Record<string, unknown>;
-        const v = self[p];
-        delete self[p];
-        self[p] = v;
-      }
-    }
+    upgrade(this);
     if (!this.#built) this.#build();
     if (this.source && !this.#events.length && !this.#loading) void this.#load();
     this.#paint();

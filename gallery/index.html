@@ -74,7 +74,7 @@ import { registerIcons } from "nx-ui";   // registra &lt;nx-sidemenu&gt;
 import { lucide } from "nx-ui/icons";     // opcional
 registerIcons(lucide);</code></pre>
         <pre role="tabpanel" hidden><code>import "nx-ui/nx-ui.css";
-import { SideMenu } from "nx-ui/solid";   // tipos JSX + envoltorio</code></pre>
+import { SideMenu } from "nx-ui/solid/sidemenu";   // tipos JSX + envoltorio</code></pre>
       </div>
 
       <h2>Compatibilidad</h2>
@@ -176,7 +176,7 @@ cap.schema = [
   { key: "total", label: "Total", type: "money", section: "Totales" },
 ];
 cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values, e.detail.confirmed));</code></pre>
-        <pre role="tabpanel" hidden><code>import { DocCapture } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { DocCapture } from "nx-ui/solid/capture";
 
 &lt;DocCapture schema={SCHEMA} endpoint="/compras/facturas/leer" reviewBelow={0.85}
   onSubmit={(e) =&gt; { e.preventDefault(); registrar(e.detail.values); }} /&gt;</code></pre>
@@ -283,7 +283,7 @@ grid.columns = [
 ];
 grid.rows = pedidos;                 // o: grid.source = "/compras/pedidos/buscar"
 grid.addEventListener("nx-grid-change", (e) =&gt; guardar(e.detail.changes));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Grid } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Grid } from "nx-ui/solid/grid";
 
 &lt;Grid columns={COLUMNAS} source="/compras/pedidos/buscar" aiEndpoint="/ia/columna" facetsOpen
   onChange={(e) =&gt; { if (!puedeEditar()) e.preventDefault(); else guardar(e.detail.changes); }} /&gt;</code></pre>
@@ -410,7 +410,9 @@ if (await nxConfirm({
 {"type":"block","message":"Ya tiene un pago: primero hay que reversarlo."}
 {"type":"note","message":"Se notificará a 2 aprobadores."}
 {"type":"done"}</code></pre>
-        <pre role="tabpanel" hidden><code>import { Dialog, nxConfirm, nxToast } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Dialog } from "nx-ui/solid/dialog";
+import { nxConfirm } from "nx-ui/confirm";
+import { nxToast } from "nx-ui/toast";
 
 &lt;Dialog open={abierto()} onOpenChange={(e) =&gt; setAbierto(e.detail.open)} heading="Nuevo pedido"&gt;
   &lt;FormularioPedido /&gt;
@@ -488,7 +490,7 @@ cmd.items = [
     children: [{ id: "claro", label: "Claro" }, { id: "oscuro", label: "Oscuro" }] },
 ];
 cmd.addEventListener("nx-command-select", (e) =&gt; ejecutar(e.detail.item.id));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Command } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Command } from "nx-ui/solid/command";
 
 &lt;Command menu="nav" source="/buscar" items={acciones()}
   onSelect={(e) =&gt; ejecutar(e.detail.item.id)} /&gt;</code></pre>
@@ -580,7 +582,7 @@ cmd.addEventListener("nx-command-select", (e) =&gt; ejecutar(e.detail.item.id));
   { type: "term", label: "Base gravable", value: 9100000 },
   { type: "term", label: "Tarifa general", value: 0.19, op: "×", format: "percent" },
 ];</code></pre>
-        <pre role="tabpanel" hidden><code>import { Explain } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Explain } from "nx-ui/solid/explain";
 
 &lt;Explain endpoint={`/explicar/factura/${id()}`}&gt;{total()}&lt;/Explain&gt;</code></pre>
       </div>
@@ -641,7 +643,7 @@ bandeja.items = await (await fetch("/compras/por-aprobar")).json();
 bandeja.addEventListener("nx-inbox-commit", (e) =&gt;
   fetch(`/compras/${e.detail.decision}`, { method: "POST", keepalive: true,
     body: JSON.stringify({ ids: e.detail.ids, motivo: e.detail.reason }) }));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Inbox } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Inbox } from "nx-ui/solid/inbox";
 
 &lt;Inbox items={pendientes()} heading="Órdenes por aprobar"
   onCommit={(e) =&gt; registrar(e.detail)} /&gt;</code></pre>
@@ -734,7 +736,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
   await db.respuestas.insert(req.body.answers);
   res.json({ results: aggregateSurvey(preguntas, await db.respuestas.all()) });
 });</code></pre>
-        <pre role="tabpanel" hidden><code>import { Survey } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Survey } from "nx-ui/solid/survey";
 
 &lt;Survey heading="¿Cómo va todo?" questions={preguntas} action="/encuestas/clima"
   onSubmit={(e) =&gt; console.log(e.detail.answers)} /&gt;</code></pre>
@@ -904,7 +906,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
 
     precio.addEventListener("input", () =&gt; (total.value = cantidad.value * precio.value));
     precio.addEventListener("nx-change", (e) =&gt; guardar(e.detail.value));   // {value, text}</code></pre>
-            <pre role="tabpanel" hidden><code>import { NumberInput } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { NumberInput } from "nx-ui/solid/number";
 
     &lt;NumberInput format="money" currency="COP" name="precio" step={1000} min={0} required
       value={precio()} onInput={(e) =&gt; setPrecio(e.currentTarget.value)}
@@ -997,7 +999,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     compras.addEventListener("nx-kanban-commit", (e) =&gt;
       fetch(`/compras/oc/${e.detail.card.id}`, { method: "PATCH", keepalive: true,
         body: JSON.stringify({ estado: e.detail.to, orden: e.detail.index }) }));</code></pre>
-            <pre role="tabpanel" hidden><code>import { Kanban } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Kanban } from "nx-ui/solid/kanban";
 
     &lt;Kanban heading="Órdenes de compra" columns={columnas} cards={ordenes()}
       onCommit={(e) =&gt; guardar(e.detail)} onAdd={(e) =&gt; nuevaOrden(e.detail.column)} /&gt;</code></pre>
@@ -1082,7 +1084,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     historia.addEventListener("nx-history-commit", (e) =&gt;
       fetch("/compras/oc-2291", { method: "PATCH", keepalive: true,
         body: JSON.stringify({ [e.detail.change.field]: e.detail.change.from }) }));</code></pre>
-            <pre role="tabpanel" hidden><code>import { History } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { History } from "nx-ui/solid/history";
 
     &lt;History record={orden()} fields={campos} events={eventos()} user={yo}
       onCommit={(e) =&gt; guardar(e.detail.record)}
@@ -1198,7 +1200,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
       const { start, end, compare } = e.detail.value;   // "2026-08-27", "2026-09-25", {start, end}
       cargarVentas(start, end, compare);
     });</code></pre>
-            <pre role="tabpanel" hidden><code>import { DateRange } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { DateRange } from "nx-ui/solid/date-range";
 
     &lt;DateRange phrase="este trimestre" compare="previous" fiscalStart={4}
       onChange={(e) =&gt; setPeriodo(e.detail.value)} /&gt;</code></pre>
@@ -1328,7 +1330,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
         &lt;label&gt;Fecha de entrega &lt;input name="entrega" type="date"&gt;&lt;/label&gt;
       &lt;/form&gt;
     &lt;/nx-paste-fill&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { PasteFill } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { PasteFill } from "nx-ui/solid/paste-fill";
 
     &lt;PasteFill fields={[{ name: "monto", kind: "money" }]} onDone={(e) =&gt; console.log(e.detail.values)}&gt;
       &lt;form&gt;
@@ -1461,7 +1463,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     aqui.addEventListener("nx-presence-local", (e) =&gt;
       fetch("/compras/oc-2291/presencia", { method: "POST", keepalive: true,
         body: JSON.stringify(e.detail) }));</code></pre>
-            <pre role="tabpanel" hidden><code>import { Presence } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Presence } from "nx-ui/solid/presence";
 
     &lt;Presence channel="oc-2291" for="orden" me={yo()}
       onLocal={(e) =&gt; socket.send(JSON.stringify(e.detail))}
@@ -1561,7 +1563,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
       const { acero, volumen } = e.detail.inputs;
       e.detail.respond([{ type: "metric", id: "margen", value: margen(acero, volumen) }]);
     });</code></pre>
-            <pre role="tabpanel" hidden><code>import { WhatIf } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { WhatIf } from "nx-ui/solid/what-if";
 
     &lt;WhatIf heading="Plan de compras 2027" endpoint="/finanzas/plan-2027/simular"
       inputs={supuestos} outputs={metricas} scenarios={escenarios()}
@@ -1656,7 +1658,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     // [{ id: "mp", label: "Materia prima", points: [{ x: "2026-01", y: 388400000 }, …] }, …]
     costos.anomalies = [{ series: "mp", x: "2026-08", label: "Acero +18 %" }];
     costos.addEventListener("nx-trend-why", (e) =&gt; analitica.track("por-que", e.detail.point));</code></pre>
-                <pre role="tabpanel" hidden><code>import { Trend } from "nx-ui/solid";
+                <pre role="tabpanel" hidden><code>import { Trend } from "nx-ui/solid/trend";
 
     &lt;Trend heading="Ventas por mes" kind="bar" format="money" currency="COP"
       series={ventas()} explainEndpoint="/ia/por-que"
@@ -1785,7 +1787,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
 
     &lt;nx-scan id="buscar"&gt;&lt;/nx-scan&gt;
     buscar.addEventListener("nx-scan", (e) =&gt; abrirProducto(e.detail.code));   // {code, format, via}</code></pre>
-            <pre role="tabpanel" hidden><code>import { Scan } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Scan } from "nx-ui/solid/scan";
 
     &lt;Scan mode="count" source="/inventario/producto?code=" formats={["ean_13", "code_128"]}
       items={lineas()} onCount={(e) =&gt; setLineas(e.detail.items)} /&gt;
@@ -1929,7 +1931,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     nxSync.subscribe((state, event) =&gt; {
       if (event?.type === "done") pintarConfirmado(event.data);
     });</code></pre>
-            <pre role="tabpanel" hidden><code>import { Sync } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Sync } from "nx-ui/solid/sync";
     import { nxSync } from "nx-ui/sync";
 
     &lt;Sync ping="/api/ping"
@@ -2103,7 +2105,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     &lt;button data-keytip="off"&gt;Eliminar&lt;/button&gt;          &lt;!-- sin atajo --&gt;
 
     keytips.addEventListener("nx-keytip", (e) =&gt; console.log(e.detail.key, e.detail.name));</code></pre>
-            <pre role="tabpanel" hidden><code>import { Keytips } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Keytips } from "nx-ui/solid/keytips";
 
     &lt;Keytips scope="#contenido" onKeytip={(e) =&gt; track(e.detail.key)} /&gt;</code></pre>
           </div>
@@ -2204,7 +2206,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     &lt;script&gt;
       clientes.addEventListener("nx-import-done", (e) =&gt; console.log(e.detail.rows, e.detail.skipped));
     &lt;/script&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Import } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Import } from "nx-ui/solid/import";
 
     &lt;Import
       id="clientes"
@@ -2362,7 +2364,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
         &lt;nx-number id="precio" name="precio" format="money" currency="COP"&gt;&lt;/nx-number&gt;
       &lt;/form&gt;
     &lt;/nx-guard&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Guard } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Guard } from "nx-ui/solid/guard";
 
     &lt;Guard mode="confirm" fields={{ precio: { history: historia(), format: "money", currency: "COP" } }}
       onWarn={(e) =&gt; console.log(e.detail.field, e.detail.finding.message)}&gt;
@@ -2489,7 +2491,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
 
     &lt;!-- La página del celular (la del url del QR: lee ?s= y ?t=) --&gt;
     &lt;nx-handoff side="phone" endpoint="/api/handoff"&gt;&lt;/nx-handoff&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Handoff } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Handoff } from "nx-ui/solid/handoff";
 
     &lt;Handoff endpoint="/api/handoff" for="conteo" kind="scan"
       onItem={(e) =&gt; console.log(e.detail.item)} onDone={(e) =&gt; guardar(e.detail.items)} /&gt;
@@ -2583,7 +2585,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     rfq.criteria = [{ id: "precio", label: "Precio", weight: 50 }, { id: "plazo", label: "Plazo", weight: 30 }];
     rfq.addEventListener("nx-award-submit", (e) =&gt;
       fetch("/compras/rfq/412/adjudicar", { method: "POST", body: JSON.stringify(e.detail) }));</code></pre>
-            <pre role="tabpanel" hidden><code>import { Award } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Award } from "nx-ui/solid/award";
 
     &lt;Award heading="RFQ-0412" endpoint="/compras/rfq/412/recomendar" currency="COP" requireReason
       suppliers={proveedores()} items={articulos()} quotes={cotizaciones()} criteria={criterios}
@@ -2703,7 +2705,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
 
     cuenta.addEventListener("nx-account-switch", (e) =&gt; cambiarEmpresa(e.detail.tenant.id));
     cuenta.addEventListener("nx-account-logout", () =&gt; limpiarDatosLocales());</code></pre>
-            <pre role="tabpanel" hidden><code>import { Account } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Account } from "nx-ui/solid/account";
 
     &lt;Account
       slot="footer"
@@ -2809,7 +2811,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     @view-transition { navigation: auto; }
     &lt;header class="nx-launcher-hero"&gt;&lt;span class="nx-launcher-hero-icon"&gt;…&lt;/span&gt;
       &lt;h1&gt;&lt;span class="nx-launcher-hero-label"&gt;Permisos&lt;/span&gt;&lt;/h1&gt;&lt;/header&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Launcher } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Launcher } from "nx-ui/solid/launcher";
     import { useNavigate } from "@solidjs/router";
 
     const navigate = useNavigate();
@@ -2888,7 +2890,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     prov.layout = { title: "name", subtitle: ["cat", "city"], status: "state", value: "compras",
       trend: "months", brief: ["cumpl"], facts: ["cumpl", "city"] };
     prov.rows = await (await fetch("/api/proveedores")).json();</code></pre>
-            <pre role="tabpanel" hidden><code>import { Cards } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Cards } from "nx-ui/solid/cards";
 
     &lt;Cards fields={campos} layout={distribucion} rows={proveedores()} group="cat" sort="compras"
       actions={[{ id: "orden", label: "Nueva orden de compra", primary: true, disabledFor: ["bloqueado"] }]}
@@ -3000,7 +3002,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
 
     /* Estilos del documento: con selectores de descendiente, no de hijo directo. */
     .factura td { padding: 3px 6px; }</code></pre>
-                <pre role="tabpanel" hidden><code>import { Print } from "nx-ui/solid";
+                <pre role="tabpanel" hidden><code>import { Print } from "nx-ui/solid/print";
 
     &lt;Print size="half-letter" orientation="landscape" heading={remision().numero}
       onPaginate={(e) =&gt; setHojas(e.detail.pages)}&gt;
@@ -3150,7 +3152,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
 
     &lt;!-- Mostrar una firma guardada --&gt;
     &lt;nx-signature readonly value='{"svg":"&lt;svg …&gt;","meta":{…}}'&gt;&lt;/nx-signature&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Signature } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Signature } from "nx-ui/solid/signature";
 
     &lt;Signature name="recibido" askName askId required document="remision" handoff="/api/handoff"
       onDone={(e) =&gt; guardar(e.detail.svg, e.detail.meta)} /&gt;</code></pre>
@@ -3237,7 +3239,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
         e.preventDefault();
       }
     });</code></pre>
-            <pre role="tabpanel" hidden><code>import { Planner } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Planner } from "nx-ui/solid/planner";
 
     &lt;Planner view="week" hours="06:00-18:00" resources={flota()} bookings={entregas()}
       endpoint="/api/despachos/reservas" summary="equipos"
@@ -3419,7 +3421,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
       // Sin formulario, con tu propio botón:
       if (await review.review()) await guardar();
     &lt;/script&gt;</code></pre>
-                <pre role="tabpanel" hidden><code>import { Review } from "nx-ui/solid";
+                <pre role="tabpanel" hidden><code>import { Review } from "nx-ui/solid/review";
 
     &lt;Review mode="significant" initial={orden()} onConfirm={(e) =&gt; guardarBitacora(e.detail.changes)}
       onDirty={(e) =&gt; setSucio(e.detail.dirty)}&gt;
@@ -3570,7 +3572,8 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
 
     &lt;!-- Sin la API del navegador (o sin mandar audio a terceros): el servidor de la app --&gt;
     &lt;nx-voice for="pedido-fill" engine="server" endpoint="/api/voz"&gt;&lt;/nx-voice&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Voice, PasteFill } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Voice } from "nx-ui/solid/voice";
+import { PasteFill } from "nx-ui/solid/paste-fill";
 
     &lt;Voice for="pedido-fill" hotkey="Alt+V" onText={(e) =&gt; registrar(e.detail.text)} /&gt;
     &lt;PasteFill id="pedido-fill"&gt;&lt;form&gt;…&lt;/form&gt;&lt;/PasteFill&gt;</code></pre>
@@ -3698,7 +3701,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
       hilo.addEventListener("nx-thread-mention", (e) =&gt;
         fetch("/api/avisos", { method: "POST", body: JSON.stringify(e.detail) }));
     &lt;/script&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Thread } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Thread } from "nx-ui/solid/thread";
 
     &lt;Thread record="OC-2291" endpoint="/api/comentarios" stream="/api/comentarios/stream"
       peopleSource="/api/personas" refsSource="/api/referencias"
@@ -3811,7 +3814,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     ]'&gt;&lt;/nx-checklist&gt;
 
     &lt;nx-checklist mode="summary" items='[{"id":"cierre","title":"Cierre de septiembre","done":18,"total":24,"overdue":3,"href":"/cierre"}]'&gt;&lt;/nx-checklist&gt;</code></pre>
-                <pre role="tabpanel" hidden><code>import { Checklist } from "nx-ui/solid";
+                <pre role="tabpanel" hidden><code>import { Checklist } from "nx-ui/solid/checklist";
 
     &lt;Checklist endpoint={`/api/procedimientos/${id()}`} me={usuario()} sequential={["Conteo"]}
       onChange={(e) =&gt; console.log(e.detail.step, e.detail.status)}
@@ -3923,7 +3926,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
       const { rrule, text, next } = e.detail;   // "DTSTART:…\nRRULE:FREQ=MONTHLY;BYDAY=-1FR;BYHOUR=17;…"
       guardar(rrule);
     });</code></pre>
-            <pre role="tabpanel" hidden><code>import { Recurrence } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Recurrence } from "nx-ui/solid/recurrence";
 
     &lt;Recurrence name="regla" value={regla()} holidays={["2026-12-24"]}
       onChange={(e) =&gt; setRegla(e.detail.rrule)} /&gt;</code></pre>
@@ -4032,7 +4035,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     jobs.track(respuesta.jobId);
 
     jobs.addEventListener("nx-jobs-done", (e) =&gt; bandeja.add(e.detail.job));</code></pre>
-            <pre role="tabpanel" hidden><code>import { Jobs, type NxJobs } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Jobs, type NxJobs } from "nx-ui/solid/jobs";
 
     let jobs!: NxJobs;
     &lt;Jobs ref={jobs} endpoint="/api/trabajos" stream="/api/trabajos/eventos" notify
@@ -4153,7 +4156,7 @@ ai.suggestions = ["¿Qué proveedores se retrasaron este mes?"];
 ai.context = { registro: 2291 };            // viaja con cada pregunta
 ai.addEventListener("nx-ai-action", (e) =&gt; abrirReclamo(e.detail.data));
 ai.addEventListener("nx-ai-feedback", (e) =&gt; guardarVoto(e.detail));</code></pre>
-        <pre role="tabpanel" hidden><code>import { AIAnswer } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { AIAnswer } from "nx-ui/solid/ai";
 
 &lt;AIAnswer endpoint="/ai/preguntar" feedback context={{ registro: id() }}
   suggestions={["¿Por qué subió el costo?"]}
@@ -4245,7 +4248,7 @@ emp.fields = [
 ];
 emp.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", cargo: "Soldadora" }, …];
 emp.addEventListener("nx-change", (e) =&gt; console.log(e.detail.value, e.detail.options));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Select } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Select } from "nx-ui/solid/select";
 
 &lt;Select fields={FIELDS} source="/hcm/empleados/buscar" avatar clearable
   value={empleado()} onChange={(e) =&gt; setEmpleado(e.detail.value as string)} /&gt;</code></pre>
@@ -4337,7 +4340,7 @@ pub.addEventListener("click", () =&gt;
 );
 
 // A mano: pub.busy = true; pub.log("…"); pub.progress = 0.5; pub.done(ok, "mensaje final");</code></pre>
-        <pre role="tabpanel" hidden><code>import { Button, type NxButton } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Button, type NxButton } from "nx-ui/solid/button";
 
 let ref!: NxButton;
 &lt;Button ref={ref} label="Publicar" variant="primary" logMode="inline"
@@ -4450,7 +4453,7 @@ let ref!: NxButton;
       children: [{ id: "pedidos", label: "Pedidos", href: "/ventas/pedidos" }] },
   ];
 &lt;/script&gt;</code></pre>
-        <pre role="tabpanel" hidden><code>import { SideMenu } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { SideMenu } from "nx-ui/solid/sidemenu";
 import { useLocation } from "@solidjs/router";
 
 const loc = useLocation();
