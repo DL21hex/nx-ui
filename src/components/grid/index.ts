@@ -17,6 +17,7 @@ export type {
   GridLabels,
   GridOption,
   GridPage,
+  GridPreset,
   GridRow,
   GridSavedView,
   GridSort,

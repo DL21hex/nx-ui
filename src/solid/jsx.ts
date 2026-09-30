@@ -12,7 +12,7 @@ import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels 
 import type { NxDocCapture } from "../components/capture/doc-capture";
 import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues } from "../components/capture/types";
 import type { NxGrid } from "../components/grid/grid";
-import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
+import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridPreset, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
 import type { NxDialog } from "../components/dialog/dialog";
 import type { CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize } from "../components/dialog/types";
 import type { NxAgent } from "../components/agent/agent";
@@ -138,7 +138,8 @@ declare module "solid-js" {
       lockVerify: ((password: string) => Promise<boolean>) | undefined;
       sync: AccountSyncQueue | null | undefined;
       value: string | string[] | number | DateRangeValue | SignatureValue | null | undefined;
-      presets: DateRangePresetInput[] | undefined;
+      // Los atajos del selector de fechas y los de la tabla: la misma propiedad en dos componentes.
+      presets: DateRangePresetInput[] | GridPreset[] | undefined;
       selection: SelectOption[] | undefined;
       columns: GridColumn[] | KanbanColumn[] | ImportColumnInput[];
       cards: KanbanCard[] | undefined;

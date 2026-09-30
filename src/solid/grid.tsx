@@ -3,10 +3,10 @@ import { splitProps, type JSX } from "solid-js";
 import "./jsx";
 import "../components/grid/index";
 import type { NxGrid } from "../components/grid/grid";
-import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "../components/grid/types";
+import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridPreset, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "../components/grid/types";
 import type { GridFilterDetail } from "./jsx";
 
-export type { NxGrid, GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels };
+export type { NxGrid, GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridPreset, GridRow, GridSavedView, GridSort, GridView, GridViewLabels };
 
 export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> {
   columns: GridColumn[];
@@ -29,6 +29,8 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   groupBy?: string;
   rowKey?: string;
   facetsOpen?: boolean;
+  /** Atajos: tarjetas con un filtro y su conteo sobre la tabla. */
+  presets?: GridPreset[];
   /** Casillas para seleccionar filas; las acciones van como hijo con `slot="bulk"`. */
   selectable?: boolean;
   selected?: string[];
@@ -50,7 +52,7 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
 }
 
 export function Grid(props: GridProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["columns", "rows", "view", "views", "viewsStorage", "onViews", "source", "clientMax", "filters", "sort", "search", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
+  const [local, rest] = splitProps(props, ["columns", "rows", "view", "views", "viewsStorage", "onViews", "source", "clientMax", "filters", "sort", "search", "groupBy", "rowKey", "facetsOpen", "presets", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
   return (
     <nx-grid
       {...rest}
@@ -59,6 +61,7 @@ export function Grid(props: GridProps): JSX.Element {
       prop:filters={local.filters}
       prop:sort={local.sort}
       prop:search={local.search}
+      prop:presets={local.presets}
       prop:view={local.view}
       prop:views={local.views}
       attr:views-storage={local.viewsStorage}

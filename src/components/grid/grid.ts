@@ -56,7 +56,7 @@ import {
 } from "./logic";
 import type { FilterHost, FilterKind, FilterPanel } from "./grid-filter";
 import type { ViewsHost, ViewsUI } from "./grid-views";
-import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridHistogram, GridLabels, GridPage, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "./types";
+import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridHistogram, GridLabels, GridPage, GridPreset, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "./types";
 
 export const GRID_LABELS: GridLabels = {
   filters: "Filtros",
@@ -81,6 +81,7 @@ export const GRID_LABELS: GridLabels = {
   less: "Ver menos",
   empty: "Ninguna fila coincide con los filtros",
   loading: "Cargando…",
+  presets: "Atajos",
   selected: "{n} seleccionadas",
   selectedOne: "1 seleccionada",
   selectAll: "Seleccionar las {n}",
@@ -214,7 +215,7 @@ export class NxGrid extends Base {
     attrProps(this, ["height"]);
   }
   declare height: string | null;
-  static observedAttributes = ["columns", "rows", "filters", "labels", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable", "views-storage"];
+  static observedAttributes = ["columns", "rows", "filters", "labels", "presets", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable", "views-storage"];
 
   #uid = `nx-grid${++uid}`;
   #labels: GridLabels = GRID_LABELS;
@@ -256,6 +257,13 @@ export class NxGrid extends Base {
   // Agregados (las barras llegan del servidor; en el cliente se calculan al abrir un filtro).
   #hist = new Map<string, GridHistogram>();
   #facetList: GridFacet[] = [];
+  #presets: GridPreset[] = [];
+  /** Conteos de los atajos: del servidor, o calculados aquí sobre `#all` (se olvidan al cambiar los datos). */
+  #presetN = new Map<string, number>();
+  #presetKey = "";
+  /** Los filtros que había antes de tocar un atajo: tocarlo otra vez los devuelve. */
+  #beforePreset: GridFilter[] | null = null;
+  #presetBar?: HTMLDivElement;
   #totals: Record<string, number> = {};
   // Filas.
   #ids = new WeakMap<GridRow, string>();
@@ -460,6 +468,17 @@ export class NxGrid extends Base {
   set facetsOpen(v: boolean) {
     this.toggleAttribute("facets-open", !!v);
   }
+  /** Atajos: tarjetas con un filtro y su conteo sobre la tabla. Con `source`, los conteos los manda
+   *  el servidor (`presets` en la respuesta); con las filas aquí, se cuentan aquí. */
+  get presets(): GridPreset[] {
+    return this.#presets;
+  }
+  set presets(v: GridPreset[] | null | undefined) {
+    this.#presets = Array.isArray(v) ? v.filter((p) => p && typeof p.id === "string" && typeof p.label === "string" && Array.isArray(p.filters)) : [];
+    if (!this.#server) this.#presetN.clear();
+    this.#presetKey = "";
+    this.#paintPresets();
+  }
   /** Nombre del archivo al exportar (sin extensión). */
   get filename(): string {
     return this.getAttribute("filename") || "tabla";
@@ -637,7 +656,7 @@ export class NxGrid extends Base {
   }
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    if ((name === "columns" || name === "rows" || name === "filters" || name === "labels") && value !== null) {
+    if ((name === "columns" || name === "rows" || name === "filters" || name === "labels" || name === "presets") && value !== null) {
       try {
         (this as unknown as Record<string, unknown>)[name] = JSON.parse(value);
       } catch {
@@ -680,6 +699,7 @@ export class NxGrid extends Base {
   /** Cambiaron las filas o las columnas: se recalcula todo lo que depende de ellas. */
   #dataChanged(columns = false): void {
     if (!this.#built) return;
+    if (!this.#server) this.#presetN.clear();
     this.#loc = nxFormat(this.locale);
     this.#forgetText();
     if (columns) this.#buildHead();
@@ -847,6 +867,8 @@ export class NxGrid extends Base {
           selected: (this.#filters.find((x) => x.key === f.key && x.op === "in") as { values: string[] } | undefined)?.values ?? [],
         }));
     if (page.totals && typeof page.totals === "object") this.#totals = page.totals;
+    if (page.presets && typeof page.presets === "object")
+      this.#presetN = new Map(Object.entries(page.presets).filter((e): e is [string, number] => typeof e[1] === "number"));
     // `client-max`: con la primera página se sabe el total (con los filtros, que nunca es mayor que
     // sin ellos). Si puede caber, se pide la consulta completa una vez, sin filtros.
     const max = this.clientMax;
@@ -1251,7 +1273,20 @@ export class NxGrid extends Base {
 
     this.#foot = h("div", { class: "nx-grid__foot" });
     this.#live = h("span", { class: "nx-sr-only", role: "status" });
-    this.append(bar, this.#selbar, this.#note, this.#chips, main, this.#foot, this.#live);
+    this.#presetBar = h("div", { class: "nx-grid__presets", role: "group", hidden: true });
+    this.#presetBar.addEventListener("click", (e) => {
+      const id = (e.target as Element).closest<HTMLElement>("[data-preset]")?.dataset.preset;
+      const p = this.#presets.find((x) => x.id === id);
+      if (!p) return;
+      if (this.#presetOn(p)) {
+        this.#setFilters(this.#beforePreset ?? []);
+        this.#beforePreset = null;
+      } else {
+        if (!this.#presets.some((x) => this.#presetOn(x))) this.#beforePreset = this.#filters;
+        this.#setFilters(validFilters(p.filters));
+      }
+    });
+    this.append(this.#presetBar, bar, this.#selbar, this.#note, this.#chips, main, this.#foot, this.#live);
   }
 
   #buildHead(): void {
@@ -1332,9 +1367,48 @@ export class NxGrid extends Base {
     this.#empty!.classList.toggle("is-loading", loading);
     this.#empty!.replaceChildren(loading ? L.loading : L.empty, ...(this.#empty!.hidden || loading ? [] : this.#relax()));
     this.#paintFacets();
+    this.#paintPresets();
     this.#paintHistory();
     this.#panel?.refresh();
     this.#viewsUI?.refresh();
+  }
+
+  /** Si los filtros de ahora son los del atajo (en cualquier orden): su tarjeta queda marcada, y se
+   *  desmarca sola si la persona cambia un filtro a mano o aplica una vista. */
+  #presetOn(p: GridPreset): boolean {
+    const canon = (fs: readonly GridFilter[]) =>
+      fs
+        .map((f) => JSON.stringify(f, Object.keys(f).sort()))
+        .sort()
+        .join();
+    return canon(this.#filters) === canon(validFilters(p.filters));
+  }
+
+  #paintPresets(): void {
+    const bar = this.#presetBar;
+    if (!bar) return;
+    const list = this.#presets;
+    // Con las filas aquí, cada atajo se cuenta una vez por juego de datos (no en cada pintado).
+    if (!this.#server && list.some((p) => !this.#presetN.has(p.id)))
+      for (const p of list) this.#presetN.set(p.id, applyFilters(this.#all, validFilters(p.filters)).length);
+    const state = list.map((p) => [p.id, p.label, p.hint, this.#presetN.get(p.id), this.#presetOn(p)]);
+    const key = JSON.stringify([this.#labels.presets, this.locale, state]);
+    if (key === this.#presetKey) return;
+    this.#presetKey = key;
+    bar.hidden = !list.length;
+    bar.setAttribute("aria-label", this.#labels.presets);
+    bar.replaceChildren(
+      ...list.map((p) => {
+        const n = this.#presetN.get(p.id);
+        return h(
+          "button",
+          { type: "button", class: "nx-grid__preset", "data-preset": p.id, "aria-pressed": String(this.#presetOn(p)) },
+          h("strong", null, n === undefined ? "—" : this.#loc.number(n)),
+          h("span", null, p.label),
+          p.hint ? h("small", null, p.hint) : null,
+        );
+      }),
+    );
   }
 
   /** Sin filas: qué filtro quitar (o la búsqueda), y cuántas volverían (en el cliente; en el

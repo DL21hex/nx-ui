@@ -89,6 +89,7 @@ export interface GridLabels {
   less: string;
   empty: string;
   loading: string;
+  presets: string;
   selected: string;
   selectedOne: string;
   selectAll: string;
@@ -147,12 +148,25 @@ export interface GridFacetData {
   options: { value: string; label?: string; count: number }[];
 }
 
+/** Un atajo: un filtro con nombre, en una tarjeta con su conteo sobre la tabla («Contratos que
+ *  vencen · 12»). Tocarla aplica sus filtros; otra vez, vuelve a los de antes. */
+export interface GridPreset {
+  id: string;
+  label: string;
+  /** Una línea corta bajo el nombre: «próximos 30 días». */
+  hint?: string;
+  /** Todos los filtros del atajo (reemplazan a los que haya). Un tramo con `rel` se recalcula cada día. */
+  filters: GridFilter[];
+}
+
 /** Lo que responde `source`: un bloque de filas y, opcionalmente, los agregados con los filtros aplicados. */
 export interface GridPage {
   rows: GridRow[];
   total: number;
   histograms?: Record<string, GridHistogram>;
   facets?: GridFacetData[];
+  /** Cuántas filas deja cada atajo (`GridPreset.id` → conteo), sobre todos los datos, no sobre lo filtrado. */
+  presets?: Record<string, number>;
   totals?: Record<string, number>;
 }
 

@@ -36,6 +36,9 @@ nx-grid > * {
   flex: 1 0 100%;
   min-inline-size: 0;
 }
+nx-grid > .nx-grid__presets {
+  order: 0;
+}
 nx-grid > .nx-grid__bar {
   order: 1;
 }
@@ -150,6 +153,58 @@ nx-grid .nx-glyph {
   align-items: center;
   gap: 8px;
   margin-block-end: 8px;
+}
+/* Atajos: tarjetas con un filtro y su conteo. Marcada, la del filtro que se está viendo. */
+.nx-grid__presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-block-end: 12px;
+}
+.nx-grid__preset {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--nx-motion-fast),
+    background-color var(--nx-motion-fast);
+
+  & > strong {
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
+  & > span {
+    font-weight: 500;
+  }
+  & > small {
+    color: var(--nx-text-tertiary);
+    font-size: 12px;
+  }
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+  }
+  &[aria-pressed="true"] {
+    border-color: var(--nx-primary-border);
+    background: var(--nx-primary-soft);
+  }
+  &[aria-pressed="true"] > strong {
+    color: var(--nx-primary-ink);
+  }
 }
 /* Buscar en la tabla: ocupa lo que sobra de la fila, y los botones que le siguen quedan a la derecha. */
 .nx-grid__search {
