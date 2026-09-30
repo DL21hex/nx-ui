@@ -17,7 +17,7 @@ const registry = new Map<string, Entry>([
   ["SideMenu", { tag: "nx-sidemenu", props: ["items", "active", "collapsed", "collapsible", "autoCollapse", "labels"] }],
   ["Select", { tag: "nx-select", props: ["options", "fields", "value", "selection", "multiple", "placeholder", "source", "name", "required", "disabled", "clearable", "avatar", "labels", "limit"] }],
   ["DocCapture", { tag: "nx-doc-capture", props: ["schema", "endpoint", "action", "reviewBelow", "labels", "accept"] }],
-  ["Grid", { tag: "nx-grid", props: ["columns", "rows", "filters", "sort", "source", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale", "selectable", "selected", "labels"] }],
+  ["Grid", { tag: "nx-grid", props: ["columns", "rows", "filters", "sort", "source", "clientMax", "aiEndpoint", "nlEndpoint", "groupBy", "rowKey", "facetsOpen", "filename", "locale", "selectable", "selected", "labels"] }],
   ["Agent", { tag: "nx-agent", props: ["endpoint", "tools", "context", "suggestions", "labels"] }],
   ["AIAnswer", { tag: "nx-ai-answer", props: ["endpoint", "method", "question", "placeholder", "suggestions", "context", "labels", "feedback"] }],
   ["Command", { tag: "nx-command", props: ["items", "menu", "source", "agent", "hotkey", "placeholder", "storage", "limit", "labels"] }],

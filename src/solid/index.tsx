@@ -314,6 +314,7 @@ declare module "solid-js" {
       "nl-endpoint": string | undefined;
       "group-by": string | undefined;
       "row-key": string | undefined;
+      "client-max": string | undefined;
       filename: string | undefined;
       height: string | undefined;
       locale: string | undefined;
@@ -800,6 +801,8 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   rows?: GridRow[];
   /** URL de datos en el servidor (POST `{offset, limit, sort, filters}` → `GridPage`). */
   source?: string;
+  /** Con `source`: si la consulta completa tiene hasta este tanto de filas, se trae una vez y se filtra en el cliente. */
+  clientMax?: number;
   /** URL que calcula las columnas de IA. Sin ella no aparece «Columna IA». */
   aiEndpoint?: string;
   /** URL opcional para frases que el analizador local no entiende. */
@@ -828,7 +831,7 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
 }
 
 export function Grid(props: GridProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["columns", "rows", "source", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
+  const [local, rest] = splitProps(props, ["columns", "rows", "source", "clientMax", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
   return (
     <nx-grid
       {...rest}
@@ -838,6 +841,7 @@ export function Grid(props: GridProps): JSX.Element {
       prop:sort={local.sort}
       prop:labels={local.labels}
       attr:source={local.source}
+      attr:client-max={local.clientMax ? String(local.clientMax) : undefined}
       attr:ai-endpoint={local.aiEndpoint}
       attr:nl-endpoint={local.nlEndpoint}
       attr:group-by={local.groupBy}

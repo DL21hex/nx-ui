@@ -370,6 +370,12 @@ Una tabla de datos que se explora sola:
 - **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques
   al desplazarse, y el backend devuelve los agregados. En el servidor, el filtro de una columna
   espera 250 ms tras el último cambio antes de pedir.
+- **O que la tabla elija.** Con `source` y `client-max="20000"`, la primera página dice el total:
+  si pasa del tope, sigue en el servidor sin pedir nada más; si cabe, trae la consulta completa una
+  vez (`{offset: 0, limit: 20001, sort: null, filters: []}`) y sigue en el cliente, con conteos
+  exactos, filtros al instante y agrupación. `grid.mode` dice dónde quedó. Las filas traídas son
+  una foto: `refresh()` las vuelve a pedir (y vuelve a mirar el total). Es opcional: sin
+  `client-max` nada cambia.
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
   En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo; más allá, `source`.
 - **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,
@@ -408,7 +414,7 @@ IA se vuelven a pedir, y lo que llegue tarde de la petición anterior se descart
 
 | | |
 |---|---|
-| Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
+| Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
 | Métodos | `ask(frase)`, `clearFilters()`, `openFilter(key)`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
 | Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open` |
 

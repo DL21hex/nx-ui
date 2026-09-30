@@ -23,7 +23,7 @@ const BUDGET = [
   ["dist/select.js", 6.5 * 1024, "select + núcleo (ESM)"],
   ["dist/ai.js", 7.5 * 1024, "ai-answer + núcleo (ESM)"],
   ["dist/capture.js", 11.75 * 1024, "doc-capture + button + núcleo (ESM)"],
-  ["dist/grid.js", 21.5 * 1024, "grid + núcleo (ESM)"],
+  ["dist/grid.js", 21.75 * 1024, "grid + núcleo (ESM)"],
   [lazy("xlsx"), 3 * 1024, "generador de XLSX (se carga al exportar)"],
   // El panel importa el chunk de la tabla (ya cargado en la página): se mide todo lo que baja con él.
   [lazy("grid-filter"), 27.5 * 1024, "nx-grid con su filtro por columna (se trae al acercarse a la cabecera)"],
