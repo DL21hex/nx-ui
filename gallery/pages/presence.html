@@ -106,7 +106,7 @@ aqui.source = "/compras/oc-2291/presencia";
 aqui.addEventListener("nx-presence-local", (e) =&gt;
   fetch("/compras/oc-2291/presencia", { method: "POST", keepalive: true,
     body: JSON.stringify(e.detail) }));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Presence } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Presence } from "nx-ui/solid/presence";
 
 &lt;Presence channel="oc-2291" for="orden" me={yo()}
   onLocal={(e) =&gt; socket.send(JSON.stringify(e.detail))}

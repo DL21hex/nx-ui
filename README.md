@@ -126,11 +126,14 @@ import { lucide } from "nx-ui/icons"; // opcional: ~28 íconos Lucide
 registerIcons(lucide);
 ```
 
-**SolidJS:** `nx-ui/solid` trae un envoltorio y los tipos JSX. Se publica como JSX sin compilar
-bajo la condición de export `"solid"`, así que vite-plugin-solid lo compila para SSR o navegador.
+**SolidJS:** cada componente tiene su envoltorio con los tipos JSX en `nx-ui/solid/<componente>`
+(`nx-ui/solid/grid`, `nx-ui/solid/sidemenu`…). Así la app carga solo lo que usa. `nx-ui/solid` los
+reexporta todos, pero importa la librería entera: sirve para prototipos, no para producción. Se
+publica como JSX sin compilar bajo la condición de export `"solid"`, así que vite-plugin-solid lo
+compila para SSR o navegador.
 
 ```tsx
-import { SideMenu } from "nx-ui/solid";
+import { SideMenu } from "nx-ui/solid/sidemenu";
 
 <SideMenu items={menu()} active={useLocation().pathname} collapsible collapsed={compact()}
   onToggle={(e) => { e.preventDefault(); setCompact(e.detail.collapsed); }} />
@@ -2027,7 +2030,7 @@ servidor estático y se abre `/examples/html/`.
 src/core/            h() y safeHref(), registro de íconos, define() seguro para SSR
 src/components/      un directorio por componente: lógica pura, render y CSS
 src/styles/          tokens.css y nx-ui.css (tokens + todos los componentes)
-src/solid/           adaptador para SolidJS
+src/solid/           adaptador para SolidJS (un archivo por componente; jsx.ts, los tipos JSX)
 src/bdui.ts          adaptador BDUI
 gallery/             la galería (usa <nx-sidemenu> como su propia navegación)
 ```

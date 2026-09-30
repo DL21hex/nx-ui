@@ -80,7 +80,7 @@ regla.addEventListener("nx-change", (e) =&gt; {
   const { rrule, text, next } = e.detail;   // "DTSTART:…\nRRULE:FREQ=MONTHLY;BYDAY=-1FR;BYHOUR=17;…"
   guardar(rrule);
 });</code></pre>
-        <pre role="tabpanel" hidden><code>import { Recurrence } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Recurrence } from "nx-ui/solid/recurrence";
 
 &lt;Recurrence name="regla" value={regla()} holidays={["2026-12-24"]}
   onChange={(e) =&gt; setRegla(e.detail.rrule)} /&gt;</code></pre>

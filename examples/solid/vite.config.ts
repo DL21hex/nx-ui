@@ -12,7 +12,8 @@ export default defineConfig({
   server: { port: 5174 },
   resolve: {
     alias: [
-      { find: "nx-ui/solid", replacement: dist("solid/index.jsx") },
+      { find: /^nx-ui\/solid\/([\w-]+)$/, replacement: dist("solid/$1.jsx") },
+      { find: /^nx-ui\/solid$/, replacement: dist("solid/index.jsx") },
       { find: "nx-ui/icons", replacement: dist("icons.js") },
       { find: "nx-ui/nx-ui.css", replacement: dist("nx-ui.css") },
       { find: /^nx-ui$/, replacement: dist("index.js") },

@@ -85,7 +85,7 @@
 ]'&gt;&lt;/nx-checklist&gt;
 
 &lt;nx-checklist mode="summary" items='[{"id":"cierre","title":"Cierre de septiembre","done":18,"total":24,"overdue":3,"href":"/cierre"}]'&gt;&lt;/nx-checklist&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Checklist } from "nx-ui/solid";
+            <pre role="tabpanel" hidden><code>import { Checklist } from "nx-ui/solid/checklist";
 
 &lt;Checklist endpoint={`/api/procedimientos/${id()}`} me={usuario()} sequential={["Conteo"]}
   onChange={(e) =&gt; console.log(e.detail.step, e.detail.status)}

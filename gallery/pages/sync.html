@@ -116,7 +116,7 @@ await nxSync.enqueue({
 nxSync.subscribe((state, event) =&gt; {
   if (event?.type === "done") pintarConfirmado(event.data);
 });</code></pre>
-        <pre role="tabpanel" hidden><code>import { Sync } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Sync } from "nx-ui/solid/sync";
 import { nxSync } from "nx-ui/sync";
 
 &lt;Sync ping="/api/ping"

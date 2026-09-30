@@ -120,7 +120,8 @@
 
 &lt;!-- Sin la API del navegador (o sin mandar audio a terceros): el servidor de la app --&gt;
 &lt;nx-voice for="pedido-fill" engine="server" endpoint="/api/voz"&gt;&lt;/nx-voice&gt;</code></pre>
-        <pre role="tabpanel" hidden><code>import { Voice, PasteFill } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { Voice } from "nx-ui/solid/voice";
+import { PasteFill } from "nx-ui/solid/paste-fill";
 
 &lt;Voice for="pedido-fill" hotkey="Alt+V" onText={(e) =&gt; registrar(e.detail.text)} /&gt;
 &lt;PasteFill id="pedido-fill"&gt;&lt;form&gt;…&lt;/form&gt;&lt;/PasteFill&gt;</code></pre>

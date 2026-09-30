@@ -199,6 +199,11 @@
       "solid": "./dist/solid/index.jsx",
       "import": "./dist/solid/index.jsx"
     },
+    "./solid/*": {
+      "types": "./dist/types/solid/*.d.ts",
+      "solid": "./dist/solid/*.jsx",
+      "import": "./dist/solid/*.jsx"
+    },
     "./nx-ui.css": "./dist/nx-ui.css",
     "./tokens.css": "./dist/tokens.css",
     "./palettes.css": "./dist/palettes.css",

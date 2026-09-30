@@ -62,7 +62,7 @@ historia.user = { name: "Sofía Herrera" };
 historia.addEventListener("nx-history-commit", (e) =&gt;
   fetch("/compras/oc-2291", { method: "PATCH", keepalive: true,
     body: JSON.stringify({ [e.detail.change.field]: e.detail.change.from }) }));</code></pre>
-        <pre role="tabpanel" hidden><code>import { History } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { History } from "nx-ui/solid/history";
 
 &lt;History record={orden()} fields={campos} events={eventos()} user={yo}
   onCommit={(e) =&gt; guardar(e.detail.record)}

@@ -90,7 +90,7 @@ periodo.addEventListener("nx-change", (e) =&gt; {
   const { start, end, compare } = e.detail.value;   // "2026-08-27", "2026-09-25", {start, end}
   cargarVentas(start, end, compare);
 });</code></pre>
-        <pre role="tabpanel" hidden><code>import { DateRange } from "nx-ui/solid";
+        <pre role="tabpanel" hidden><code>import { DateRange } from "nx-ui/solid/date-range";
 
 &lt;DateRange phrase="este trimestre" compare="previous" fiscalStart={4}
   onChange={(e) =&gt; setPeriodo(e.detail.value)} /&gt;</code></pre>

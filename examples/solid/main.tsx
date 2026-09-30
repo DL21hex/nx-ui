@@ -4,7 +4,7 @@ import { render } from "solid-js/web";
 import "nx-ui/nx-ui.css";
 import { registerIcons } from "nx-ui";
 import { lucide } from "nx-ui/icons";
-import { SideMenu, type MenuItem } from "nx-ui/solid";
+import { SideMenu, type MenuItem } from "nx-ui/solid/sidemenu";
 import "./app.css";
 
 registerIcons(lucide);
