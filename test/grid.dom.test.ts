@@ -468,6 +468,59 @@ describe("<nx-grid>", () => {
     expect(pop.querySelector(".nx-grid__f-left")!.textContent).toBe("250 filas");
   });
 
+  it("client-max: si la consulta completa cabe, se trae una vez y se sigue en el cliente", async () => {
+    const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const q = JSON.parse(init.body as string);
+      const all = Array.from({ length: 250 }, (_, i) => ({ id: String(i), oc: `OC-${i}`, prov: i % 2 ? "Aceros" : "Empaques", estado: i % 5 ? "pend" : "apr", monto: 1000 }));
+      const rows = q.filters.length ? all.filter((r) => r.estado === "apr") : all;
+      return new Response(JSON.stringify({ rows: rows.slice(q.offset, q.offset + q.limit), total: rows.length }));
+    });
+    vi.stubGlobal("fetch", fetch);
+    const bodies = () => fetch.mock.calls.map((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string));
+    const el = mount('source="/datos" client-max="1000"');
+    await new Promise((r) => setTimeout(r, 30));
+    // Una sola vez la consulta completa, sin filtros ni orden.
+    expect(bodies().filter((b) => b.limit === 1001)).toEqual([{ offset: 0, limit: 1001, sort: null, filters: [] }]);
+    const calls = fetch.mock.calls.length;
+    expect(el.mode).toBe("client");
+    expect(el.rows).toHaveLength(250);
+    expect(foot(el)).toContain("250 filas");
+    // En el cliente: filtrar no pide nada y agrupar vuelve a estar.
+    expect(el.querySelector<HTMLElement>(".nx-grid__group")!.hidden).toBe(false);
+    el.filters = [{ key: "estado", op: "in", values: ["apr"] }];
+    expect(foot(el)).toContain("50 de 250 filas");
+    expect(fetch).toHaveBeenCalledTimes(calls);
+    // refresh() vuelve a mirar el servidor: la primera página (con el filtro) y la consulta completa.
+    el.refresh();
+    expect(el.mode).toBe("server");
+    await new Promise((r) => setTimeout(r, 30));
+    expect(bodies().slice(calls)).toEqual([
+      { offset: 0, limit: 100, sort: null, filters: [{ key: "estado", op: "in", values: ["apr"] }] },
+      { offset: 0, limit: 1001, sort: null, filters: [] },
+    ]);
+    expect(el.mode).toBe("client");
+    expect(foot(el)).toContain("50 de 250 filas");
+  });
+
+  it("client-max: si la consulta pasa del tope, se queda en el servidor sin pedir de más", async () => {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ rows: [{ id: "1", oc: "OC-1" }], total: 5000 })));
+    vi.stubGlobal("fetch", fetch);
+    const el = mount('source="/datos" client-max="1000"');
+    await new Promise((r) => setTimeout(r, 30));
+    expect(fetch.mock.calls.every((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string).limit === 100)).toBe(true);
+    expect(el.mode).toBe("server");
+    // Un total que miente (dice 10 y llegan más del tope): se queda en el servidor.
+    const liar = vi.fn(async (_u: string, init: RequestInit) => {
+      const q = JSON.parse(init.body as string);
+      return new Response(JSON.stringify({ rows: Array.from({ length: Math.min(q.limit, 20) }, (_, i) => ({ id: String(i) })), total: 10 }));
+    });
+    vi.stubGlobal("fetch", liar);
+    el.clientMax = 15;
+    await new Promise((r) => setTimeout(r, 30));
+    expect(liar.mock.calls.some((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string).limit === 16)).toBe(true);
+    expect(el.mode).toBe("server");
+  });
+
   it("locale: formatos del atributo, o del lang más cercano", () => {
     document.body.innerHTML = `<div lang="en-US"><nx-grid></nx-grid></div>`;
     const el = document.querySelector("nx-grid")!;

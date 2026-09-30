@@ -7,7 +7,8 @@
  * partir de los datos de cada fila y un prompt.
  *
  * Datos: `rows` (en el cliente; filtra, ordena y agrega aquí) o `source` (en el servidor: POST
- * `{offset, limit, sort, filters}` → `GridPage`, por bloques a medida que se desplaza).
+ * `{offset, limit, sort, filters}` → `GridPage`, por bloques a medida que se desplaza). Con
+ * `client-max`, si la consulta completa cabe en ese tope se trae una vez y se sigue en el cliente.
  *
  * Un solo modelo de filtros (`GridFilter[]`): el filtro de una columna, una casilla de faceta o una
  * frase producen el mismo filtro y el mismo chip, que la persona ve, vuelve a abrir y puede quitar.
@@ -170,7 +171,7 @@ function validFilters(v: unknown): GridFilter[] {
 }
 
 export class NxGrid extends Base {
-  static observedAttributes = ["columns", "rows", "filters", "labels", "source", "group-by", "facets-open", "height", "locale", "selectable"];
+  static observedAttributes = ["columns", "rows", "filters", "labels", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable"];
 
   #uid = `nx-grid${++uid}`;
   #labels: GridLabels = GRID_LABELS;
@@ -207,6 +208,9 @@ export class NxGrid extends Base {
   #blocks = new Map<number, GridRow[] | "loading">();
   #gen = 0;
   #wait?: ReturnType<typeof setTimeout>;
+  /** `client-max`: la consulta completa se trajo y se filtra aquí (`local`); ya se miró el total (`decided`). */
+  #local = false;
+  #decided = false;
   // Filtro por columna (se carga aparte).
   #panel?: FilterPanel;
   #panelLoad?: Promise<FilterPanel>;
@@ -309,6 +313,19 @@ export class NxGrid extends Base {
   set source(v: string | null) {
     this.#attr("source", v);
   }
+  /** Con `source`: si la consulta sin filtros tiene hasta este tanto de filas, se traen todas una
+   *  vez y se sigue en el cliente (conteos exactos, filtros al instante, agrupar). 0: siempre en el
+   *  servidor. */
+  get clientMax(): number {
+    return Math.max(0, Math.floor(Number(this.getAttribute("client-max")) || 0));
+  }
+  set clientMax(v: number | null) {
+    this.#attr("client-max", v ? String(v) : null);
+  }
+  /** Dónde se filtra ahora: `client` (las filas están en el navegador) o `server`. */
+  get mode(): "client" | "server" {
+    return this.#server ? "server" : "client";
+  }
   /** URL que calcula las columnas de IA (POST `{prompt, column, columns, rows}` → eventos `cell`). */
   get aiEndpoint(): string | null {
     return this.getAttribute("ai-endpoint");
@@ -390,7 +407,7 @@ export class NxGrid extends Base {
     this.#paintAll();
   }
   get #server(): boolean {
-    return !!this.#url("source");
+    return !this.#local && !!this.#url("source");
   }
 
   /** La URL de un atributo (`source`, `ai-endpoint`, `nl-endpoint`) si es del mismo origen (o de uno
@@ -503,9 +520,11 @@ export class NxGrid extends Base {
     this.#emit("nx-grid-columns", { columns: this.#columns });
   }
 
-  /** Vuelve a pedir los datos (modo servidor). */
+  /** Vuelve a pedir los datos (con `source`). Con `client-max`, vuelve a mirar si caben en el cliente. */
   refresh(): void {
-    if (this.#server) this.#reload();
+    if (!this.#url("source")) return;
+    this.#local = this.#decided = false;
+    this.#dataChanged();
   }
 
   /** Descarga las filas filtradas y ordenadas como .xlsx (el generador se carga solo en este
@@ -589,7 +608,10 @@ export class NxGrid extends Base {
       return;
     }
     if (!this.#built || old === value) return;
-    if (name === "source") this.#dataChanged(true);
+    if (name === "source" || name === "client-max") {
+      this.#local = this.#decided = false;
+      this.#dataChanged(true);
+    }
     else if (name === "locale" || name === "selectable") this.#dataChanged(name === "selectable");
     else if (name === "group-by") {
       this.#collapsed.clear();
@@ -717,14 +739,14 @@ export class NxGrid extends Base {
     this.#paintAll();
   }
 
-  async #request(offset: number, limit: number): Promise<GridPage | null> {
+  async #request(offset: number, limit: number, q: { sort: GridSort | null; filters: GridFilter[] } = { sort: this.#sort, filters: this.#filters }): Promise<GridPage | null> {
     const url = this.#url("source");
     if (!url) return null;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ offset, limit, sort: this.#sort, filters: this.#filters }),
+      body: JSON.stringify({ offset, limit, ...q }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as GridPage;
@@ -761,6 +783,13 @@ export class NxGrid extends Base {
           selected: (this.#filters.find((x) => x.key === f.key && x.op === "in") as { values: string[] } | undefined)?.values ?? [],
         }));
     if (page.totals && typeof page.totals === "object") this.#totals = page.totals;
+    // `client-max`: con la primera página se sabe el total (con los filtros, que nunca es mayor que
+    // sin ellos). Si puede caber, se pide la consulta completa una vez, sin filtros.
+    const max = this.clientMax;
+    if (block === 0 && max && !this.#decided) {
+      this.#decided = true;
+      if (this.#total <= max) void this.#tryLocal(max);
+    }
     // Un bloque que llega no rehace todo: los agregados, y las filas que esperaban sus datos (las
     // que siguen a la vista se reutilizan en el próximo cuadro).
     this.#footDirty = true;
@@ -768,6 +797,27 @@ export class NxGrid extends Base {
     this.#paintFoot();
     this.#soon();
     this.#paintPicked(false);
+  }
+
+  /** Trae la consulta completa (hasta `max` + 1 filas) y, si cabe, sigue en el cliente con ella. */
+  async #tryLocal(max: number): Promise<void> {
+    const src = this.getAttribute("source");
+    let page: GridPage | null = null;
+    try {
+      page = await this.#request(0, max + 1, { sort: null, filters: [] });
+    } catch {
+      return; // se queda en el servidor
+    }
+    // Mientras tanto cambió el origen o el tope: esa respuesta ya no dice nada.
+    if (!page || src !== this.getAttribute("source") || !this.#server || !this.#decided) return;
+    const rows = page.rows.filter((r) => r && typeof r === "object");
+    if (rows.length > max || rows.length < (Number(page.total) || 0)) return;
+    // Lo que falte por llegar del servidor se descarta.
+    this.#gen++;
+    this.#blocks.clear();
+    clearTimeout(this.#wait);
+    this.#local = true;
+    this.rows = rows;
   }
 
   /** Todas las filas de la consulta (para exportar), por bloques: nunca una sola respuesta con
