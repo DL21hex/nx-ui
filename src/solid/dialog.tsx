@@ -52,6 +52,8 @@ export function Dialog(props: DialogProps): JSX.Element {
       on:nx-dialog-close={(e) => local.onClose?.(e)}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-dialog>
   );
 }

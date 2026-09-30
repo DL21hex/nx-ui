@@ -35,8 +35,6 @@ export interface GridColumn {
   link?: boolean;
   /** Un círculo con las iniciales del valor antes del texto (nombres de personas). */
   avatar?: boolean;
-  /** Columna calculada por IA: el backend (`ai-endpoint`) la llena fila por fila. */
-  ai?: { prompt: string };
 }
 
 export type GridRow = Record<string, unknown>;
@@ -69,16 +67,10 @@ export interface GridHistogram {
 }
 
 export interface GridLabels {
-  ask: string;
-  notUnderstood: string;
   filters: string;
   groupBy: string;
   noGroup: string;
   export: string;
-  aiColumn: string;
-  aiName: string;
-  aiPrompt: string;
-  aiAdd: string;
   rows: string;
   of: string;
   cells: string;
@@ -90,6 +82,8 @@ export interface GridLabels {
   clear: string;
   remove: string;
   search: string;
+  searchTable: string;
+  clearSearch: string;
   more: string;
   less: string;
   empty: string;

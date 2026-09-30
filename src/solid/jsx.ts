@@ -12,7 +12,7 @@ import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels 
 import type { NxDocCapture } from "../components/capture/doc-capture";
 import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues } from "../components/capture/types";
 import type { NxGrid } from "../components/grid/grid";
-import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
+import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
 import type { NxDialog } from "../components/dialog/dialog";
 import type { CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize } from "../components/dialog/types";
 import type { NxAgent } from "../components/agent/agent";
@@ -83,7 +83,7 @@ import type { Job, JobEvent, JobResult, JobSpec, JobStatus, JobsErrorDetail, Job
 import type { NxSidemenu } from "../components/sidemenu/sidemenu";
 import type { MenuItem, OpenChangeDetail, SelectDetail, SidemenuLabels, ToggleDetail } from "../components/sidemenu/types";
 
-export type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; count: number };
+export type GridFilterDetail = { filters: GridFilter[]; sort: GridSort | null; groupBy: string; search: string; count: number };
 
 declare module "solid-js" {
   namespace JSX {
@@ -145,6 +145,7 @@ declare module "solid-js" {
       rows: GridRow[] | CardsRow[] | undefined;
       filters: GridFilter[] | undefined;
       sort: GridSort | null | undefined;
+      search: string | undefined;
       view: Partial<GridView> | undefined;
       views: GridSavedView[] | undefined;
       selected: string[] | undefined;
@@ -225,8 +226,6 @@ declare module "solid-js" {
       question: string | undefined;
       action: string | undefined;
       "review-below": string | undefined;
-      "ai-endpoint": string | undefined;
-      "nl-endpoint": string | undefined;
       "group-by": string | undefined;
       "row-key": string | undefined;
       "client-max": string | undefined;
@@ -391,7 +390,7 @@ declare module "solid-js" {
       "nx-capture-done": CustomEvent<{ values: CaptureValues; pending: string[] }>;
       "nx-capture-submit": CustomEvent<CaptureSubmitDetail>;
       "nx-grid-filter": CustomEvent<GridFilterDetail>;
-      "nx-grid-change": CustomEvent<{ changes: GridChange[] }>;
+      "nx-grid-change": CustomEvent<{ changes: GridChange[]; source: GridChangeSource }>;
       "nx-grid-columns": CustomEvent<{ columns: GridColumn[] }>;
       "nx-dialog-close": CustomEvent<DialogCloseDetail>;
       "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;

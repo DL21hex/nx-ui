@@ -18,6 +18,12 @@ nx-grid {
   line-height: 1.4;
   color: var(--nx-foreground);
 }
+/* Pintada en el servidor (SSR) y antes de que cargue el JS, la tabla todavía está vacía: guarda su
+   alto (barra, tabla y pie) para que la página no salte al llegar. */
+nx-grid:not(:defined) {
+  display: block;
+  min-block-size: calc(var(--nx-grid-height) + 96px);
+}
 nx-grid *,
 nx-grid *::before,
 nx-grid *::after {
@@ -145,16 +151,19 @@ nx-grid .nx-glyph {
   gap: 8px;
   margin-block-end: 8px;
 }
-.nx-grid__ask {
+/* Buscar en la tabla. */
+.nx-grid__search {
   display: flex;
-  flex: 1 1 320px;
+  flex: 1 1 240px;
   align-items: center;
   gap: 8px;
+  max-inline-size: 400px;
   block-size: 36px;
-  padding-inline: 12px;
+  padding-inline: 12px 4px;
   border: 1px solid var(--nx-border);
-  border-radius: var(--nx-radius-lg);
+  border-radius: var(--nx-radius-md);
   background: var(--nx-card);
+  color: var(--nx-text-tertiary);
   transition:
     border-color var(--nx-motion-fast),
     box-shadow var(--nx-motion-fast);
@@ -163,21 +172,45 @@ nx-grid .nx-glyph {
     border-color: var(--nx-primary-border);
     box-shadow: 0 0 0 3px var(--nx-primary-soft);
   }
-  & .nx-glyph {
-    color: var(--nx-primary-ink);
-  }
 }
-.nx-grid__ask-input {
+.nx-grid__search-input {
   flex: 1;
   min-inline-size: 0;
+  block-size: 100%;
   border: 0;
   outline: 0;
   background: none;
-  color: inherit;
+  color: var(--nx-foreground);
   font: inherit;
 
   &::placeholder {
     color: var(--nx-text-tertiary);
+  }
+  /* La ✕ es la propia (Firefox no trae la suya). */
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+.nx-grid__search-clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: -2px;
   }
 }
 .nx-grid__btn {
@@ -429,6 +462,10 @@ nx-grid .nx-glyph {
   border-radius: var(--nx-radius-lg);
   background: var(--nx-card);
   outline: 0;
+  /* Con el dedo: sin zoom de doble toque ni el destello gris del navegador sobre toda la tabla (la
+     celda activa ya se marca). */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 
   &:focus-visible {
     box-shadow: 0 0 0 2px var(--nx-ring);
@@ -485,9 +522,6 @@ nx-grid .nx-glyph {
   .is-num > & {
     justify-content: flex-end;
   }
-  .is-ai > & {
-    padding-inline-end: 18px;
-  }
 }
 .nx-grid__th-label {
   overflow: hidden;
@@ -513,52 +547,6 @@ nx-grid .nx-grid__sort-icon {
 .nx-grid__th[data-sort="desc"] .nx-grid__sort-icon {
   rotate: 180deg;
 }
-nx-grid .nx-grid__ai-mark {
-  inline-size: 13px;
-  block-size: 13px;
-  color: var(--nx-primary-ink);
-}
-.nx-grid__ai-prompt {
-  flex-basis: 100%;
-  display: -webkit-box;
-  block-size: 26px;
-  overflow: hidden;
-  color: var(--nx-text-tertiary);
-  font-size: 11px;
-  line-height: 13px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.nx-grid__rm {
-  position: absolute;
-  inset-block-start: 5px;
-  inset-inline-end: 4px;
-  display: grid;
-  place-items: center;
-  inline-size: 20px;
-  block-size: 20px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: none;
-  color: var(--nx-text-tertiary);
-  opacity: 0;
-  cursor: pointer;
-
-  .nx-grid__th:hover > &,
-  &:focus-visible {
-    opacity: 1;
-  }
-  &:hover {
-    background: var(--nx-hover);
-    color: var(--nx-foreground);
-  }
-  & .nx-glyph {
-    inline-size: 12px;
-    block-size: 12px;
-  }
-}
-
 /* El embudo: aparece al pasar por la cabecera o con el foco; con un filtro puesto se queda, en color. */
 .nx-grid__funnel {
   display: grid;
@@ -703,21 +691,15 @@ nx-grid .nx-grid__ai-mark {
     --_fg: var(--nx-danger);
   }
 }
-.nx-grid__shim,
+/* Una fila del servidor que todavía no llega. */
 .is-loading .nx-grid__cell::before {
   content: "";
   display: inline-block;
-  inline-size: 70%;
+  inline-size: 55%;
   block-size: 10px;
   border-radius: 5px;
-  background: linear-gradient(90deg, var(--nx-border-subtle), var(--nx-primary-soft), var(--nx-border-subtle)) 0 0 / 200% 100%;
-  vertical-align: middle;
-  animation: nx-grid-shim 1.2s linear infinite;
-}
-.is-loading .nx-grid__cell::before {
-  inline-size: 55%;
   background: var(--nx-border-subtle);
-  animation: none;
+  vertical-align: middle;
 }
 
 /* Grupos: subtotales bajo sus columnas y una barra para comparar grupos. */
@@ -785,7 +767,7 @@ nx-grid .nx-grid__chev {
   margin-block-start: 12px;
 }
 
-/* ---------------------------------------------------------------- pie y columna IA */
+/* ---------------------------------------------------------------- pie */
 
 .nx-grid__foot {
   display: flex;
@@ -800,33 +782,6 @@ nx-grid .nx-grid__chev {
 .nx-grid__foot-k {
   color: var(--nx-text-tertiary);
 }
-.nx-grid__pop {
-  position: fixed;
-  inset: auto;
-  inline-size: 340px;
-  max-inline-size: calc(100vw - 16px);
-  margin: 0;
-  padding: 14px;
-  border: 1px solid var(--nx-border);
-  border-radius: var(--nx-radius-lg);
-  background: var(--nx-popover);
-  color: var(--nx-foreground);
-  box-shadow: var(--nx-shadow-popover);
-}
-.nx-grid__ai-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  & label {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    color: var(--nx-muted-foreground);
-    font-size: 12px;
-    font-weight: 500;
-  }
-}
 .nx-grid__field {
   padding: 7px 9px;
   border: 1px solid var(--nx-border);
@@ -835,7 +790,6 @@ nx-grid .nx-grid__chev {
   color: var(--nx-foreground);
   font: inherit;
   font-size: 13px;
-  resize: vertical;
 
   &:focus {
     border-color: var(--nx-primary-border);
@@ -870,6 +824,10 @@ nx-grid .nx-grid__chev {
 
   &:popover-open {
     display: flex;
+  }
+  /* En una pantalla táctil el foco queda en el panel (sin abrir el teclado): sin anillo. */
+  &:focus {
+    outline: 0;
   }
 }
 .nx-grid__f-head {
@@ -1305,8 +1263,56 @@ nx-grid mark {
     flex-basis: auto;
     max-block-size: 280px;
   }
-  .nx-grid__ask {
+  .nx-grid__search {
     flex-basis: 100%;
+    max-inline-size: none;
+  }
+}
+
+/* En un celular, los botones de la barra quedan solo con su ícono (el nombre sigue ahí para el
+   lector de pantalla): así caben en una fila bajo el buscador. «Vistas» conserva el nombre de la
+   vista aplicada. */
+@container (width < 480px) {
+  .nx-grid__bar > .nx-grid__btn:not(.nx-grid__views, .nx-grid__group) {
+    justify-content: center;
+    min-inline-size: 36px;
+    padding-inline: 9px;
+  }
+  .nx-grid__bar > .nx-grid__btn:not(.nx-grid__views, .nx-grid__group) > span:not([class]) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* En una pantalla táctil: la página sigue desplazándose cuando la tabla llega a su final (si no,
+   una tabla que ocupa la pantalla la deja atrapada), campos de 16 px (Safari hace zoom al enfocar
+   uno más chico) y blancos de toque más grandes. */
+@media (pointer: coarse) {
+  .nx-grid__scroll {
+    overscroll-behavior-block: auto;
+  }
+  nx-grid :is(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea) {
+    font-size: 16px;
+  }
+  .nx-grid__funnel {
+    inline-size: 32px;
+    block-size: 32px;
+  }
+  .nx-grid__check input {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+  .nx-grid__chip {
+    block-size: 32px;
+    border-radius: 16px;
+    & [data-i] {
+      inline-size: 28px;
+      block-size: 28px;
+    }
   }
 }
 
@@ -1314,11 +1320,6 @@ nx-grid mark {
   from {
     opacity: 0;
     translate: 0 -3px;
-  }
-}
-@keyframes nx-grid-shim {
-  to {
-    background-position: -200% 0;
   }
 }
 @keyframes nx-grid-copy {

@@ -33,6 +33,8 @@ export function Explain(props: ExplainProps): JSX.Element {
       prop:labels={local.labels}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-explain>
   );
 }

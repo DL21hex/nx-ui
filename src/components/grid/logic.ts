@@ -73,7 +73,38 @@ export function parseInput(text: string, c: GridColumn, f: NxFormat = nxFormat()
   return t;
 }
 
+// ---------------------------------------------------------------- buscar en la tabla
+
+/** Lo que «Buscar en la tabla» mira de una fila: el texto que se ve en cada columna y, en números y
+ *  fechas, también el valor sin formato («8000000», «2026-03»), sin tildes ni mayúsculas. Un salto
+ *  de línea separa las columnas: lo buscado no puede quedar a caballo entre dos.
+ *
+ *  Devuelve la función que lo arma para unas columnas y un locale. Los valores que se repiten
+ *  (fechas, estados, proveedores) se formatean una sola vez: formatear 100.000 fechas con `Intl`
+ *  costaba más de la mitad del tiempo, y solo había 336 distintas. */
+export function rowTexter(cols: readonly GridColumn[], f: NxFormat = nxFormat()): (r: GridRow) => string {
+  const memo = cols.map(() => new Map<unknown, string>());
+  return (r) => {
+    let s = "";
+    cols.forEach((c, i) => {
+      const v = r[c.key];
+      if (v === null || v === undefined || v === "") return;
+      let t = memo[i].get(v);
+      if (t === undefined) {
+        t = foldText(isNumeric(c) || colType(c) === "date" ? `${formatCell(v, c, f)}\n${String(v)}` : formatCell(v, c, f));
+        if (memo[i].size < 5000) memo[i].set(v, t);
+      }
+      s += `${t}\n`;
+    });
+    return s;
+  };
+}
+
 // ---------------------------------------------------------------- filtros y orden
+
+/** «Contiene» se evalúa en cada fila con el mismo texto buscado: se pliega una vez, no por fila. */
+let needle = { raw: "", folded: "" };
+const folded = (q: string) => (needle.raw === q ? needle.folded : (needle = { raw: q, folded: foldText(q) }).folded);
 
 export function matchFilter(row: GridRow, f: GridFilter): boolean {
   const v = row[f.key];
@@ -83,7 +114,7 @@ export function matchFilter(row: GridRow, f: GridFilter): boolean {
     case "notIn":
       return !f.values.includes(String(v ?? ""));
     case "contains":
-      return foldText(String(v ?? "")).includes(foldText(f.value));
+      return foldText(String(v ?? "")).includes(folded(f.value));
     case "range": {
       if (v === null || v === undefined || v === "") return false;
       const x = typeof f.min === "string" || typeof f.max === "string" ? String(v) : num(v);
@@ -344,7 +375,7 @@ export interface GridFacet {
 /** Las columnas que van al panel: `status`, y texto con pocas opciones distintas. */
 export function facetColumns(columns: readonly GridColumn[], rows: readonly GridRow[], max = 40): GridColumn[] {
   return columns.filter((c) => {
-    if (c.ai || isNumeric(c) || colType(c) === "date") return false;
+    if (isNumeric(c) || colType(c) === "date") return false;
     if (c.options) return true;
     const seen = new Set<string>();
     let n = 0;

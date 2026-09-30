@@ -60,6 +60,8 @@ export function SideMenu(props: SideMenuProps): JSX.Element {
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-sidemenu>
   );
 }

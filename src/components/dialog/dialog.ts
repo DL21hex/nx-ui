@@ -449,7 +449,7 @@ export class NxDialog extends Base {
 
     // Cambios sin guardar: lo que se escribe en los campos del autor.
     // No cuentan los controles de consulta de los componentes de adentro (`data-nx-ephemeral`: el
-    // buscador de un <nx-select>, la frase, las facetas o las casillas de una <nx-grid>): buscar o
+    // buscador de un <nx-select>, las facetas o las casillas de una <nx-grid>): buscar o
     // filtrar no es cambiar datos. Sí cuentan sus cambios de valor (`nx-change`, `nx-grid-change`).
     const touch = (e: Event) => {
       const t = e.target as Element;

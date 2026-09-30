@@ -41,6 +41,8 @@ export function PasteFill(props: PasteFillProps): JSX.Element {
       on:nx-paste-fill-undo={(e) => local.onUndo?.(e)}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-paste-fill>
   );
 }

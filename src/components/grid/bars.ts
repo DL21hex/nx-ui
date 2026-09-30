@@ -63,7 +63,7 @@ const MAX_CATEGORIES = 12;
 
 /** Cómo se reparte una columna (se calcula sobre TODAS las filas, una vez por versión de datos). */
 export function histogramSpec(c: GridColumn, rows: readonly GridRow[], f: NxFormat = nxFormat()): HistogramSpec | null {
-  if (c.histogram === false || c.ai) return null;
+  if (c.histogram === false) return null;
   const t = colType(c);
   if (isNumeric(c)) {
     let min = Infinity;

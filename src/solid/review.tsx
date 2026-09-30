@@ -51,6 +51,8 @@ export function Review(props: ReviewProps): JSX.Element {
       on:nx-review-dirty={(e) => local.onDirty?.(e)}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-review>
   );
 }

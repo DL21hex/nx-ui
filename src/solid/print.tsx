@@ -46,6 +46,8 @@ export function Print(props: PrintProps): JSX.Element {
       on:nx-print-after={(e) => local.onAfterPrint?.(e)}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-print>
   );
 }
