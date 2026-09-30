@@ -134,7 +134,7 @@ export class FilterPanel {
     // `data-nx-ephemeral`: filtrar no es un cambio de datos (ver la barra de la tabla).
     this.#pop = h(
       "div",
-      { class: "nx-grid__filter", popover: "auto", role: "dialog", "data-nx-ephemeral": "" },
+      { class: "nx-grid__filter", popover: "auto", role: "dialog", tabindex: -1, "data-nx-ephemeral": "" },
       h("div", { class: "nx-grid__f-head" }, this.#title),
       this.#box,
       h("div", { class: "nx-grid__f-foot" }, this.#clear, this.#left, this.#doneBtn),
@@ -227,7 +227,10 @@ export class FilterPanel {
     }
     if (!this.#pop.matches?.(":popover-open")) this.#pop.showPopover?.();
     this.#position();
-    this.#body.focus();
+    // En una pantalla táctil, el foco en el buscador o en «Desde» abriría el teclado encima de la
+    // hoja: el foco queda en el panel, salvo en «contiene», que es para escribir.
+    if (kind !== "text" && typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches) this.#pop.focus({ preventScroll: true });
+    else this.#body.focus();
   }
 
   #foot(): void {
@@ -651,8 +654,13 @@ export class FilterPanel {
     this.#menu.showPopover?.();
     const w = this.#menu.offsetWidth || 220;
     const hgt = this.#menu.offsetHeight || 120;
-    this.#menu.style.setProperty("--_left", `${Math.max(8, Math.min(x, innerWidth - w - 8))}px`);
-    this.#menu.style.setProperty("--_top", `${Math.max(8, Math.min(y, innerHeight - hgt - 8))}px`);
+    // El punto del clic (o del dedo, en una pulsación larga) queda siempre dentro del menú: si no cabe
+    // hacia abajo o hacia la derecha, abre hacia arriba o hacia la izquierda. Si quedara afuera, el
+    // navegador lo cerraría al soltar el botón o levantar el dedo.
+    const left = x + w + 8 > innerWidth ? x - w + 4 : x - 4;
+    const top = y + hgt + 8 > innerHeight ? y - hgt + 4 : y - 4;
+    this.#menu.style.setProperty("--_left", `${Math.max(8, left)}px`);
+    this.#menu.style.setProperty("--_top", `${Math.max(8, top)}px`);
     this.#menu.querySelector<HTMLElement>("button")?.focus();
   }
 

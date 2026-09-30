@@ -10,7 +10,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-select>` + núcleo (ESM) | ≈ 6,2 KB |
 | `<nx-ai-answer>` + núcleo (ESM) | ≈ 7 KB |
 | `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 11,2 KB |
-| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,6 KB, se carga al exportar | ≈ 20,6 KB |
+| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,6 KB, se carga al exportar | ≈ 20,1 KB |
 | `<nx-dialog>` + núcleo (ESM) | ≈ 4,8 KB |
 | `nxToast()` + núcleo (ESM) | ≈ 2,5 KB |
 | `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 9,8 KB |
@@ -350,17 +350,21 @@ Una tabla de datos que se explora sola:
   Se aplica mientras se elige y dice cuántas filas quedan; el chip lo vuelve a abrir. Con más de la
   mitad marcada se guarda como exclusión («Proveedor: sin Aceros»). `filter` en la columna lo fuerza
   o lo quita (`false`). El panel se carga aparte, la primera vez que hace falta.
+- **Buscar en la tabla.** La caja de la barra deja las filas que contienen lo escrito en alguna
+  columna visible, sin tildes ni mayúsculas: lo que se ve (la etiqueta de un estado, el monto con
+  formato) y, en números y fechas, también el valor sin formato. Busca un momento después de la
+  última tecla (o con Enter); la ✕ o Escape la borran. Se suma a los filtros sin ser uno: no deja
+  chip ni va en las vistas, y si no queda ninguna fila la tabla propone quitarla. `grid.search` la
+  lee o la asigna. El texto de cada fila se arma la primera vez que se busca (con 10.000 filas,
+  unos 20 ms) y después cada tecla solo lo recorre.
 - **Filtrar desde una celda.** Clic derecho (o Mayús+F10): «Solo Aceros», «Sin Aceros», «Desde
   $ 5.000.000». Si no queda ninguna fila, la tabla propone qué filtro quitar y cuántas volverían.
-- **Filtro en lenguaje natural.** «pendientes de marzo de más de 5 millones», «sin anulados»,
-  «atraso mayor a 3». Lo resuelve un analizador local con el vocabulario de las columnas y los
-  datos. Lo que no entiende lo dice; con `nl-endpoint`, esas frases van al backend.
 - **Panel de filtros.** Facetas con casillas y conteos, con la misma regla del tablón de nx32:
   - las opciones de una faceta se suman (O) y las facetas se restringen entre sí (Y);
   - cada opción se cuenta con los demás filtros, nunca con el suyo;
   - una opción en 0 queda deshabilitada.
-- **Un solo modelo de filtros.** El filtro de la columna, la casilla, el menú de la celda y la frase
-  producen el mismo filtro y el mismo chip.
+- **Un solo modelo de filtros.** El filtro de la columna, la casilla y el menú de la celda producen
+  el mismo filtro y el mismo chip.
 - **Hoja de cálculo.** Navegación con teclado, rangos con suma, promedio, mínimo y máximo, copiar y
   pegar con Excel (TSV) y edición en línea (`nx-grid-change`, cancelable). Deshacer y rehacer
   (Ctrl+Z, Ctrl+Y o Ctrl+Mayús+Z, y botones): cada edición, pegado o borrado es un paso; lo
@@ -382,8 +386,6 @@ Una tabla de datos que se explora sola:
   5.000 (hasta el tope de una hoja de Excel); si el servidor falla, `exportXlsx()` se rechaza.
 - **Copiar sin fórmulas.** Un texto que empieza con `=`, `+`, `-` o `@` se copia con un apóstrofo
   delante (Excel lo pega como texto, no como fórmula); al pegarlo de vuelta en la tabla se quita.
-- **Columnas de IA.** Un nombre y un prompt; `ai-endpoint` recibe las filas visibles, en lotes, y
-  responde celda por celda en streaming.
 - **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques
   al desplazarse, y el backend devuelve los agregados. En el servidor, el filtro de una columna
   espera 250 ms tras el último cambio antes de pedir.
@@ -399,11 +401,16 @@ Una tabla de datos que se explora sola:
   «seleccionar las n» filtradas); lo que la app ponga con `slot="bulk"` aparece junto al conteo.
   Una columna `link` abre el detalle (`nx-grid-open`, también con Enter) y `avatar` muestra las
   iniciales. `grid.rows = grid.rows` recalcula tras cambiar filas por fuera.
+- **Con el dedo.** Un toque marca la celda y otro toque sobre la misma la edita o abre la fila,
+  como el doble clic (que en iOS no llega). La pulsación larga abre el menú de la celda. Arrastrar
+  desplaza la tabla (no marca un rango) y, al llegar a su final, sigue la página. En una pantalla
+  angosta los botones de la barra quedan solo con su ícono y el filtro de una columna sube como hoja
+  inferior sin abrir el teclado; los campos van a 16 px, para que Safari no haga zoom al enfocarlos.
+  Pintada en el servidor (SSR), la tabla guarda su alto hasta que carga el JS.
 - **Locale.** Números, montos, fechas, lo que se escribe en una celda y el orden alfabético salen
   de `Intl` con `locale` («es-CO», «en-US», «pt-BR»…; por defecto, el `lang` de la página). Un
   `currency` ISO («COP», «USD») usa el formato de moneda del locale. Los textos de la interfaz van
-  aparte, en `labels`, y el filtro en lenguaje natural local entiende español (otros idiomas, con
-  `nl-endpoint`).
+  aparte, en `labels`.
 
 ```js
 grid.columns = [
@@ -417,22 +424,21 @@ grid.addEventListener("nx-grid-change", (e) => guardar(e.detail.changes));
 ```
 
 ```
-source       POST {offset, limit, sort, filters} → {rows, total, histograms?, facets?, totals?}
-ai-endpoint  POST {prompt, column, label, columns, rows:[{id, …}]} → {"type":"cell","id":"2201","value":"Alto","tone":"danger"} por línea
-nl-endpoint  POST {q, columns} → {filters, unknown?}
+source       POST {offset, limit, sort, filters, search?} → {rows, total, histograms?, facets?, totals?}
 filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?, rel?} · {key, op:"contains", value}
 ```
 
-`source`, `ai-endpoint` y `nl-endpoint` solo se usan si son del mismo origen (o de uno permitido con
-`allowOrigins`): las filas no salen hacia un tercero. En modo servidor, «seleccionar las n» y las
+Si el servidor tiene un tope por página menor que `limit`, puede mandar menos filas: al exportar, la
+tabla sigue pidiendo desde donde quedó hasta `total`.
+
+`source` solo se usa si es del mismo origen (o de uno permitido con `allowOrigins`): las filas no salen hacia un tercero. En modo servidor, «seleccionar las n» y las
 acciones en lote alcanzan solo las filas de la consulta actual; sin `row-key`, una marca por
-posición se pierde al cambiar de filtro u orden. Con filas nuevas (o otra consulta) las columnas de
-IA se vuelven a pedir, y lo que llegue tarde de la petición anterior se descarta.
+posición se pierde al cambiar de filtro u orden.
 
 | | |
 |---|---|
-| Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `view`, `views-storage`, `views`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
-| Métodos | `ask(frase)`, `clearFilters()`, `openFilter(key)`, `applyView(id)`, `activeView`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
+| Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `search`, `view`, `views-storage`, `views`, `group-by`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
+| Métodos | `clearFilters()`, `openFilter(key)`, `applyView(id)`, `activeView`, `exportXlsx()`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
 | Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open`, `nx-grid-views` |
 
 ## `<nx-dialog>`, `nxToast()` y `nxConfirm()`

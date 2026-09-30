@@ -15,6 +15,11 @@
  * - `items={x}` en un elemento personalizado se renderiza en el servidor como el atributo
  *   `items="[object Object]"`, y al hidratar no se asigna la propiedad. `prop:items` evita las dos cosas.
  * - `collapsed={false}` escribe `collapsed="false"`; `bool:collapsed` quita el atributo.
+ *
+ * Hijos: los componentes que reciben hijos (`<Grid>`, `<Dialog>`…) ponen sus propios nodos en el
+ * mismo elemento. Si `{children}` fuera lo único adentro, Solid tomaría todo el contenido como suyo
+ * y, cuando los hijos cambian (un `<Show>` que se apaga), lo vaciaría entero con `textContent = ""`,
+ * tabla o diálogo incluidos. Un `<template />` fijo después de los hijos le marca hasta dónde llegan.
  */
 export * from "./sidemenu";
 export * from "./button";

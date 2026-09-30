@@ -11,7 +11,7 @@ import { searchOptions } from "../src/components/select/logic";
 import type { RunAgentInput } from "../src/components/agent/types";
 import { agentRun } from "./demo-agent";
 import { EMPLOYEE_FIELDS, EMPLOYEES } from "./demo-data";
-import { aiCell, purchasePage } from "./demo-grid";
+import { purchasePage } from "./demo-grid";
 import { ocHistoryPage } from "./demo-history";
 import { hrEmployees, hrExitImpact } from "./demo-hr";
 import { invoiceEvents, invoiceSvg } from "./demo-invoice";
@@ -137,20 +137,6 @@ const gridRows: Handler = async (req, out) => {
   await sleep(120 + Math.random() * 180);
   out.type("application/json");
   out.end(JSON.stringify(purchasePage(q)));
-};
-const gridAi: Handler = async (req, out) => {
-  const q = json(req.body) as { rows?: Line[]; prompt?: string };
-  const send = ndjson(out);
-  const rows = Array.isArray(q.rows) ? [...q.rows] : [];
-  rows.sort(() => Math.random() - 0.5);
-  await sleep(300);
-  for (const row of rows) {
-    if (out.closed()) return;
-    send({ type: "cell", id: row.id, ...aiCell(String(q.prompt ?? ""), row) });
-    await sleep(25 + Math.random() * 70);
-  }
-  send({ type: "done" });
-  out.end();
 };
 
 // ---------------------------------------------------------------- impacto, TH y agente
@@ -303,7 +289,6 @@ const ROUTES: [string, Handler][] = [
   ["/demo/capture/registrar", captureRegister],
   ["/demo/capture", capture],
   ["/demo/grid/rows", gridRows],
-  ["/demo/grid/ai", gridAi],
   ["/demo/th/retiro", retiro],
   ["/demo/agent", agent],
   ["/demo/impact", impact],

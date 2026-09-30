@@ -42,6 +42,8 @@ export function Guard(props: GuardProps): JSX.Element {
       on:nx-guard-block={(e) => local.onBlock?.(e)}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-guard>
   );
 }

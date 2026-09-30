@@ -3,10 +3,10 @@ import { splitProps, type JSX } from "solid-js";
 import "./jsx";
 import "../components/grid/index";
 import type { NxGrid } from "../components/grid/grid";
-import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "../components/grid/types";
+import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "../components/grid/types";
 import type { GridFilterDetail } from "./jsx";
 
-export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels };
+export type { NxGrid, GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels };
 
 export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> {
   columns: GridColumn[];
@@ -16,12 +16,10 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   source?: string;
   /** Con `source`: si la consulta completa tiene hasta este tanto de filas, se trae una vez y se filtra en el cliente. */
   clientMax?: number;
-  /** URL que calcula las columnas de IA. Sin ella no aparece «Columna IA». */
-  aiEndpoint?: string;
-  /** URL opcional para frases que el analizador local no entiende. */
-  nlEndpoint?: string;
   filters?: GridFilter[];
   sort?: GridSort | null;
+  /** Buscar en la tabla: lo que dice la caja (asignarlo busca). */
+  search?: string;
   /** Filtros, orden, agrupación, columnas ocultas y anchos de una vez. */
   view?: Partial<GridView>;
   /** Clave de `localStorage` para las vistas con nombre. Sin ella no hay menú de vistas. */
@@ -43,7 +41,7 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   /** Las vistas guardadas cambiaron (guardar, renombrar, borrar). */
   onViews?: (e: CustomEvent<{ views: GridSavedView[] }>) => void;
   /** Cancelable: con `preventDefault()` la edición no se aplica. */
-  onChange?: (e: CustomEvent<{ changes: GridChange[] }>) => void;
+  onChange?: (e: CustomEvent<{ changes: GridChange[]; source: GridChangeSource }>) => void;
   onColumns?: (e: CustomEvent<{ columns: GridColumn[] }>) => void;
   onSelection?: (e: CustomEvent<{ ids: string[]; count: number }>) => void;
   /** Clic en una columna `link` o Enter en una fila: el detalle (p. ej. un `<Dialog mode="panel">`). */
@@ -52,7 +50,7 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
 }
 
 export function Grid(props: GridProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["columns", "rows", "view", "views", "viewsStorage", "onViews", "source", "clientMax", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
+  const [local, rest] = splitProps(props, ["columns", "rows", "view", "views", "viewsStorage", "onViews", "source", "clientMax", "filters", "sort", "search", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
   return (
     <nx-grid
       {...rest}
@@ -60,6 +58,7 @@ export function Grid(props: GridProps): JSX.Element {
       prop:rows={local.rows}
       prop:filters={local.filters}
       prop:sort={local.sort}
+      prop:search={local.search}
       prop:view={local.view}
       prop:views={local.views}
       attr:views-storage={local.viewsStorage}
@@ -67,8 +66,6 @@ export function Grid(props: GridProps): JSX.Element {
       prop:labels={local.labels}
       attr:source={local.source}
       attr:client-max={local.clientMax ? String(local.clientMax) : undefined}
-      attr:ai-endpoint={local.aiEndpoint}
-      attr:nl-endpoint={local.nlEndpoint}
       attr:group-by={local.groupBy}
       attr:row-key={local.rowKey}
       attr:height={local.height === undefined ? undefined : String(local.height)}
@@ -84,6 +81,8 @@ export function Grid(props: GridProps): JSX.Element {
       bool:selectable={!!local.selectable}
     >
       {local.children}
+      {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
+      <template />
     </nx-grid>
   );
 }

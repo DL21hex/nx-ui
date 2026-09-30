@@ -69,7 +69,7 @@ const forbidden = (k: string) => FORBIDDEN.test(k) || isHandler(k);
 
 /** Props que llevan una URL a la que el componente pide datos o envía algo. El agente las quita de
  *  lo que muestra el modelo (`nx_show`): una respuesta del modelo no elige a dónde van los datos. */
-export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "source", "aiEndpoint", "nlEndpoint", "explainEndpoint", "channel", "stream", "ping", "href", "url", "handoff", "peopleSource", "refsSource"]);
+export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "source", "explainEndpoint", "channel", "stream", "ping", "href", "url", "handoff", "peopleSource", "refsSource"]);
 
 /** Registra un componente propio (o un alias) para `render`. Solo elementos personalizados (con
  *  guion): un `<a>` o un `<iframe>` con props de un payload se saltarían el saneo de URLs. Sin

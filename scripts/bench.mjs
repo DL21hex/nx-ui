@@ -7,15 +7,14 @@
 import { build } from "esbuild";
 
 const entry = `
-import { applyFilters, crossfilter, facetColumns, facetOrder, groupRows, sortRows } from "./src/components/grid/logic";
+import { applyFilters, crossfilter, facetColumns, facetOrder, groupRows, rowTexter, sortRows } from "./src/components/grid/logic";
 import { histogram, histogramSpec } from "./src/components/grid/bars";
-import { parseNL } from "./src/components/grid/nl";
 import { searchOptions } from "./src/components/select/logic";
 import { filterItems } from "./src/components/sidemenu/logic";
 import { nxFormat } from "./src/core/locale";
 import { PURCHASE_COLUMNS, purchaseRows } from "./gallery/demo-grid";
 import { EMPLOYEE_FIELDS, EMPLOYEES } from "./gallery/demo-data";
-export const lib = { applyFilters, crossfilter, facetColumns, facetOrder, groupRows, histogram, histogramSpec, sortRows, parseNL, searchOptions, filterItems, nxFormat, PURCHASE_COLUMNS, purchaseRows, EMPLOYEE_FIELDS, EMPLOYEES };
+export const lib = { applyFilters, crossfilter, facetColumns, facetOrder, groupRows, histogram, histogramSpec, rowTexter, sortRows, searchOptions, filterItems, nxFormat, PURCHASE_COLUMNS, purchaseRows, EMPLOYEE_FIELDS, EMPLOYEES };
 `;
 const out = await build({ stdin: { contents: entry, resolveDir: process.cwd(), loader: "ts" }, bundle: true, format: "esm", platform: "node", write: false, logLevel: "error" });
 const { lib } = await import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString("base64")}`);
@@ -49,6 +48,11 @@ for (const n of [10_000, 100_000]) {
   const three = [...one, { key: "monto", op: "range", min: 5e6 }, { key: "prov", op: "in", values: ["Aceros del Caribe"] }];
   bench("grid", `filtro + facetas, 1 condición (${k})`, () => lib.crossfilter(data, one, facetCols, order));
   bench("grid", `filtro + facetas, 3 condiciones (${k})`, () => lib.crossfilter(data, three, facetCols, order));
+  bench("grid", `filtro «contiene» en texto con tildes (${k})`, () => lib.applyFilters(data, [{ key: "desc", op: "contains", value: "tubería" }]));
+  // «Buscar en la tabla»: la primera vez arma el texto de cada fila; después solo lo recorre.
+  bench("grid", `buscar en la tabla, primera vez (${k})`, () => data.map(lib.rowTexter(C, f)));
+  const texts = data.map(lib.rowTexter(C, f));
+  bench("grid", `buscar en la tabla, cada tecla (${k})`, () => texts.filter((t) => t.includes("aceros")));
   const specs = C.map((c) => lib.histogramSpec(c, data, f)).filter(Boolean);
   const filtered = lib.applyFilters(data, one);
   bench("grid", `histogramas de ${specs.length} columnas (${k})`, () => specs.forEach((s) => lib.histogram(s, data, filtered)));
@@ -56,7 +60,6 @@ for (const n of [10_000, 100_000]) {
   bench("grid", `ordenar texto con repetidos (${k})`, () => lib.sortRows(data, { key: "desc", dir: 1 }, C, f));
   bench("grid", `ordenar texto único (${k})`, () => lib.sortRows(data, { key: "oc", dir: 1 }, C, f));
   bench("grid", `agrupar (${k})`, () => lib.groupRows(data, C[2], C, f));
-  bench("grid", `frase en lenguaje natural (${k})`, () => lib.parseNL("pendientes de aceros de marzo de más de 5 millones", C, data));
 }
 
 // ---------------------------------------------------------------- <nx-select>

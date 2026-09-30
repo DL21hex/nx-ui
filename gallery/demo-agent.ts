@@ -80,7 +80,7 @@ export function* agentRun(input: RunAgentInput, people: GridRow[]): Generator<Ev
       yield* tool("nx_tour", {
         steps: [
           { target: '[data-tour="pendientes"]', title: "1 · Empieza por lo pendiente", text: "Cada tarjeta es un filtro listo: «Documentos faltantes» te deja solo a quienes les falta algo." },
-          { target: "#th-grid .nx-grid__ask", title: "2 · O dilo con tus palabras", text: "Escribe «en período de prueba con documentos faltantes» y la tabla se filtra sola." },
+          { target: "#th-grid .nx-grid__th", title: "2 · O filtra una columna", text: "El embudo de cada cabecera abre el filtro de esa columna: se aplica mientras eliges y deja un chip que puedes quitar." },
           { target: "#th-grid .nx-grid__head", title: "3 · Selecciona a las personas", text: "La casilla de la cabecera selecciona todo lo filtrado; también puedes elegir una por una." },
           { target: '[data-tour="lote"]', title: "4 · Pide los documentos", text: "Con personas seleccionadas aparece esta barra: «Pedir documentos» les escribe a todas." },
           { target: '[data-tour="asistente"]', title: "5 · O pídemelo a mí", text: "Escribe «pide los documentos faltantes» y lo hago yo, con tu aprobación antes de enviar." },

@@ -655,7 +655,6 @@ function mountGridDemo(root: HTMLElement) {
   }
   const loc = root.querySelector<HTMLSelectElement>(".grid-locale")!;
   loc.addEventListener("change", () => (grid.locale = loc.value));
-  for (const b of root.querySelectorAll<HTMLButtonElement>("[data-grid-ask]")) b.addEventListener("click", () => void grid.ask(b.textContent ?? ""));
   const log = root.querySelector<HTMLOListElement>("#grid-log")!;
   const add = (text: string) => {
     const li = document.createElement("li");

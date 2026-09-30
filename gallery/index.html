@@ -212,15 +212,10 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
       <h1>Tabla <code class="tag">&lt;nx-grid&gt;</code></h1>
       <p class="lead">
         Una tabla que se explora sola. El embudo de cada columna abre su filtro: una lista, un rango, fechas o
-        «contiene», según el dato. También filtras escribiendo una frase, con el panel de filtros o desde una celda
-        (clic derecho), trabajas como en una hoja de cálculo, agrupas con
-        subtotales, exportas a Excel y agregas columnas que calcula una IA con los datos de cada fila.
+        «contiene», según el dato. También filtras con el panel de filtros o desde una celda (clic derecho),
+        trabajas como en una hoja de cálculo, agrupas con subtotales y exportas a Excel.
       </p>
       <div class="grid-try">
-        <span>Prueba:</span>
-        <button type="button" data-grid-ask>pendientes de más de 5 millones</button>
-        <button type="button" data-grid-ask>aceros de marzo sin anulados</button>
-        <button type="button" data-grid-ask>atraso mayor a 5</button>
         <select class="grid-locale" aria-label="Formato (locale)">
           <option value="es-CO">es-CO</option>
           <option value="en-US">en-US</option>
@@ -232,7 +227,7 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
           <button type="button" data-grid-mode="server" aria-pressed="false">Servidor · 20.000</button>
         </span>
       </div>
-      <nx-grid id="grid-demo" locale="es-CO" ai-endpoint="/demo/grid/ai" facets-open filename="necesidades-de-compra" views-storage="nx-galeria:compras"></nx-grid>
+      <nx-grid id="grid-demo" locale="es-CO" facets-open filename="necesidades-de-compra" views-storage="nx-galeria:compras"></nx-grid>
       <ol class="stage__log btn-events" id="grid-log"></ol>
 
       <h2>Cómo se usa</h2>
@@ -241,13 +236,13 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
           <thead><tr><th>Para</th><th>Haz esto</th></tr></thead>
           <tbody>
             <tr><td>Filtrar una columna</td><td>El embudo de la cabecera (aparece al pasar por ella; con <kbd>Alt</kbd>+<kbd>↓</kbd> desde la tabla o la cabecera). Estados y texto con pocos valores: una lista con cuántas filas quedan en cada uno y «Solo» para quedarse con uno. Montos: barras, manijas y dos campos que aceptan «5 M» o «5 millones». Fechas: «Antes de hoy», «Próximos 30 días», «Este mes»… (se guardan relativos) o entre dos fechas. Lo demás: «contiene». Se aplica mientras eliges; el chip lo vuelve a abrir.</td></tr>
+            <tr><td>Buscar</td><td>La caja «Buscar en la tabla» deja las filas que contienen lo que escribes en alguna columna visible, sin tildes ni mayúsculas («quimicos» encuentra «Químicos», «8.000.000» o «8000000» el monto). Se suma a los filtros; la ✕ o <kbd>Esc</kbd> la borran.</td></tr>
             <tr><td>Guardar una vista</td><td>Filtra, ordena, agrupa, esconde columnas («Columnas») o cambia su ancho (arrastra el borde de una cabecera) y usa «Vistas → Guardar como vista nueva…» o «Guardar como vista» junto a los chips. Se aplica con un clic; si cambias algo, el botón dice «modificada». Se guarda en <code>localStorage</code> con <code>views-storage</code>.</td></tr>
             <tr><td>Filtrar desde una celda</td><td>Clic derecho (o <kbd>Mayús</kbd>+<kbd>F10</kbd>): «Solo Aceros», «Sin Aceros», «Desde $ 5.000.000». Si no queda ninguna fila, la tabla propone qué filtro quitar y cuántas volverían.</td></tr>
-            <tr><td>Filtrar con palabras</td><td>«pendientes de marzo de más de 5 millones», «sin anulados», «entre 1 y 2 millones», «atraso mayor a 3», o texto entre comillas. Lo que no entiende te lo dice. Con <code>nl-endpoint</code>, esas frases van al backend.</td></tr>
             <tr><td>Panel de filtros</td><td>Las opciones de una faceta se suman y las facetas se combinan entre sí. Cada conteo refleja los demás filtros; una opción en 0 queda deshabilitada.</td></tr>
             <tr><td>Hoja de cálculo</td><td>Flechas, <kbd>Inicio</kbd>/<kbd>Fin</kbd>, <kbd>RePág</kbd>/<kbd>AvPág</kbd>, <kbd>Mayús</kbd> para seleccionar un rango (o arrastrar); el pie muestra suma, promedio, mínimo y máximo. <kbd>Ctrl</kbd>+<kbd>C</kbd> copia para pegar en Excel, y <kbd>Ctrl</kbd>+<kbd>V</kbd> pega desde Excel en las columnas editables.</td></tr>
             <tr><td>Editar</td><td>Doble clic, <kbd>Enter</kbd>, <kbd>F2</kbd> o simplemente escribir. <kbd>Enter</kbd> guarda y baja, <kbd>Tab</kbd> guarda y avanza, <kbd>Esc</kbd> cancela, <kbd>Supr</kbd> borra. Las celdas editadas llevan una marca. <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace y <kbd>Ctrl</kbd>+<kbd>Y</kbd> rehace (también con los botones de la barra).</td></tr>
-            <tr><td>Columna IA</td><td>«Riesgo de retraso según proveedor, monto y atraso», «¿Es una compra recurrente?», «Ahorro posible si se negocia». Solo se calculan las filas que ves, en lotes.</td></tr>
+            <tr><td>Con el dedo</td><td>Un toque marca la celda y otro sobre la misma la edita o abre la fila. La pulsación larga abre el menú de la celda. Arrastrar desplaza la tabla y, al llegar a su final, sigue la página.</td></tr>
           </tbody>
         </table>
       </div>
@@ -257,10 +252,8 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
         <table>
           <thead><tr><th>Endpoint</th><th>Petición → respuesta</th></tr></thead>
           <tbody>
-            <tr><td><code>source</code></td><td><code>POST {"offset":0,"limit":100,"sort":{"key":"monto","dir":-1},"filters":[…]}</code> → <code>{"rows":[…],"total":20000,"histograms":{"monto":{"kind":"bins","labels":[…],"counts":[…],"filtered":[…],"edges":[…]}},"facets":[{"key":"prov","label":"Proveedor","options":[{"value":"…","count":12}]}],"totals":{"monto":…}}</code>. Los agregados son opcionales: <code>histograms</code> da las barras del filtro de montos y fechas, y <code>facets</code> los valores (con su conteo) de las listas y del panel de filtros. Sin ellos, esos filtros quedan con sus campos.</td></tr>
+            <tr><td><code>source</code></td><td><code>POST {"offset":0,"limit":100,"sort":{"key":"monto","dir":-1},"filters":[…],"search":"aceros"}</code> (<code>search</code> solo si hay algo escrito) → <code>{"rows":[…],"total":20000,"histograms":{"monto":{"kind":"bins","labels":[…],"counts":[…],"filtered":[…],"edges":[…]}},"facets":[{"key":"prov","label":"Proveedor","options":[{"value":"…","count":12}]}],"totals":{"monto":…}}</code>. Los agregados son opcionales: <code>histograms</code> da las barras del filtro de montos y fechas, y <code>facets</code> los valores (con su conteo) de las listas y del panel de filtros. Sin ellos, esos filtros quedan con sus campos.</td></tr>
             <tr><td><code>client-max</code></td><td>Opcional, con <code>source</code>. Si el <code>total</code> de la primera página cabe en el tope, la tabla pide una vez <code>{"offset":0,"limit":client-max + 1,"sort":null,"filters":[]}</code> y sigue en el cliente (conteos exactos, filtros al instante, agrupar). Si no cabe, no pide nada más. <code>grid.mode</code> dice dónde quedó; <code>refresh()</code> vuelve a traer y a mirar.</td></tr>
-            <tr><td><code>ai-endpoint</code></td><td><code>POST {"prompt","column","label","columns":[…],"rows":[{"id":"2201","monto":…}]}</code> → NDJSON o SSE, una línea por celda y en cualquier orden: <code>{"type":"cell","id":"2201","value":"Alto","tone":"danger"}</code>. El tono (<code>success</code>, <code>warning</code>, <code>danger</code>, <code>info</code>) es opcional.</td></tr>
-            <tr><td><code>nl-endpoint</code></td><td><code>POST {"q","columns"}</code> → <code>{"filters":[…],"unknown":["…"]}</code>. Solo se llama si el analizador local no entendió todo.</td></tr>
             <tr><td>Filtros</td><td><code>{"key","op":"in","values":[…]}</code>, <code>"notIn"</code>, <code>{"op":"range","min","max"}</code> (<code>min</code> incluido, <code>max</code> excluido; números o fechas ISO; con <code>"rel":"month"</code>, <code>"past"</code>, <code>"last30"</code>, <code>"next30"</code>, <code>"lastMonth"</code> o <code>"year"</code> el tramo se recalcula con la fecha de hoy) y <code>{"op":"contains","value"}</code>.</td></tr>
           </tbody>
         </table>
@@ -273,7 +266,7 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
           <button role="tab" aria-selected="false">SolidJS</button>
           <button role="tab" aria-selected="false">BDUI</button>
         </div>
-        <pre role="tabpanel"><code>&lt;nx-grid id="grid" ai-endpoint="/ia/columna" facets-open&gt;&lt;/nx-grid&gt;
+        <pre role="tabpanel"><code>&lt;nx-grid id="grid" facets-open&gt;&lt;/nx-grid&gt;
 
 grid.columns = [
   { key: "oc", label: "Pedido" },
@@ -286,7 +279,7 @@ grid.rows = pedidos;                 // o: grid.source = "/compras/pedidos/busca
 grid.addEventListener("nx-grid-change", (e) =&gt; guardar(e.detail.changes));</code></pre>
         <pre role="tabpanel" hidden><code>import { Grid } from "nx32-elements/solid/grid";
 
-&lt;Grid columns={COLUMNAS} source="/compras/pedidos/buscar" aiEndpoint="/ia/columna" facetsOpen
+&lt;Grid columns={COLUMNAS} source="/compras/pedidos/buscar" facetsOpen
   onChange={(e) =&gt; { if (!puedeEditar()) e.preventDefault(); else guardar(e.detail.changes); }} /&gt;</code></pre>
         <pre role="tabpanel" hidden><code>{ "component": "Grid", "props": {
     "columns": [ … ],
@@ -300,13 +293,13 @@ grid.addEventListener("nx-grid-change", (e) =&gt; guardar(e.detail.changes));</c
         <table>
           <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
           <tbody>
-            <tr><td><code>columns</code></td><td><code>{key, label, type?, width?, editable?, options?, histogram?, facet?, currency?, ai?}</code>. Tipos: <code>text</code>, <code>number</code>, <code>money</code>, <code>date</code> (ISO) y <code>status</code> (con <code>options</code> y tono).</td></tr>
-            <tr><td><code>rows</code> / <code>source</code></td><td>Filas en el cliente (se copian: ediciones y valores de IA quedan en <code>grid.rows</code>) o URL de datos en el servidor.</td></tr>
+            <tr><td><code>columns</code></td><td><code>{key, label, type?, width?, editable?, options?, histogram?, facet?, currency?, link?, avatar?}</code>. Tipos: <code>text</code>, <code>number</code>, <code>money</code>, <code>date</code> (ISO) y <code>status</code> (con <code>options</code> y tono).</td></tr>
+            <tr><td><code>rows</code> / <code>source</code></td><td>Filas en el cliente (se copian: las ediciones quedan en <code>grid.rows</code>) o URL de datos en el servidor.</td></tr>
             <tr><td><code>filters</code>, <code>sort</code>, <code>group-by</code></td><td>El estado, serializable. Agrupar solo funciona en el cliente.</td></tr>
-            <tr><td><code>ai-endpoint</code>, <code>nl-endpoint</code></td><td>Columnas de IA y frases que el analizador local no entiende.</td></tr>
+            <tr><td><code>search</code></td><td>Lo que dice la caja «Buscar en la tabla» (asignarlo busca). No va en las vistas.</td></tr>
             <tr><td><code>locale</code></td><td>Formato de números, montos, fechas, lo que se escribe en una celda y el orden alfabético (<code>es-CO</code>, <code>en-US</code>…). Por defecto, el <code>lang</code> de la página. Con <code>currency</code> ISO en la columna (<code>"COP"</code>, <code>"USD"</code>), el formato de moneda del locale.</td></tr>
             <tr><td><code>facets-open</code>, <code>height</code>, <code>row-key</code>, <code>filename</code>, <code>labels</code></td><td>Panel de filtros abierto, alto en px (o <code>--nx-grid-height</code>), campo identificador (<code>id</code>), nombre del .xlsx y textos.</td></tr>
-            <tr><td><code>ask(frase)</code>, <code>clearFilters()</code>, <code>exportXlsx()</code>, <code>addAiColumn(nombre, prompt)</code>, <code>removeColumn(key)</code>, <code>refresh()</code></td><td>Lo mismo que la interfaz, desde código.</td></tr>
+            <tr><td><code>clearFilters()</code>, <code>exportXlsx()</code>, <code>removeColumn(key)</code>, <code>refresh()</code></td><td>Lo mismo que la interfaz, desde código.</td></tr>
             <tr><td>Eventos</td><td><code>nx-grid-filter</code> <code>{filters, sort, groupBy, count}</code>, <code>nx-grid-change</code> <code>{changes: [{id, key, value, old}]}</code> (cancelable) y <code>nx-grid-columns</code> <code>{columns}</code>.</td></tr>
           </tbody>
         </table>

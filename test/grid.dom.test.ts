@@ -70,7 +70,6 @@ describe("<nx-grid>", () => {
     const rows = ROWS.map((r) => ({ ...r }));
     const el = mount();
     el.rows = rows;
-    el.addAiColumn("X", "y");
     el.rows[0].monto = 1;
     expect(rows[0].monto).toBe(8_000_000);
   });
@@ -262,11 +261,10 @@ describe("<nx-grid>", () => {
     expect(column(el, 0)).toEqual(["OC-4"]);
   });
 
-  it("filter: false quita el embudo; las columnas de IA no lo tienen", () => {
+  it("filter: false quita el embudo", () => {
     const el = mount();
     el.columns = COLS.map((c) => (c.key === "prov" ? { ...c, filter: false as const } : c));
-    el.addAiColumn("Riesgo", "p");
-    expect([...el.querySelectorAll(".nx-grid__th")].map((th) => !!th.querySelector(".nx-grid__funnel"))).toEqual([true, false, true, true, false]);
+    expect([...el.querySelectorAll(".nx-grid__th")].map((th) => !!th.querySelector(".nx-grid__funnel"))).toEqual([true, false, true, true]);
   });
 
   it("panel de facetas: conteos sin la propia faceta, opciones en 0 deshabilitadas", () => {
@@ -288,25 +286,6 @@ describe("<nx-grid>", () => {
     el.querySelector<HTMLButtonElement>(".nx-grid__bar .nx-grid__btn[aria-controls]")!.click();
     expect(el.facetsOpen).toBe(false);
     expect(el.querySelector<HTMLElement>(".nx-grid__facets")!.hidden).toBe(true);
-  });
-
-  it("ask(): una frase se vuelve filtros y lo que no entiende se dice", async () => {
-    const el = mount();
-    const r = await el.ask("pendientes de más de 5 millones urgentes");
-    expect(chips(el).sort()).toEqual(["Estado: Pendiente", "Monto ≥ $5 M"]);
-    expect(column(el, 0)).toEqual(["OC-1"]);
-    expect(r.unknown).toEqual(["urgentes"]);
-    expect(el.querySelector(".nx-grid__note")!.textContent).toBe("No entendí «urgentes»");
-  });
-
-  it("ask() consulta nl-endpoint si el analizador local no entiende", async () => {
-    const fetch = vi.fn(async () => new Response(JSON.stringify({ filters: [{ key: "prov", op: "in", values: ["Químicos"] }, { key: "nope", op: "in", values: [] }] })));
-    vi.stubGlobal("fetch", fetch);
-    const el = mount('nl-endpoint="/nl"');
-    await el.ask("los del laboratorio");
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string).q).toBe("los del laboratorio");
-    expect(el.filters).toEqual([{ key: "prov", op: "in", values: ["Químicos"] }]);
   });
 
   it("teclado: mover, extender el rango y ver las estadísticas en el pie", () => {
@@ -404,28 +383,24 @@ describe("<nx-grid>", () => {
     expect(column(el, 0)).toEqual(["OC-2", "OC-4"]);
   });
 
-  it("columna IA: pide solo las filas visibles y pinta lo que llega en streaming", async () => {
-    const fetch = vi.fn(async (_url: string, init: RequestInit) => {
-      const body = JSON.parse(init.body as string);
-      const lines = body.rows.map((r: GridRow) => JSON.stringify({ type: "cell", id: r.id, value: r.id === "1" ? "Alto" : "Bajo", tone: r.id === "1" ? "danger" : "success" }));
-      return new Response(`${lines.join("\n")}\n`);
-    });
-    vi.stubGlobal("fetch", fetch);
-    const el = mount('ai-endpoint="/ia"');
-    expect(el.querySelector(".nx-grid__bar button[popovertarget]")!.hasAttribute("hidden")).toBe(false);
-    el.addAiColumn("Riesgo", "riesgo de retraso");
-    expect(el.querySelectorAll(".nx-grid__shim")).toHaveLength(4);
-    await new Promise((r) => setTimeout(r, 200));
-    expect(fetch).toHaveBeenCalledOnce();
-    const body = JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
-    expect(body).toMatchObject({ prompt: "riesgo de retraso", column: "ai_riesgo" });
-    expect(body.rows[0]).toEqual({ id: "1", oc: "OC-1", prov: "Aceros", estado: "pend", monto: 8_000_000 });
-    await new Promise((r) => setTimeout(r, 50));
-    expect(el.querySelector(`[data-r="0"] > [data-c="4"] .nx-grid__pill`)!.getAttribute("data-tone")).toBe("danger");
-    expect(el.rows[0].ai_riesgo).toBe("Alto");
-    el.removeColumn("ai_riesgo");
-    expect(el.columns).toHaveLength(4);
-    expect("ai_riesgo" in el.rows[0]).toBe(false);
+  it("removeColumn quita la columna con su filtro y su orden", () => {
+    const el = mount();
+    const counts: number[] = [];
+    el.addEventListener("nx-grid-columns", (e) => counts.push(e.detail.columns.length));
+    el.filters = [{ key: "prov", op: "in", values: ["Aceros"] }];
+    el.sort = { key: "prov", dir: -1 };
+    el.removeColumn("prov");
+    expect(el.columns.map((c) => c.key)).toEqual(["oc", "estado", "monto"]);
+    expect(el.filters).toEqual([]);
+    expect(el.sort).toBeNull();
+    expect(counts).toEqual([3]);
+    expect(column(el, 0)).toEqual(["OC-1", "OC-2", "OC-3", "OC-4"]);
+  });
+
+  it("sin columnas de IA ni filtro de frases", () => {
+    const el = mount('ai-endpoint="/ia" nl-endpoint="/nl"');
+    expect(el.querySelector(".nx-grid__bar [popovertarget], .nx-grid__pop, .nx-grid__rm, .nx-grid__ask")).toBeNull();
+    expect("addAiColumn" in el || "ask" in el).toBe(false);
   });
 
   it("modo servidor: pide bloques con filtros y orden, y usa sus agregados", async () => {

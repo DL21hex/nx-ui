@@ -73,50 +73,6 @@ describe("modo servidor: la selección no alcanza filas de otra consulta", () =>
   });
 });
 
-describe("columnas de IA", () => {
-  it("con filas nuevas se vuelven a pedir (no quedan cargando para siempre)", async () => {
-    const fetch = vi.fn(async (_url: string, init: RequestInit) => {
-      const lines = JSON.parse(init.body as string).rows.map((r: GridRow) => JSON.stringify({ type: "cell", id: r.id, value: `v${r.id}` }));
-      return new Response(`${lines.join("\n")}\n{"type":"done"}\n`);
-    });
-    vi.stubGlobal("fetch", fetch);
-    const el = mount('ai-endpoint="/ia"');
-    el.addAiColumn("Riesgo", "riesgo");
-    await sleep(200);
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(el.querySelectorAll(".nx-grid__shim")).toHaveLength(0);
-    // La app trae datos frescos (sin la columna de IA): antes, las celdas quedaban con el shim.
-    el.rows = ROWS.map((r) => ({ ...r }));
-    expect(el.querySelectorAll(".nx-grid__shim")).toHaveLength(2);
-    await sleep(200);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    expect(el.querySelectorAll(".nx-grid__shim")).toHaveLength(0);
-    expect(el.rows[0].ai_riesgo).toBe("v1");
-  });
-
-  it("una respuesta que llega después de cambiar las filas no se escribe en las nuevas", async () => {
-    let release!: () => void;
-    const fetch = vi.fn(
-      (_url: string, init: RequestInit) =>
-        new Promise<Response>((resolve, reject) => {
-          init.signal?.addEventListener("abort", () => reject(new DOMException("abort", "AbortError")));
-          release = () => resolve(new Response(`${JSON.stringify({ type: "cell", id: "1", value: "viejo" })}\n`));
-        }),
-    );
-    vi.stubGlobal("fetch", fetch);
-    const el = mount('ai-endpoint="/ia"');
-    el.addAiColumn("Riesgo", "riesgo");
-    await sleep(150);
-    expect(fetch).toHaveBeenCalledOnce();
-    expect((fetch.mock.calls[0][1] as RequestInit).signal!.aborted).toBe(false);
-    el.rows = ROWS.map((r) => ({ ...r }));
-    expect((fetch.mock.calls[0][1] as RequestInit).signal!.aborted).toBe(true);
-    release();
-    await sleep(10);
-    expect(el.rows[0].ai_riesgo).not.toBe("viejo");
-  });
-});
-
 describe("reconexión", () => {
   it("moverla en el DOM no vuelve a pedir los datos y vuelve a observar su tamaño", async () => {
     const observed: Element[] = [];
@@ -146,32 +102,6 @@ describe("reconexión", () => {
     expect(observed).toHaveLength(2);
     expect(fetch.mock.calls.length).toBe(calls);
     expect(el.querySelector('[data-r="0"] [data-c="0"]')!.textContent).toBe("OC-0");
-  });
-});
-
-describe("ask() con nl-endpoint", () => {
-  it("dos frases seguidas: gana la última aunque la primera responda después", async () => {
-    const replies: Record<string, { at: number; filters: unknown[] }> = {
-      lenta: { at: 60, filters: [{ key: "prov", op: "in", values: ["Aceros"] }] },
-      rapida: { at: 5, filters: [{ key: "prov", op: "in", values: ["Empaques"] }] },
-    };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        (_url: string, init: RequestInit) =>
-          new Promise<Response>((resolve, reject) => {
-            const r = replies[JSON.parse(init.body as string).q];
-            const t = setTimeout(() => resolve(new Response(JSON.stringify({ filters: r.filters }))), r.at);
-            init.signal?.addEventListener("abort", () => (clearTimeout(t), reject(new DOMException("abort", "AbortError"))));
-          }),
-      ),
-    );
-    const el = mount('nl-endpoint="/nl"');
-    const a = el.ask("lenta");
-    const b = el.ask("rapida");
-    await Promise.all([a, b]);
-    await sleep(80);
-    expect(el.filters).toEqual([{ key: "prov", op: "in", values: ["Empaques"] }]);
   });
 });
 
@@ -270,6 +200,27 @@ describe("exportar", () => {
     expect(text).toContain('<dimension ref="A1:C7000"/>');
   });
 
+  it("modo servidor: si el servidor manda menos de lo pedido (un tope de 100), sigue hasta el total", async () => {
+    const all = Array.from({ length: 250 }, (_, i) => ({ id: String(i), oc: `OC-${i}`, prov: "x", monto: i }));
+    const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const q = JSON.parse(init.body as string);
+      return new Response(JSON.stringify({ rows: all.slice(q.offset, q.offset + Math.min(q.limit, 100)), total: all.length }));
+    });
+    vi.stubGlobal("fetch", fetch);
+    vi.stubGlobal("CompressionStream", undefined);
+    let blob: Blob | undefined;
+    URL.createObjectURL = (b: Blob) => ((blob = b), "blob:x");
+    URL.revokeObjectURL = () => {};
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const el = mount('source="/datos"');
+    await sleep(20);
+    fetch.mockClear();
+    await el.exportXlsx("pedidos");
+    expect(fetch.mock.calls.map((c) => body(c).offset)).toEqual([0, 100, 200]);
+    const text = new TextDecoder().decode(new Uint8Array(await blob!.arrayBuffer()));
+    expect(text).toContain('<dimension ref="A1:C251"/>');
+  });
+
   it("si el servidor falla, el botón no deja una promesa rechazada sin atender", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("x", { status: 500 })));
     const el = mount('source="/datos"');
@@ -282,26 +233,23 @@ describe("exportar", () => {
 });
 
 describe("endpoints de otro origen", () => {
-  it("source, ai-endpoint y nl-endpoint de otro origen no se usan", async () => {
+  it("un source de otro origen no se usa", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const el = mount('source="https://otro.example/datos" ai-endpoint="//otro.example/ia" nl-endpoint="https://otro.example/nl"');
-    el.addAiColumn("Riesgo", "riesgo");
-    await el.ask("algo raro");
+    const el = mount('source="https://otro.example/datos"');
     await sleep(200);
     expect(fetch).not.toHaveBeenCalled();
-    // Sin `source` válido la tabla muestra `rows`; el botón de IA no aparece.
+    // Sin `source` válido la tabla muestra `rows`.
     expect(el.querySelector('[data-r="0"] [data-c="1"]')!.textContent).toBe("Aceros");
-    expect(el.querySelector<HTMLElement>(".nx-grid__bar button[popovertarget]")!.hidden).toBe(true);
     expect(warn).toHaveBeenCalled();
   });
 });
 
 describe("dentro de un diálogo, consultar no es editar", () => {
-  it("la frase, las facetas, agrupar y las casillas llevan data-nx-ephemeral", () => {
+  it("las facetas, agrupar y las casillas llevan data-nx-ephemeral", () => {
     const el = mount("selectable facets-open");
-    for (const sel of [".nx-grid__ask-input", ".nx-grid__group", ".nx-grid__facets", "input[data-pick]", "input[data-pick-all]"]) {
+    for (const sel of [".nx-grid__group", ".nx-grid__facets", "input[data-pick]", "input[data-pick-all]"]) {
       expect(el.querySelector(sel)!.closest("[data-nx-ephemeral]"), sel).not.toBeNull();
     }
     expect(el.querySelector(".nx-grid__rows [data-c]")!.closest("[data-nx-ephemeral]")).toBeNull();

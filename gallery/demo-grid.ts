@@ -85,36 +85,6 @@ export function purchaseRows(n: number, seed = 7): GridRow[] {
   return rows;
 }
 
-// ---------------------------------------------------------------- «IA» de las columnas calculadas
-
-type Tone = "neutral" | "info" | "success" | "warning" | "danger";
-
-/** Una respuesta verosímil según el prompt (la galería no llama a ningún modelo). */
-export function aiCell(prompt: string, row: GridRow): { value: string; tone?: Tone } {
-  const p = prompt.toLowerCase();
-  const monto = Number(row.monto) || 0;
-  const atraso = Number(row.atraso) || 0;
-  if (/riesgo|retras|cumpl/.test(p)) {
-    const score = atraso * 2 + (row.prov === "Aceros del Caribe" ? 6 : 0) + (monto > 10e6 ? 5 : monto > 3e6 ? 2 : 0);
-    return score >= 12 ? { value: "Alto", tone: "danger" } : score >= 5 ? { value: "Medio", tone: "warning" } : { value: "Bajo", tone: "success" };
-  }
-  if (/urgen|priori/.test(p)) {
-    const urgent = row.area === "Producción" && (row.estado === "pendiente" || row.estado === "borrador");
-    return urgent ? { value: "Urgente", tone: "danger" } : row.area === "Mantenimiento" ? { value: "Alta", tone: "warning" } : { value: "Normal", tone: "neutral" };
-  }
-  if (/recurrent|repet|frecuen/.test(p)) {
-    const rec = /Resmas|Tóner|Guantes|Película|Cinta|Flete|Aceite/.test(String(row.desc));
-    return rec ? { value: "Recurrente", tone: "info" } : { value: "Puntual" };
-  }
-  if (/ahorro|negoci|descuento/.test(p)) {
-    const pct = monto > 10e6 ? 8 : monto > 3e6 ? 5 : 2;
-    return { value: `${pct} % si se consolida con el pedido del mes`, tone: pct >= 5 ? "success" : undefined };
-  }
-  // Por defecto: un resumen de una línea.
-  const qty = /×(\d+)/.exec(String(row.desc))?.[1];
-  return { value: `${String(row.desc).replace(/ ×\d+/, "")}${qty ? ` (${qty} und.)` : ""} para ${row.area}${atraso ? `, ${atraso} días tarde` : ""}` };
-}
-
 // ---------------------------------------------------------------- modo servidor
 
 let serverRows: GridRow[] | null = null;

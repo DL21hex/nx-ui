@@ -23,7 +23,6 @@ import {
 } from "../src/components/grid/logic";
 import { histogram, histogramSpec, niceEdges } from "../src/components/grid/bars";
 import { excludeValue, parseAmount } from "../src/components/grid/grid-filter";
-import { parseNL } from "../src/components/grid/nl";
 import { colName, crc32, excelDate, sheetXml, xmlText } from "../src/components/grid/xlsx";
 import type { GridColumn, GridFilter, GridRow } from "../src/components/grid/types";
 
@@ -116,9 +115,8 @@ describe("histogramas", () => {
     expect(spec.edges![1]).toBe("2026-03-01");
   });
 
-  it("sin histograma: texto con muchos valores o columnas de IA", () => {
+  it("sin histograma: texto con muchos valores", () => {
     expect(histogramSpec(COLS[0], ROWS)).toBeNull();
-    expect(histogramSpec({ key: "x", label: "X", ai: { prompt: "p" } }, ROWS)).toBeNull();
   });
 });
 
@@ -165,39 +163,6 @@ describe("facetas (la regla de nx32)", () => {
     expect(f).toEqual([{ key: "estado", op: "in", values: ["pend", "apr"] }]);
     f = toggleFacet(toggleFacet(f, "estado", "pend"), "estado", "apr");
     expect(f).toEqual([]);
-  });
-});
-
-describe("lenguaje natural", () => {
-  const nl = (q: string) => parseNL(q, COLS, ROWS);
-
-  it("estados en plural, meses y «más de N millones»", () => {
-    const { filters, unknown } = nl("pedidos pendientes de marzo de más de 5 millones");
-    expect(filters).toContainEqual({ key: "estado", op: "in", values: ["pend"] });
-    expect(filters).toContainEqual({ key: "fecha", op: "range", min: "2026-03-01", max: "2026-04-01" });
-    expect(filters).toContainEqual({ key: "monto", op: "range", min: 5_000_001 });
-    expect(unknown).toEqual(["pedidos"]);
-  });
-
-  it("la columna nombrada antes de la comparación gana («atraso mayor a 3»)", () => {
-    expect(nl("atraso mayor a 3").filters).toEqual([{ key: "atraso", op: "range", min: 4 }]);
-  });
-
-  it("«entre», categorías por su primera palabra y negación", () => {
-    const { filters } = nl("de aceros entre 1 y 2 millones sin anulados");
-    expect(filters).toContainEqual({ key: "monto", op: "range", min: 1_000_000, max: 2_000_000 });
-    expect(filters).toContainEqual({ key: "prov", op: "in", values: ["Aceros del Caribe"] });
-    expect(filters).toContainEqual({ key: "estado", op: "notIn", values: ["anu"] });
-  });
-
-  it("una etiqueta de varias palabras cuenta entera como entendida", () => {
-    const cols: GridColumn[] = [{ key: "estado", label: "Estado", type: "status", options: [{ value: "prueba", label: "Período de prueba" }, { value: "activo", label: "Activo" }] }];
-    expect(parseNL("en período de prueba", cols, [])).toEqual({ filters: [{ key: "estado", op: "in", values: ["prueba"] }], unknown: [] });
-  });
-
-  it("texto entre comillas es «contiene»; lo que no entiende se devuelve", () => {
-    expect(nl('«OC-3»').filters).toEqual([{ key: "oc", op: "contains", value: "OC-3" }]);
-    expect(nl("urgentes del cliente").unknown).toEqual(["urgentes", "cliente"]);
   });
 });
 
