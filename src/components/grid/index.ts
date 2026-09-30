@@ -19,8 +19,11 @@ export type {
   GridOption,
   GridPage,
   GridRow,
+  GridSavedView,
   GridSort,
   GridTone,
+  GridView,
+  GridViewLabels,
 } from "./types";
 
 declare global {
@@ -32,6 +35,7 @@ declare global {
     "nx-grid-change": CustomEvent<{ changes: import("./types").GridChange[]; source: import("./types").GridChangeSource }>;
     "nx-grid-columns": CustomEvent<{ columns: import("./types").GridColumn[] }>;
     "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
+    "nx-grid-views": CustomEvent<{ views: import("./types").GridSavedView[] }>;
     "nx-grid-open": CustomEvent<{ id: string; row: import("./types").GridRow; key: string; origin: HTMLElement | null }>;
   }
 }

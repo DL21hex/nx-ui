@@ -3,10 +3,10 @@ import { splitProps, type JSX } from "solid-js";
 import "./jsx";
 import "../components/grid/index";
 import type { NxGrid } from "../components/grid/grid";
-import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort } from "../components/grid/types";
+import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "../components/grid/types";
 import type { GridFilterDetail } from "./jsx";
 
-export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort };
+export type { NxGrid, GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView, GridViewLabels };
 
 export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> {
   columns: GridColumn[];
@@ -22,6 +22,12 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   nlEndpoint?: string;
   filters?: GridFilter[];
   sort?: GridSort | null;
+  /** Filtros, orden, agrupación, columnas ocultas y anchos de una vez. */
+  view?: Partial<GridView>;
+  /** Clave de `localStorage` para las vistas con nombre. Sin ella no hay menú de vistas. */
+  viewsStorage?: string;
+  /** Las vistas guardadas (asignarlas las guarda). */
+  views?: GridSavedView[];
   groupBy?: string;
   rowKey?: string;
   facetsOpen?: boolean;
@@ -32,8 +38,10 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   filename?: string;
   /** Formato de números, montos, fechas y orden (`es-CO`, `en-US`…). Por defecto, el `lang` de la página. */
   locale?: string;
-  labels?: Partial<GridLabels>;
+  labels?: Partial<GridLabels & GridViewLabels>;
   onFilter?: (e: CustomEvent<GridFilterDetail>) => void;
+  /** Las vistas guardadas cambiaron (guardar, renombrar, borrar). */
+  onViews?: (e: CustomEvent<{ views: GridSavedView[] }>) => void;
   /** Cancelable: con `preventDefault()` la edición no se aplica. */
   onChange?: (e: CustomEvent<{ changes: GridChange[] }>) => void;
   onColumns?: (e: CustomEvent<{ columns: GridColumn[] }>) => void;
@@ -44,7 +52,7 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
 }
 
 export function Grid(props: GridProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["columns", "rows", "source", "clientMax", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
+  const [local, rest] = splitProps(props, ["columns", "rows", "view", "views", "viewsStorage", "onViews", "source", "clientMax", "aiEndpoint", "nlEndpoint", "filters", "sort", "groupBy", "rowKey", "facetsOpen", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
   return (
     <nx-grid
       {...rest}
@@ -52,6 +60,10 @@ export function Grid(props: GridProps): JSX.Element {
       prop:rows={local.rows}
       prop:filters={local.filters}
       prop:sort={local.sort}
+      prop:view={local.view}
+      prop:views={local.views}
+      attr:views-storage={local.viewsStorage}
+      on:nx-grid-views={(e) => local.onViews?.(e)}
       prop:labels={local.labels}
       attr:source={local.source}
       attr:client-max={local.clientMax ? String(local.clientMax) : undefined}

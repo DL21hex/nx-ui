@@ -366,6 +366,16 @@ Una tabla de datos que se explora sola:
   (Ctrl+Z, Ctrl+Y o Ctrl+Mayús+Z, y botones): cada edición, pegado o borrado es un paso; lo
   deshecho queda seleccionado, y la marca de «editada» se va si la celda vuelve a su valor original.
 - **Agrupación con subtotales** por cualquier columna de categorías o por mes.
+- **Columnas a la medida.** «Columnas» muestra y esconde columnas (la última no se esconde, y el
+  filtro de una columna oculta sigue puesto). El borde de cada cabecera cambia su ancho: arrastrar,
+  flechas con el foco en él, y doble clic o Supr para el original.
+- **Vistas guardadas.** Con `views-storage="compras:ana"`, «Vistas» guarda el estado de la tabla
+  con un nombre en `localStorage` (filtros, orden, agrupación, columnas ocultas y anchos) y lo
+  aplica con un clic. Si después se cambia algo, el botón dice «modificada» y el menú ofrece
+  guardar los cambios o guardarla como nueva; también renombrar, borrar y volver a la tabla
+  original. Una puede abrir la tabla. Los tramos de fechas relativos siguen siendo ciertos otro
+  día, lo de columnas que ya no existen se quita (y se dice) y otra pestaña que guarda se ve al
+  instante. `grid.view` lee o aplica ese estado sin guardarlo; el menú se carga aparte.
 - **Exportar a .xlsx.** Es un Excel de verdad: números, montos (con el símbolo de su moneda y
   decimales solo si los hay) y fechas como valores, cabecera fija y autofiltro. El generador no
   tiene dependencias y se carga solo al exportar. Con `source`, las filas se piden por bloques de
@@ -421,9 +431,9 @@ IA se vuelven a pedir, y lo que llegue tarde de la petición anterior se descart
 
 | | |
 |---|---|
-| Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
-| Métodos | `ask(frase)`, `clearFilters()`, `openFilter(key)`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
-| Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open` |
+| Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `view`, `views-storage`, `views`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
+| Métodos | `ask(frase)`, `clearFilters()`, `openFilter(key)`, `applyView(id)`, `activeView`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
+| Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open`, `nx-grid-views` |
 
 ## `<nx-dialog>`, `nxToast()` y `nxConfirm()`
 

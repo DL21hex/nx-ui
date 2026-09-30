@@ -232,7 +232,7 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
           <button type="button" data-grid-mode="server" aria-pressed="false">Servidor · 20.000</button>
         </span>
       </div>
-      <nx-grid id="grid-demo" locale="es-CO" ai-endpoint="/demo/grid/ai" facets-open filename="necesidades-de-compra"></nx-grid>
+      <nx-grid id="grid-demo" locale="es-CO" ai-endpoint="/demo/grid/ai" facets-open filename="necesidades-de-compra" views-storage="nx-galeria:compras"></nx-grid>
       <ol class="stage__log btn-events" id="grid-log"></ol>
 
       <h2>Cómo se usa</h2>
@@ -241,6 +241,7 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
           <thead><tr><th>Para</th><th>Haz esto</th></tr></thead>
           <tbody>
             <tr><td>Filtrar una columna</td><td>El embudo de la cabecera (aparece al pasar por ella; con <kbd>Alt</kbd>+<kbd>↓</kbd> desde la tabla o la cabecera). Estados y texto con pocos valores: una lista con cuántas filas quedan en cada uno y «Solo» para quedarse con uno. Montos: barras, manijas y dos campos que aceptan «5 M» o «5 millones». Fechas: «Antes de hoy», «Próximos 30 días», «Este mes»… (se guardan relativos) o entre dos fechas. Lo demás: «contiene». Se aplica mientras eliges; el chip lo vuelve a abrir.</td></tr>
+            <tr><td>Guardar una vista</td><td>Filtra, ordena, agrupa, esconde columnas («Columnas») o cambia su ancho (arrastra el borde de una cabecera) y usa «Vistas → Guardar como vista nueva…» o «Guardar como vista» junto a los chips. Se aplica con un clic; si cambias algo, el botón dice «modificada». Se guarda en <code>localStorage</code> con <code>views-storage</code>.</td></tr>
             <tr><td>Filtrar desde una celda</td><td>Clic derecho (o <kbd>Mayús</kbd>+<kbd>F10</kbd>): «Solo Aceros», «Sin Aceros», «Desde $ 5.000.000». Si no queda ninguna fila, la tabla propone qué filtro quitar y cuántas volverían.</td></tr>
             <tr><td>Filtrar con palabras</td><td>«pendientes de marzo de más de 5 millones», «sin anulados», «entre 1 y 2 millones», «atraso mayor a 3», o texto entre comillas. Lo que no entiende te lo dice. Con <code>nl-endpoint</code>, esas frases van al backend.</td></tr>
             <tr><td>Panel de filtros</td><td>Las opciones de una faceta se suman y las facetas se combinan entre sí. Cada conteo refleja los demás filtros; una opción en 0 queda deshabilitada.</td></tr>

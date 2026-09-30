@@ -23,10 +23,12 @@ const BUDGET = [
   ["dist/select.js", 6.5 * 1024, "select + núcleo (ESM)"],
   ["dist/ai.js", 7.5 * 1024, "ai-answer + núcleo (ESM)"],
   ["dist/capture.js", 11.75 * 1024, "doc-capture + button + núcleo (ESM)"],
-  ["dist/grid.js", 21.75 * 1024, "grid + núcleo (ESM)"],
+  ["dist/grid.js", 23.5 * 1024, "grid + núcleo (ESM; con columnas, anchos y vistas)"],
   [lazy("xlsx"), 3 * 1024, "generador de XLSX (se carga al exportar)"],
   // El panel importa el chunk de la tabla (ya cargado en la página): se mide todo lo que baja con él.
-  [lazy("grid-filter"), 27.5 * 1024, "nx-grid con su filtro por columna (se trae al acercarse a la cabecera)"],
+  [lazy("grid-filter"), 29 * 1024, "nx-grid con su filtro por columna (se trae al acercarse a la cabecera)"],
+  // Este no importa el chunk de la tabla: se mide solo lo que baja al abrir «Vistas» o «Columnas».
+  [lazy("grid-views"), 3.5 * 1024, "menú de vistas y selector de columnas de nx-grid (al tocarlos, o en reposo con views-storage)"],
   ["dist/dialog.js", 5.5 * 1024, "dialog + núcleo (ESM)"],
   ["dist/confirm.js", 10 * 1024, "confirm + dialog + button + núcleo (ESM)"],
   ["dist/toast.js", 2.75 * 1024, "toast + núcleo (ESM)"],
@@ -94,7 +96,7 @@ const BUDGET = [
   ["dist/select.css", 2 * 1024, "select (CSS)"],
   ["dist/ai.css", 2.5 * 1024, "ai-answer (CSS)"],
   ["dist/capture.css", 3 * 1024, "doc-capture (CSS)"],
-  ["dist/grid.css", 4.25 * 1024, "grid (CSS; con el panel del filtro por columna)"],
+  ["dist/grid.css", 4.5 * 1024, "grid (CSS; con el filtro por columna y las vistas)"],
   ["dist/dialog.css", 2.5 * 1024, "dialog (CSS)"],
   ["dist/confirm.css", 1 * 1024, "confirm (CSS, además de dialog y button)"],
   ["dist/toast.css", 1.5 * 1024, "toast (CSS)"],

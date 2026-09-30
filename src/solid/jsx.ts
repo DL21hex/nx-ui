@@ -12,7 +12,7 @@ import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels 
 import type { NxDocCapture } from "../components/capture/doc-capture";
 import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues } from "../components/capture/types";
 import type { NxGrid } from "../components/grid/grid";
-import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSort } from "../components/grid/types";
+import type { GridChange, GridColumn, GridFilter, GridLabels, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
 import type { NxDialog } from "../components/dialog/dialog";
 import type { CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize } from "../components/dialog/types";
 import type { NxAgent } from "../components/agent/agent";
@@ -145,6 +145,8 @@ declare module "solid-js" {
       rows: GridRow[] | CardsRow[] | undefined;
       filters: GridFilter[] | undefined;
       sort: GridSort | null | undefined;
+      view: Partial<GridView> | undefined;
+      views: GridSavedView[] | undefined;
       selected: string[] | undefined;
       active: string | null | undefined;
       dirty: boolean | undefined;
@@ -228,6 +230,7 @@ declare module "solid-js" {
       "group-by": string | undefined;
       "row-key": string | undefined;
       "client-max": string | undefined;
+      "views-storage": string | undefined;
       filename: string | undefined;
       height: string | undefined;
       locale: string | undefined;
@@ -396,6 +399,7 @@ declare module "solid-js" {
       "nx-agent-state": CustomEvent<{ state: unknown }>;
       "nx-agent-event": CustomEvent<AguiEvent>;
       "nx-grid-open": CustomEvent<{ id: string; row: GridRow; key: string; origin: HTMLElement | null }>;
+      "nx-grid-views": CustomEvent<{ views: GridSavedView[] }>;
       "nx-command-select": CustomEvent<CommandSelectDetail>;
       "nx-command-ask": CustomEvent<{ query: string }>;
       "nx-inbox-decide": CustomEvent<InboxDecisionDetail>;
