@@ -371,10 +371,9 @@ nx-grid .nx-glyph {
   align-items: flex-start;
   gap: 12px;
 }
+/* Al lado de la tabla, el panel crece con su contenido: nada de un segundo scroll dentro de él. */
 .nx-grid__facets {
   flex: 0 0 var(--nx-grid-facets-width, 248px);
-  max-block-size: var(--nx-grid-height);
-  overflow: auto;
   padding: 12px;
   border: 1px solid var(--nx-border);
   border-radius: var(--nx-radius-lg);
@@ -1272,9 +1271,11 @@ nx-grid mark {
     flex-direction: column;
     align-items: stretch;
   }
+  /* Encima de la tabla, con tope: si no, la empujaría fuera de la pantalla. */
   .nx-grid__facets {
     flex-basis: auto;
     max-block-size: 280px;
+    overflow: auto;
   }
   .nx-grid__search {
     flex-basis: 100%;
