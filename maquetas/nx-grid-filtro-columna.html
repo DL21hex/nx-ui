@@ -1,0 +1,787 @@
+<title>Filtro por columna de nx-grid</title>
+<style>
+/* Tokens de nx-ui (src/styles/tokens.css), recortados a lo que usa la maqueta. */
+:root {
+  color-scheme: light dark;
+  --_h: 262; --_c: 0.19; --_l: 0.54; --_ld: 0.72; --_n: 260; --_t: 1;
+  --nx-canvas: light-dark(oklch(0.985 calc(0.002 * var(--_t)) var(--_n)), oklch(0.165 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-popover: light-dark(oklch(1 0 0), oklch(0.235 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-border-subtle: light-dark(oklch(0.925 calc(0.004 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 calc(0.005 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 calc(0.006 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.17));
+  --nx-foreground: light-dark(oklch(0.2 calc(0.008 * var(--_t)) var(--_n)), oklch(0.955 calc(0.003 * var(--_t)) var(--_n)));
+  --nx-muted-foreground: light-dark(oklch(0.44 calc(0.01 * var(--_t)) var(--_n)), oklch(0.76 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-text-tertiary: light-dark(oklch(0.51 calc(0.01 * var(--_t)) var(--_n)), oklch(0.64 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-text-quaternary: light-dark(oklch(0.66 calc(0.008 * var(--_t)) var(--_n)), oklch(0.53 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-primary: light-dark(oklch(var(--_l) var(--_c) var(--_h)), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h)));
+  --nx-primary-ink: light-dark(oklch(calc(var(--_l) - 0.07) var(--_c) var(--_h)), oklch(calc(var(--_ld) + 0.05) calc(var(--_c) * 0.7) var(--_h)));
+  --nx-primary-soft: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.1), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.15));
+  --nx-primary-border: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.35), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.4));
+  --nx-hover: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.05), oklch(1 0 0 / 0.06));
+  --nx-ring: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.6), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.7));
+  --nx-backdrop: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.4), oklch(0 0 0 / 0.6));
+  --nx-success: light-dark(oklch(0.49 0.13 150), oklch(0.74 0.14 150));
+  --nx-success-soft: light-dark(oklch(0.55 0.14 150 / 0.1), oklch(0.74 0.14 150 / 0.14));
+  --nx-danger: light-dark(oklch(0.52 0.2 27), oklch(0.72 0.16 27));
+  --nx-danger-soft: light-dark(oklch(0.55 0.2 27 / 0.1), oklch(0.7 0.17 27 / 0.15));
+  --nx-warning: light-dark(oklch(0.74 0.15 70), oklch(0.8 0.14 78));
+  --nx-warning-ink: light-dark(oklch(0.5 0.12 60), oklch(0.84 0.13 80));
+  --nx-warning-soft: light-dark(oklch(0.75 0.15 70 / 0.16), oklch(0.8 0.14 78 / 0.15));
+  --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
+    0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
+  --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --nx-radius-sm: 5px; --nx-radius-md: 7px; --nx-radius-lg: 10px;
+  --nx-motion-fast: 140ms;
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--nx-canvas);
+  color: var(--nx-foreground);
+  font: 14px/1.5 var(--nx-font-sans);
+  padding-inline: 16px;
+  padding-block: 36px 72px;
+}
+.page { max-width: 1060px; margin: 0 auto; display: grid; gap: 48px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--nx-text-tertiary); font-weight: 600; margin: 0 0 6px; }
+h1 { font-size: 26px; line-height: 1.2; margin: 0 0 10px; letter-spacing: -0.01em; text-wrap: balance; }
+h1 code { font-family: var(--nx-font-mono); font-size: 0.88em; color: var(--nx-primary-ink); }
+h2 { font-size: 18px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 15px; margin: 0; }
+.lede { color: var(--nx-muted-foreground); max-width: 68ch; margin: 0; font-size: 15px; }
+.sec-note { color: var(--nx-muted-foreground); margin: 0 0 16px; max-width: 72ch; }
+kbd { font-family: var(--nx-font-mono); font-size: 12px; border: 1px solid var(--nx-border-strong); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--nx-card); }
+code { font-family: var(--nx-font-mono); font-size: 12.5px; }
+
+/* ---------------------------------------------------------------- la tabla */
+.grid { background: var(--nx-card); border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg); overflow: hidden; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--nx-border-subtle); min-height: 50px; }
+.hint { color: var(--nx-text-tertiary); font-size: 13px; }
+.chip { display: inline-flex; align-items: center; border: 1px solid var(--nx-primary-border); background: var(--nx-primary-soft); color: var(--nx-primary-ink); border-radius: 999px; font-size: 13px; max-width: 100%; }
+.chip button { appearance: none; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; border-radius: 999px; }
+.chip .open { padding: 3px 4px 3px 11px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip .x { width: 26px; height: 26px; display: grid; place-items: center; margin-right: 1px; }
+.chip .x:hover { background: var(--nx-primary-soft); }
+.chip button:focus-visible, .link:focus-visible, .btn:focus-visible, .menu button:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; }
+.scroll { overflow: auto; max-height: 440px; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 880px; font-variant-numeric: tabular-nums; }
+thead th { position: sticky; top: 0; z-index: 1; background: var(--nx-card); text-align: left; font-weight: 600; font-size: 13px; padding: 8px 10px 6px; border-bottom: 1px solid var(--nx-border); vertical-align: bottom; }
+.th { display: flex; align-items: center; gap: 2px; }
+.th-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+th.num .th-label { text-align: right; }
+.funnel { appearance: none; border: 0; background: none; width: 24px; height: 24px; flex: none; border-radius: var(--nx-radius-sm); display: grid; place-items: center; color: var(--nx-text-tertiary); cursor: pointer; opacity: 0; transition: opacity var(--nx-motion-fast), background var(--nx-motion-fast); }
+th:hover .funnel, .funnel:focus-visible, .funnel[aria-expanded="true"], .funnel.on { opacity: 1; }
+@media (hover: none) { .funnel { opacity: 0.75; } }
+.funnel:hover, .funnel[aria-expanded="true"] { background: var(--nx-hover); color: var(--nx-foreground); }
+.funnel.on { color: var(--nx-primary-ink); background: var(--nx-primary-soft); }
+.funnel.on path { fill: currentColor; }
+.funnel:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 1px; }
+.b-all { fill: var(--nx-border); }
+.b-on { fill: var(--nx-primary); }
+.b-off { fill: var(--nx-text-quaternary); opacity: 0.55; }
+.today { stroke: var(--nx-danger); stroke-width: 0.6; stroke-dasharray: 1.5 1; }
+tbody td { padding: 7px 10px; border-bottom: 1px solid var(--nx-border-subtle); white-space: nowrap; }
+tbody tr:not(.empty):hover td { background: var(--nx-hover); }
+td.num { text-align: right; }
+td.mono { font-family: var(--nx-font-mono); font-size: 12.5px; color: var(--nx-muted-foreground); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 1px 9px 1px 8px; border-radius: 999px; background: var(--soft); color: var(--ink); }
+.dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--tone); }
+[data-tone="warning"] { --tone: var(--nx-warning); --soft: var(--nx-warning-soft); --ink: var(--nx-warning-ink); }
+[data-tone="success"] { --tone: var(--nx-success); --soft: var(--nx-success-soft); --ink: var(--nx-success); }
+[data-tone="danger"] { --tone: var(--nx-danger); --soft: var(--nx-danger-soft); --ink: var(--nx-danger); }
+[data-tone="neutral"] { --tone: var(--nx-text-quaternary); --soft: var(--nx-hover); --ink: var(--nx-muted-foreground); }
+.empty td { padding: 36px 16px; text-align: center; white-space: normal; color: var(--nx-muted-foreground); }
+.empty p { margin: 0 0 12px; }
+.empty .sugs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.foot { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; padding: 9px 12px; border-top: 1px solid var(--nx-border-subtle); color: var(--nx-muted-foreground); font-size: 13px; font-variant-numeric: tabular-nums; }
+.foot b { color: var(--nx-foreground); font-weight: 600; }
+.try { margin: 12px 0 0; color: var(--nx-text-tertiary); font-size: 13px; }
+
+/* ---------------------------------------------------------------- el panel */
+.pop { background: var(--nx-popover); color: var(--nx-foreground); border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg); box-shadow: var(--nx-shadow-popover); width: 304px; display: flex; flex-direction: column; font: 14px/1.45 var(--nx-font-sans); }
+.pop[popover] { position: fixed; inset: auto; margin: 0; padding: 0; top: var(--top, 64px); left: var(--left, 16px); max-height: var(--maxh, 70vh); }
+.pop[popover]:not(:popover-open) { display: none; }
+.pop.static { width: 100%; max-width: 320px; }
+@media (max-width: 600px) {
+  .pop[popover] { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 85vh; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pop[popover]::backdrop { background: var(--nx-backdrop); }
+}
+.pop-in { display: contents; }
+.pop-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 12px 14px 8px; }
+.pop-kind { font-size: 12px; color: var(--nx-text-tertiary); }
+.pop-body { padding: 0 14px 12px; overflow: auto; min-height: 0; flex: 1; display: grid; gap: 10px; align-content: start; }
+.pop-foot { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--nx-border-subtle); }
+.pop-count { flex: 1; font-size: 13px; color: var(--nx-muted-foreground); font-variant-numeric: tabular-nums; text-align: right; }
+.pop-count b { color: var(--nx-foreground); font-weight: 600; }
+.link { appearance: none; border: 0; background: none; color: var(--nx-primary-ink); font: inherit; font-size: 13px; cursor: pointer; padding: 2px 0; border-radius: 3px; }
+.link:hover { text-decoration: underline; }
+.link:disabled { color: var(--nx-text-quaternary); cursor: default; text-decoration: none; }
+.btn { appearance: none; border: 1px solid var(--nx-border-strong); background: var(--nx-card); color: var(--nx-foreground); font: inherit; font-size: 13px; padding: 4px 12px; border-radius: var(--nx-radius-md); cursor: pointer; }
+.btn:hover { background: var(--nx-hover); }
+.field { width: 100%; font: inherit; padding: 6px 10px; border: 1px solid var(--nx-border-strong); border-radius: var(--nx-radius-md); background: var(--nx-card); color: inherit; min-width: 0; }
+.field:focus { outline: 2px solid var(--nx-ring); outline-offset: -1px; border-color: transparent; }
+.field::placeholder { color: var(--nx-text-quaternary); }
+.small { font-size: 12px; color: var(--nx-text-tertiary); }
+.opts { display: grid; gap: 1px; margin: 0 -6px; max-height: 248px; overflow: auto; }
+.opt { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--nx-radius-sm); cursor: pointer; min-height: 30px; }
+.opt:hover { background: var(--nx-hover); }
+.opt input { margin: 0; accent-color: var(--nx-primary); flex: none; }
+.opt .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opt .n { font-size: 12px; color: var(--nx-text-tertiary); font-variant-numeric: tabular-nums; }
+.opt .solo { display: none; font-size: 12px; }
+.opt:hover .solo, .opt:focus-within .solo { display: inline; }
+.opt:hover .n, .opt:focus-within .n { display: none; }
+.opt.zero .t { color: var(--nx-text-quaternary); }
+.opt.all { border-bottom: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-sm) var(--nx-radius-sm) 0 0; margin-bottom: 3px; color: var(--nx-muted-foreground); }
+mark { background: var(--nx-warning-soft); color: inherit; border-radius: 2px; }
+.hist-big { display: block; width: calc(100% - 16px); height: 48px; margin: 4px 8px 0; cursor: pointer; }
+.slider { position: relative; height: 22px; }
+.track { position: absolute; left: 8px; right: 8px; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--nx-border); }
+.track i { position: absolute; top: 0; bottom: 0; background: var(--nx-primary); border-radius: 2px; }
+.slider input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; pointer-events: none; appearance: none; -webkit-appearance: none; background: none; }
+.slider input::-webkit-slider-runnable-track { background: none; }
+.slider input::-moz-range-track { background: none; }
+.slider input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 16px; height: 16px; border-radius: 50%; background: var(--nx-card); border: 2px solid var(--nx-primary); cursor: grab; }
+.slider input::-moz-range-thumb { pointer-events: auto; width: 12px; height: 12px; border-radius: 50%; background: var(--nx-card); border: 2px solid var(--nx-primary); cursor: grab; }
+.slider input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--nx-ring); }
+.slider input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--nx-ring); }
+.axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--nx-text-tertiary); font-variant-numeric: tabular-nums; margin-top: -2px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fld { display: grid; gap: 3px; font-size: 12px; color: var(--nx-muted-foreground); }
+.months { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--nx-text-tertiary); margin: 2px 8px 0; }
+.preview { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-family: var(--nx-font-mono); font-size: 12.5px; }
+.preview li { display: flex; justify-content: space-between; gap: 8px; }
+.preview li span:last-child { font-family: var(--nx-font-sans); color: var(--nx-text-tertiary); font-size: 12px; }
+
+/* ---------------------------------------------------------------- menú de celda */
+.menu { background: var(--nx-popover); color: var(--nx-foreground); border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); box-shadow: var(--nx-shadow-popover); padding: 4px; min-width: 200px; font: 13px/1.4 var(--nx-font-sans); }
+.menu[popover] { position: fixed; inset: auto; margin: 0; top: var(--top); left: var(--left); }
+.menu[popover]:not(:popover-open) { display: none; }
+.menu button { display: block; width: 100%; text-align: left; appearance: none; border: 0; background: none; color: inherit; font: inherit; padding: 6px 10px; border-radius: var(--nx-radius-sm); cursor: pointer; }
+.menu button:hover, .menu button:focus { background: var(--nx-hover); outline: none; }
+.menu hr { border: 0; border-top: 1px solid var(--nx-border-subtle); margin: 4px 2px; }
+
+/* ---------------------------------------------------------------- láminas */
+.specs { display: grid; gap: 20px; }
+.spec { display: grid; grid-template-columns: 320px 1fr; gap: 20px 32px; align-items: start; padding: 20px; border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: color-mix(in oklab, var(--nx-card) 55%, transparent); }
+.spec-text { display: grid; gap: 8px; padding-top: 4px; }
+.spec-text .when { font-size: 13px; color: var(--nx-text-tertiary); margin: 0; }
+.spec ul, .rules ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; max-width: 62ch; }
+.spec li::marker, .rules li::marker { color: var(--nx-text-quaternary); }
+@media (max-width: 760px) { .spec { grid-template-columns: 1fr; padding: 14px; } .pop.static { max-width: none; } }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 24px 36px; }
+.rules section h3 { margin-bottom: 6px; }
+.rules p { margin: 0; color: var(--nx-muted-foreground); max-width: 60ch; }
+.code-note { border-left: 2px solid var(--nx-border-strong); padding-left: 14px; color: var(--nx-muted-foreground); max-width: 76ch; display: grid; gap: 8px; }
+.code-note p { margin: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">nx-ui · boceto</p>
+    <h1>Filtro por columna en <code>&lt;nx-grid&gt;</code></h1>
+    <p class="lede">Un embudo en cada cabecera abre un panel que se adapta al tipo de dato. El filtro se aplica mientras eliges, el panel dice cuántas filas quedan y deja un chip que se puede volver a abrir. Pruébalo con 64 facturas de ejemplo.</p>
+  </header>
+
+  <section aria-labelledby="t-try">
+    <h2 id="t-try">Pruébalo</h2>
+    <p class="sec-note">Cartera por cobrar de ejemplo. Arranca con un filtro puesto en Estado.</p>
+    <div class="grid" id="grid">
+      <div class="chips" id="chips"></div>
+      <div class="scroll" id="scroll">
+        <table>
+          <thead><tr id="headrow"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="foot" id="foot"></div>
+    </div>
+    <p class="try">Prueba el embudo de Ciudad, haz clic en un chip, clic derecho sobre un monto, o <kbd>Alt</kbd>+<kbd>↓</kbd> con el foco en una cabecera. Filtra hasta que no quede nada.</p>
+  </section>
+
+  <section aria-labelledby="t-specs">
+    <h2 id="t-specs">Los cuatro paneles</h2>
+    <p class="sec-note">No los elige quien configura la tabla: salen del tipo de columna y de cuántos valores distintos tiene. Estos son los mismos paneles de arriba, fuera de la tabla, y también responden.</p>
+    <div class="specs" id="specs"></div>
+  </section>
+
+  <section aria-labelledby="t-rules">
+    <h2 id="t-rules">Cómo se comporta</h2>
+    <p class="sec-note">Las decisiones de uso que sostienen el diseño.</p>
+    <div class="rules">
+      <section><h3>Una sola puerta por columna</h3><p>El embudo aparece al pasar el cursor o con el foco. Si la columna tiene un filtro, se queda a la vista y en color. Un clic en el nombre sigue ordenando, así que las dos acciones no se estorban.</p></section>
+      <section><h3>Se aplica al instante</h3><p>No hay botón «Aplicar»: el pie del panel dice cuántas filas quedan antes de cerrarlo. «Listo» solo cierra. Con <code>source</code> (datos en el servidor), espera 250 ms antes de pedir.</p></section>
+      <section><h3>El chip es el resumen y la vuelta</h3><p>Un clic en el chip vuelve a abrir el panel de esa columna. La × lo quita. El texto habla como una persona: «Ciudad: sin Cali», «Vence: próximos 30 días».</p></section>
+      <section><h3>Filtrar desde lo que se mira</h3><p>Clic derecho (o <kbd>Shift</kbd>+<kbd>F10</kbd> en la celda activa): «Solo Cali», «Desde $ 5.000.000». Hace lo mismo que el panel, pero sin ir a buscarlo.</p></section>
+      <section><h3>Nunca una tabla en blanco</h3><p>Si no queda ninguna fila, la tabla propone qué filtro quitar y cuántas filas volverían con cada uno.</p></section>
+      <section><h3>Teclado y móvil</h3><p><kbd>Alt</kbd>+<kbd>↓</kbd> en la cabecera abre, <kbd>Esc</kbd> cierra y devuelve el foco al embudo, y <kbd>Tab</kbd> recorre el panel. En pantallas angostas el panel sube como hoja inferior.</p></section>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-code">
+    <h2 id="t-code">Qué cambia en el código</h2>
+    <div class="code-note">
+      <p>El modelo sigue siendo <code>GridFilter</code> (<code>in</code>, <code>notIn</code>, <code>range</code>, <code>contains</code>). Las facetas y la frase siguen igual y producen los mismos chips. El panel por columna es otra forma de escribir en esa misma lista.</p>
+      <p>El panel lateral de facetas se queda: muestra de un vistazo todo lo aplicado. Las barras de las cabeceras se van: la cabecera lleva solo el nombre y el embudo.</p>
+      <p>Lo nuevo es el panel (reutiliza <code>crossfilter</code> para los conteos), los chips que se pueden volver a abrir, el menú de celda y el estado vacío con sugerencias. En <code>GridColumn</code> entra <code>filter?: false | "list" | "range" | "text"</code> para apagar el panel o forzar uno.</p>
+      <p>Con <code>source</code> (datos en el servidor), el panel es el mismo. Los conteos de la lista salen de <code>facets</code> y las barras de rango y fechas de <code>histograms</code>, que ya vienen en la respuesta. Lo que cambia es que espera 250 ms después del último cambio antes de pedir, y cancela la petición anterior.</p>
+      <p>El único cambio en el tipo de filtro: <code>range</code> acepta un <code>rel</code> opcional (<code>"past"</code>, <code>"next30"</code>, <code>"month"</code>…), para que una vista guardada con «próximos 30 días» siga siendo cierta mañana.</p>
+    </div>
+  </section>
+</div>
+
+<div class="pop" id="pop" popover="auto" role="dialog"></div>
+<div class="menu" id="menu" popover="auto" role="menu" aria-label="Filtrar por esta celda"></div>
+
+<script>
+// ------------------------------------------------------------------ utilidades
+function h(tag, a, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(a ?? {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "value" || k === "checked") e[k] = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c);
+  return e;
+}
+const NS = "http://www.w3.org/2000/svg";
+function s(tag, a = {}) { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); return e; }
+let UID = 0;
+const uid = (p) => `${p}-${++UID}`;
+const fold = (x) => String(x).normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+const MONEY = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+const fmtMoney = (v) => MONEY.format(v);
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const fmtDate = (iso) => `${+iso.slice(8, 10)} ${MONTHS[+iso.slice(5, 7) - 1]}`;
+const addDays = (iso, n) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+// `max` es excluyente; lo que se escribe en «Hasta» se guarda como valor + 1 y se muestra sin él.
+const dispMax = (m) => (m % 10 === 1 ? m - 1 : m);
+function parseMoney(str) {
+  const t = fold(str).trim();
+  if (!t) return null;
+  let mult = 1;
+  if (/(millones|millon|mill|mm|m)\.?$/.test(t)) mult = 1e6;
+  else if (/(mil|k)$/.test(t)) mult = 1e3;
+  const n = parseFloat(t.replace(/[^\d,]/g, "").replace(",", "."));
+  return Number.isFinite(n) ? Math.round(n * mult) : null;
+}
+
+// ------------------------------------------------------------------ datos de ejemplo
+const TODAY = "2026-09-29";
+let seed = 20260929;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const CLIENTES = ["Ferretería El Tornillo", "Distribuidora Andina", "Café La Montaña", "Textiles Caribe", "Constructora Horizonte", "Panadería San José", "Clínica del Norte", "Agro Sabana", "Transportes Rápido Sur", "Litografía Aurora", "Hotel Brisas del Mar", "Colegio Los Pinos"];
+const CIUDADES = ["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Pereira", "Cartagena", "Manizales"];
+const ESTADOS = [
+  { value: "pendiente", label: "Pendiente", tone: "warning" },
+  { value: "vencida", label: "Vencida", tone: "danger" },
+  { value: "pagada", label: "Pagada", tone: "success" },
+  { value: "anulada", label: "Anulada", tone: "neutral" },
+];
+const ROWS = Array.from({ length: 64 }, (_, i) => {
+  const vence = addDays("2026-01-12", Math.floor(rnd() * 345));
+  const p = rnd();
+  const estado = vence < TODAY ? (p < 0.66 ? "pagada" : p < 0.94 ? "vencida" : "anulada") : p < 0.8 ? "pendiente" : p < 0.95 ? "pagada" : "anulada";
+  return {
+    factura: `FV-${1041 + i}`,
+    cliente: CLIENTES[Math.floor(rnd() ** 1.3 * CLIENTES.length)],
+    ciudad: CIUDADES[Math.floor(rnd() ** 1.7 * CIUDADES.length)],
+    estado,
+    monto: Math.round(Math.exp(Math.log(3e5) + rnd() * Math.log(160)) / 1000) * 1000,
+    vence,
+  };
+});
+const COLS = [
+  { key: "factura", label: "Factura", type: "text", width: 110 },
+  { key: "cliente", label: "Cliente", type: "text", width: 230 },
+  { key: "ciudad", label: "Ciudad", type: "text", width: 140 },
+  { key: "estado", label: "Estado", type: "status", options: ESTADOS, width: 130 },
+  { key: "monto", label: "Monto", type: "money", width: 150 },
+  { key: "vence", label: "Vence", type: "date", width: 120 },
+];
+const COL = Object.fromEntries(COLS.map((c) => [c.key, c]));
+
+// ------------------------------------------------------------------ lógica de filtros
+/** El panel lo decide el dato: dinero → rango, fecha → fechas, pocos valores → lista, muchos → texto. */
+function kindOf(col) {
+  if (col.type === "money" || col.type === "number") return "range";
+  if (col.type === "date") return "date";
+  if (col.type === "status") return "list";
+  const d = new Set(ROWS.map((r) => r[col.key])).size;
+  return d <= 30 && d < ROWS.length * 0.5 ? "list" : "text";
+}
+function optionsOf(col) {
+  if (col.options) return col.options;
+  const c = countBy(ROWS, col.key);
+  return [...c.keys()].sort((a, b) => c.get(b) - c.get(a) || String(a).localeCompare(String(b), "es")).map((v) => ({ value: v, label: v }));
+}
+const labelOf = (col, v) => col.options?.find((o) => o.value === v)?.label ?? v;
+function countBy(rows, key) { const m = new Map(); for (const r of rows) m.set(r[key], (m.get(r[key]) || 0) + 1); return m; }
+function match(r, f) {
+  const v = r[f.key];
+  if (f.op === "in") return f.values.includes(v);
+  if (f.op === "notIn") return !f.values.includes(v);
+  if (f.op === "contains") return fold(v).includes(fold(f.value));
+  return (f.min == null || v >= f.min) && (f.max == null || v < f.max);
+}
+/** Las filas que pasan todos los filtros menos los de `except` (una columna nunca se cuenta a sí misma). */
+function applyAll(filters, except) {
+  return ROWS.filter((r) => { for (const [k, f] of filters) if (k !== except && !match(r, f)) return false; return true; });
+}
+function selOf(col, f) {
+  const vals = optionsOf(col).map((o) => o.value);
+  if (!f) return new Set(vals);
+  if (f.op === "in") return new Set(f.values);
+  return new Set(vals.filter((v) => !f.values.includes(v)));
+}
+/** Lo marcado → filtro. Más de la mitad marcada se guarda como exclusión («sin Cali»). */
+function fromSel(col, S) {
+  const vals = optionsOf(col).map((o) => o.value);
+  if (S.size === vals.length) return null;
+  return S.size <= vals.length / 2 ? { key: col.key, op: "in", values: vals.filter((v) => S.has(v)) } : { key: col.key, op: "notIn", values: vals.filter((v) => !S.has(v)) };
+}
+
+const EDGES = [0, 1e6, 2e6, 5e6, 10e6, 20e6, 50e6];
+const monthStart = (m) => `2026-${String(m + 1).padStart(2, "0")}-01`;
+const monthEnd = (m) => (m === 11 ? "2027-01-01" : monthStart(m + 1));
+const PRESETS = [
+  { rel: "past", label: "Ya vencidas", max: TODAY },
+  { rel: "next30", label: "Próximos 30 días", min: TODAY, max: addDays(TODAY, 31) },
+  { rel: "month", label: "Este mes", min: "2026-09-01", max: "2026-10-01" },
+  { rel: "lastMonth", label: "Mes pasado", min: "2026-08-01", max: "2026-09-01" },
+];
+function binsOf(col, rows) {
+  if (col.type === "money") {
+    const c = Array(EDGES.length - 1).fill(0);
+    for (const r of rows) { let i = EDGES.findIndex((e, j) => j > 0 && r.monto < e) - 1; if (i < 0) i = c.length - 1; c[i]++; }
+    return c;
+  }
+  if (col.type === "date") { const c = Array(12).fill(0); for (const r of rows) c[+r.vence.slice(5, 7) - 1]++; return c; }
+  if (col.type === "status") { const m = countBy(rows, col.key); return col.options.map((o) => m.get(o.value) || 0); }
+  return null;
+}
+const overlaps = (a, b, min, max) => (min == null || b > min) && (max == null || a < max);
+function maskOf(col, f) {
+  if (!f) return null;
+  if (col.type === "money") return EDGES.slice(0, -1).map((e, i) => overlaps(e, EDGES[i + 1], f.min, f.max));
+  if (col.type === "date") return MONTHS.map((_, i) => overlaps(monthStart(i), monthEnd(i), f.min, f.max));
+  if (col.type === "status") { const S = selOf(col, f); return col.options.map((o) => S.has(o.value)); }
+  return null;
+}
+function drawBars(svg, all, part, mask, H) {
+  svg.replaceChildren();
+  const n = all.length, max = Math.max(1, ...all), gap = n > 8 ? 1.4 : 2.4, w = (100 - gap * (n - 1)) / n;
+  all.forEach((v, i) => {
+    const x = i * (w + gap), a = (v / max) * H, p = (part[i] / max) * H;
+    svg.append(s("rect", { x, y: H - a, width: w, height: a, class: "b-all" }));
+    if (p) svg.append(s("rect", { x, y: H - p, width: w, height: p, class: mask && !mask[i] ? "b-off" : "b-on" }));
+  });
+}
+function listText(col, values, joiner) {
+  const labs = values.map((v) => labelOf(col, v));
+  if (!labs.length) return "ninguno";
+  return labs.length <= 2 ? labs.join(joiner) : `${labs[0]}, ${labs[1]} y ${labs.length - 2} más`;
+}
+function chipText(col, f) {
+  if (f.op === "contains") return `${col.label} contiene «${f.value}»`;
+  if (f.op === "in") return `${col.label}: ${listText(col, f.values, " o ")}`;
+  if (f.op === "notIn") return `${col.label}: sin ${listText(col, f.values, " ni ")}`;
+  if (f.rel) return `${col.label}: ${PRESETS.find((p) => p.rel === f.rel).label.toLowerCase()}`;
+  const date = col.type === "date";
+  const a = f.min != null ? (date ? fmtDate(f.min) : fmtMoney(f.min)) : null;
+  const b = f.max != null ? (date ? fmtDate(addDays(f.max, -1)) : fmtMoney(dispMax(f.max))) : null;
+  return `${col.label}: ${a && b ? `${a} – ${b}` : a ? `desde ${a}` : `hasta ${b}`}`;
+}
+function highlight(el, text, q) {
+  el.replaceChildren();
+  const i = q ? fold(text).indexOf(q) : -1;
+  if (i < 0) { el.textContent = text; return; }
+  el.append(text.slice(0, i), h("mark", { text: text.slice(i, i + q.length) }), text.slice(i + q.length));
+}
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+// ------------------------------------------------------------------ los paneles
+/** El panel de una columna. `ctx`: { filters (Map), set(key, filtro|null), done() }. */
+function panel(col, ctx, isStatic = false) {
+  const kind = kindOf(col);
+  const count = h("span", { class: "pop-count", "aria-live": "polite" });
+  const clear = h("button", { type: "button", class: "link", text: "Limpiar", onclick() { ctx.set(col.key, null); inner.reset?.(); upd(); } });
+  const inner = { list: listBody, range: rangeBody, date: dateBody, text: textBody }[kind](col, ctx, () => upd());
+  const kindLabel = kind === "list" ? `Lista · ${optionsOf(col).length} valores` : { range: "Rango", date: "Fechas", text: "Texto" }[kind];
+  const el = h("div", { class: "pop-in" },
+    h("div", { class: "pop-head" }, h("strong", { text: col.label }), h("span", { class: "pop-kind", text: kindLabel })),
+    h("div", { class: "pop-body" }, inner.el),
+    h("div", { class: "pop-foot" }, clear, count, isStatic ? null : h("button", { type: "button", class: "btn", text: "Listo", onclick: () => ctx.done() })));
+  function upd() {
+    inner.update();
+    count.replaceChildren("Quedan ", h("b", { text: String(applyAll(ctx.filters).length) }), ` de ${ROWS.length}`);
+    clear.disabled = !ctx.filters.has(col.key);
+  }
+  upd();
+  return { el, focus: inner.focus };
+}
+
+function listBody(col, ctx, changed) {
+  const key = col.key, opts = optionsOf(col);
+  let q = "";
+  const search = opts.length > 7 ? h("input", { type: "search", class: "field", id: uid("q"), placeholder: `Buscar en ${opts.length} valores`, "aria-label": `Buscar en ${col.label}` }) : null;
+  const hint = h("div", { class: "small", text: "Enter deja marcados solo estos.", hidden: true });
+  const allBox = h("input", { type: "checkbox", id: uid("all") });
+  const allText = h("span", { class: "t" });
+  const allRow = h("label", { class: "opt all" }, allBox, allText);
+  const items = opts.map((o) => {
+    const cb = h("input", { type: "checkbox", id: uid("o") });
+    const t = h("span", { class: "t" }), n = h("span", { class: "n" });
+    const solo = h("button", { type: "button", class: "solo link", text: "Solo", "aria-label": `Solo ${o.label}` });
+    const row = h("label", { class: "opt" }, cb, o.tone ? h("span", { class: "dot", "data-tone": o.tone }) : null, t, n, solo);
+    return { o, cb, t, n, solo, row };
+  });
+  const empty = h("div", { class: "small", text: "Ningún valor coincide.", hidden: true });
+  const commit = (S) => { ctx.set(key, fromSel(col, S)); changed(); };
+  const visible = () => items.filter((i) => !i.row.hidden);
+  for (const i of items) {
+    i.cb.addEventListener("change", () => { const S = selOf(col, ctx.filters.get(key)); i.cb.checked ? S.add(i.o.value) : S.delete(i.o.value); commit(S); });
+    i.solo.addEventListener("click", (e) => { e.preventDefault(); commit(new Set([i.o.value])); });
+  }
+  allBox.addEventListener("change", () => {
+    const S = selOf(col, ctx.filters.get(key)), vis = visible(), on = vis.every((i) => S.has(i.o.value));
+    for (const i of vis) on ? S.delete(i.o.value) : S.add(i.o.value);
+    commit(S);
+  });
+  search?.addEventListener("input", () => { q = fold(search.value.trim()); update(); });
+  search?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const vis = visible();
+    if (q && vis.length) commit(new Set(vis.map((i) => i.o.value)));
+  });
+  function update() {
+    const S = selOf(col, ctx.filters.get(key)), counts = countBy(applyAll(ctx.filters, key), key);
+    for (const i of items) {
+      i.row.hidden = !!q && !fold(i.o.label).includes(q);
+      i.cb.checked = S.has(i.o.value);
+      const c = counts.get(i.o.value) || 0;
+      i.n.textContent = String(c);
+      i.row.classList.toggle("zero", !c);
+      highlight(i.t, i.o.label, q);
+    }
+    const vis = visible(), on = vis.filter((i) => S.has(i.o.value)).length;
+    allBox.checked = vis.length > 0 && on === vis.length;
+    allBox.indeterminate = on > 0 && on < vis.length;
+    allText.textContent = q ? `Todos los que coinciden (${vis.length})` : "Seleccionar todo";
+    allRow.hidden = !vis.length;
+    empty.hidden = vis.length > 0;
+    hint.hidden = !q || !vis.length;
+  }
+  return {
+    el: h("div", { style: "display:grid;gap:8px" }, search, hint, h("div", { class: "opts", role: "group", "aria-label": col.label }, allRow, ...items.map((i) => i.row)), empty),
+    update,
+    reset() { if (search) { search.value = ""; q = ""; } },
+    focus: () => (search || items[0].cb).focus(),
+  };
+}
+
+function rangeBody(col, ctx, changed) {
+  const key = col.key, N = EDGES.length - 1;
+  const svg = s("svg", { viewBox: "0 0 100 48", preserveAspectRatio: "none", class: "hist-big", "aria-hidden": "true" });
+  const lo = h("input", { type: "range", min: 0, max: N, step: 1, id: uid("lo"), "aria-label": "Desde" });
+  const hi = h("input", { type: "range", min: 0, max: N, step: 1, id: uid("hi"), "aria-label": "Hasta" });
+  const fill = h("i");
+  const from = h("input", { class: "field", id: uid("from"), inputmode: "decimal", placeholder: "Sin mínimo" });
+  const to = h("input", { class: "field", id: uid("to"), inputmode: "decimal", placeholder: "Sin máximo" });
+  const cur = () => ctx.filters.get(key);
+  const set = (min, max) => { ctx.set(key, min == null && max == null ? null : { key, op: "range", min: min ?? undefined, max: max ?? undefined }); changed(); };
+  const idx = (v, d) => (v == null ? d : EDGES.reduce((b, e, i) => (Math.abs(e - v) < Math.abs(EDGES[b] - v) ? i : b), 0));
+  function slide(e) {
+    let a = +lo.value, b = +hi.value;
+    if (a >= b) { if (e.target === lo) { a = Math.min(a, N - 1); b = a + 1; } else { b = Math.max(b, 1); a = b - 1; } }
+    set(a ? EDGES[a] : null, b < N ? EDGES[b] : null);
+  }
+  lo.addEventListener("input", slide);
+  hi.addEventListener("input", slide);
+  svg.addEventListener("click", (e) => { const i = Math.min(N - 1, Math.floor((e.offsetX / svg.clientWidth) * N)); set(i ? EDGES[i] : null, i + 1 < N ? EDGES[i + 1] : null); });
+  const typed = () => { const a = parseMoney(from.value), b = parseMoney(to.value); set(a, b == null ? null : b + 1); from.blur(); };
+  for (const inp of [from, to]) {
+    inp.addEventListener("change", typed);
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); typed(); } });
+  }
+  function update() {
+    const f = cur(), a = idx(f?.min, 0), b = idx(f?.max, N);
+    lo.value = a; hi.value = b;
+    fill.style.left = `${(a / N) * 100}%`; fill.style.right = `${(1 - b / N) * 100}%`;
+    lo.setAttribute("aria-valuetext", a ? fmtMoney(EDGES[a]) : "Sin mínimo");
+    hi.setAttribute("aria-valuetext", b < N ? fmtMoney(EDGES[b]) : "Sin máximo");
+    if (document.activeElement !== from) from.value = f?.min != null ? fmtMoney(f.min) : "";
+    if (document.activeElement !== to) to.value = f?.max != null ? fmtMoney(dispMax(f.max)) : "";
+    drawBars(svg, binsOf(col, ROWS), binsOf(col, applyAll(ctx.filters, key)), maskOf(col, f), 48);
+  }
+  return {
+    el: h("div", { style: "display:grid;gap:6px" },
+      svg,
+      h("div", { class: "slider" }, h("div", { class: "track" }, fill), lo, hi),
+      h("div", { class: "axis" }, ...EDGES.map((e) => h("span", { text: e ? `${e / 1e6} M` : "0" }))),
+      h("div", { class: "pair", style: "margin-top:6px" }, h("label", { class: "fld" }, "Desde", from), h("label", { class: "fld" }, "Hasta", to)),
+      h("div", { class: "small", text: "Acepta 5.000.000, 5 M o 5 millones." })),
+    update,
+    focus: () => from.focus(),
+  };
+}
+
+function dateBody(col, ctx, changed) {
+  const key = col.key, name = uid("d");
+  let custom = false;
+  const cur = () => ctx.filters.get(key);
+  const radios = [{ rel: "any", label: "Cualquier fecha" }, ...PRESETS, { rel: "custom", label: "Entre dos fechas…" }].map((p) => {
+    const r = h("input", { type: "radio", name, id: uid("r"), value: p.rel });
+    const n = h("span", { class: "n" });
+    r.addEventListener("change", () => {
+      custom = p.rel === "custom";
+      if (p.rel === "any") ctx.set(key, null);
+      else if (!custom) ctx.set(key, { key, op: "range", rel: p.rel, min: p.min, max: p.max });
+      else { const f = cur(); if (f) ctx.set(key, { key, op: "range", min: f.min, max: f.max }); }
+      changed();
+      if (custom) from.focus();
+    });
+    return { p, r, n, row: h("label", { class: "opt" }, r, h("span", { class: "t", text: p.label }), n) };
+  });
+  const from = h("input", { type: "date", class: "field", id: uid("df"), min: "2026-01-01", max: "2026-12-31" });
+  const to = h("input", { type: "date", class: "field", id: uid("dt"), min: "2026-01-01", max: "2026-12-31" });
+  const pair = h("div", { class: "pair" }, h("label", { class: "fld" }, "Desde", from), h("label", { class: "fld" }, "Hasta", to));
+  const typed = () => { custom = true; const a = from.value || null, b = to.value ? addDays(to.value, 1) : null; ctx.set(key, a || b ? { key, op: "range", min: a ?? undefined, max: b ?? undefined } : null); changed(); };
+  from.addEventListener("change", typed);
+  to.addEventListener("change", typed);
+  const svg = s("svg", { viewBox: "0 0 100 48", preserveAspectRatio: "none", class: "hist-big", "aria-hidden": "true" });
+  svg.addEventListener("click", (e) => {
+    const m = Math.min(11, Math.floor((e.offsetX / svg.clientWidth) * 12));
+    custom = true;
+    ctx.set(key, { key, op: "range", min: monthStart(m), max: monthEnd(m) });
+    changed();
+  });
+  function update() {
+    const f = cur(), others = applyAll(ctx.filters, key);
+    const mode = f ? f.rel || "custom" : custom ? "custom" : "any";
+    for (const x of radios) {
+      x.r.checked = x.p.rel === mode;
+      x.n.textContent = x.p.rel === "any" || x.p.rel === "custom" ? "" : String(others.filter((r) => overlaps(r.vence, addDays(r.vence, 1), x.p.min, x.p.max)).length);
+    }
+    pair.hidden = mode !== "custom";
+    if (document.activeElement !== from) from.value = f?.min ?? "";
+    if (document.activeElement !== to) to.value = f?.max ? addDays(f.max, -1) : "";
+    drawBars(svg, binsOf(col, ROWS), binsOf(col, others), maskOf(col, f), 48);
+    const m = +TODAY.slice(5, 7) - 1, gap = 1.4, w = (100 - gap * 11) / 12, x = m * (w + gap) + (w * +TODAY.slice(8, 10)) / 30;
+    svg.append(s("line", { x1: x, x2: x, y1: 0, y2: 48, class: "today" }));
+  }
+  return {
+    el: h("div", { style: "display:grid;gap:8px" },
+      h("div", { class: "opts", role: "radiogroup", "aria-label": col.label }, ...radios.map((x) => x.row)),
+      pair,
+      h("div", null, svg, h("div", { class: "months" }, ...MONTHS.map((m) => h("span", { text: m[0].toUpperCase() })))),
+      h("div", { class: "small", text: "Clic en un mes para verlo solo. La línea roja es hoy." })),
+    update,
+    reset() { custom = false; },
+    focus: () => (radios.find((x) => x.r.checked) || radios[0]).r.focus(),
+  };
+}
+
+function textBody(col, ctx, changed) {
+  const key = col.key;
+  const inp = h("input", { type: "search", class: "field", id: uid("c"), placeholder: "Contiene… p. ej. 1052", "aria-label": `${col.label} contiene` });
+  const res = h("div", { class: "small" });
+  const prev = h("ul", { class: "preview" });
+  let timer;
+  inp.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { const v = inp.value.trim(); ctx.set(key, v ? { key, op: "contains", value: v } : null); changed(); }, 120);
+  });
+  function update() {
+    const f = ctx.filters.get(key);
+    if (document.activeElement !== inp) inp.value = f?.value ?? "";
+    const q = fold(f?.value ?? "");
+    const others = applyAll(ctx.filters, key);
+    const m = q ? others.filter((r) => fold(r[key]).includes(q)) : [];
+    res.textContent = q ? plural(m.length, "factura coincide", "facturas coinciden") : "Escribe parte del número. No distingue mayúsculas ni tildes.";
+    prev.replaceChildren(...m.slice(0, 5).map((r) => { const a = h("span"); highlight(a, r[key], q); return h("li", null, a, h("span", { text: r.cliente })); }));
+    if (m.length > 5) prev.append(h("li", null, h("span", { class: "small", text: `y ${m.length - 5} más` })));
+  }
+  return { el: h("div", { style: "display:grid;gap:8px" }, inp, res, prev), update, focus: () => inp.focus() };
+}
+
+// ------------------------------------------------------------------ la tabla
+const FUNNEL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4z"/></svg>';
+const X = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const main = { filters: new Map([["estado", { key: "estado", op: "in", values: ["pendiente", "vencida"] }]]) };
+const ths = {};
+const headrow = document.getElementById("headrow");
+for (const col of COLS) {
+  const btn = h("button", { type: "button", class: "funnel", "aria-haspopup": "dialog", "aria-expanded": "false" });
+  btn.innerHTML = FUNNEL;
+  btn.addEventListener("click", () => openFilter(col.key));
+  const th = h("th", { class: col.type === "money" ? "num" : null, style: `width:${col.width}px`, "data-k": col.key }, h("div", { class: "th" }, h("span", { class: "th-label", text: col.label }), btn));
+  headrow.append(th);
+  ths[col.key] = { th, btn };
+}
+headrow.addEventListener("keydown", (e) => {
+  const th = e.target.closest("th");
+  if (th && e.altKey && e.key === "ArrowDown") { e.preventDefault(); openFilter(th.dataset.k); }
+});
+
+function cell(col, r, i) {
+  const v = r[col.key];
+  if (col.type === "status") { const o = col.options.find((x) => x.value === v); return h("td", { "data-k": col.key }, h("span", { class: "pill", "data-tone": o.tone }, h("span", { class: "dot" }), o.label)); }
+  if (col.type === "money") return h("td", { class: "num", "data-k": col.key, text: fmtMoney(v) });
+  if (col.type === "date") return h("td", { "data-k": col.key, text: fmtDate(v) });
+  return h("td", { class: col.key === "factura" ? "mono" : null, "data-k": col.key, text: v });
+}
+
+function renderGrid() {
+  const rows = applyAll(main.filters);
+  for (const col of COLS) {
+    const { btn } = ths[col.key], f = main.filters.get(col.key);
+    btn.classList.toggle("on", !!f);
+    btn.setAttribute("aria-label", f ? `Filtro de ${col.label}: ${chipText(col, f)}` : `Filtrar ${col.label}`);
+  }
+  const chips = document.getElementById("chips");
+  chips.replaceChildren();
+  if (!main.filters.size) chips.append(h("span", { class: "hint", text: "Sin filtros. Usa el embudo de cada columna o haz clic derecho sobre una celda." }));
+  for (const [k, f] of main.filters) {
+    const text = chipText(COL[k], f);
+    const x = h("button", { type: "button", class: "x", "aria-label": `Quitar: ${text}`, onclick() { main.filters.delete(k); renderGrid(); } });
+    x.innerHTML = X;
+    chips.append(h("span", { class: "chip" }, h("button", { type: "button", class: "open", title: "Cambiar este filtro", text, onclick: () => openFilter(k) }), x));
+  }
+  if (main.filters.size > 1) chips.append(h("button", { type: "button", class: "link", style: "margin-left:4px", text: "Quitar todos", onclick() { main.filters.clear(); renderGrid(); } }));
+
+  const tbody = document.getElementById("tbody");
+  if (!rows.length) {
+    const sugs = [...main.filters.keys()]
+      .map((k) => ({ k, n: applyAll(main.filters, k).length }))
+      .filter((x) => x.n > 0)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 2);
+    tbody.replaceChildren(h("tr", { class: "empty" }, h("td", { colspan: COLS.length },
+      h("p", { text: "Ninguna factura cumple todos los filtros." }),
+      h("div", { class: "sugs" }, ...sugs.map((x) => h("button", { type: "button", class: "btn", onclick() { main.filters.delete(x.k); renderGrid(); } }, `Quitar «${chipText(COL[x.k], main.filters.get(x.k))}» → ${plural(x.n, "fila", "filas")}`))))));
+  } else {
+    tbody.replaceChildren(...rows.map((r) => h("tr", { "data-i": ROWS.indexOf(r) }, ...COLS.map((c) => cell(c, r)))));
+  }
+  const sum = rows.reduce((a, r) => a + r.monto, 0);
+  document.getElementById("foot").replaceChildren(
+    h("span", null, h("b", { text: String(rows.length) }), ` de ${ROWS.length} facturas`),
+    h("span", null, "Suma ", h("b", { text: fmtMoney(sum) })));
+}
+
+// ------------------------------------------------------------------ el panel flotante
+const pop = document.getElementById("pop");
+let openKey = null, lastClose = { key: null, t: 0 };
+function openFilter(key) {
+  if (lastClose.key === key && performance.now() - lastClose.t < 250) return;
+  if (pop.matches(":popover-open")) pop.hidePopover();
+  const col = COL[key];
+  const p = panel(col, {
+    filters: main.filters,
+    set(k, f) { f ? main.filters.set(k, f) : main.filters.delete(k); renderGrid(); },
+    done: () => pop.hidePopover(),
+  });
+  pop.replaceChildren(p.el);
+  pop.setAttribute("aria-label", `Filtrar ${col.label}`);
+  openKey = key;
+  ths[key].btn.setAttribute("aria-expanded", "true");
+  ths[key].th.scrollIntoView({ block: "nearest", inline: "nearest" });
+  pop.showPopover();
+  place();
+  p.focus();
+}
+// `beforetoggle` llega sincrónico: el foco todavía está dentro y se puede devolver al embudo.
+pop.addEventListener("beforetoggle", (e) => {
+  if (e.newState !== "closed" || !openKey) return;
+  const b = ths[openKey].btn;
+  b.setAttribute("aria-expanded", "false");
+  lastClose = { key: openKey, t: performance.now() };
+  const back = pop.contains(document.activeElement) || document.activeElement === document.body;
+  openKey = null;
+  if (back) queueMicrotask(() => b.focus({ preventScroll: true }));
+});
+function place() {
+  if (!openKey) return;
+  const r = ths[openKey].th.getBoundingClientRect(), w = pop.offsetWidth;
+  const left = Math.min(Math.max(8, COL[openKey].type === "money" ? r.right - w : r.left), innerWidth - w - 8);
+  const top = Math.max(8, r.bottom + 4);
+  pop.style.setProperty("--left", `${left}px`);
+  pop.style.setProperty("--top", `${top}px`);
+  pop.style.setProperty("--maxh", `${Math.max(260, innerHeight - top - 12)}px`);
+}
+addEventListener("resize", place);
+addEventListener("scroll", place, true);
+
+// ------------------------------------------------------------------ menú de celda
+const menu = document.getElementById("menu");
+document.getElementById("tbody").addEventListener("contextmenu", (e) => {
+  const td = e.target.closest("td[data-k]");
+  if (!td) return;
+  e.preventDefault();
+  const col = COL[td.dataset.k], v = ROWS[+td.parentElement.dataset.i][col.key], f = main.filters.get(col.key);
+  const act = (text, fn) => h("button", { type: "button", role: "menuitem", text, onclick() { fn(); menu.hidePopover(); renderGrid(); } });
+  const setF = (nf) => (nf ? main.filters.set(col.key, nf) : main.filters.delete(col.key));
+  const kind = kindOf(col), items = [];
+  if (kind === "list") {
+    const lab = labelOf(col, v);
+    items.push(act(`Solo «${lab}»`, () => setF(fromSel(col, new Set([v])))));
+    items.push(act(`Sin «${lab}»`, () => { const S = selOf(col, f); S.delete(v); setF(fromSel(col, S)); }));
+  } else if (kind === "range") {
+    items.push(act(`Desde ${fmtMoney(v)}`, () => setF({ key: col.key, op: "range", min: v, max: f?.max })));
+    items.push(act(`Hasta ${fmtMoney(v)}`, () => setF({ key: col.key, op: "range", min: f?.min, max: v + 1 })));
+  } else if (kind === "date") {
+    items.push(act(`Desde el ${fmtDate(v)}`, () => setF({ key: col.key, op: "range", min: v, max: f?.rel ? undefined : f?.max })));
+    items.push(act(`Hasta el ${fmtDate(v)}`, () => setF({ key: col.key, op: "range", min: f?.rel ? undefined : f?.min, max: addDays(v, 1) })));
+  } else items.push(act(`Contiene «${v}»`, () => setF({ key: col.key, op: "contains", value: v })));
+  items.push(h("hr"), h("button", { type: "button", role: "menuitem", text: `Más filtros de ${col.label}…`, onclick() { menu.hidePopover(); openFilter(col.key); } }));
+  menu.replaceChildren(...items);
+  menu.showPopover();
+  menu.style.setProperty("--left", `${Math.min(e.clientX, innerWidth - menu.offsetWidth - 8)}px`);
+  menu.style.setProperty("--top", `${Math.min(e.clientY, innerHeight - menu.offsetHeight - 8)}px`);
+  menu.querySelector("button").focus();
+});
+menu.addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  e.preventDefault();
+  const bs = [...menu.querySelectorAll("button")], i = bs.indexOf(document.activeElement);
+  bs[(i + (e.key === "ArrowDown" ? 1 : bs.length - 1)) % bs.length].focus();
+});
+
+// ------------------------------------------------------------------ las láminas
+const SPECS = [
+  { key: "ciudad", title: "Lista", when: "Estados y columnas de texto con pocos valores distintos (aquí, 8 ciudades).",
+    init: { key: "ciudad", op: "in", values: ["Bogotá", "Medellín"] },
+    notes: ["Cada valor dice cuántas filas quedarían, contando los demás filtros. Los que darían cero se atenúan, pero no desaparecen.", "«Solo» aparece al pasar el cursor: un clic en vez de desmarcar siete.", "El buscador sale con más de 7 valores. Enter deja marcados solo los que coinciden.", "Si queda marcada más de la mitad, se guarda como exclusión: «Ciudad: sin Cali»."] },
+  { key: "monto", title: "Rango", when: "Montos y números.",
+    init: { key: "monto", op: "range", min: 5e6, max: 20e6 },
+    notes: ["Las barras muestran dónde se concentran los montos antes de cortar. Solo aparecen aquí, dentro del panel; las cabeceras quedan limpias.", "Las manijas saltan a cifras redondas. Los campos aceptan el valor exacto, escrito como sale natural.", "Clic en una barra para quedarse con ese tramo."] },
+  { key: "vence", title: "Fechas", when: "Fechas en formato ISO.",
+    init: { key: "vence", op: "range", rel: "next30", min: PRESETS[1].min, max: PRESETS[1].max },
+    notes: ["Atajos con el lenguaje del dato («Ya vencidas», «Próximos 30 días»), cada uno con su conteo.", "Se guardan como relativos: la vista sigue siendo cierta mañana.", "Clic en un mes para verlo solo, o «Entre dos fechas…» para fechas exactas."] },
+  { key: "factura", title: "Texto", when: "Columnas con casi un valor por fila: números de factura, correos, referencias.",
+    init: { key: "factura", op: "contains", value: "105" },
+    notes: ["Solo «contiene»: sin menú de operadores. Para lo demás, la frase de la barra.", "Filtra mientras escribes y muestra ejemplos, con la coincidencia marcada.", "Ignora mayúsculas y tildes."] },
+];
+const specs = document.getElementById("specs");
+for (const sp of SPECS) {
+  const filters = new Map([[sp.key, sp.init]]);
+  const box = h("div", { class: "pop static", role: "group", "aria-label": `Panel de ejemplo: ${COL[sp.key].label}` });
+  const p = panel(COL[sp.key], { filters, set(k, f) { f ? filters.set(k, f) : filters.delete(k); }, done() {} }, true);
+  box.append(p.el);
+  specs.append(h("article", { class: "spec" }, box,
+    h("div", { class: "spec-text" }, h("h3", { text: `${sp.title} · ${COL[sp.key].label}` }), h("p", { class: "when", text: sp.when }), h("ul", null, ...sp.notes.map((n) => h("li", { text: n }))))));
+}
+
+renderGrid();
+</script>
