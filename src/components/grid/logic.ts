@@ -1,7 +1,8 @@
-/** Lógica pura de `<nx-grid>`: valores, filtros, orden, histogramas, grupos, estadísticas y TSV. */
+/** Lógica pura de `<nx-grid>`: valores, filtros, orden, grupos, estadísticas y TSV. Las barras del
+ *  filtro de una columna están en `bars.ts` (solo las usa el panel, que se carga aparte). */
 import { foldText } from "../../core/text";
 import { nxFormat, type NxFormat } from "../../core/locale";
-import type { GridColumn, GridFilter, GridHistogram, GridRow, GridSort } from "./types";
+import type { GridColumn, GridDateRel, GridFilter, GridRow, GridSort } from "./types";
 
 // Las funciones que muestran o leen valores reciben el formato del locale (`nxFormat`); sin él,
 // usan «es-CO».
@@ -127,23 +128,28 @@ export function sortRows(rows: readonly GridRow[], sort: GridSort | null, column
   return keyed.sort((a, b) => ((a.k as number) - (b.k as number)) * sort.dir || a.i - b.i).map((x) => x.r);
 }
 
-/** El texto de un chip de filtro. */
-export function filterLabel(f: GridFilter, c: GridColumn | undefined, fmt: NxFormat = nxFormat()): string {
+/** El texto de un chip de filtro. `rels`: los nombres de los tramos relativos («Este mes»). */
+export function filterLabel(f: GridFilter, c: GridColumn | undefined, fmt: NxFormat = nxFormat(), rels?: Partial<Record<GridDateRel, string>>): string {
   const name = c?.label ?? f.key;
   const show = (v: number | string) => (typeof v === "string" ? fmt.date(v) : c && colType(c) === "money" ? fmt.money(v, c, true) : fmt.compact(v));
   const opt = (v: string) => c?.options?.find((o) => o.value === v)?.label ?? v;
   switch (f.op) {
     case "in":
-      return `${name}: ${f.values.map(opt).join(", ")}`;
+      return `${name}: ${f.values.map(opt).join(", ") || "—"}`;
     case "notIn":
       return `${name}: sin ${f.values.map(opt).join(", ")}`;
     case "contains":
       return `${name} contiene «${f.value}»`;
-    case "range":
+    case "range": {
+      const rel = f.rel && rels?.[f.rel];
+      if (rel) return `${name}: ${rel.toLowerCase()}`;
       if (typeof f.min === "string" && typeof f.max === "string" && /-01$/.test(f.min) && /-01$/.test(f.max) && monthSpan(f.min, f.max) === 1) return `${name}: ${fmt.date(f.min.slice(0, 7))}`;
-      if (f.min !== undefined && f.max !== undefined) return `${name}: ${show(f.min)} – ${show(f.max)}`;
+      // `max` no se incluye: en una fecha, el tramo termina el día anterior.
+      const max = typeof f.max === "string" && ISO_DAY.test(f.max) ? addDays(f.max, -1) : f.max;
+      if (f.min !== undefined && max !== undefined) return `${name}: ${show(f.min)} – ${show(max)}`;
       if (f.min !== undefined) return `${name} ≥ ${show(f.min)}`;
-      return `${name} < ${show(f.max!)}`;
+      return typeof max === "string" ? `${name} ≤ ${show(max)}` : `${name} < ${show(max!)}`;
+    }
   }
 }
 
@@ -153,158 +159,74 @@ function monthSpan(a: string, b: string): number {
   return (yb - ya) * 12 + (mb - ma);
 }
 
-// ---------------------------------------------------------------- histogramas
+// ---------------------------------------------------------------- filtro por columna
 
-/** Bordes «bonitos» (1-2-5) entre min y max; logarítmicos si los datos abarcan varios órdenes. */
-export function niceEdges(min: number, max: number, target = 10): number[] {
-  if (!(max > min) || !Number.isFinite(min) || !Number.isFinite(max)) return [min, min + 1];
-  // Un rango por debajo de la precisión del número (0,3 y 0,1 + 0,2; 1e17 y 1e17 + 16): sumar el
-  // paso no mueve el borde y el bucle no terminaría. Se trata como un solo valor.
-  if ((max - min) / Math.max(Math.abs(min), Math.abs(max)) < 1e-9) return [min, max + Math.abs(max) * 1e-6];
-  if (min > 0 && max / min > 100) {
-    const edges: number[] = [];
-    for (let e = Math.floor(Math.log10(min)); e <= Math.ceil(Math.log10(max)); e++) {
-      for (const m of [1, 2, 5]) {
-        const v = m * 10 ** e;
-        if (v <= min) edges.length = 0;
-        edges.push(v);
-        if (v > max) return edges;
-      }
-    }
-    return edges;
-  }
-  const raw = (max - min) / target;
-  const p = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw)!;
-  const start = Math.floor(min / step) * step;
-  const edges = [start];
-  // Con un paso ≥ rango/objetivo bastan objetivo + 2 bordes; el tope es una red por si el redondeo
-  // de coma flotante deja de avanzar.
-  while (edges[edges.length - 1] <= max) {
-    if (edges.length > target * 4 + 2) return [min, max + Math.abs(max - min) * 1e-6 || max + 1];
-    edges.push(edges[edges.length - 1] + step);
-  }
-  return edges;
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Hoy, en la zona de quien mira (AAAA-MM-DD). */
+export function todayISO(d = new Date()): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function binIndex(edges: readonly (number | string)[], v: number | string): number {
-  let lo = 0;
-  let hi = edges.length - 2;
-  if (v < edges[0] || v >= edges[edges.length - 1]) return -1;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1;
-    if (v >= edges[mid]) lo = mid;
-    else hi = mid - 1;
-  }
-  return lo;
+export function addDays(iso: string, n: number): string {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
-export interface HistogramSpec {
-  kind: "bins" | "categories";
-  labels: string[];
-  edges?: (number | string)[];
-  values?: string[];
-  /** Índice de la barra de una fila, o -1. */
-  index: (row: GridRow) => number;
-  /** Conteo sobre todas las filas, calculado una vez por arreglo de filas. */
-  memo?: { rows: readonly GridRow[]; counts: number[] };
+export const DATE_RELS: readonly GridDateRel[] = ["past", "last30", "next30", "month", "lastMonth", "year"];
+
+/** El tramo de un filtro relativo (`max` excluido), contado desde `today`. */
+export function relRange(rel: GridDateRel, today: string): { min?: string; max?: string } {
+  const y = Number(today.slice(0, 4));
+  const m = Number(today.slice(5, 7));
+  const first = (yy: number, mm: number) => (mm > 12 ? `${yy + 1}-01-01` : mm < 1 ? `${yy - 1}-12-01` : `${yy}-${pad(mm)}-01`);
+  switch (rel) {
+    case "past":
+      return { max: today };
+    case "last30":
+      return { min: addDays(today, -30), max: addDays(today, 1) };
+    case "next30":
+      return { min: today, max: addDays(today, 31) };
+    case "month":
+      return { min: first(y, m), max: first(y, m + 1) };
+    case "lastMonth":
+      return { min: first(y, m - 1), max: first(y, m) };
+    default:
+      return { min: `${y}-01-01`, max: `${y + 1}-01-01` };
+  }
 }
 
-const MAX_CATEGORIES = 12;
-
-/** Cómo se reparte una columna (se calcula sobre TODAS las filas, una vez por versión de datos). */
-export function histogramSpec(c: GridColumn, rows: readonly GridRow[], f: NxFormat = nxFormat()): HistogramSpec | null {
-  if (c.histogram === false || c.ai) return null;
-  const t = colType(c);
-  if (isNumeric(c)) {
-    let min = Infinity;
-    let max = -Infinity;
-    for (const r of rows) {
-      const v = num(r[c.key]);
-      if (v === null) continue;
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    if (min === Infinity) return null;
-    const edges = niceEdges(min, max);
-    const show = (v: number) => (t === "money" ? f.money(v, c, true) : f.compact(v));
-    return {
-      kind: "bins",
-      edges,
-      labels: edges.slice(0, -1).map((e, i) => `${show(e)} – ${show(edges[i + 1])}`),
-      index: (r) => {
-        const v = num(r[c.key]);
-        return v === null ? -1 : binIndex(edges, v);
-      },
-    };
-  }
-  if (t === "date") {
-    const months = new Set<string>();
-    for (const r of rows) {
-      const v = String(r[c.key] ?? "");
-      if (/^\d{4}-\d{2}/.test(v)) months.add(v.slice(0, 7));
-    }
-    if (!months.size) return null;
-    const sorted = [...months].sort();
-    const byYear = sorted.length > 24;
-    const keys = byYear ? [...new Set(sorted.map((m) => m.slice(0, 4)))] : sorted;
-    const next = (k: string) => {
-      if (byYear) return `${Number(k) + 1}-01-01`;
-      const [y, m] = k.split("-").map(Number);
-      return m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
-    };
-    const edges = [...keys.map((k) => (byYear ? `${k}-01-01` : `${k}-01`)), next(keys[keys.length - 1])];
-    return {
-      kind: "bins",
-      edges,
-      labels: keys.map((k) => (byYear ? k : f.date(k))),
-      index: (r) => {
-        const v = String(r[c.key] ?? "");
-        return v ? binIndex(edges, v) : -1;
-      },
-    };
-  }
-  // Categorías: las opciones declaradas, o los valores distintos si son pocos.
-  let values = c.options?.map((o) => o.value);
-  if (!values) {
-    const count = new Map<string, number>();
-    for (const r of rows) {
-      const v = String(r[c.key] ?? "");
-      if (!v) continue;
-      count.set(v, (count.get(v) ?? 0) + 1);
-      if (count.size > MAX_CATEGORIES * 4) return null;
-    }
-    // Si ningún valor se repite es un identificador, no una categoría.
-    if (count.size > MAX_CATEGORIES || count.size < 2 || count.size === rows.length) return null;
-    values = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([v]) => v);
-  }
-  const at = new Map(values.map((v, i) => [v, i]));
-  return {
-    kind: "categories",
-    values,
-    labels: values.map((v) => c.options?.find((o) => o.value === v)?.label ?? v),
-    index: (r) => at.get(String(r[c.key] ?? "")) ?? -1,
-  };
+/** Los tramos relativos se recalculan con la fecha de hoy (una vista guardada ayer sigue siendo
+ *  cierta); un `rel` desconocido se quita y queda el tramo fijo. */
+export function resolveRel(filters: readonly GridFilter[], today = todayISO()): GridFilter[] {
+  return filters.map((f) => {
+    if (f.op !== "range" || f.rel === undefined) return f;
+    const { rel, ...fixed } = f;
+    return DATE_RELS.includes(rel) ? { key: f.key, op: "range", rel, ...relRange(rel, today) } : fixed;
+  });
 }
 
-export function histogram(spec: HistogramSpec, all: readonly GridRow[], filtered: readonly GridRow[]): GridHistogram {
-  if (spec.memo?.rows !== all) {
-    const c = new Array<number>(spec.labels.length).fill(0);
-    for (const r of all) {
-      const i = spec.index(r);
-      if (i >= 0) c[i]++;
-    }
-    spec.memo = { rows: all, counts: c };
-  }
-  const counts = spec.memo.counts;
-  const fcounts = new Array<number>(spec.labels.length).fill(0);
-  if (filtered === all) fcounts.splice(0, fcounts.length, ...counts);
-  else
-    for (const r of filtered) {
-      const i = spec.index(r);
-      if (i >= 0) fcounts[i]++;
-    }
-  return { kind: spec.kind, labels: spec.labels, counts, filtered: fcounts, edges: spec.edges, values: spec.values };
+/** Lo marcado en la lista de una columna: los valores que pasan sus filtros `in` / `notIn`, o
+ *  `null` si no tiene ninguno. */
+export function selection(filters: readonly GridFilter[], key: string, values: readonly string[]): Set<string> | null {
+  const own = filters.filter((f) => f.key === key && (f.op === "in" || f.op === "notIn"));
+  if (!own.length) return null;
+  return new Set(values.filter((v) => own.every((f) => matchFilter({ [key]: v }, f))));
+}
+
+/** Lo marcado → los filtros de la columna. Todo marcado es no filtrar; con más de la mitad (si se
+ *  conocen todos los valores: `exclude`) se guarda como exclusión, «sin Cali». */
+export function fromSelection(key: string, sel: ReadonlySet<string>, values: readonly string[], exclude = true): GridFilter[] {
+  if (values.every((v) => sel.has(v))) return [];
+  if (exclude && sel.size > values.length / 2) return [{ key, op: "notIn", values: values.filter((v) => !sel.has(v)) }];
+  return [{ key, op: "in", values: values.filter((v) => sel.has(v)) }];
+}
+
+/** Los filtros con los de una columna reemplazados. */
+export function withColumn(filters: readonly GridFilter[], key: string, next: readonly GridFilter[]): GridFilter[] {
+  return [...filters.filter((f) => f.key !== key), ...next];
 }
 
 // ---------------------------------------------------------------- grupos
@@ -513,8 +435,15 @@ export function facets(columns: readonly GridColumn[], rows: readonly GridRow[],
   return crossfilter(rows, filters, columns).facets;
 }
 
-/** Marca o desmarca un valor de faceta: edita (o crea, o quita) el filtro `in` de esa columna. */
-export function toggleFacet(filters: readonly GridFilter[], key: string, value: string): GridFilter[] {
+/** Marca o desmarca un valor de faceta: edita (o crea, o quita) el filtro `in` de esa columna. Si
+ *  la columna tiene una exclusión («sin Cali», del filtro de la cabecera) y se conocen sus valores,
+ *  parte de lo que esa exclusión deja marcado. */
+export function toggleFacet(filters: readonly GridFilter[], key: string, value: string, all?: readonly string[]): GridFilter[] {
+  if (all && filters.some((f) => f.key === key && f.op === "notIn")) {
+    const sel = selection(filters, key, all)!;
+    if (!sel.delete(value)) sel.add(value);
+    return withColumn(filters, key, sel.size ? fromSelection(key, sel, all, false) : []);
+  }
   const own = filters.find((f): f is Extract<GridFilter, { op: "in" }> => f.key === key && f.op === "in");
   const rest = filters.filter((f) => f !== own);
   const values = own ? (own.values.includes(value) ? own.values.filter((v) => v !== value) : [...own.values, value]) : [value];

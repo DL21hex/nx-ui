@@ -9,9 +9,6 @@ import {
   filterLabel,
   formatCell,
   groupRows,
-  histogram,
-  histogramSpec,
-  niceEdges,
   parseInput,
   parseNumber,
   parseTSV,
@@ -19,7 +16,13 @@ import {
   stats,
   toggleFacet,
   toTSV,
+  fromSelection,
+  relRange,
+  resolveRel,
+  selection,
 } from "../src/components/grid/logic";
+import { histogram, histogramSpec, niceEdges } from "../src/components/grid/bars";
+import { excludeValue, parseAmount } from "../src/components/grid/grid-filter";
 import { parseNL } from "../src/components/grid/nl";
 import { colName, crc32, excelDate, sheetXml, xmlText } from "../src/components/grid/xlsx";
 import type { GridColumn, GridFilter, GridRow } from "../src/components/grid/types";
@@ -84,7 +87,7 @@ describe("filtros y orden", () => {
     expect(filterLabel({ key: "estado", op: "in", values: ["pend", "apr"] }, COLS[3])).toBe("Estado: Pendiente, Aprobado");
     expect(filterLabel({ key: "fecha", op: "range", min: "2026-03-01", max: "2026-04-01" }, COLS[2])).toBe("Fecha: mar 2026");
     // Un tramo que no empieza el día 1 no es «un mes».
-    expect(filterLabel({ key: "fecha", op: "range", min: "2026-09-24", max: "2026-10-24" }, COLS[2])).toBe("Fecha: 24 sept 2026 – 24 oct 2026");
+    expect(filterLabel({ key: "fecha", op: "range", min: "2026-09-24", max: "2026-10-24" }, COLS[2])).toBe("Fecha: 24 sept 2026 – 23 oct 2026");
     expect(filterLabel({ key: "monto", op: "range", min: 5_000_001 }, COLS[4])).toBe("Monto ≥ $5 M");
   });
 });
@@ -274,5 +277,71 @@ describe("crossfilter: una pasada, mismo resultado que filtrar faceta por faceta
   it("sin filtros devuelve el mismo arreglo (los histogramas lo aprovechan)", () => {
     const rows = [{ a: "x" }, { a: "y" }];
     expect(crossfilter(rows, [], []).filtered).toBe(rows);
+  });
+});
+
+describe("filtro por columna", () => {
+  it("relRange: tramos relativos a hoy, con `max` excluido", () => {
+    expect(relRange("past", "2026-09-29")).toEqual({ max: "2026-09-29" });
+    expect(relRange("last30", "2026-09-29")).toEqual({ min: "2026-08-30", max: "2026-09-30" });
+    expect(relRange("next30", "2026-09-29")).toEqual({ min: "2026-09-29", max: "2026-10-30" });
+    expect(relRange("month", "2026-12-05")).toEqual({ min: "2026-12-01", max: "2027-01-01" });
+    expect(relRange("lastMonth", "2026-01-15")).toEqual({ min: "2025-12-01", max: "2026-01-01" });
+    expect(relRange("year", "2026-09-29")).toEqual({ min: "2026-01-01", max: "2027-01-01" });
+  });
+
+  it("resolveRel recalcula con hoy; un `rel` desconocido deja el tramo fijo", () => {
+    const out = resolveRel(
+      [
+        { key: "f", op: "range", rel: "month", min: "2020-01-01", max: "2020-02-01" },
+        { key: "g", op: "range", rel: "otro" as "month", min: "2026-01-01" },
+        { key: "h", op: "in", values: ["a"] },
+      ],
+      "2026-09-29",
+    );
+    expect(out).toEqual([
+      { key: "f", op: "range", rel: "month", min: "2026-09-01", max: "2026-10-01" },
+      { key: "g", op: "range", min: "2026-01-01" },
+      { key: "h", op: "in", values: ["a"] },
+    ]);
+  });
+
+  it("selection y fromSelection: todo marcado no filtra; más de la mitad es exclusión", () => {
+    const vals = ["a", "b", "c", "d"];
+    expect(selection([], "k", vals)).toBeNull();
+    expect([...selection([{ key: "k", op: "notIn", values: ["b"] }], "k", vals)!]).toEqual(["a", "c", "d"]);
+    expect(fromSelection("k", new Set(vals), vals)).toEqual([]);
+    expect(fromSelection("k", new Set(["a", "b", "c"]), vals)).toEqual([{ key: "k", op: "notIn", values: ["d"] }]);
+    expect(fromSelection("k", new Set(["a", "b", "c"]), vals, false)).toEqual([{ key: "k", op: "in", values: ["a", "b", "c"] }]);
+    expect(fromSelection("k", new Set(["b", "a"]), vals)).toEqual([{ key: "k", op: "in", values: ["a", "b"] }]);
+  });
+
+  it("excludeValue quita el valor de un `in` o lo suma al `notIn`", () => {
+    expect(excludeValue([], "k", "a")).toEqual([{ key: "k", op: "notIn", values: ["a"] }]);
+    expect(excludeValue([{ key: "k", op: "notIn", values: ["a"] }], "k", "b")).toEqual([{ key: "k", op: "notIn", values: ["a", "b"] }]);
+    expect(excludeValue([{ key: "k", op: "in", values: ["a", "b"] }], "k", "a")).toEqual([{ key: "k", op: "in", values: ["b"] }]);
+  });
+
+  it("toggleFacet parte de lo que deja una exclusión", () => {
+    const vals = ["a", "b", "c"];
+    expect(toggleFacet([{ key: "k", op: "notIn", values: ["c"] }], "k", "b", vals)).toEqual([{ key: "k", op: "in", values: ["a"] }]);
+    expect(toggleFacet([{ key: "k", op: "notIn", values: ["c"] }], "k", "c", vals)).toEqual([]);
+  });
+
+  it("parseAmount: como sale natural", () => {
+    expect(parseAmount("5.000.000")).toBe(5_000_000);
+    expect(parseAmount("$ 5 M")).toBe(5_000_000);
+    expect(parseAmount("2,5 millones")).toBe(2_500_000);
+    expect(parseAmount("450 mil")).toBe(450_000);
+    expect(parseAmount("450k")).toBe(450_000);
+    expect(parseAmount("12,5")).toBe(12.5);
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("m")).toBeNull();
+  });
+
+  it("filterLabel: tramos relativos con su nombre; sin valores, una raya", () => {
+    expect(filterLabel({ key: "fecha", op: "range", rel: "month", min: "2026-09-01", max: "2026-10-01" }, COLS[2], undefined, { month: "Este mes" })).toBe("Fecha: este mes");
+    expect(filterLabel({ key: "fecha", op: "range", max: "2026-09-29" }, COLS[2])).toBe("Fecha ≤ 28 sept 2026");
+    expect(filterLabel({ key: "estado", op: "in", values: [] }, COLS[3])).toBe("Estado: —");
   });
 });
