@@ -102,6 +102,11 @@ export interface GridLabels {
   redo: string;
   undone: string;
   redone: string;
+  views: string;
+  columns: string;
+  saveView: string;
+  resize: string;
+  gone: string;
   filterBy: string;
   filterOn: string;
   left: string;
@@ -163,4 +168,45 @@ export interface GridChange {
   key: string;
   value: unknown;
   old: unknown;
+}
+
+/** El estado de la tabla que se puede guardar: filtros, orden, agrupación, columnas ocultas y anchos. */
+export interface GridView {
+  filters: GridFilter[];
+  sort: GridSort | null;
+  groupBy: string;
+  /** Las columnas ocultas (por `key`). */
+  hidden: string[];
+  /** Los anchos que eligió la persona, en px (por `key`). */
+  widths: Record<string, number>;
+}
+
+/** Una vista guardada con nombre (`views-storage`). */
+export interface GridSavedView extends GridView {
+  id: string;
+  name: string;
+  /** Se aplica al abrir la tabla (solo una puede tenerlo). */
+  default?: boolean;
+}
+
+/** Los textos del menú de vistas y del selector de columnas (se cargan con ellos). */
+export interface GridViewLabels {
+  viewModified: string;
+  viewEmpty: string;
+  viewSaveNew: string;
+  viewSaveChanges: string;
+  viewEdit: string;
+  viewDelete: string;
+  viewDeleteYes: string;
+  viewReset: string;
+  viewName: string;
+  viewDefault: string;
+  viewSave: string;
+  viewCancel: string;
+  viewDuplicate: string;
+  viewConfirm: string;
+  viewUntitled: string;
+  columnsTitle: string;
+  columnsReset: string;
+  columnsHint: string;
 }

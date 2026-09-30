@@ -14,6 +14,10 @@
  * frase producen el mismo filtro y el mismo chip, que la persona ve, vuelve a abrir y puede quitar.
  * El panel del filtro se carga aparte (`grid-filter.ts`), la primera vez que hace falta.
  *
+ * Vistas: `grid.view` es el estado que se puede guardar (filtros, orden, agrupación, columnas
+ * ocultas y anchos). Con `views-storage`, la persona lo guarda con un nombre en `localStorage` y lo
+ * aplica con un clic; el menú y el selector de columnas se cargan aparte (`grid-views.ts`).
+ *
  * Las filas se virtualizan (solo existen en el DOM las visibles); todo el texto va por
  * `textContent`.
  */
@@ -52,7 +56,8 @@ import {
 } from "./logic";
 import { parseNL } from "./nl";
 import type { FilterHost, FilterKind, FilterPanel } from "./grid-filter";
-import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridHistogram, GridLabels, GridPage, GridRow, GridSort, GridTone } from "./types";
+import type { ViewsHost, ViewsUI } from "./grid-views";
+import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridHistogram, GridLabels, GridPage, GridRow, GridSavedView, GridSort, GridTone, GridView, GridViewLabels } from "./types";
 
 export const GRID_LABELS: GridLabels = {
   ask: "Filtra con tus palabras: «pendientes de marzo de más de 5 millones»",
@@ -88,6 +93,11 @@ export const GRID_LABELS: GridLabels = {
   redo: "Rehacer",
   undone: "Deshecho",
   redone: "Rehecho",
+  views: "Vistas",
+  columns: "Columnas",
+  saveView: "Guardar como vista",
+  resize: "Ancho de {col}",
+  gone: "La vista usaba {cols}, que ya no está en la tabla.",
   filterBy: "Filtrar {col}",
   filterOn: "Cambiar el filtro «{filter}»",
   left: "Quedan {n} de {total}",
@@ -132,6 +142,11 @@ const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
 const ARROW = '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>';
 const UNDO = '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>';
 const REDO = '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>';
+const BOOKMARK = '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>';
+const COLUMNS = '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>';
+/** Límites del ancho que la persona elige para una columna (px). */
+const MIN_W = 60;
+const MAX_W = 800;
 const FUNNEL = '<path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/>';
 /** En modo servidor, el filtro de una columna espera esto tras el último cambio antes de pedir. */
 const SERVER_WAIT = 250;
@@ -169,17 +184,58 @@ function validFilters(v: unknown): GridFilter[] {
   );
 }
 
+const clampW = (w: number) => Math.round(Math.min(MAX_W, Math.max(MIN_W, w)));
+
+/** Una vista que llega de afuera (localStorage, la app): solo lo que tiene la forma correcta. */
+function cleanView(v: unknown): GridView {
+  const x = (v && typeof v === "object" ? v : {}) as Partial<GridView>;
+  const sort = x.sort && typeof x.sort.key === "string" ? { key: x.sort.key, dir: x.sort.dir === -1 ? (-1 as const) : (1 as const) } : null;
+  const widths: Record<string, number> = {};
+  if (x.widths && typeof x.widths === "object") for (const [k, w] of Object.entries(x.widths)) if (typeof w === "number" && w > 0) widths[k] = clampW(w);
+  return {
+    filters: validFilters(x.filters),
+    sort,
+    groupBy: typeof x.groupBy === "string" ? x.groupBy : "",
+    hidden: Array.isArray(x.hidden) ? x.hidden.filter((k): k is string => typeof k === "string") : [],
+    widths,
+  };
+}
+
+function cleanViews(list: unknown): GridSavedView[] {
+  if (!Array.isArray(list)) return [];
+  let def = false;
+  return list
+    .filter((v) => v && typeof v.id === "string" && typeof v.name === "string" && v.name.trim())
+    .map((v) => {
+      const on = !!v.default && !def;
+      def ||= on;
+      return { id: v.id, name: String(v.name).trim().slice(0, 80), ...cleanView(v), ...(on ? { default: true } : {}) };
+    });
+}
+
 export class NxGrid extends Base {
   static {
     attrProps(this, ["height"]);
   }
   declare height: string | null;
-  static observedAttributes = ["columns", "rows", "filters", "labels", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable"];
+  static observedAttributes = ["columns", "rows", "filters", "labels", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable", "views-storage"];
 
   #uid = `nx-grid${++uid}`;
   #labels: GridLabels = GRID_LABELS;
   #loc: NxFormat = nxFormat();
+  /** Todas las columnas (`#cols`) y las que se ven (`#columns`: sin las ocultas). */
+  #cols: GridColumn[] = [];
   #columns: GridColumn[] = [];
+  #hidden = new Set<string>();
+  #widths = new Map<string, number>();
+  // Vistas guardadas (`views-storage`): la lista leída, la aplicada y la clave ya arrancada.
+  #viewList: GridSavedView[] | null = null;
+  #activeView: string | null = null;
+  #booted = "";
+  #quiet = false;
+  #viewsUI?: ViewsUI;
+  #viewsLoad?: Promise<ViewsUI>;
+  #labelsIn: unknown;
   #all: GridRow[] = [];
   #filters: GridFilter[] = [];
   #sort: GridSort | null = null;
@@ -241,6 +297,8 @@ export class NxGrid extends Base {
   #facetMore = new Set<string>();
   // Nodos.
   #askInput?: HTMLInputElement;
+  #viewsBtn?: HTMLButtonElement;
+  #colsBtn?: HTMLButtonElement;
   #facetBtn?: HTMLButtonElement;
   #groupSel?: HTMLSelectElement;
   #aiBtn?: HTMLButtonElement;
@@ -267,11 +325,55 @@ export class NxGrid extends Base {
   // ---------------------------------------------------------------- propiedades
 
   get columns(): GridColumn[] {
-    return this.#columns;
+    return this.#cols;
   }
   set columns(v: GridColumn[] | null | undefined) {
-    this.#columns = Array.isArray(v) ? v.filter((c) => c && typeof c.key === "string" && typeof c.label === "string") : [];
+    this.#cols = Array.isArray(v) ? v.filter((c) => c && typeof c.key === "string" && typeof c.label === "string") : [];
+    this.#syncColumns();
     this.#dataChanged(true);
+  }
+
+  /** El estado que se puede guardar: filtros, orden, agrupación, columnas ocultas y anchos. */
+  get view(): GridView {
+    return { filters: this.#filters, sort: this.#sort, groupBy: this.groupBy, hidden: [...this.#hidden], widths: Object.fromEntries(this.#widths) };
+  }
+  set view(v: Partial<GridView> | null | undefined) {
+    this.#applyView(v, null);
+  }
+  /** La clave de `localStorage` donde se guardan las vistas con nombre. Sin ella no hay menú de vistas. */
+  get viewsStorage(): string {
+    return this.getAttribute("views-storage") ?? "";
+  }
+  set viewsStorage(v: string | null) {
+    this.#attr("views-storage", v);
+  }
+  /** Las vistas guardadas. Asignarlas las guarda (y emite `nx-grid-views`). */
+  get views(): GridSavedView[] {
+    if (!this.#viewList) {
+      let raw: unknown = null;
+      try {
+        raw = JSON.parse((this.viewsStorage && localStorage.getItem(this.viewsStorage)) || "null");
+      } catch {
+        /* guardado roto o sin acceso: sin vistas */
+      }
+      this.#viewList = cleanViews((raw as { views?: unknown } | null)?.views);
+    }
+    return this.#viewList;
+  }
+  set views(v: GridSavedView[] | null | undefined) {
+    this.#viewList = cleanViews(v);
+    if (this.#activeView && !this.#viewList.some((x) => x.id === this.#activeView)) this.#activeView = null;
+    try {
+      if (this.viewsStorage) localStorage.setItem(this.viewsStorage, JSON.stringify({ v: 1, views: this.#viewList }));
+    } catch {
+      /* sin espacio o bloqueado: quedan en esta página */
+    }
+    this.#emit("nx-grid-views", { views: this.#viewList });
+    this.#paintChrome();
+  }
+  /** La vista guardada que está aplicada (su `id`), o null. */
+  get activeView(): string | null {
+    return this.#activeView;
   }
   /** Las filas (modo cliente). Se copian: las ediciones y los valores de IA quedan aquí, no en el
    *  original. Asignar de nuevo `grid.rows` (el mismo arreglo) recalcula filtros y agregados. */
@@ -405,7 +507,9 @@ export class NxGrid extends Base {
   get labels(): GridLabels {
     return this.#labels;
   }
-  set labels(v: Partial<GridLabels> | null | undefined) {
+  set labels(v: Partial<GridLabels & GridViewLabels> | null | undefined) {
+    // Los textos de las vistas los toma su propio módulo (se carga aparte), de lo mismo que llegó.
+    this.#labelsIn = v;
     this.#labels = mergeLabels(GRID_LABELS, v);
     this.#paintAll();
   }
@@ -433,7 +537,7 @@ export class NxGrid extends Base {
     const q = query.trim();
     if (!q) return { filters: [], unknown: [] };
     // En modo servidor el vocabulario sale también de las facetas que mandó el backend.
-    const cols = this.#columns.map((c) => {
+    const cols = this.#cols.map((c) => {
       const f = !c.options && this.#server ? this.#facetList.find((x) => x.key === c.key) : undefined;
       return f ? { ...c, options: f.options.map((o) => ({ value: o.value, label: o.label })) } : c;
     });
@@ -455,7 +559,7 @@ export class NxGrid extends Base {
           signal: ctrl.signal,
         });
         const data = (await res.json()) as { filters?: unknown; unknown?: unknown };
-        const f = validFilters(data?.filters).filter((x) => this.#columns.some((c) => c.key === x.key));
+        const f = validFilters(data?.filters).filter((x) => this.#cols.some((c) => c.key === x.key));
         if (f.length) {
           filters = f;
           unknown = Array.isArray(data.unknown) ? data.unknown.map(String) : [];
@@ -485,11 +589,17 @@ export class NxGrid extends Base {
 
   /** Abre el filtro de una columna (el mismo panel que el embudo de su cabecera). */
   async openFilter(key: string): Promise<void> {
-    const ci = this.#columns.findIndex((c) => c.key === key);
-    const col = this.#columns[ci];
+    const col = this.#cols.find((c) => c.key === key);
     if (!col || !this.#filterable(col)) return;
     const panel = await this.#loadPanel();
-    if (panel.openKey !== key) panel.toggle(col, this.#ths[ci] ?? null);
+    if (panel.openKey !== key) panel.toggle(col, this.#thOf(key) ?? this.#chips ?? null);
+  }
+
+  /** Aplica una vista guardada (por su `id`); `false` si no existe. */
+  applyView(id: string): boolean {
+    const v = this.views.find((x) => x.id === id);
+    if (v) this.#applyView(v, v.id);
+    return !!v;
   }
 
   /** Agrega una columna que calcula la IA con los datos de cada fila (solo las filas que se ven). */
@@ -498,19 +608,21 @@ export class NxGrid extends Base {
     const p = prompt.trim();
     if (!name || !p) return null;
     let key = `ai_${foldText(name).replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "col"}`;
-    while (this.#columns.some((c) => c.key === key)) key += "_";
+    while (this.#cols.some((c) => c.key === key)) key += "_";
     const col: GridColumn = { key, label: name, ai: { prompt: p } };
-    this.#columns = [...this.#columns, col];
+    this.#cols = [...this.#cols, col];
+    this.#syncColumns();
     this.#dataChanged(true);
-    this.#emit("nx-grid-columns", { columns: this.#columns });
+    this.#emit("nx-grid-columns", { columns: this.#cols });
     if (this.#scroll) this.#scroll.scrollLeft = this.#scroll.scrollWidth;
     return col;
   }
 
   removeColumn(key: string): void {
-    const col = this.#columns.find((c) => c.key === key);
+    const col = this.#cols.find((c) => c.key === key);
     if (!col) return;
-    this.#columns = this.#columns.filter((c) => c !== col);
+    this.#cols = this.#cols.filter((c) => c !== col);
+    this.#syncColumns();
     if (col.ai) {
       for (const r of this.#byId.values()) delete r[key];
       for (const k of [...this.#aiPending]) if (k.startsWith(`${key}\u0000`)) this.#aiPending.delete(k);
@@ -520,7 +632,7 @@ export class NxGrid extends Base {
     if (this.#sort?.key === key) this.#sort = null;
     this.#act = this.#anchor = { r: this.#act.r, c: Math.min(this.#act.c, this.#columns.length - 1) };
     this.#dataChanged(true);
-    this.#emit("nx-grid-columns", { columns: this.#columns });
+    this.#emit("nx-grid-columns", { columns: this.#cols });
   }
 
   /** Vuelve a pedir los datos (con `source`). Con `client-max`, vuelve a mirar si caben en el cliente. */
@@ -574,12 +686,22 @@ export class NxGrid extends Base {
       this.#ro = new ResizeObserver(() => this.#soon());
       this.#ro.observe(this.#scroll!);
     }
+    addEventListener("storage", this.#onStorage);
+    // La vista de inicio se aplica antes del primer cálculo: la tabla no parpadea sin ella.
+    if (first) this.#bootViews();
     // Movido en el DOM (un portal, una lista que se reordena): los datos no cambiaron, no se
     // recalcula ni se vuelve a pedir nada; solo se repintan las filas visibles (y se vuelven a
     // pedir las celdas de IA que quedaron en cola al desconectarse).
     if (first) this.#dataChanged(true);
     else this.#paintRows(true);
   }
+
+  /** Otra pestaña guardó vistas con la misma clave: la lista se vuelve a leer. */
+  #onStorage = (e: StorageEvent) => {
+    if (!e.key || e.key !== this.viewsStorage) return;
+    this.#viewList = null;
+    this.#paintChrome();
+  };
 
   disconnectedCallback(): void {
     this.#ro?.disconnect();
@@ -592,6 +714,8 @@ export class NxGrid extends Base {
     this.#aiQueue.clear();
     // Un popover abierto que sale del DOM se oculta sin avisar: el panel se da por cerrado.
     this.#panel?.close();
+    this.#viewsUI?.close();
+    removeEventListener("storage", this.#onStorage);
   }
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -603,12 +727,16 @@ export class NxGrid extends Base {
       }
       return;
     }
-    if (!this.#built || old === value) return;
+    if (!this.#built || old === value || this.#quiet) return;
     if (name === "source" || name === "client-max") {
       this.#local = this.#decided = false;
       this.#dataChanged(true);
-    }
-    else if (name === "locale" || name === "selectable") this.#dataChanged(name === "selectable");
+    } else if (name === "views-storage") {
+      this.#viewList = null;
+      this.#activeView = null;
+      this.#bootViews();
+      this.#paintChrome();
+    } else if (name === "locale" || name === "selectable") this.#dataChanged(name === "selectable");
     else if (name === "group-by") {
       this.#collapsed.clear();
       this.#refilter(true, "order");
@@ -637,8 +765,9 @@ export class NxGrid extends Base {
     this.#loc = nxFormat(this.locale);
     if (columns) this.#buildHead();
     if (this.#server) return this.#reload();
-    const auto = facetColumns(this.#columns, this.#all);
-    this.#facetCols = this.#columns.filter((c) => !c.ai && (c.facet === true || (c.facet !== false && auto.includes(c))));
+    // Las facetas salen de todas las columnas: esconder una no quita su filtro ni su lista.
+    const auto = facetColumns(this.#cols, this.#all);
+    this.#facetCols = this.#cols.filter((c) => !c.ai && (c.facet === true || (c.facet !== false && auto.includes(c))));
     this.#order = facetOrder(this.#facetCols, this.#all);
     this.#recompute("filter");
   }
@@ -662,7 +791,7 @@ export class NxGrid extends Base {
   /** `filter`: qué filas pasan (filtro y facetas en una pasada, histogramas y totales). Después,
    *  siempre: orden, grupos y la lista visible. Ordenar o agrupar no repite la primera etapa. */
   #recompute(stage: "filter" | "order"): void {
-    const cols = this.#columns;
+    const cols = this.#cols;
     if (stage === "filter") {
       const x = crossfilter(this.#all, this.#filters, this.#facetCols, this.#order);
       this.#filtered = x.filtered;
@@ -679,7 +808,7 @@ export class NxGrid extends Base {
 
   #sumTotals(): void {
     this.#totals = {};
-    const money = this.#columns.filter((c) => colType(c) === "money");
+    const money = this.#cols.filter((c) => colType(c) === "money");
     for (const r of this.#filtered) for (const c of money) this.#totals[c.key] = (this.#totals[c.key] ?? 0) + (num(r[c.key]) ?? 0);
   }
 
@@ -687,7 +816,7 @@ export class NxGrid extends Base {
   #groupStats(): void {
     this.#groupMax = {};
     for (const g of this.#groups ?? []) {
-      for (const c of this.#columns.filter(isNumeric)) {
+      for (const c of this.#cols.filter(isNumeric)) {
         g.sums[c.key] = g.rows.reduce((a, r) => a + (num(r[c.key]) ?? 0), 0);
         this.#groupMax[c.key] = Math.max(this.#groupMax[c.key] ?? 0, Math.abs(g.sums[c.key]));
       }
@@ -702,7 +831,7 @@ export class NxGrid extends Base {
 
   #groupable(): GridColumn[] {
     if (this.#server) return [];
-    return this.#columns.filter((c) => !c.ai && !isNumeric(c) && (colType(c) === "date" || this.#facetCols.includes(c)));
+    return this.#cols.filter((c) => !c.ai && !isNumeric(c) && (colType(c) === "date" || this.#facetCols.includes(c)));
   }
 
   #count(): number {
@@ -833,7 +962,7 @@ export class NxGrid extends Base {
   // ---------------------------------------------------------------- IA
 
   #meta() {
-    return this.#columns.filter((c) => !c.ai).map(({ key, label, type, options }) => ({ key, label, type: type ?? "text", options }));
+    return this.#cols.filter((c) => !c.ai).map(({ key, label, type, options }) => ({ key, label, type: type ?? "text", options }));
   }
 
   /** Olvida lo pedido a la IA (filas nuevas, otra consulta): lo que llegue de antes se descarta y
@@ -857,7 +986,7 @@ export class NxGrid extends Base {
     clearTimeout(this.#aiTimer);
     this.#aiTimer = setTimeout(() => {
       for (const [key, ids] of this.#aiQueue) {
-        const col = this.#columns.find((x) => x.key === key);
+        const col = this.#cols.find((x) => x.key === key);
         const list = [...ids];
         if (col?.ai) for (let i = 0; i < list.length; i += 50) void this.#fetchAi(col, list.slice(i, i + 50));
       }
@@ -901,7 +1030,7 @@ export class NxGrid extends Base {
         if (ctrl.signal.aborted) return false;
         const id = String(ev?.id);
         const r = this.#byId.get(id);
-        if (ev?.type !== "cell" || !r || !wanted.has(id) || !this.#columns.includes(col)) return;
+        if (ev?.type !== "cell" || !r || !wanted.has(id) || !this.#cols.includes(col)) return;
         r[col.key] = ev.value ?? null;
         if (typeof ev.tone === "string") this.#tones.set(`${col.key}\u0000${id}`, ev.tone);
         done.add(id);
@@ -914,9 +1043,144 @@ export class NxGrid extends Base {
     if (ctrl.signal.aborted) return;
     for (const id of ids) {
       const r = this.#byId.get(id);
-      if (r && !done.has(id) && r[col.key] === undefined && this.#columns.includes(col)) r[col.key] = null;
+      if (r && !done.has(id) && r[col.key] === undefined && this.#cols.includes(col)) r[col.key] = null;
     }
     this.#soon();
+  }
+
+  // ---------------------------------------------------------------- vistas y columnas
+
+  /** Las columnas que se ven. Nunca todas ocultas: una tabla sin columnas no se puede arreglar
+   *  desde ella misma. */
+  #syncColumns(): void {
+    this.#columns = this.#cols.filter((c) => !this.#hidden.has(c.key));
+    if (!this.#columns.length && this.#cols.length) {
+      this.#hidden.clear();
+      this.#columns = this.#cols;
+    }
+  }
+
+  /** Aplica una vista (guardada, con su `id`, o suelta). Lo de columnas que ya no existen se quita,
+   *  y se dice. */
+  #applyView(v: unknown, id: string | null): void {
+    const x = cleanView(v);
+    const known = (k: string) => !this.#cols.length || this.#cols.some((c) => c.key === k);
+    const gone = [...new Set([...x.filters.map((f) => f.key), ...(x.sort ? [x.sort.key] : [])].filter((k) => !known(k)))];
+    this.#activeView = id;
+    this.#hidden = new Set(x.hidden);
+    this.#widths = new Map(Object.entries(x.widths));
+    this.#syncColumns();
+    this.#sort = x.sort && known(x.sort.key) ? x.sort : null;
+    this.#filters = x.filters.filter((f) => known(f.key));
+    if (this.#note) {
+      this.#note.hidden = !gone.length;
+      this.#note.textContent = gone.length ? this.#fmt(this.#labels.gone, { cols: gone.map((k) => `«${k}»`).join(", ") }) : "";
+    }
+    if (this.#built) this.#buildHead();
+    this.#collapsed.clear();
+    // `group-by` es un atributo: se cambia sin que su aviso vuelva a calcular; se calcula una vez aquí.
+    this.#quiet = true;
+    this.groupBy = x.groupBy;
+    this.#quiet = false;
+    this.#refilter(true);
+  }
+
+  /** Con `views-storage`: la vista marcada «abrir con esta vista» se aplica al empezar (una vez por
+   *  clave), y el menú se trae en reposo para poner su nombre en el botón. */
+  #bootViews(): void {
+    const key = this.viewsStorage;
+    if (!key || key === this.#booted) return;
+    this.#booted = key;
+    this.#viewList = null;
+    const d = this.views.find((v) => v.default);
+    if (d) this.#applyView(d, d.id);
+    void this.#loadViews().catch(() => {});
+  }
+
+  /** Si el menú ya está cargado, en el mismo clic; si no, al llegar. */
+  #withViews(fn: (v: ViewsUI) => void): void {
+    if (this.#viewsUI) fn(this.#viewsUI);
+    else void this.#loadViews().then(fn);
+  }
+
+  #loadViews(): Promise<ViewsUI> {
+    return (this.#viewsLoad ??= import("./grid-views").then((m) => (this.#viewsUI = new m.ViewsUI(this.#viewsHost()))));
+  }
+
+  /** Esconde o muestra una columna. */
+  #setHidden(key: string, hidden: boolean): void {
+    if (hidden) this.#hidden.add(key);
+    else this.#hidden.delete(key);
+    this.#syncColumns();
+    this.#buildHead();
+    this.#clampSel();
+    this.#paintAll();
+  }
+
+  /** El ancho de una columna (null: el original). `paint`: al soltar, no en cada paso del arrastre. */
+  #setWidth(key: string, w: number | null, paint = true): void {
+    if (w === null) this.#widths.delete(key);
+    else this.#widths.set(key, clampW(w));
+    this.#applyWidths();
+    if (paint) this.#paintChrome();
+  }
+
+  #widthOf(c: GridColumn): number {
+    return this.#widths.get(c.key) ?? c.width ?? WIDTH[c.ai ? "ai" : colType(c)] ?? 160;
+  }
+
+  #applyWidths(): void {
+    const widths = this.#columns.map((c) => this.#widthOf(c));
+    const check = this.selectable ? "36px " : "";
+    this.#scroll!.style.setProperty("--_cols", check + widths.map((w, i) => (i === widths.length - 1 ? `minmax(${w}px, 1fr)` : `${w}px`)).join(" "));
+    this.#scroll!.style.setProperty("--_w", `${widths.reduce((a, b) => a + b, check ? 36 : 0)}px`);
+    this.#ths.forEach((th, i) => th.querySelector(".nx-grid__resize")?.setAttribute("aria-valuenow", String(widths[i])));
+  }
+
+  #viewsHost(): ViewsHost {
+    const self = this;
+    return {
+      el: this,
+      get labels() {
+        return self.#labels;
+      },
+      get labelsIn() {
+        return self.#labelsIn;
+      },
+      get cols() {
+        return self.#cols;
+      },
+      get hidden() {
+        return self.#hidden;
+      },
+      get view() {
+        return self.view;
+      },
+      get views() {
+        return self.views;
+      },
+      get active() {
+        return self.#activeView;
+      },
+      apply: (id) => {
+        const v = id && this.views.find((x) => x.id === id);
+        this.#applyView(v || {}, v ? v.id : null);
+      },
+      save: (list, active) => {
+        this.views = list;
+        this.#activeView = active;
+        this.#paintChrome();
+      },
+      setHidden: (key, hidden) => this.#setHidden(key, hidden),
+      resetColumns: () => {
+        this.#hidden.clear();
+        this.#widths.clear();
+        this.#setHidden("", false);
+      },
+      chipText: (f) => this.#chipText(f),
+      viewsBtn: this.#viewsBtn!,
+      colsBtn: this.#colsBtn!,
+    };
   }
 
   // ---------------------------------------------------------------- estructura
@@ -943,6 +1207,10 @@ export class NxGrid extends Base {
       e.preventDefault();
       void this.ask(this.#askInput!.value);
     });
+    this.#viewsBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__views", "aria-haspopup": "dialog", hidden: true }, glyph(BOOKMARK), h("span"));
+    this.#viewsBtn.addEventListener("click", () => this.#withViews((v) => v.toggleViews()));
+    this.#colsBtn = h("button", { type: "button", class: "nx-grid__btn", "aria-haspopup": "dialog" }, glyph(COLUMNS), h("span"));
+    this.#colsBtn.addEventListener("click", () => this.#withViews((v) => v.toggleColumns()));
     this.#facetBtn = h("button", { type: "button", class: "nx-grid__btn", "aria-controls": `${u}-facets` }, glyph(SLIDERS), h("span"), h("span", { class: "nx-grid__badge" }));
     this.#facetBtn.addEventListener("click", () => (this.facetsOpen = !this.facetsOpen));
     this.#groupSel = h("select", { class: "nx-grid__btn nx-grid__group", "data-nx-ephemeral": "" });
@@ -960,7 +1228,7 @@ export class NxGrid extends Base {
     this.#redoBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__icon" }, glyph(REDO));
     this.#undoBtn.addEventListener("click", () => this.undo());
     this.#redoBtn.addEventListener("click", () => this.redo());
-    const bar = h("div", { class: "nx-grid__bar" }, ask, this.#facetBtn, this.#groupSel, this.#aiBtn, this.#undoBtn, this.#redoBtn, this.#exportBtn);
+    const bar = h("div", { class: "nx-grid__bar" }, this.#viewsBtn, ask, this.#facetBtn, this.#groupSel, this.#colsBtn, this.#aiBtn, this.#undoBtn, this.#redoBtn, this.#exportBtn);
 
     this.#selbar = h("div", { class: "nx-grid__selbar", hidden: true }, h("strong"), h("button", { type: "button", class: "nx-grid__clear", "data-pick": "all" }), h("button", { type: "button", class: "nx-grid__clear", "data-pick": "none" }));
     this.#selbar.addEventListener("click", (e) => {
@@ -971,7 +1239,8 @@ export class NxGrid extends Base {
     this.#chips = h("div", { class: "nx-grid__chips" });
     this.#chips.addEventListener("click", (e) => {
       const edit = (e.target as Element).closest<HTMLElement>("[data-edit]");
-      if (edit) return void this.#toggleFilter(edit.dataset.edit!);
+      if (edit) return void this.#toggleFilter(edit.dataset.edit!, edit);
+      if ((e.target as Element).closest("[data-save-view]")) return this.#withViews((v) => v.toggleViews(true));
       const b = (e.target as Element).closest<HTMLElement>("[data-i], [data-clear]");
       if (!b) return;
       if (b.dataset.clear !== undefined) this.clearFilters();
@@ -1004,8 +1273,42 @@ export class NxGrid extends Base {
 
     this.#head = h("div", { class: "nx-grid__head", role: "row", "aria-rowindex": 1 });
     this.#head.addEventListener("click", (e) => this.#onHeadClick(e));
+    // El borde de una cabecera cambia su ancho: arrastrar, doble clic (el original) o flechas.
+    this.#head.addEventListener("pointerdown", (e) => {
+      const hd = (e.target as Element).closest<HTMLElement>("[data-resize]");
+      const col = hd && this.#columns[Number(hd.dataset.resize)];
+      if (!hd || !col || e.button !== 0) return;
+      e.preventDefault();
+      const x0 = e.clientX;
+      const w0 = hd.parentElement!.getBoundingClientRect().width;
+      const dir = getComputedStyle(this).direction === "rtl" ? -1 : 1;
+      hd.setPointerCapture?.(e.pointerId);
+      const move = (ev: PointerEvent) => this.#setWidth(col.key, w0 + (ev.clientX - x0) * dir, false);
+      const up = () => {
+        hd.removeEventListener("pointermove", move);
+        hd.removeEventListener("pointerup", up);
+        hd.removeEventListener("pointercancel", up);
+        this.#paintChrome();
+      };
+      hd.addEventListener("pointermove", move);
+      hd.addEventListener("pointerup", up);
+      hd.addEventListener("pointercancel", up);
+    });
+    this.#head.addEventListener("dblclick", (e) => {
+      const hd = (e.target as Element).closest<HTMLElement>("[data-resize]");
+      const col = hd && this.#columns[Number(hd.dataset.resize)];
+      if (col) this.#setWidth(col.key, null);
+    });
     // Alt+↓ en una cabecera abre su filtro (como el autofiltro de Excel).
     this.#head.addEventListener("keydown", (e) => {
+      const hd = (e.target as Element).closest<HTMLElement>("[data-resize]");
+      const col = hd && this.#columns[Number(hd.dataset.resize)];
+      if (col && ["ArrowLeft", "ArrowRight", "Delete", "Backspace"].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const step = (e.key === "ArrowRight" ? 1 : -1) * (e.shiftKey ? 64 : 16) * (getComputedStyle(this).direction === "rtl" ? -1 : 1);
+        return this.#setWidth(col.key, e.key.startsWith("Arrow") ? this.#widthOf(col) + step : null);
+      }
       const th = (e.target as Element).closest<HTMLElement>("[aria-colindex]");
       if (!th || !e.altKey || e.key !== "ArrowDown") return;
       e.preventDefault();
@@ -1092,10 +1395,6 @@ export class NxGrid extends Base {
 
   #buildHead(): void {
     const cols = this.#columns;
-    const widths = cols.map((c) => c.width ?? WIDTH[c.ai ? "ai" : colType(c)] ?? 160);
-    const check = this.selectable ? "36px " : "";
-    this.#scroll!.style.setProperty("--_cols", check + widths.map((w, i) => (i === widths.length - 1 ? `minmax(${w}px, 1fr)` : `${w}px`)).join(" "));
-    this.#scroll!.style.setProperty("--_w", `${widths.reduce((a, b) => a + b, check ? 36 : 0)}px`);
     this.#scroll!.setAttribute("aria-colcount", String(cols.length));
     this.#ths = cols.map((c, ci) =>
       h(
@@ -1105,8 +1404,10 @@ export class NxGrid extends Base {
         c.ai ? h("button", { type: "button", class: "nx-grid__rm", "data-rm": ci }, glyph(X)) : null,
         c.ai ? h("span", { class: "nx-grid__ai-prompt" }, c.ai.prompt) : null,
         this.#filterable(c) ? h("button", { type: "button", class: "nx-grid__funnel", "data-filter": ci, "aria-haspopup": "dialog", "aria-expanded": "false" }, glyph(FUNNEL)) : null,
+        h("span", { class: "nx-grid__resize", role: "separator", tabindex: 0, "aria-orientation": "vertical", "aria-valuemin": MIN_W, "aria-valuemax": MAX_W, "aria-label": this.#fmt(this.#labels.resize, { col: c.label }), "data-resize": ci }),
       ),
     );
+    this.#applyWidths();
     this.#panel?.close();
     this.#headCheck = this.selectable ? h("input", { type: "checkbox", "data-pick-all": "", "data-nx-ephemeral": "", "aria-label": this.#labels.selectAll.replace("{n}", "").trim() }) : undefined;
     this.#head!.replaceChildren(...(this.#headCheck ? [h("div", { role: "columnheader", class: "nx-grid__th nx-grid__check" }, this.#headCheck)] : []), ...this.#ths);
@@ -1145,6 +1446,10 @@ export class NxGrid extends Base {
     this.#aiBtn!.hidden = !this.#url("ai-endpoint");
     this.#aiBtn!.lastElementChild!.textContent = L.aiColumn;
     this.#exportBtn!.lastElementChild!.textContent = L.export;
+    this.#viewsBtn!.hidden = !this.viewsStorage;
+    if (!this.#viewsUI) this.#viewsBtn!.lastElementChild!.textContent = L.views;
+    this.#colsBtn!.hidden = this.#cols.length < 2;
+    this.#colsBtn!.lastElementChild!.textContent = L.columns;
     const [nameL, promptL] = this.#aiPop!.querySelectorAll("label > span");
     nameL.textContent = L.aiName;
     promptL.textContent = L.aiPrompt;
@@ -1154,12 +1459,13 @@ export class NxGrid extends Base {
     this.#chips!.replaceChildren(
       ...this.#filters.map((f, i) => {
         const text = this.#chipText(f);
-        const col = this.#columns.find((c) => c.key === f.key);
+        const col = this.#cols.find((c) => c.key === f.key);
         // El texto del chip vuelve a abrir el filtro de su columna.
         const label = col && this.#filterable(col) ? h("button", { type: "button", class: "nx-grid__chip-edit", "data-edit": f.key, title: this.#fmt(L.filterBy, { col: col.label }) }, text) : h("span", null, text);
         return h("span", { class: "nx-grid__chip" }, label, h("button", { type: "button", "data-i": i, "aria-label": `${L.remove}: ${text}` }, glyph(X)));
       }),
       h("button", { type: "button", class: "nx-grid__clear", "data-clear": "" }, L.clear),
+      ...(this.viewsStorage ? [h("button", { type: "button", class: "nx-grid__save-view", "data-save-view": "" }, L.saveView)] : []),
     );
     // Cabeceras.
     this.#ths.forEach((th, ci) => this.#paintTh(th, this.#columns[ci]));
@@ -1169,6 +1475,7 @@ export class NxGrid extends Base {
     this.#paintFacets();
     this.#paintHistory();
     this.#panel?.refresh();
+    this.#viewsUI?.refresh();
   }
 
   /** Sin filas: qué filtro quitar, y cuántas volverían (en el cliente; en el servidor no se sabe). */
@@ -1222,7 +1529,7 @@ export class NxGrid extends Base {
   }
 
   #colOf(key: string): GridColumn | undefined {
-    const c = this.#columns.find((x) => x.key === key);
+    const c = this.#cols.find((x) => x.key === key);
     const f = this.#facetList.find((x) => x.key === key);
     // En modo servidor, las etiquetas de los valores vienen de las facetas.
     return c && !c.options && f ? { ...c, options: f.options.map((o) => ({ value: o.value, label: o.label })) } : c;
@@ -1541,11 +1848,15 @@ export class NxGrid extends Base {
   }
 
   /** El embudo es un interruptor: abre el filtro de la columna, o lo cierra si ya estaba abierto. */
-  async #toggleFilter(key: string): Promise<void> {
-    const ci = this.#columns.findIndex((c) => c.key === key);
-    const col = this.#columns[ci];
+  async #toggleFilter(key: string, anchor?: HTMLElement): Promise<void> {
+    const col = this.#cols.find((c) => c.key === key);
     if (!col || !this.#filterable(col)) return;
-    (await this.#loadPanel()).toggle(col, this.#ths[ci] ?? null);
+    (await this.#loadPanel()).toggle(col, this.#thOf(key) ?? anchor ?? this.#chips ?? null);
+  }
+
+  /** La cabecera de una columna, si se ve. */
+  #thOf(key: string): HTMLElement | undefined {
+    return this.#ths[this.#columns.findIndex((c) => c.key === key)];
   }
 
   /** Las filas que pasan todos los filtros menos los de una columna (una columna nunca se cuenta a
@@ -1921,7 +2232,7 @@ export class NxGrid extends Base {
    *  Solo se recalcula lo de las columnas tocadas (antes, cada Enter recorría todas las filas por
    *  cada columna). */
   #reaggregate(keys: Set<string>): void {
-    const touched = this.#columns.filter((c) => keys.has(c.key));
+    const touched = this.#cols.filter((c) => keys.has(c.key));
     for (const c of touched) {
       if (colType(c) === "money") {
         let t = 0;
