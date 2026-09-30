@@ -8,7 +8,7 @@ import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels 
 export type { NxAiAnswer, AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels };
 
 export interface AIAnswerProps extends JSX.HTMLAttributes<NxAiAnswer> {
-  /** URL que responde con el protocolo de streaming de nx-ui (POST `{question, context}`). */
+  /** URL que responde con el protocolo de streaming de nx32-elements (POST `{question, context}`). */
   endpoint?: string;
   method?: string;
   /** Pregunta inicial; con `endpoint`, se pregunta al montar. */

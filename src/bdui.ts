@@ -75,9 +75,9 @@ export const URL_PROPS: ReadonlySet<string> = new Set(["endpoint", "action", "so
  *  guion): un `<a>` o un `<iframe>` con props de un payload se saltarían el saneo de URLs. Sin
  *  `props`, acepta los setters de la clase, igual que los de la librería. */
 export function registerComponent(name: string, tag: string, props?: readonly string[]): void {
-  if (!/^[a-z][a-z0-9._]*-[a-z0-9._-]*$/.test(tag)) throw new Error(`[nx-ui] BDUI: "${tag}" no es un elemento personalizado`);
+  if (!/^[a-z][a-z0-9._]*-[a-z0-9._-]*$/.test(tag)) throw new Error(`[nx32-elements] BDUI: "${tag}" no es un elemento personalizado`);
   const bad = props?.filter(forbidden) ?? [];
-  if (bad.length) throw new Error(`[nx-ui] BDUI: props no permitidas: ${bad.join(", ")}`);
+  if (bad.length) throw new Error(`[nx32-elements] BDUI: props no permitidas: ${bad.join(", ")}`);
   registry.set(name, { tag, props });
 }
 
@@ -113,7 +113,7 @@ export function render(node: BduiNode | BduiNode[], target: Element): Element[] 
   for (const n of Array.isArray(node) ? node : [node]) {
     const entry = n && registry.get(n.component);
     if (!entry) {
-      console.warn(`[nx-ui] componente BDUI desconocido: ${n?.component}`);
+      console.warn(`[nx32-elements] componente BDUI desconocido: ${n?.component}`);
       continue;
     }
     const el = document.createElement(entry.tag) as unknown as Record<string, unknown> & HTMLElement;
@@ -121,11 +121,11 @@ export function render(node: BduiNode | BduiNode[], target: Element): Element[] 
       const ctor = customElements.get(entry.tag);
       for (const [k, v] of Object.entries(n.props ?? {})) {
         if (accepts(entry, ctor, k)) el[k] = v;
-        else console.warn(`[nx-ui] ${n.component}: prop ignorada "${k}"`);
+        else console.warn(`[nx32-elements] ${n.component}: prop ignorada "${k}"`);
       }
     };
     const defined = !!customElements.get(entry.tag);
-    if (!defined) console.warn(`[nx-ui] <${entry.tag}> no está definido: importa su módulo (nx-ui/…) antes de pintar ${n.component}`);
+    if (!defined) console.warn(`[nx32-elements] <${entry.tag}> no está definido: importa su módulo (nx32-elements/…) antes de pintar ${n.component}`);
     if (defined || entry.props) assign();
     else {
       // Sin la clase no se sabe qué acepta: las props esperan a que el módulo se cargue.

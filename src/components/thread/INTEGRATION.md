@@ -77,7 +77,7 @@ regenera (como `pen-line` con la firma). Si no, `users` sirve mientras tanto.
 En `PAGES`: `"#/thread": { template: "page-thread", mount: mountThreadDemo },` con
 `import { mountThreadDemo } from "./demo-thread";` e `import "./pages/thread.css";`. La plantilla está
 en `gallery/pages/thread.html` para pegarla en `gallery/index.html`. `demo-thread.ts` importa
-`thread.css` directamente (mientras `nx-ui.css` no lo haga); esa línea sobra al unir.
+`thread.css` directamente (mientras `nx32-elements.css` no lo haga); esa línea sobra al unir.
 
 La demo registra `/demo/thread/…` con `addDemoRoute` **al importarse** (el hilo pide sus comentarios
 apenas se conecta, antes de que corra `mountThreadDemo`): `comentarios` (GET/POST/PATCH/DELETE y
@@ -246,7 +246,7 @@ comentarios viven en el pedido, la factura o la orden de compra, y se pueden anc
   `groupThreadByDay`, `threadDayLabel`, `threadRefPatterns`, `threadFirstUnread`, `threadAnchorCounts`,
   `threadRoot`, `threadPick`, `cleanThreadComment`, `cleanThreadComments`, `mergeThreadComments`,
   `encodeThreadDraft`, `decodeThreadDraft` y los tipos `Thread*`.
-- `src/styles/nx-ui.css` → `@import "../components/thread/thread.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/thread/thread.css";`
 - `vite.config.ts` → `thread: "src/components/thread/index.ts",` (los tres chunks salen solos del `import()`).
 - `scripts/build-css.mjs` → `"thread": "src/components/thread/thread.css",`
 - `package.json` → `"./thread": { "types": "./dist/types/components/thread/index.d.ts", "import": "./dist/thread.js" }`

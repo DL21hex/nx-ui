@@ -205,7 +205,7 @@ export function qrMatrix(text: string, opts: QrOptions = {}): boolean[][] {
   const ecc: QrEcc = LEVELS.includes(opts.ecc as QrEcc) ? (opts.ecc as QrEcc) : "M";
   const bytes = new TextEncoder().encode(text);
   let version = Math.max(1, Math.min(40, Math.floor(opts.minVersion ?? 1)));
-  while (qrCapacity(version, ecc) < bytes.length) if (++version > 40) throw new RangeError("[nx-ui] el texto no cabe en un código QR");
+  while (qrCapacity(version, ecc) < bytes.length) if (++version > 40) throw new RangeError("[nx32-elements] el texto no cabe en un código QR");
 
   // Datos → bloques → corrección → intercalado.
   const { ec, data: lens } = qrBlocks(version, ecc);

@@ -1,6 +1,6 @@
 /**
  * Captura inteligente de documentos. El backend (OCR, un modelo, lo que sea) lee el documento y
- * transmite lo que encuentra con el mismo transporte que la IA de nx-ui (NDJSON o SSE):
+ * transmite lo que encuentra con el mismo transporte que la IA de nx32-elements (NDJSON o SSE):
  *
  *   {"type":"page","n":1,"src":"/docs/7/p1.png","width":1240,"height":1754}
  *   {"type":"field","key":"nit","value":"900.123.456-7","confidence":0.99,

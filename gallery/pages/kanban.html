@@ -65,7 +65,7 @@ compras.cards = await (await fetch("/compras/oc?mes=2026-09")).json();
 compras.addEventListener("nx-kanban-commit", (e) =&gt;
   fetch(`/compras/oc/${e.detail.card.id}`, { method: "PATCH", keepalive: true,
     body: JSON.stringify({ estado: e.detail.to, orden: e.detail.index }) }));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Kanban } from "nx-ui/solid/kanban";
+        <pre role="tabpanel" hidden><code>import { Kanban } from "nx32-elements/solid/kanban";
 
 &lt;Kanban heading="Órdenes de compra" columns={columnas} cards={ordenes()}
   onCommit={(e) =&gt; guardar(e.detail)} onAdd={(e) =&gt; nuevaOrden(e.detail.column)} /&gt;</code></pre>

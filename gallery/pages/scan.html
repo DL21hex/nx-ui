@@ -103,7 +103,7 @@ recepcion.addEventListener("nx-scan-count", (e) =&gt; guardarBorrador(e.detail.i
 
 &lt;nx-scan id="buscar"&gt;&lt;/nx-scan&gt;
 buscar.addEventListener("nx-scan", (e) =&gt; abrirProducto(e.detail.code));   // {code, format, via}</code></pre>
-        <pre role="tabpanel" hidden><code>import { Scan } from "nx-ui/solid/scan";
+        <pre role="tabpanel" hidden><code>import { Scan } from "nx32-elements/solid/scan";
 
 &lt;Scan mode="count" source="/inventario/producto?code=" formats={["ean_13", "code_128"]}
   items={lineas()} onCount={(e) =&gt; setLineas(e.detail.items)} /&gt;

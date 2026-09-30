@@ -47,8 +47,8 @@ formatea fechas con su propio `Intl.DateTimeFormat` (no `nxFormat`, −0,9 KB), 
 frases y los controles van en un chunk con `import()`**. El elemento lo pide al acercarse
 (`focusin`/`pointerenter`), al abrir «Ajustar a mano» o si el valor inicial es una frase; una RRULE
 que llega del backend se muestra (frase canónica y fechas) sin él. Si el chunk no llega (sin red), se
-vuelve a pedir la próxima vez. Por eso **`parseRecurrence` no se exporta desde `nx-ui/recurrence`**
-(lo arrastraría a la entrada) sino desde `nx-ui` (ver «Otros archivos»), como el dictado de nx-voice.
+vuelve a pedir la próxima vez. Por eso **`parseRecurrence` no se exporta desde `nx32-elements/recurrence`**
+(lo arrastraría a la entrada) sino desde `nx32-elements` (ver «Otros archivos»), como el dictado de nx-voice.
 
 Para `scripts/size.mjs`:
 
@@ -73,7 +73,7 @@ En `gallery/main.ts`, dentro de `NAV` (con los componentes nuevos):
 En `PAGES`: `"#/recurrence": { template: "page-recurrence", mount: mountRecurrenceDemo },` con
 `import { mountRecurrenceDemo } from "./demo-recurrence";`. La plantilla está en
 `gallery/pages/recurrence.html` para pegarla en `gallery/index.html`; `demo-recurrence.ts` importa
-`./pages/recurrence.css` y, mientras `nx-ui.css` no lo haga, `recurrence.css` del componente (esa
+`./pages/recurrence.css` y, mientras `nx32-elements.css` no lo haga, `recurrence.css` del componente (esa
 línea sobra al unir). La demo no usa backend de mentira.
 
 ## Solid
@@ -215,7 +215,7 @@ ni correr festivos.
   `fillRecurrenceRule`, `nextOccurrences`, `recurrenceOccurrences`, `parseRRule`, `toRRule`,
   `parseRecurrence` y los tipos `Recurrence*` son nuevos. Los re-exports nuevos de
   `date-range/logic.ts` no llegan a `src/index.ts` (date-range exporta con nombres propios desde su `index.ts`).
-- `src/styles/nx-ui.css` → `@import "../components/recurrence/recurrence.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/recurrence/recurrence.css";`
 - `vite.config.ts` → `recurrence: "src/components/recurrence/index.ts",`
 - `scripts/build-css.mjs` → `"recurrence": "src/components/recurrence/recurrence.css",`
 - `package.json` → `"./recurrence": { "types": "./dist/types/components/recurrence/index.d.ts", "import": "./dist/recurrence.js" }`

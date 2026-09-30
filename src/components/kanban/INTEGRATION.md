@@ -183,7 +183,7 @@ test("tablero en reposo, filtrado, con una columna plegada y con una tarjeta lev
 
 - **No toqué nada del núcleo** (`src/core/`) ni de otros componentes.
 - Falta, además de lo de arriba: `export * from "./components/kanban/index";` en `src/index.ts`;
-  `@import "../components/kanban/kanban.css";` en `src/styles/nx-ui.css`; la entrada
+  `@import "../components/kanban/kanban.css";` en `src/styles/nx32-elements.css`; la entrada
   `kanban: "src/components/kanban/index.ts"` en `vite.config.ts` (build de la librería) y
   `kanban: "src/components/kanban/kanban.css"` en `scripts/build-css.mjs`; `"./kanban"` y
   `"./kanban.css"` en los `exports` de `package.json` (como `./inbox`).
@@ -201,4 +201,4 @@ test("tablero en reposo, filtrado, con una columna plegada y con una tarjeta lev
 - En la demo, la orden en dólares usa `currency: "US$"` (símbolo) y no `"USD"`: con `es-CO`,
   `Intl` con `currencyDisplay: "narrowSymbol"` pinta `USD` como «$», igual que un peso.
 - `tsc --noEmit -p .` solo muestra los errores que ya había en `examples/solid/main.tsx` (no encuentra
-  `nx-ui` sin `dist/`); nada de este componente.
+  `nx32-elements` sin `dist/`); nada de este componente.

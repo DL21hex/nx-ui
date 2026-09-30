@@ -105,7 +105,7 @@
         </div>
         <pre role="tabpanel"><code>&lt;nx-sync ping="/api/ping"&gt;&lt;/nx-sync&gt;
 
-import { nxSync } from "nx-ui/sync";
+import { nxSync } from "nx32-elements/sync";
 
 // Sin conexión también: se guarda y se envía cuando se pueda.
 await nxSync.enqueue({
@@ -116,8 +116,8 @@ await nxSync.enqueue({
 nxSync.subscribe((state, event) =&gt; {
   if (event?.type === "done") pintarConfirmado(event.data);
 });</code></pre>
-        <pre role="tabpanel" hidden><code>import { Sync } from "nx-ui/solid/sync";
-import { nxSync } from "nx-ui/sync";
+        <pre role="tabpanel" hidden><code>import { Sync } from "nx32-elements/solid/sync";
+import { nxSync } from "nx32-elements/sync";
 
 &lt;Sync ping="/api/ping"
   fields={[{ key: "productos.*.cantidad", label: "Cantidad · {nombre}" }]}

@@ -322,7 +322,7 @@ export function addDemoRoute(prefix: string, handler: Handler): void {
 }
 export type { Handler as DemoHandler, Req as DemoRequest, Out as DemoOut };
 
-/** La parte de la ruta desde `/demo/`, esté la galería en la raíz o en una subcarpeta (`/nx-ui/demo/…`). */
+/** La parte de la ruta desde `/demo/`, esté la galería en la raíz o en una subcarpeta (`/nx32-elements/demo/…`). */
 function demoPath(url: URL): string | null {
   const i = url.pathname.indexOf("/demo/");
   return i >= 0 ? url.pathname.slice(i) : null;

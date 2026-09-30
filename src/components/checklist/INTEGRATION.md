@@ -46,7 +46,7 @@ límite a ~13,25 KB y cambia `#fields()` por un import estático (nada más depe
 `nx-signature`, `nx-handoff` y `nxToast` siguen con `import()`, como pide el encargo.
 
 `sortChecklistItems` vive en `logic.ts` pero **no** se exporta desde la entrada (solo lo usa el
-resumen): exportarlo cuesta ~150 B. Si se quiere en `nx-ui/checklist`, agregarlo a `index.ts`.
+resumen): exportarlo cuesta ~150 B. Si se quiere en `nx32-elements/checklist`, agregarlo a `index.ts`.
 
 Para `scripts/size.mjs` (en `BUDGET`):
 
@@ -75,7 +75,7 @@ En `PAGES`: `"#/checklist": { template: "page-checklist", mount: mountChecklistD
 `import { mountChecklistDemo } from "./demo-checklist";` e `import "./pages/checklist.css";`. La
 plantilla está en `gallery/pages/checklist.html` para pegarla en `gallery/index.html`.
 `demo-checklist.ts` importa `checklist.css` y `../src/components/checklist/index` directamente
-(mientras `nx-ui.css` y `src/index.ts` no los traigan); la línea del CSS sobra al unir.
+(mientras `nx32-elements.css` y `src/index.ts` no los traigan); la línea del CSS sobra al unir.
 
 El backend de mentira lo registra `demo-checklist.ts` al importarse (`addDemoRoute("/demo/checklist",
 …)`): `GET /demo/checklist/recepcion-oc-2291`, `PATCH …/steps/{id}` y `POST …/close`. Como
@@ -216,7 +216,7 @@ Ojo con `state`: pasarlo (aunque sea `{}`) evita el `GET`. Para que el elemento 
   `checklistNeedsNote`, `checklistOptions`, `checklistOverdue`, `checklistProgress`,
   `checklistResolved`, `cleanChecklistItems`, `cleanChecklistLog`, `cleanChecklistState`,
   `cleanChecklistSteps` y los tipos `Checklist*`.
-- `src/styles/nx-ui.css` → `@import "../components/checklist/checklist.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/checklist/checklist.css";`
 - `vite.config.ts` (entradas de la librería) → `checklist: "src/components/checklist/index.ts",`
   (los dos chunks salen solos de los `import()`).
 - `scripts/build-css.mjs` → `"checklist": "src/components/checklist/checklist.css",`

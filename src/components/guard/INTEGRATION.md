@@ -55,7 +55,7 @@ Y en `PAGES`: `"#/guard": { template: "page-guard", mount: mountGuardDemo },` co
 - `src/index.ts` → `export * from "./components/guard/index";` (los nombres no chocan: `NxGuard`,
   `GUARD_LABELS`, `guardCheck`, `robustRange`, `guardDate`, `readGuardAmount`, `guardReadings` y
   los tipos `Guard*`, `RobustRange`).
-- `src/styles/nx-ui.css` → `@import "../components/guard/guard.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/guard/guard.css";`
 - `vite.config.ts` (entradas de la librería) → `guard: "src/components/guard/index.ts",`
 - `scripts/build-css.mjs` → `"guard": "src/components/guard/guard.css",`
 - `package.json` → en `exports`:

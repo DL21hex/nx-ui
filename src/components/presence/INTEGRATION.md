@@ -31,7 +31,7 @@ Para `scripts/size.mjs`:
 Y para que existan esos archivos, como con survey: `presence: "src/components/presence/index.ts"`
 en las entradas de `vite.config.ts` (build de la librería), `presence: "src/components/presence/presence.css"`
 en `scripts/build-css.mjs`, `@import "../components/presence/presence.css";` en
-`src/styles/nx-ui.css`, y en `package.json` las entradas `"./presence"` (types + import, como
+`src/styles/nx32-elements.css`, y en `package.json` las entradas `"./presence"` (types + import, como
 `./survey`) y `"./presence.css": "./dist/presence.css"` en `exports`.
 
 ## Nav
@@ -50,7 +50,7 @@ y en `PAGES`, con `import { mountPresenceDemo } from "./demo-presence";`:
 
 La plantilla está en `gallery/pages/presence.html` (va dentro de `gallery/index.html`, con las
 demás). El CSS de la demo (`gallery/pages/presence.css`) lo importa `gallery/demo-presence.ts`;
-el del componente llega con `src/styles/nx-ui.css` (ver «Peso»). La demo no usa `demo-api.ts`:
+el del componente llega con `src/styles/nx32-elements.css` (ver «Peso»). La demo no usa `demo-api.ts`:
 todo va por `BroadcastChannel` y `push()`.
 
 ## Solid
@@ -258,4 +258,4 @@ test("presencia: la pila, los campos marcados, el aviso de bloqueo y la lista", 
   comparte los valores del formulario entre pestañas por un canal suyo
   (`nx-presence-demo:oc-2291`), para que se vea por qué importa el aviso.
 - `npx tsc --noEmit -p .` solo da los 4 errores que ya había en `examples/solid/main.tsx` (no
-  encuentra `nx-ui` sin un `dist/` construido).
+  encuentra `nx32-elements` sin un `dist/` construido).

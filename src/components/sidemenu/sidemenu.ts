@@ -3,7 +3,7 @@
  * padre, modo compacto de solo íconos y drawer en móvil.
  *
  * Reglas de diseño:
- * - **Light DOM.** Los estilos vienen de `nx-ui.css` y se pueden sobrescribir con CSS normal.
+ * - **Light DOM.** Los estilos vienen de `nx32-elements.css` y se pueden sobrescribir con CSS normal.
  * - **Solo AÑADE al final.** Los hijos del autor (`slot="header"`, `slot="footer"`) no se mueven;
  *   se colocan con `grid-template-areas`. Así la hidratación de Solid encuentra el DOM como lo
  *   dejó el servidor.

@@ -1,6 +1,6 @@
 /**
  * Registro de íconos. La librería no trae íconos en su núcleo: la app registra los que usa
- * (`registerIcons(lucide)` desde `nx-ui/icons`, o los suyos) y los datos solo los NOMBRAN.
+ * (`registerIcons(lucide)` desde `nx32-elements/icons`, o los suyos) y los datos solo los NOMBRAN.
  *
  * Un valor puede ser un `<svg>` completo o solo su contenido (paths de 24×24, trazo de Lucide).
  * Lo registra el desarrollador, no el backend: es el único HTML que la librería interpreta.

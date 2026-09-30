@@ -133,16 +133,16 @@ const BUDGET = [
   ["dist/checklist.css", 3 * 1024, "checklist (CSS)"],
   ["dist/recurrence.css", 1.5 * 1024, "recurrence (CSS)"],
   ["dist/jobs.css", 2.25 * 1024, "jobs (CSS)"],
-  ["dist/nx-ui.css", null, "todo el CSS (informativo)"],
-  ["dist/nx-ui.iife.js", null, "todo-en-uno + íconos (informativo)"],
+  ["dist/nx32-elements.css", null, "todo el CSS (informativo)"],
+  ["dist/nx32-elements.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];
 
 let failed = false;
 const kb = (n) => `${(n / 1024).toFixed(2)} KB`;
-console.log("\narchivo                 min+gzip    límite     ");
+console.log("\narchivo                     min+gzip    límite     ");
 for (const [file, limit, desc] of BUDGET) {
   if (!existsSync(file)) {
-    console.log(`${file.padEnd(24)}FALTA`);
+    console.log(`${file.padEnd(28)}FALTA`);
     failed = true;
     continue;
   }
@@ -157,6 +157,6 @@ for (const [file, limit, desc] of BUDGET) {
   const ok = limit === null || size <= limit;
   failed ||= !ok;
   const mark = limit === null ? "·" : ok ? "✓" : "✗ SE PASA";
-  console.log(`${file.padEnd(24)}${kb(size).padEnd(12)}${(limit === null ? "—" : kb(limit)).padEnd(11)}${mark}  ${desc}`);
+  console.log(`${file.padEnd(28)}${kb(size).padEnd(12)}${(limit === null ? "—" : kb(limit)).padEnd(11)}${mark}  ${desc}`);
 }
 if (failed) process.exit(1);

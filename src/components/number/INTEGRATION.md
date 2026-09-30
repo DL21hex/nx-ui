@@ -241,7 +241,7 @@ test("número: factura con vista previa, error y aviso de recorte", async ({ pag
   misma línea en number; mientras tanto, se convierte (`e as Event as CustomEvent<NumberChangeDetail>`).
   En Solid pasa igual con `CustomEvents["nx-change"]`: el envoltorio convierte el tipo.
 - **Otros archivos a tocar** (como con survey): `src/index.ts` → `export * from "./components/number/index";`;
-  `src/styles/nx-ui.css` → `@import "../components/number/number.css";`; `vite.config.ts` (entradas
+  `src/styles/nx32-elements.css` → `@import "../components/number/number.css";`; `vite.config.ts` (entradas
   de la librería) → `number: "src/components/number/index.ts"`; `scripts/build-css.mjs` →
   `number: "src/components/number/number.css"`; `package.json` → `"./number": { "types":
   "./dist/types/components/number/index.d.ts", "import": "./dist/number.js" }` y

@@ -69,7 +69,7 @@ costos.series = await (await fetch("/costos/produccion?anio=2026")).json();
 // [{ id: "mp", label: "Materia prima", points: [{ x: "2026-01", y: 388400000 }, …] }, …]
 costos.anomalies = [{ series: "mp", x: "2026-08", label: "Acero +18 %" }];
 costos.addEventListener("nx-trend-why", (e) =&gt; analitica.track("por-que", e.detail.point));</code></pre>
-            <pre role="tabpanel" hidden><code>import { Trend } from "nx-ui/solid/trend";
+            <pre role="tabpanel" hidden><code>import { Trend } from "nx32-elements/solid/trend";
 
 &lt;Trend heading="Ventas por mes" kind="bar" format="money" currency="COP"
   series={ventas()} explainEndpoint="/ia/por-que"

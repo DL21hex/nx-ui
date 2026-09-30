@@ -19,7 +19,7 @@ Medido con los comandos del brief (gzip -9):
   archivo): 14.828 B; esa diferencia es el chunk de IA, que en `dist/` sale aparte (y es el mismo
   `dist/ai.js` si la app ya lo usa).
 - CSS `src/components/trend/trend.css`: **2.454 B (2,4 KB)**. No incluye el de `<nx-ai-answer>`
-  (`ai.css`), que el popover necesita: ya viene en `nx-ui.css`; quien cargue CSS por componente
+  (`ai.css`), que el popover necesita: ya viene en `nx32-elements.css`; quien cargue CSS por componente
   debe cargar también `ai.css`.
 
 Límites propuestos para `scripts/size.mjs` (en `BUDGET`):
@@ -229,15 +229,15 @@ test("tendencias: gráfico, tooltip, popover con la respuesta y tabla", async ({
 - **No toqué el núcleo** (`src/core/`). Uso `h()`, `safeHref()`, `nxFormat()`/`resolveLocale()` y
   `boolAttr()`; el SVG se arma con un ayudante propio (`createElementNS`, textos como nodos de texto).
 - **Otros archivos a tocar** (como con los demás): `src/index.ts` → `export * from
-  "./components/trend/index";`; `src/styles/nx-ui.css` → `@import "../components/trend/trend.css";`;
+  "./components/trend/index";`; `src/styles/nx32-elements.css` → `@import "../components/trend/trend.css";`;
   `vite.config.ts` (entradas de la librería) → `trend: "src/components/trend/index.ts"`;
   `scripts/build-css.mjs` → `trend: "src/components/trend/trend.css"`; `package.json` →
   `"./trend": { "types": "./dist/types/components/trend/index.d.ts", "import": "./dist/trend.js" }`
   y `"./trend.css": "./dist/trend.css"`. Los nombres que exporta no chocan con los que ya hay
   (`niceTicks`, `periodLabel`, `detectAnomalies` son nuevos; revisar si se prefiere prefijarlos).
 - **Galería (para probar):** además de la plantilla y la navegación, `gallery/main.ts` necesita el CSS
-  del componente mientras `nx-ui.css` no lo importe (`import "../src/components/trend/trend.css";`,
-  que sobra una vez agregado a `nx-ui.css`).
+  del componente mientras `nx32-elements.css` no lo importe (`import "../src/components/trend/trend.css";`,
+  que sobra una vez agregado a `nx32-elements.css`).
 - **Colores:** la paleta categórica es la de referencia de la skill de visualización, validada con su
   script contra `--nx-card` (blanco y oklch 0,225): pasa separación para daltonismo y el piso de
   visión normal en claro y oscuro; en claro, aqua/amarillo/magenta quedan por debajo de 3:1 contra el
@@ -250,7 +250,7 @@ test("tendencias: gráfico, tooltip, popover con la respuesta y tabla", async ({
   una no lo mueve). Con `money`, los ticks van compactos sin símbolo («400 M»), como pide el brief.
 - **Repreguntar:** usa la caja de `<nx-ai-answer>`, con el mismo `context`; mientras una respuesta
   llega, Enter la detiene (es el comportamiento de `<nx-ai-answer>`).
-- **`tsc`:** los únicos errores son los de `examples/solid/main.tsx` (no encuentra `nx-ui` porque el
+- **`tsc`:** los únicos errores son los de `examples/solid/main.tsx` (no encuentra `nx32-elements` porque el
   worktree no tiene `dist/`), preexistentes y ajenos a este componente.
 - **Verificado solo en Chromium** (Playwright con el Chromium instalado, más captura en claro,
   oscuro y 390 px, y axe en claro y oscuro sin violaciones). No corrí Firefox ni WebKit.

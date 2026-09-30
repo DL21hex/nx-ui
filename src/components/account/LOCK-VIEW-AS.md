@@ -6,7 +6,7 @@ Dos módulos sin elemento propio que usa `<nx-account>`: `lock.ts` (`nxLock`) y 
 ## Lo que falta conectar
 
 1. **CSS.** `lock.css` no está importado en ningún lado: agregarlo a `account.css` (o
-   `@import "../components/account/lock.css";` en `src/styles/nx-ui.css`) y, si se publica aparte, al
+   `@import "../components/account/lock.css";` en `src/styles/nx32-elements.css`) y, si se publica aparte, al
    presupuesto de `scripts/size.mjs`.
 2. **Volver a bloquear tras recargar.** Si alguien recarga la página bloqueada, el bloqueo del cliente se
    pierde. `nxLock` deja un marcador en `sessionStorage` (`nx-locked`) mientras está bloqueada, y

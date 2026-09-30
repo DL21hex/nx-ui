@@ -15,7 +15,7 @@ export const MAX_LINE = 1 << 20;
 
 export class StreamLimitError extends Error {
   constructor(limit: number) {
-    super(`[nx-ui] línea de más de ${limit} caracteres en el stream`);
+    super(`[nx32-elements] línea de más de ${limit} caracteres en el stream`);
     this.name = "StreamLimitError";
   }
 }

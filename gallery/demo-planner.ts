@@ -6,7 +6,7 @@
  * cambia a una flota generada que llega por `source`, un mes a la vez.
  */
 import "../src/components/planner/index";
-// Mientras `nx-ui.css` no lo importe (ver INTEGRATION.md); al unir, esta línea sobra.
+// Mientras `nx32-elements.css` no lo importe (ver INTEGRATION.md); al unir, esta línea sobra.
 import type { NxPlanner, PlannerBooking, PlannerResource } from "../src/components/planner/index";
 import { plannerParse } from "../src/components/planner/logic";
 import { addDemoRoute } from "./demo-api";

@@ -147,7 +147,7 @@
 
 precio.addEventListener("input", () =&gt; (total.value = cantidad.value * precio.value));
 precio.addEventListener("nx-change", (e) =&gt; guardar(e.detail.value));   // {value, text}</code></pre>
-        <pre role="tabpanel" hidden><code>import { NumberInput } from "nx-ui/solid/number";
+        <pre role="tabpanel" hidden><code>import { NumberInput } from "nx32-elements/solid/number";
 
 &lt;NumberInput format="money" currency="COP" name="precio" step={1000} min={0} required
   value={precio()} onInput={(e) =&gt; setPrecio(e.currentTarget.value)}

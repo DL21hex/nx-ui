@@ -1,6 +1,6 @@
 # Licencias de terceros
 
-`nx-ui/icons` (y el bundle `nx-ui.iife.js`) incluye íconos de [Lucide](https://lucide.dev),
+`nx32-elements/icons` (y el bundle `nx32-elements.iife.js`) incluye íconos de [Lucide](https://lucide.dev),
 distribuidos bajo la licencia ISC:
 
 ```

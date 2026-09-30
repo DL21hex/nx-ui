@@ -246,7 +246,7 @@ pantalla con mouse, lápiz o dedo, o en el celular de quien recibe.
   `typedSignatureSVG`, `parseSignatureValue`, `cleanSignatureMeta`, `normalizeSignedText` y los tipos
   `Signature*` son nuevos. `strokeWidths` se exporta como `signatureStrokeWidths` (el nombre corto
   es genérico); `escapeXml`, `cleanInk` y `safeSignatureSvg` no se exportan desde el índice.
-- `src/styles/nx-ui.css` → `@import "../components/signature/signature.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/signature/signature.css";`
 - `vite.config.ts` → `signature: "src/components/signature/index.ts",`
 - `scripts/build-css.mjs` → `"signature": "src/components/signature/signature.css",`
 - `package.json` → `"./signature": { "types": "./dist/types/components/signature/index.d.ts", "import": "./dist/signature.js" }`

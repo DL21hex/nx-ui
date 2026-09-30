@@ -209,7 +209,7 @@ escanea) y el resultado aparece solo en el formulario.
 - `src/index.ts` → `export * from "./components/handoff/index";` (los nombres no chocan:
   `qrMatrix`, `qrSvgPath`, `QrEcc`, `QrOptions`, `setHandoffFiles`, `handoffCountdown`,
   `handoffRetryDelay`, `parseHandoff*` son nuevos).
-- `src/styles/nx-ui.css` → `@import "../components/handoff/handoff.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/handoff/handoff.css";`
 - `vite.config.ts` (entradas de la librería) → `handoff: "src/components/handoff/index.ts",`
 - `scripts/build-css.mjs` → `"handoff": "src/components/handoff/handoff.css",`
 - `package.json` → en `exports`:
@@ -410,7 +410,7 @@ app.get("/api/handoff/:id/files/:key", (c) => {
 app.get("/m/handoff", (c) => {
   c.header("Referrer-Policy", "no-referrer");
   c.header("Cache-Control", "no-store");
-  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/nx-ui.css"><script type="module" src="/handoff.js"></script><main style="padding:16px"><nx-handoff side="phone" endpoint="/api/handoff"></nx-handoff></main>`);
+  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/nx32-elements.css"><script type="module" src="/handoff.js"></script><main style="padding:16px"><nx-handoff side="phone" endpoint="/api/handoff"></nx-handoff></main>`);
 });
 
 // Limpieza: las sesiones y sus archivos se van un minuto después de vencer.

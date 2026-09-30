@@ -56,7 +56,7 @@ En `gallery/main.ts`, dentro de `NAV`:
 En `PAGES`: `"#/print": { template: "page-print", mount: mountPrintDemo },` con
 `import { mountPrintDemo } from "./demo-print";` e `import "./pages/print.css";`. La plantilla está en
 `gallery/pages/print.html` para pegarla en `gallery/index.html`. `demo-print.ts` importa `print.css`
-directamente (mientras `nx-ui.css` no lo haga); esa línea sobra al unir. La demo usa `numberToWords`
+directamente (mientras `nx32-elements.css` no lo haga); esa línea sobra al unir. La demo usa `numberToWords`
 de `src/components/number/logic.ts` (el total en letras) y `formatNit`/`nitCheckDigit` de `src/core/nit.ts`;
 la librería no los importa. No registra rutas en `demo-api.ts`.
 
@@ -204,7 +204,7 @@ hijas directas del elemento.
   `fillPageText` y los tipos `Print*` son nuevos (ningún componente exporta nada con «print»).
   `toMm`, `parseZoom`, `stepZoom`, `ZOOM_STEPS` y `PX_PER_MM` quedan internos a propósito (nombres
   genéricos que chocarían).
-- `src/styles/nx-ui.css` → `@import "../components/print/print.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/print/print.css";`
 - `vite.config.ts` → `print: "src/components/print/index.ts",`
 - `scripts/build-css.mjs` → `"print": "src/components/print/print.css",`
 - `package.json` → `"./print": { "types": "./dist/types/components/print/index.d.ts", "import": "./dist/print.js" }`

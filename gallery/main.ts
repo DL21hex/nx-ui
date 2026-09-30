@@ -1,4 +1,4 @@
-import "../src/styles/nx-ui.css";
+import "../src/styles/nx32-elements.css";
 import "../src/styles/palettes.css";
 import "./gallery.css";
 import { render, type BduiNode } from "../src/bdui";
@@ -62,7 +62,7 @@ installDemoApi();
 
 // ---------------------------------------------------------------- tema de la galería
 
-const THEME_KEY = "nx-ui-gallery-theme";
+const THEME_KEY = "nx32-elements-gallery-theme";
 function applyTheme(theme: string) {
   if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
   else delete document.documentElement.dataset.theme;
@@ -91,7 +91,7 @@ document.addEventListener("click", (e) => {
 
 // ---------------------------------------------------------------- paleta de la galería
 
-const PALETTE_KEY = "nx-ui-gallery-palette";
+const PALETTE_KEY = "nx32-elements-gallery-palette";
 const PALETTES = [
   { id: "indigo", name: "Índigo", desc: "La de siempre: azul eléctrico sobre grises fríos." },
   { id: "oceano", name: "Océano", desc: "Azul profundo y grises con un toque de mar." },
@@ -221,7 +221,7 @@ function route() {
   // La paleta le pregunta al asistente de la página, si hay uno.
   cmd.agent = page.querySelector("nx-agent")?.id ?? null;
   page.scrollTop = 0;
-  document.title = `nx-ui · ${NAV.find((n) => n.href === hash)?.label ?? "Galería"}`;
+  document.title = `nx32-elements · ${NAV.find((n) => n.href === hash)?.label ?? "Galería"}`;
 }
 // ---------------------------------------------------------------- paleta de comandos (dogfooding)
 

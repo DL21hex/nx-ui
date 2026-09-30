@@ -53,7 +53,7 @@ En `gallery/main.ts`, dentro de `NAV` (después de «Tablero», por afinidad):
 En `PAGES`: `"#/planner": { template: "page-planner", mount: mountPlannerDemo },` con
 `import { mountPlannerDemo } from "./demo-planner";`. La plantilla está en `gallery/pages/planner.html`
 para pegarla en `gallery/index.html` (no necesita CSS de página). `demo-planner.ts` importa
-`planner.css` directamente mientras `nx-ui.css` no lo haga; esa línea sobra al unir.
+`planner.css` directamente mientras `nx32-elements.css` no lo haga; esa línea sobra al unir.
 
 La demo registra `addDemoRoute("/demo/planner", …)` al importarse: `PATCH`/`POST`/`DELETE
 /demo/planner/reservas/{id}` (350 ms; 409 con `{message}` si el tramo pisa un mantenimiento del
@@ -175,7 +175,7 @@ export function Planner(props: PlannerProps): JSX.Element {
   `plannerX`, `cleanPlannerBookings`, `cleanPlannerResources` y los tipos `Planner*` son nuevos (sin
   choque con `addDays`/`startOfWeek` de date-range, `fill` de kanban, etc., que aquí van renombrados o
   no se exportan).
-- `src/styles/nx-ui.css` → `@import "../components/planner/planner.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/planner/planner.css";`
 - `vite.config.ts` → `planner: "src/components/planner/index.ts",`
 - `scripts/build-css.mjs` → `"planner": "src/components/planner/planner.css",`
 - `package.json` → `"./planner": { "types": "./dist/types/components/planner/index.d.ts", "import": "./dist/planner.js" }`

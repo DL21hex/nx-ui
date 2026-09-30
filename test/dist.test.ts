@@ -7,13 +7,13 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { build } from "esbuild";
 import { describe, expect, it } from "vitest";
 
-const hasDist = existsSync("dist/nx-ui.iife.js");
+const hasDist = existsSync("dist/nx32-elements.iife.js");
 
 describe.skipIf(!hasDist)("dist/", () => {
-  it("el IIFE registra <nx-sidemenu> y expone NxUI", () => {
-    (0, eval)(readFileSync("dist/nx-ui.iife.js", "utf8"));
+  it("el IIFE registra <nx-sidemenu> y expone Nx32Elements", () => {
+    (0, eval)(readFileSync("dist/nx32-elements.iife.js", "utf8"));
     expect(customElements.get("nx-sidemenu")).toBeTypeOf("function");
-    expect((globalThis as unknown as { NxUI: { render: unknown } }).NxUI.render).toBeTypeOf("function");
+    expect((globalThis as unknown as { Nx32Elements: { render: unknown } }).Nx32Elements.render).toBeTypeOf("function");
   });
 
   it("una app que solo importa registerIcons conserva el registro del elemento", async () => {
@@ -34,7 +34,7 @@ describe.skipIf(!hasDist)("dist/", () => {
     for (const f of solid()) expect(readFileSync(`dist/solid/${f}`, "utf8"), f).not.toMatch(/customElements\.define|extends Base/);
   });
 
-  it("cada componente de Solid trae solo el suyo: nx-ui/solid/grid no arrastra la librería", () => {
+  it("cada componente de Solid trae solo el suyo: nx32-elements/solid/grid no arrastra la librería", () => {
     for (const f of solid().filter((f) => f !== "index.jsx")) {
       const imports = [...readFileSync(`dist/solid/${f}`, "utf8").matchAll(/(?:from |import )"(\.\.?\/[\w-]+\.jsx?)"/g)].map((m) => m[1]);
       expect(imports, f).toEqual([`../${f.replace(".jsx", ".js")}`]);

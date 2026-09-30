@@ -236,7 +236,7 @@ test("simulador: en la base, con notas de advertencia y peligro, escribiendo y r
 
 - **No toqué el núcleo** (`src/core/`) ni otros componentes.
 - **Otros archivos a tocar** (como con los demás): `src/index.ts` → `export * from "./components/what-if/index";`;
-  `src/styles/nx-ui.css` → `@import "../components/what-if/what-if.css";`; `vite.config.ts` (entradas
+  `src/styles/nx32-elements.css` → `@import "../components/what-if/what-if.css";`; `vite.config.ts` (entradas
   de la librería) → `"what-if": "src/components/what-if/index.ts"`; `scripts/build-css.mjs` →
   `"what-if": "src/components/what-if/what-if.css"`; `package.json` → `"./what-if": { "types":
   "./dist/types/components/what-if/index.d.ts", "import": "./dist/what-if.js" }` y
@@ -244,7 +244,7 @@ test("simulador: en la base, con notas de advertencia y peligro, escribiendo y r
   `whatIf*`, `parseWhatIfEvent`, tipos `WhatIf*`) no chocan con los que ya hay.
 - `gallery/demo-what-if.ts` importa `../src/components/what-if/index` para registrar el elemento
   (sobra cuando `src/index.ts` lo exporte, pero no molesta). Para probar importé temporalmente el CSS
-  del componente en `main.ts`; con la línea de `nx-ui.css` ya no hace falta.
+  del componente en `main.ts`; con la línea de `nx32-elements.css` ya no hace falta.
 - **Base de las métricas:** si un evento `metric` no trae `base`, la base es el valor que dio el
   cálculo con todos los supuestos en la base (el primero, al conectar). Lo mismo con los puntos de
   una serie. El backend de la demo manda `base` siempre, que es lo más robusto.

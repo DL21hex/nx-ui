@@ -30,7 +30,7 @@ trae evidencia, capa de anillos, sugerencias, deshacer y streaming. Límites pro
 ```
 
 Además: `src/index.ts` → `export * from "./components/paste-fill/index";`;
-`src/styles/nx-ui.css` → `@import "../components/paste-fill/paste-fill.css";`;
+`src/styles/nx32-elements.css` → `@import "../components/paste-fill/paste-fill.css";`;
 `scripts/build-css.mjs` → `"paste-fill": "src/components/paste-fill/paste-fill.css"`;
 `vite.config.ts` → entrada `"paste-fill": "src/components/paste-fill/index.ts"` y el plugin del
 servidor de la demo (ver Notas); `package.json` → la subruta `./paste-fill` como las demás.
@@ -224,4 +224,4 @@ test("pegar y llenar: en reposo, con revisar y sugerencia, y con el servidor que
 - **Prueba intermitente ajena:** corriendo todo e2e en paralelo, `a11y.spec.ts › encuesta…` falló
   una vez y pasó sola al repetirla (no es de este componente).
 - `tsc --noEmit -p .` solo reporta los errores que ya estaban en `examples/solid/main.tsx`
-  (en este entorno no encuentra el paquete `nx-ui` sin compilar).
+  (en este entorno no encuentra el paquete `nx32-elements` sin compilar).

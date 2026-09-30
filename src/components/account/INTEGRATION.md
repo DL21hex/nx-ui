@@ -68,7 +68,7 @@ En `gallery/main.ts`, dentro de `NAV`:
 En `PAGES`: `"#/account": { template: "page-account", mount: mountAccountDemo },` con
 `import { mountAccountDemo } from "./demo-account";` e `import "./pages/account.css";`. La plantilla
 está en `gallery/pages/account.html` para pegarla en `gallery/index.html`. `demo-account.ts` importa
-`account.css` directamente (mientras `nx-ui.css` no lo haga); esa línea sobra al unir.
+`account.css` directamente (mientras `nx32-elements.css` no lo haga); esa línea sobra al unir.
 
 La demo registra `/demo/account/unlock` (clave «1234»), `/demo/account/extend` y
 `/demo/account/people?q=` con `addDemoRoute`, y le pone `account="acc"` al `#cmd` de la galería para
@@ -76,14 +76,14 @@ que <kbd>Ctrl</kbd> <kbd>K</kbd> «oscuro» o «bogotá» funcione.
 
 ### Choque de preferencias con la galería (decides al unir)
 
-La galería ya guarda tema y paleta en `nx-ui-gallery-theme` (`auto|light|dark`) y
-`nx-ui-gallery-palette`, y los aplica al cargar. Si la cuenta de la demo guardara en su propia clave,
+La galería ya guarda tema y paleta en `nx32-elements-gallery-theme` (`auto|light|dark`) y
+`nx32-elements-gallery-palette`, y los aplica al cargar. Si la cuenta de la demo guardara en su propia clave,
 al volver a la página de Cuenta aplicaría su tema viejo encima del de la galería. Lo que hace la demo
 hoy: **`storage="none"`** (la cuenta no guarda ni aplica nada al conectar; lee el estado de `<html>`
 al abrir) y, en `nx-account-theme`, escribe las claves de la galería y marca sus botones
 `[data-theme-set]`. Costo: los «recientes» de empresa no persisten en la demo (con tres empresas no
-se muestran de todos modos). Alternativa más limpia: que `gallery/main.ts` use `applyAccountPrefs("nx-ui-gallery")`
-y la demo `storage="nx-ui-gallery"`, migrando las dos claves viejas.
+se muestran de todos modos). Alternativa más limpia: que `gallery/main.ts` use `applyAccountPrefs("nx32-elements-gallery")`
+y la demo `storage="nx32-elements-gallery"`, migrando las dos claves viejas.
 
 ## Solid
 
@@ -265,7 +265,7 @@ compacto; en el celular, una hoja desde abajo):
   `accountInitials`, `formatSessionRemaining`, `normalizePalettes`, `pickTheme`, `revealRadius`,
   `sessionPhase`, `sessionRemaining`, `accountStatusUntil`, `BUILTIN_PALETTES` y los tipos `Account*`
   son nuevos (sin choque con `formatElapsed`, `countdown` de handoff, `initials`, etc.).
-- `src/styles/nx-ui.css` → `@import "../components/account/account.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/account/account.css";`
 - `vite.config.ts` → `account: "src/components/account/index.ts",`
 - `scripts/build-css.mjs` → `"account": "src/components/account/account.css",`
 - `package.json` → `"./account": { "types": "./dist/types/components/account/index.d.ts", "import": "./dist/account.js" }`

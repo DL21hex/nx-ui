@@ -62,7 +62,7 @@ En `gallery/main.ts`, dentro de `NAV`:
 En `PAGES`: `"#/jobs": { template: "page-jobs", mount: mountJobsDemo },` con
 `import { mountJobsDemo } from "./demo-jobs";` e `import "./pages/jobs.css";`. La plantilla está en
 `gallery/pages/jobs.html` para pegarla en `gallery/index.html`. `demo-jobs.ts` importa `jobs.css`
-directamente (mientras `nx-ui.css` no lo haga); esa línea sobra al unir.
+directamente (mientras `nx32-elements.css` no lo haga); esa línea sobra al unir.
 
 La demo registra `/demo/jobs` con `addDemoRoute` **al importarse** (el elemento pide la lista apenas se
 conecta): lista, `POST` para lanzar, `/{id}`, `/{id}/cancel`, `/{id}/retry` y `/eventos` (NDJSON abierto,
@@ -210,7 +210,7 @@ trabajo vive en el servidor y una píldora discreta en la barra dice cómo va.
   `syncBackoff`/`syncRetryAfter`): `NxJobs`, `JOBS_LABELS`, `cleanJob`, `cleanJobs`, `isJobActive`,
   `mergeJob`, `splitJobs`, `jobFraction`, `jobsFraction`, `jobPace`, `jobLeft`, `jobsDuration`,
   `jobsBackoff`, `jobsRetryAfter`, `jobsPollDelay`, `jobUrl`, `readJobsMemo` y los tipos `Job*`/`Jobs*`.
-- `src/styles/nx-ui.css` → `@import "../components/jobs/jobs.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/jobs/jobs.css";`
 - `vite.config.ts` → `jobs: "src/components/jobs/index.ts",` (el chunk del panel sale solo del `import()`).
 - `scripts/build-css.mjs` → `"jobs": "src/components/jobs/jobs.css",`
 - `package.json` → `"./jobs": { "types": "./dist/types/components/jobs/index.d.ts", "import": "./dist/jobs.js" }`

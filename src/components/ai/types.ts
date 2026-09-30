@@ -1,5 +1,5 @@
 /**
- * Protocolo de streaming de IA de nx-ui. Una línea = un evento (NDJSON, o `data:` de SSE). Es
+ * Protocolo de streaming de IA de nx32-elements. Una línea = un evento (NDJSON, o `data:` de SSE). Es
  * independiente del modelo: cualquier backend que emita estas líneas sirve.
  *
  *   {"type":"step","id":"s1","label":"Consultando costos","status":"run"}

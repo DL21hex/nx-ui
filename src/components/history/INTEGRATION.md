@@ -205,7 +205,7 @@ test("historial: la línea, viajando en el tiempo y con un filtro", async ({ pag
 
 - No toqué `src/core/`. El componente importa `nxToast` de `../toast/toast` y registra el toaster
   con `../toast/index`, como `<nx-inbox>`.
-- CSS: agregar `@import "../components/history/history.css";` a `src/styles/nx-ui.css`.
+- CSS: agregar `@import "../components/history/history.css";` a `src/styles/nx32-elements.css`.
 - `src/index.ts`: `export * from "./components/history/index";` (o la lista explícita como los
   demás). Exporta `NxHistory`, `HISTORY_LABELS`, `historyStateAt`, `wordDiff`, `revertChange`,
   `cleanHistoryEvents` y los tipos `History*`/`DiffPart`.
@@ -217,4 +217,4 @@ test("historial: la línea, viajando en el tiempo y con un filtro", async ({ pag
 - La prueba DOM fija el reloj (`vi.useFakeTimers({ toFake: ["Date"] })`) para que «Hoy», «Ayer» y
   «hace 3 h» no dependan de la hora a la que corre.
 - `npx tsc --noEmit -p .` solo da los errores que ya había en `examples/solid/main.tsx` (no
-  encuentra `nx-ui` sin un `dist/` construido); nada de este componente.
+  encuentra `nx32-elements` sin un `dist/` construido); nada de este componente.

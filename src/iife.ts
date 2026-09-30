@@ -1,6 +1,6 @@
 /**
  * Bundle todo-en-uno para `<script>`: registra los componentes, trae los íconos Lucide ya
- * registrados y expone `window.NxUI` (con `render` para payloads BDUI).
+ * registrados y expone `window.Nx32Elements` (con `render` para payloads BDUI).
  */
 import { registerIcons } from "./core/icons";
 import { lucide } from "./icons/index";

@@ -152,7 +152,7 @@
   // Sin formulario, con tu propio botón:
   if (await review.review()) await guardar();
 &lt;/script&gt;</code></pre>
-            <pre role="tabpanel" hidden><code>import { Review } from "nx-ui/solid/review";
+            <pre role="tabpanel" hidden><code>import { Review } from "nx32-elements/solid/review";
 
 &lt;Review mode="significant" initial={orden()} onConfirm={(e) =&gt; guardarBitacora(e.detail.changes)}
   onDirty={(e) =&gt; setSucio(e.detail.dirty)}&gt;

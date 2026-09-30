@@ -10,7 +10,7 @@
  */
 import "../src/components/thread/index";
 import "../src/components/presence/index";
-// Mientras `nx-ui.css` no lo importe (se agrega al unir; ver INTEGRATION.md).
+// Mientras `nx32-elements.css` no lo importe (se agrega al unir; ver INTEGRATION.md).
 import type { NxPresence } from "../src/components/presence/index";
 import type { NxThread, ThreadComment } from "../src/components/thread/index";
 import { addDemoRoute, type DemoOut } from "./demo-api";

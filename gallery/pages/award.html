@@ -64,7 +64,7 @@ rfq.quotes = [{ item: "A15", supplier: "ferrecaribe", price: 18500, leadTime: 5 
 rfq.criteria = [{ id: "precio", label: "Precio", weight: 50 }, { id: "plazo", label: "Plazo", weight: 30 }];
 rfq.addEventListener("nx-award-submit", (e) =&gt;
   fetch("/compras/rfq/412/adjudicar", { method: "POST", body: JSON.stringify(e.detail) }));</code></pre>
-        <pre role="tabpanel" hidden><code>import { Award } from "nx-ui/solid/award";
+        <pre role="tabpanel" hidden><code>import { Award } from "nx32-elements/solid/award";
 
 &lt;Award heading="RFQ-0412" endpoint="/compras/rfq/412/recomendar" currency="COP" requireReason
   suppliers={proveedores()} items={articulos()} quotes={cotizaciones()} criteria={criterios}

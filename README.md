@@ -1,4 +1,4 @@
-# nx-ui
+# nx32-elements
 
 Componentes web ultraligeros, **sin dependencias**, compatibles con BDUI. Se usan igual en una
 página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el backend.
@@ -36,10 +36,10 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-checklist>` + núcleo (ESM); los campos de evidencia, el resumen y la firma se cargan aparte | ≈ 11,8 KB |
 | `<nx-recurrence>` + núcleo (ESM); el intérprete de frases y los controles se cargan aparte | ≈ 9,1 KB |
 | `<nx-jobs>` + núcleo (ESM); el panel se carga aparte | ≈ 8,8 KB |
-| `nx-ui.css` (tokens + todos los componentes) | ≈ 37,1 KB |
-| `nx-ui.iife.js` todo-en-uno con íconos | ≈ 207 KB |
+| `nx32-elements.css` (tokens + todos los componentes) | ≈ 37,1 KB |
+| `nx32-elements.iife.js` todo-en-uno con íconos | ≈ 207 KB |
 
-Cada componente es una subruta (`nx-ui/sidemenu`, `nx-ui/button`): una app solo carga lo que importa.
+Cada componente es una subruta (`nx32-elements/sidemenu`, `nx32-elements/button`): una app solo carga lo que importa.
 
 `npm run size` imprime los números actuales y falla si una pieza (el JS o el CSS de un componente,
 o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
@@ -49,7 +49,7 @@ o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
 1. **Primero una librería normal.** Atributos para lo simple, propiedades para los datos
    (`items`), eventos para las acciones y slots para tu contenido.
 2. **BDUI sin costo.** Ninguna prop es una función: todo lo que acepta un componente puede venir
-   del backend. `nx-ui/bdui` es un adaptador opcional que convierte `{component, props}` en elementos.
+   del backend. `nx32-elements/bdui` es un adaptador opcional que convierte `{component, props}` en elementos.
 3. **El navegador hace el trabajo pesado.** Los flotantes y el drawer usan la Popover API: capa
    superior, clic fuera, Escape y devolución del foco sin código propio.
 4. **Neutro y tematizable.** Todo el color sale de variables `--nx-*` (el mismo vocabulario que el
@@ -75,12 +75,12 @@ o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
 
 ## Paletas
 
-`nx-ui/palettes.css` trae nueve paletas listas: `indigo` (por defecto), `oceano`, `esmeralda`,
+`nx32-elements/palettes.css` trae nueve paletas listas: `indigo` (por defecto), `oceano`, `esmeralda`,
 `bosque`, `terracota`, `frambuesa`, `violeta`, `medianoche` y `grafito`. Se aplican con un atributo,
 en `<html>` o en cualquier zona de la página:
 
 ```html
-<link rel="stylesheet" href="nx-ui/palettes.css" />
+<link rel="stylesheet" href="nx32-elements/palettes.css" />
 <html data-nx-palette="oceano">
 ```
 
@@ -101,8 +101,8 @@ Una paleta propia son cinco números; claro, oscuro y todos los tokens derivados
 **HTML plano**, sin build:
 
 ```html
-<link rel="stylesheet" href="nx-ui.css" />
-<script src="nx-ui.iife.js"></script>
+<link rel="stylesheet" href="nx32-elements.css" />
+<script src="nx32-elements.iife.js"></script>
 
 <button popovertarget="menu" aria-label="Abrir menú">☰</button> <!-- solo se ve en móvil -->
 <nx-sidemenu id="menu" active="/ventas/pedidos" collapsible>
@@ -120,20 +120,20 @@ Una paleta propia son cinco números; claro, oscuro y todos los tokens derivados
 **Módulos (ESM):**
 
 ```js
-import "nx-ui/nx-ui.css";
-import { registerIcons } from "nx-ui"; // registra <nx-sidemenu>
-import { lucide } from "nx-ui/icons"; // opcional: ~28 íconos Lucide
+import "nx32-elements/nx32-elements.css";
+import { registerIcons } from "nx32-elements"; // registra <nx-sidemenu>
+import { lucide } from "nx32-elements/icons"; // opcional: ~28 íconos Lucide
 registerIcons(lucide);
 ```
 
-**SolidJS:** cada componente tiene su envoltorio con los tipos JSX en `nx-ui/solid/<componente>`
-(`nx-ui/solid/grid`, `nx-ui/solid/sidemenu`…). Así la app carga solo lo que usa. `nx-ui/solid` los
+**SolidJS:** cada componente tiene su envoltorio con los tipos JSX en `nx32-elements/solid/<componente>`
+(`nx32-elements/solid/grid`, `nx32-elements/solid/sidemenu`…). Así la app carga solo lo que usa. `nx32-elements/solid` los
 reexporta todos, pero importa la librería entera: sirve para prototipos, no para producción. Se
 publica como JSX sin compilar bajo la condición de export `"solid"`, así que vite-plugin-solid lo
 compila para SSR o navegador.
 
 ```tsx
-import { SideMenu } from "nx-ui/solid/sidemenu";
+import { SideMenu } from "nx32-elements/solid/sidemenu";
 
 <SideMenu items={menu()} active={useLocation().pathname} collapsible collapsed={compact()}
   onToggle={(e) => { e.preventDefault(); setCompact(e.detail.collapsed); }} />
@@ -146,7 +146,7 @@ envoltorio, hay que usar `prop:items` y `bool:collapsed`. Con `items={…}` el S
 **BDUI:**
 
 ```js
-import { render } from "nx-ui/bdui";
+import { render } from "nx32-elements/bdui";
 render({ component: "SideMenu", props: { items, active: "/ventas/pedidos" } }, contenedor);
 ```
 
@@ -163,7 +163,7 @@ solo si es del mismo origen que la página. Así un payload no puede mandar fila
 el contexto de la app a un tercero. Si la API vive en otro dominio, se declara una vez:
 
 ```js
-import { allowOrigins } from "nx-ui";
+import { allowOrigins } from "nx32-elements";
 allowOrigins("https://api.miapp.co");
 ```
 
@@ -506,7 +506,7 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 | `nx_confirm` | Tarjeta de aprobación con impacto (`tone: "danger"` → mantener pulsado) | `{approved}` |
 | `nx_ask` | Pregunta con opciones o texto libre | `{answer}` |
 | `nx_notify` | Un resultado; con `undo`, espera 7 s por si la persona lo deshace | `{undone}` |
-| `nx_show` | Pinta un componente de nx-ui (nodo BDUI, con su lista de props permitidas). Nunca pasan las props con URL (`endpoint`, `action`, `source`, `*Endpoint`, `*Source`, `*Url`…); con `show="Trend, Grid"`, solo esos componentes | `{shown}` |
+| `nx_show` | Pinta un componente de nx32-elements (nodo BDUI, con su lista de props permitidas). Nunca pasan las props con URL (`endpoint`, `action`, `source`, `*Endpoint`, `*Source`, `*Url`…); con `show="Trend, Grid"`, solo esos componentes | `{shown}` |
 | `nx_tour` | Un recorrido guiado sobre la pantalla («¿cómo…?»): cada paso señala un elemento. Los `[data-tour]` visibles viajan en el contexto para que el modelo sepa qué puede señalar | `{completed, step}` |
 | `nx_grid_filter`, `nx_grid_select` | Filtra o selecciona en la tabla de `for` (y la tabla viaja como contexto) | `{rows}`, `{selected}` |
 
@@ -529,14 +529,14 @@ la respuesta vuelve como mensaje `tool` en la corrida siguiente.
 | Métodos | `send(texto)`, `stop()`, `reset()` |
 | Eventos | `nx-agent-tool` (herramientas de la app), `nx-agent-send` (ajustar la entrada), `nx-agent-state`, `nx-agent-custom`, `nx-agent-event` (cada evento AG-UI) |
 
-**`nxTour(pasos)`** (`nx-ui/tour`) es el mismo recorrido, para cualquier app (una bienvenida, una
+**`nxTour(pasos)`** (`nx32-elements/tour`) es el mismo recorrido, para cualquier app (una bienvenida, una
 novedad): ilumina el elemento de cada paso, oscurece lo demás y pone al lado una tarjeta con título
 y texto. `Enter`/`→` avanza, `←` vuelve y `Escape` termina; el foco vuelve a donde estaba. Mientras
 se escribe en un campo de la página, las flechas y `Enter` son del campo. Solo muestra: no hace
 clic ni cambia nada.
 
 ```js
-import { nxTour } from "nx-ui/tour";
+import { nxTour } from "nx32-elements/tour";
 const { completed } = await nxTour([
   { target: "#nuevo", title: "Crea un pedido", text: "Empieza aquí." },
   { target: "[data-tour=filtros]", title: "Filtra", text: "Escribe en tus palabras." },
@@ -1186,7 +1186,7 @@ intermitente.
 ```html
 <nx-sync id="sync" ping="/api/ping"></nx-sync>
 <script type="module">
-  import { nxSync } from "nx-ui/sync";
+  import { nxSync } from "nx32-elements/sync";
 
   sync.fields = [{ key: "productos.*.cantidad", label: "Cantidad · {nombre}" }];
   await nxSync.enqueue({
@@ -2006,7 +2006,7 @@ trabajo vive en el servidor y una píldora discreta en la barra dice cómo va.
 
 ## Desarrollo
 
-**Galería en línea:** https://dl21hex.github.io/nx-ui/ — la documentación con todos los ejemplos
+**Galería en línea:** https://dl21hex.github.io/nx32-elements/ — la documentación con todos los ejemplos
 funcionando. Se publica sola en cada push a `main` (`.github/workflows/pages.yml`). Los ejemplos que
 «hablan con un servidor» (la IA, la captura, el agente, el impacto…) usan una API de mentira que
 corre en el navegador (`gallery/demo-api.ts`), así que no hace falta backend ni en local ni en Pages.
@@ -2039,7 +2039,7 @@ servidor estático y se abre `/examples/html/`.
 ```
 src/core/            h() y safeHref(), registro de íconos, define() seguro para SSR
 src/components/      un directorio por componente: lógica pura, render y CSS
-src/styles/          tokens.css y nx-ui.css (tokens + todos los componentes)
+src/styles/          tokens.css y nx32-elements.css (tokens + todos los componentes)
 src/solid/           adaptador para SolidJS (un archivo por componente; jsx.ts, los tipos JSX)
 src/bdui.ts          adaptador BDUI
 gallery/             la galería (usa <nx-sidemenu> como su propia navegación)
@@ -2048,7 +2048,7 @@ gallery/             la galería (usa <nx-sidemenu> como su propia navegación)
 **Navegadores:** Chrome/Edge 123+, Safari 17.5+ y Firefox 125+. Importar la librería en el
 servidor (SSR) no lanza errores: los elementos solo se registran en el navegador.
 
-Los íconos de `nx-ui/icons` son de [Lucide](https://lucide.dev) (licencia ISC, ver
+Los íconos de `nx32-elements/icons` son de [Lucide](https://lucide.dev) (licencia ISC, ver
 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)). Para regenerarlos: `node scripts/gen-icons.mjs`.
 
 ## Licencia

@@ -164,7 +164,7 @@ Mantener Alt ~400 ms también los muestra (y Alt+letra sin soltar ejecuta).
 - `src/index.ts` → `export * from "./components/keytips/index";` (los nombres no chocan:
   `NxKeytips`, `KEYTIPS_LABELS`, `KEYTIPS_SINGLE_MAX`, `assignKeytips`, `keytipLetters`,
   `keytipChar`, `cleanKeytip` y los tipos `Keytip*`).
-- `src/styles/nx-ui.css` → `@import "../components/keytips/keytips.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/keytips/keytips.css";`
 - `vite.config.ts` (entradas de la librería) → `keytips: "src/components/keytips/index.ts"`.
 - `scripts/build-css.mjs` → `"keytips": "src/components/keytips/keytips.css"`.
 - `package.json` → `"./keytips": { "types": "./dist/types/components/keytips/index.d.ts", "import": "./dist/keytips.js" }`

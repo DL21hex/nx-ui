@@ -65,7 +65,7 @@ En `gallery/main.ts`, dentro de `NAV` (con los demás «Nuevo» de Componentes; 
 En `PAGES`: `"#/review": { template: "page-review", mount: mountReviewDemo },` con
 `import { mountReviewDemo } from "./demo-review";` e `import "./pages/review.css";`. La plantilla está en
 `gallery/pages/review.html` para pegarla en `gallery/index.html`. `demo-review.ts` importa
-`review.css` y `../src/components/review/index` directamente (mientras `nx-ui.css` y `src/index.ts`
+`review.css` y `../src/components/review/index` directamente (mientras `nx32-elements.css` y `src/index.ts`
 no los traigan); esas dos líneas sobran al unir. La demo no usa `addDemoRoute`.
 
 La demo: la OC-2291 a Aceros del Caribe ya cargada (proveedor, fecha de entrega, condición de pago,
@@ -180,7 +180,7 @@ elemento se conecta ya cuenta como base.
   `describeReviewChange`, `countReview`, `countReviewChanges`, `groupReview`, `reviewShouldOpen`,
   `reviewRowName`, `reviewName`, `reviewValueText`, `flattenReview`, `sameReviewValue` y los tipos
   `Review*`.
-- `src/styles/nx-ui.css` → `@import "../components/review/review.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/review/review.css";`
 - `vite.config.ts` (entradas de la librería) → `review: "src/components/review/index.ts",`
 - `scripts/build-css.mjs` → `"review": "src/components/review/review.css",`
 - `package.json` → en `exports`:

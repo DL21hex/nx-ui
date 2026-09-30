@@ -1,10 +1,10 @@
 import { Route, Router, useLocation, type RouteSectionProps } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import "nx-ui/nx-ui.css";
-import { registerIcons } from "nx-ui";
-import { lucide } from "nx-ui/icons";
-import { SideMenu, type MenuItem } from "nx-ui/solid/sidemenu";
+import "nx32-elements/nx32-elements.css";
+import { registerIcons } from "nx32-elements";
+import { lucide } from "nx32-elements/icons";
+import { SideMenu, type MenuItem } from "nx32-elements/solid/sidemenu";
 import "./app.css";
 
 registerIcons(lucide);
@@ -42,7 +42,7 @@ function Layout(props: RouteSectionProps) {
         }}
       >
         <a slot="header" class="brand" href="/">
-          Solid + nx-ui
+          Solid + nx32-elements
         </a>
       </SideMenu>
       <main>

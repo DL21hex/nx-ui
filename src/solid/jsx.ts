@@ -1,5 +1,5 @@
 /**
- * Tipos JSX de las etiquetas de nx-ui para SolidJS (`prop:`, `attr:`, `bool:`, `on:`). Solo tipos:
+ * Tipos JSX de las etiquetas de nx32-elements para SolidJS (`prop:`, `attr:`, `bool:`, `on:`). Solo tipos:
  * en ejecución este módulo está vacío. Van juntos porque TypeScript funde las interfaces de
  * `solid-js` y una misma prop (`labels`, `items`) tiene que tener un solo tipo.
  */

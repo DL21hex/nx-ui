@@ -2,16 +2,16 @@
 // el vite-plugin-solid de la app, en modo SSR o navegador. Sus imports internos apuntan al
 // módulo ya construido del componente, no a src/.
 //
-// Un archivo por componente (`dist/solid/grid.jsx` → `nx-ui/solid/grid`): la app que usa solo la
+// Un archivo por componente (`dist/solid/grid.jsx` → `nx32-elements/solid/grid`): la app que usa solo la
 // tabla no arrastra los demás. `index.jsx` los reexporta, sin copiarlos.
 import { readdirSync } from "node:fs";
 import { build } from "esbuild";
 
 const toDist = {
-  name: "nx-ui-dist",
+  name: "nx32-elements-dist",
   setup(b) {
     // Cada componente (y `nxSync`) sale del módulo ya construido: una sola copia de las clases, del
-    // registro de íconos y de la cola de nx-sync aunque la app importe también `nx-ui`.
+    // registro de íconos y de la cola de nx-sync aunque la app importe también `nx32-elements`.
     b.onResolve({ filter: /components\/([\w-]+)\/(index|logic)$/ }, (a) => ({ path: `../${/components\/([\w-]+)\//.exec(a.path)[1]}.js`, external: true }));
     // Entre archivos del adaptador (el índice): el `.jsx` hermano ya publicado. `./jsx` son solo
     // tipos y se funde como un módulo vacío.

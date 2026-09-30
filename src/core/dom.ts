@@ -51,7 +51,7 @@ export function allowOrigins(...origins: string[]): void {
     try {
       allowed.add(new URL(o).origin);
     } catch {
-      console.warn(`[nx-ui] origen inválido: ${o}`);
+      console.warn(`[nx32-elements] origen inválido: ${o}`);
     }
   }
 }
@@ -72,7 +72,7 @@ export function safeEndpoint(url: unknown): string | undefined {
   }
   if (u.protocol !== "http:" && u.protocol !== "https:") return undefined;
   if (u.origin !== location.origin && !allowed.has(u.origin)) {
-    console.warn(`[nx-ui] endpoint de otro origen bloqueado: ${u.origin} (ver allowOrigins)`);
+    console.warn(`[nx32-elements] endpoint de otro origen bloqueado: ${u.origin} (ver allowOrigins)`);
     return undefined;
   }
   // Tal como vino (recortada): `URL` codificaría las plantillas (`/items/{code}` → `%7Bcode%7D`).

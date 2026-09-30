@@ -1,5 +1,5 @@
 /*
- * Tokens de nx-ui. Mismo vocabulario que el design system de nx32 (`--nx-*`), con valores
+ * Tokens de nx32-elements. Mismo vocabulario que el design system de nx32 (`--nx-*`), con valores
  * neutros: grises fríos y un acento azul. Para aplicar una marca basta con redefinirlos.
  *
  * Los colores salen de unos pocos parámetros; una paleta (`palettes.css`, o la tuya) solo

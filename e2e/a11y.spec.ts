@@ -108,7 +108,7 @@ test("encuesta: una pregunta, la escala NPS y los resultados", async ({ page }) 
 
 test("encuesta: lo respondido arriba y los resultados plegados", async ({ page }) => {
   await open(page, "#/survey");
-  await page.evaluate(() => localStorage.removeItem("nx-ui-demo-encuesta"));
+  await page.evaluate(() => localStorage.removeItem("nx32-elements-demo-encuesta"));
   await page.reload();
   const s = page.locator("#survey-demo");
   await s.getByRole("button", { name: "Empezar" }).click();

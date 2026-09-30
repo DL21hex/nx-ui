@@ -161,7 +161,7 @@ export const UI_TOOLS: AguiTool[] = [
   },
   {
     name: "nx_show",
-    description: "Muestra un componente de nx-ui en la conversación: {component, props} (BDUI).",
+    description: "Muestra un componente de nx32-elements en la conversación: {component, props} (BDUI).",
     parameters: { type: "object", properties: { component: str, props: { type: "object" } }, required: ["component"] },
   },
 ];

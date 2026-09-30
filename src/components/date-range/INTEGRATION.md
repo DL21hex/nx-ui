@@ -38,7 +38,7 @@ Entradas para `scripts/size.mjs`:
 Y, para que existan esos archivos: `date-range: "src/components/date-range/index.ts"` en las
 entradas de `vite.config.ts` (build de la librería), `"date-range": "src/components/date-range/date-range.css"`
 en `scripts/build-css.mjs`, `@import "../components/date-range/date-range.css";` en
-`src/styles/nx-ui.css`, y la entrada `"./date-range"` en `exports` de `package.json` (como `./select`).
+`src/styles/nx32-elements.css`, y la entrada `"./date-range"` en `exports` de `package.json` (como `./select`).
 
 ## Nav
 
@@ -55,7 +55,7 @@ import { mountDateRangeDemo } from "./demo-date-range";
 
 La plantilla está en `gallery/pages/date-range.html` (va dentro de `gallery/index.html`). El CSS de
 la demo (`gallery/pages/date-range.css`) lo importa `gallery/demo-date-range.ts`, así que no hay que
-agregarlo en otro lado. El CSS del componente llega con `src/styles/nx-ui.css` (ver «Peso»).
+agregarlo en otro lado. El CSS del componente llega con `src/styles/nx32-elements.css` (ver «Peso»).
 
 ## Solid
 
@@ -238,5 +238,5 @@ test("rango de fechas cerrado, abierto, eligiendo y con una frase que no entiend
   `periodo[start]=2026-04-01 · periodo[end]=2027-03-31 · periodo[compare][start]=… · periodo[compare][end]=…`
   y `checkValidity()` es `false` sin valor con `required`. happy-dom no implementa
   `attachInternals`, así que en las pruebas DOM no se verifica (el elemento funciona igual, sin form).
-- `npx tsc --noEmit -p .` reporta 4 errores en `examples/solid/main.tsx` (no encuentra `nx-ui`,
+- `npx tsc --noEmit -p .` reporta 4 errores en `examples/solid/main.tsx` (no encuentra `nx32-elements`,
   porque este worktree no tiene `dist/`); son previos y ajenos a este componente.

@@ -1,5 +1,5 @@
 {
-  "name": "nx-ui",
+  "name": "nx32-elements",
   "version": "0.1.0",
   "description": "Componentes web ultraligeros, sin dependencias, compatibles con BDUI. Funcionan en HTML plano y en SolidJS.",
   "type": "module",
@@ -204,7 +204,7 @@
       "solid": "./dist/solid/*.jsx",
       "import": "./dist/solid/*.jsx"
     },
-    "./nx-ui.css": "./dist/nx-ui.css",
+    "./nx32-elements.css": "./dist/nx32-elements.css",
     "./tokens.css": "./dist/tokens.css",
     "./palettes.css": "./dist/palettes.css",
     "./sidemenu.css": "./dist/sidemenu.css",

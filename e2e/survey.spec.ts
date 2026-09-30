@@ -3,7 +3,7 @@ import { open } from "./helpers";
 
 test("se contesta con el teclado, cambia según las respuestas y muestra los resultados", async ({ page }) => {
   await open(page, "#/survey");
-  await page.evaluate(() => localStorage.removeItem("nx-ui-demo-encuesta"));
+  await page.evaluate(() => localStorage.removeItem("nx32-elements-demo-encuesta"));
   await page.reload();
   const s = page.locator("#survey-demo");
   await s.getByRole("button", { name: "Empezar" }).click();
@@ -43,7 +43,7 @@ test("guarda el borrador y ofrece continuar", async ({ page }) => {
 
 test("lo respondido queda arriba y se vuelve con un clic", async ({ page }) => {
   await open(page, "#/survey");
-  await page.evaluate(() => localStorage.removeItem("nx-ui-demo-encuesta"));
+  await page.evaluate(() => localStorage.removeItem("nx32-elements-demo-encuesta"));
   await page.reload();
   const s = page.locator("#survey-demo");
   await s.getByRole("button", { name: "Empezar" }).click();

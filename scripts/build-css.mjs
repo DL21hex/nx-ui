@@ -3,7 +3,7 @@ import { build } from "esbuild";
 
 const target = ["chrome114", "firefox125", "safari17"];
 const entries = {
-  "nx-ui": "src/styles/nx-ui.css",
+  "nx32-elements": "src/styles/nx32-elements.css",
   tokens: "src/styles/tokens.css",
   palettes: "src/styles/palettes.css",
   sidemenu: "src/components/sidemenu/sidemenu.css",

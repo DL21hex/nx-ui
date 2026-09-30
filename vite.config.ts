@@ -4,12 +4,12 @@ import { defineConfig } from "vite";
 //                               corre en el navegador (gallery/demo-api.ts): no hace falta servidor.
 // `vite build --mode gallery` → dist-gallery/: la galería como archivos estáticos (GitHub Pages)
 // `vite build`               → librería ESM, una entrada por subruta del package
-// `vite build --mode iife`   → dist/nx-ui.iife.js, todo-en-uno para <script>
+// `vite build --mode iife`   → dist/nx32-elements.iife.js, todo-en-uno para <script>
 export default defineConfig(({ command, mode }) => {
   if (command === "serve") return { root: "gallery", server: { port: 5173 } };
 
   if (mode === "gallery") {
-    // Rutas relativas: sirve en la raíz de un dominio o en una subcarpeta (usuario.github.io/nx-ui/).
+    // Rutas relativas: sirve en la raíz de un dominio o en una subcarpeta (usuario.github.io/nx32-elements/).
     return { root: "gallery", base: "./", build: { outDir: "../dist-gallery", emptyOutDir: true, target: "es2022" } };
   }
 
@@ -18,7 +18,7 @@ export default defineConfig(({ command, mode }) => {
       build: {
         target: "es2022",
         emptyOutDir: false,
-        lib: { entry: "src/iife.ts", name: "NxUI", formats: ["iife"], fileName: () => "nx-ui.iife.js" },
+        lib: { entry: "src/iife.ts", name: "Nx32Elements", formats: ["iife"], fileName: () => "nx32-elements.iife.js" },
       },
     };
   }

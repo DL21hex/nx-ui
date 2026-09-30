@@ -130,7 +130,7 @@
     &lt;nx-number id="precio" name="precio" format="money" currency="COP"&gt;&lt;/nx-number&gt;
   &lt;/form&gt;
 &lt;/nx-guard&gt;</code></pre>
-        <pre role="tabpanel" hidden><code>import { Guard } from "nx-ui/solid/guard";
+        <pre role="tabpanel" hidden><code>import { Guard } from "nx32-elements/solid/guard";
 
 &lt;Guard mode="confirm" fields={{ precio: { history: historia(), format: "money", currency: "COP" } }}
   onWarn={(e) =&gt; console.log(e.detail.field, e.detail.finding.message)}&gt;

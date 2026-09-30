@@ -7,7 +7,7 @@ export { NxVoice, VOICE_LABELS } from "./voice";
 export { parseVoiceHotkey, speechTranscript, voiceErrorCode, voiceHotkeyMatches, voiceHotkeyText, voiceLevel } from "./logic";
 // El dictado en un campo (`applyDictation`, `parseDictation`) y la grabación para el servidor
 // (`pickVoiceMime`, `parseVoiceLine`…) viven en chunks que el elemento carga al usarlos: se exportan
-// desde `nx-ui` (el índice general, ver `INTEGRATION.md`), no desde aquí, para que `nx-ui/voice` no
+// desde `nx32-elements` (el índice general, ver `INTEGRATION.md`), no desde aquí, para que `nx32-elements/voice` no
 // los arrastre.
 export type { DictationToken } from "./voice-text";
 export type {

@@ -5,7 +5,7 @@
  * «1234», extender la sesión y buscar personas para «Ver como…». Los cambios sin sincronizar los
  * simula una cola falsa que se pasa en `sync` (se vacía sola al enviar, salvo «Sin conexión»).
  *
- * La galería ya guarda su tema y su paleta (`nx-ui-gallery-theme`/`-palette`): la cuenta va con
+ * La galería ya guarda su tema y su paleta (`nx32-elements-gallery-theme`/`-palette`): la cuenta va con
  * `storage="none"` y, cuando cambia, escribe esas claves y marca los botones de la galería. Así no
  * hay dos preferencias peleándose (ver INTEGRATION.md).
  */
@@ -148,8 +148,8 @@ export function mountAccountDemo(root: HTMLElement): void {
     add(`nx-account-theme → ${theme} · ${palette}`);
     galleryTheme(theme);
     try {
-      localStorage.setItem("nx-ui-gallery-theme", theme === "system" ? "auto" : theme);
-      localStorage.setItem("nx-ui-gallery-palette", palette);
+      localStorage.setItem("nx32-elements-gallery-theme", theme === "system" ? "auto" : theme);
+      localStorage.setItem("nx32-elements-gallery-palette", palette);
     } catch {
       /* sin almacenamiento */
     }

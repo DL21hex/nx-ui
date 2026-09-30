@@ -27,7 +27,7 @@ panel con cuenta regresiva, comparador campo por campo y editor JSON) el resto. 
 
 Además, como con los demás: `sync: "src/components/sync/index.ts"` en las entradas de
 `vite.config.ts` (build de la librería), `"./sync"` en `exports` de `package.json` (la demo y el
-README importan `nxSync` desde `nx-ui/sync`), y `sync: "src/components/sync/sync.css"` en
+README importan `nxSync` desde `nx32-elements/sync`), y `sync: "src/components/sync/sync.css"` en
 `scripts/build-css.mjs`.
 
 ## Nav
@@ -146,7 +146,7 @@ intermitente.
 ```html
 <nx-sync id="sync" ping="/api/ping"></nx-sync>
 <script type="module">
-  import { nxSync } from "nx-ui/sync";
+  import { nxSync } from "nx32-elements/sync";
 
   sync.fields = [{ key: "productos.*.cantidad", label: "Cantidad · {nombre}" }];
   await nxSync.enqueue({
@@ -218,7 +218,7 @@ test("sin conexión: la píldora en cada estado, el panel, el comparador y el ed
 ## Notas
 
 - No toqué `src/core/`.
-- CSS: agregar `@import "../components/sync/sync.css";` a `src/styles/nx-ui.css`.
+- CSS: agregar `@import "../components/sync/sync.css";` a `src/styles/nx32-elements.css`.
 - `src/index.ts`: `export * from "./components/sync/index";` (o la lista explícita). Exporta
   `NxSync` (la clase), `SYNC_LABELS`, `nxSync` (la cola de la página), `createSync`,
   `syncMemoryStore`, `syncIdbStore`, `syncBackoff`, `syncRetryAfter`, `classifySyncResponse`,

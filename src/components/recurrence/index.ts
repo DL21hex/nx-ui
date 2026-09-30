@@ -14,8 +14,8 @@ export {
   toRRule,
 } from "./logic";
 // El intérprete de frases (`parseRecurrence`) vive en un chunk que el elemento carga al necesitarlo:
-// se exporta desde `nx-ui` (el índice general, ver INTEGRATION.md), no desde aquí, para que
-// `nx-ui/recurrence` no lo arrastre.
+// se exporta desde `nx32-elements` (el índice general, ver INTEGRATION.md), no desde aquí, para que
+// `nx32-elements/recurrence` no lo arrastre.
 export type {
   RecurrenceChangeDetail,
   RecurrenceErrorDetail,

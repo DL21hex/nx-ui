@@ -42,7 +42,7 @@ bajar: el marcado como plantilla constante (textos con `textContent`), los atrib
 `defineProperty` por propiedad (como `<nx-signature>`), y **dos chunks con `import()`**: el dictado en
 un campo (solo si `for` apunta a un `<input>`/`<textarea>`) y la grabación para el servidor (solo con
 `engine="server"` o sin la API del navegador). Por eso **esas funciones puras no se exportan desde
-`nx-ui/voice`** (lo arrastrarían a la entrada) sino desde `nx-ui` (ver «Otros archivos a tocar»).
+`nx32-elements/voice`** (lo arrastrarían a la entrada) sino desde `nx32-elements` (ver «Otros archivos a tocar»).
 
 Para `scripts/size.mjs`:
 
@@ -243,7 +243,7 @@ catorce para Ferretería El Tornillo, entrega el viernes» y el formulario se ll
 ## Otros archivos a tocar
 
 - `src/index.ts` → estas tres líneas (las funciones de los chunks se exportan desde aquí, no desde
-  `nx-ui/voice`, para que su entrada no las cargue):
+  `nx32-elements/voice`, para que su entrada no las cargue):
 
   ```ts
   export * from "./components/voice/index";
@@ -256,7 +256,7 @@ catorce para Ferretería El Tornillo, entrega el viernes» y el formulario se ll
   `speechTranscript`, `voiceErrorCode`, `voiceFileName`, `voiceHotkeyMatches`, `voiceHotkeyText`,
   `voiceLevel` y los tipos `Voice*`, `DictationEdit`, `DictationToken` son nuevos. `record` y
   `transcribe` de `voice-server.ts` no se exportan (son del elemento).
-- `src/styles/nx-ui.css` → `@import "../components/voice/voice.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/voice/voice.css";`
 - `vite.config.ts` → `voice: "src/components/voice/index.ts",`
 - `scripts/build-css.mjs` → `"voice": "src/components/voice/voice.css",`
 - `package.json` → `"./voice": { "types": "./dist/types/components/voice/index.d.ts", "import": "./dist/voice.js" }`

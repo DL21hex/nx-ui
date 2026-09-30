@@ -242,7 +242,7 @@ ni siquiera menores.)
 
 - **No toqué el núcleo** (`src/core/`) ni otros componentes.
 - **Otros archivos a tocar** (como con number/kanban): `src/index.ts` →
-  `export * from "./components/scan/index";`; `src/styles/nx-ui.css` →
+  `export * from "./components/scan/index";`; `src/styles/nx32-elements.css` →
   `@import "../components/scan/scan.css";` (la galería no ve el CSS del componente hasta esto; para
   probar lo importé en `gallery/main.ts` y lo revertí); `vite.config.ts` (entradas de la librería) →
   `scan: "src/components/scan/index.ts"`; `scripts/build-css.mjs` → `scan: "src/components/scan/scan.css"`;

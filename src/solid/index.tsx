@@ -5,7 +5,7 @@
  * `<PasteFill>`, `<Presence>`, `<WhatIf>`, `<Trend>`, `<Scan>`, `<Sync>`, `<Import>`,
  * `<Keytips>`, `<Guard>`, `<Handoff>`, `<Award>`, `<Account>`, `<Launcher>`, `<Cards>`, `<Print>`, `<Signature>`, `<Planner>`, `<Review>`, `<Voice>`, `<Thread>`, `<Checklist>`, `<Recurrence>`, `<Jobs>`), y `nxToast` / `nxConfirm` / `nxSync`.
  *
- * Cada componente vive en su archivo y se puede importar solo (`nx-ui/solid/grid`): así la app
+ * Cada componente vive en su archivo y se puede importar solo (`nx32-elements/solid/grid`): así la app
  * carga únicamente lo que usa. Este índice los reexporta todos.
  *
  * Se publica como JSX sin compilar bajo la condición de export `"solid"`: el compilador de la

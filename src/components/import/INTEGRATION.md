@@ -63,7 +63,7 @@ Para `scripts/size.mjs`:
   `cleanImportColumns`, `normalizeImportValue`, `validateImportRows`, `importValidator`,
   `parseImportNumber`, `parseImportDate`, `excelSerialDate`, `rememberImportMapping`,
   `recallImportMapping`, `importRowsToCsv`, `IMPORT_MESSAGES`, `IMPORT_LABELS`).
-- `src/styles/nx-ui.css` → `@import "../components/import/import.css";`
+- `src/styles/nx32-elements.css` → `@import "../components/import/import.css";`
 - `vite.config.ts` (entradas de la librería) → `import: "src/components/import/index.ts"`.
 - `scripts/build-css.mjs` → `import: "src/components/import/import.css"`.
 - `package.json` → `"./import": { "types": "./dist/types/components/import/index.d.ts", "import": "./dist/import.js" }`
