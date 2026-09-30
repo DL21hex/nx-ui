@@ -96,7 +96,7 @@ const BUDGET = [
   ["dist/select.css", 2 * 1024, "select (CSS)"],
   ["dist/ai.css", 2.5 * 1024, "ai-answer (CSS)"],
   ["dist/capture.css", 3 * 1024, "doc-capture (CSS)"],
-  ["dist/grid.css", 4.5 * 1024, "grid (CSS; con el filtro por columna, las vistas y lo táctil)"],
+  ["dist/grid.css", 4.6 * 1024, "grid (CSS; con el filtro por columna, las vistas, lo táctil y el botón ocupado)"],
   ["dist/dialog.css", 2.5 * 1024, "dialog (CSS)"],
   ["dist/confirm.css", 1 * 1024, "confirm (CSS, además de dialog y button)"],
   ["dist/toast.css", 1.5 * 1024, "toast (CSS)"],

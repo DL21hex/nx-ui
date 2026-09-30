@@ -151,13 +151,12 @@ nx-grid .nx-glyph {
   gap: 8px;
   margin-block-end: 8px;
 }
-/* Buscar en la tabla. */
+/* Buscar en la tabla: ocupa lo que sobra de la fila, y los botones que le siguen quedan a la derecha. */
 .nx-grid__search {
   display: flex;
   flex: 1 1 240px;
   align-items: center;
   gap: 8px;
-  max-inline-size: 400px;
   block-size: 36px;
   padding-inline: 12px 4px;
   border: 1px solid var(--nx-border);
@@ -239,6 +238,20 @@ nx-grid .nx-glyph {
     border-color: var(--nx-primary-border);
     background: var(--nx-primary-soft);
     color: var(--nx-primary-ink);
+  }
+  /* Trabajando (exportar): el ícono gira y el botón no atiende otro clic. */
+  &[aria-busy="true"] {
+    cursor: progress;
+
+    & > .nx-glyph {
+      border: 2px solid var(--nx-border-strong);
+      border-block-start-color: var(--nx-primary);
+      border-radius: 50%;
+      animation: nx-grid-spin 0.8s linear infinite;
+    }
+    & > .nx-glyph > svg {
+      visibility: hidden;
+    }
   }
   &.is-primary {
     justify-content: center;
@@ -1265,7 +1278,6 @@ nx-grid mark {
   }
   .nx-grid__search {
     flex-basis: 100%;
-    max-inline-size: none;
   }
 }
 
@@ -1316,6 +1328,11 @@ nx-grid mark {
   }
 }
 
+@keyframes nx-grid-spin {
+  to {
+    rotate: 1turn;
+  }
+}
 @keyframes nx-grid-in {
   from {
     opacity: 0;

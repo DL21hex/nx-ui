@@ -71,6 +71,7 @@ export interface GridLabels {
   groupBy: string;
   noGroup: string;
   export: string;
+  exporting: string;
   rows: string;
   of: string;
   cells: string;

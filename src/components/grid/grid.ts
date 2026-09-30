@@ -63,6 +63,7 @@ export const GRID_LABELS: GridLabels = {
   groupBy: "Agrupar por {col}",
   noGroup: "Sin agrupar",
   export: "Exportar",
+  exporting: "Exportando…",
   rows: "{n} filas",
   of: "{n} de {total} filas",
   cells: "{n} celdas",
@@ -696,7 +697,7 @@ export class NxGrid extends Base {
     if (this.#server) this.#reload();
     else this.#recompute(stage);
     this.#clampSel();
-    if (this.#live) this.#live.textContent = this.#rowsText();
+    if (this.#live && !this.#server) this.#live.textContent = this.#rowsText();
     if (emit) this.#emit("nx-grid-filter", { filters: this.#filters, sort: this.#sort, groupBy: this.groupBy, search: this.#search.trim(), count: this.#rowCount() });
   }
 
@@ -832,6 +833,8 @@ export class NxGrid extends Base {
     this.#index(rows, block * BLOCK);
     this.#blocks.set(block, rows);
     this.#total = Math.max(0, Number(page.total) || 0);
+    // El conteo para el lector de pantalla, con el total nuevo (al filtrar aún no se sabía).
+    if (block === 0 && this.#live) this.#live.textContent = this.#rowsText();
     if (page.histograms && typeof page.histograms === "object") this.#hist = new Map(Object.entries(page.histograms).filter(([, x]) => x && Array.isArray(x.counts)));
     if (Array.isArray(page.facets))
       this.#facetList = page.facets
@@ -1061,12 +1064,19 @@ export class NxGrid extends Base {
     this.#groupSel = h("select", { class: "nx-grid__btn nx-grid__group", "data-nx-ephemeral": "" });
     this.#groupSel.addEventListener("change", () => (this.groupBy = this.#groupSel!.value));
     this.#exportBtn = h("button", { type: "button", class: "nx-grid__btn" }, glyph(DOWNLOAD), h("span"));
+    // Mientras exporta (en modo servidor pide todas las filas, puede tardar), el botón gira y no
+    // atiende otro clic. No se usa `disabled`: sacaría el foco del botón al teclado.
     this.#exportBtn.addEventListener("click", () => {
       const b = this.#exportBtn!;
+      if (b.hasAttribute("aria-busy")) return;
       b.setAttribute("aria-busy", "true");
+      this.#paintChrome();
       this.exportXlsx()
         .catch((err) => console.warn("[nx-grid] no se pudo exportar", err))
-        .finally(() => b.removeAttribute("aria-busy"));
+        .finally(() => {
+          b.removeAttribute("aria-busy");
+          this.#paintChrome();
+        });
     });
     this.#undoBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__icon" }, glyph(UNDO));
     this.#redoBtn = h("button", { type: "button", class: "nx-grid__btn nx-grid__icon" }, glyph(REDO));
@@ -1293,7 +1303,7 @@ export class NxGrid extends Base {
     this.#groupSel!.setAttribute("aria-label", this.#fmt(L.groupBy, { col: "" }).trim());
     this.#groupSel!.replaceChildren(h("option", { value: "" }, L.noGroup), ...groupable.map((c) => h("option", { value: c.key }, this.#fmt(L.groupBy, { col: c.label }))));
     this.#groupSel!.value = groupable.some((c) => c.key === this.groupBy) ? this.groupBy : "";
-    this.#exportBtn!.lastElementChild!.textContent = L.export;
+    this.#exportBtn!.lastElementChild!.textContent = this.#exportBtn!.hasAttribute("aria-busy") ? L.exporting : L.export;
     this.#viewsBtn!.hidden = !this.viewsStorage;
     if (!this.#viewsUI) this.#viewsBtn!.lastElementChild!.textContent = L.views;
     this.#colsBtn!.hidden = this.#cols.length < 2;
