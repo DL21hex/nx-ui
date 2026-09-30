@@ -20,8 +20,12 @@ export interface GridColumn {
   editable?: boolean;
   /** `status`: los valores posibles, con su etiqueta y tono. */
   options?: GridOption[];
-  /** `false` para no mostrar el histograma de la cabecera. */
+  /** `false` para no mostrar las barras en el filtro de la columna (montos, números y fechas). */
   histogram?: boolean;
+  /** Filtro de la columna (el embudo de la cabecera). Por defecto sale del tipo: montos y números
+   *  → rango, fechas → fechas, estados y texto con pocos valores → lista, el resto → «contiene».
+   *  Un valor lo fuerza; `false` lo quita. */
+  filter?: false | "list" | "range" | "date" | "text";
   /** Símbolo de `money` (por defecto `$`). */
   currency?: string;
   /** Panel de filtros: `true` la incluye, `false` la excluye (por defecto, las columnas con pocas
@@ -37,11 +41,15 @@ export interface GridColumn {
 
 export type GridRow = Record<string, unknown>;
 
+/** Un tramo de fechas relativo a hoy: al asignar los filtros (una vista guardada, otro día), `min`
+ *  y `max` se recalculan. */
+export type GridDateRel = "past" | "last30" | "next30" | "month" | "lastMonth" | "year";
+
 /** Un filtro serializable. `range`: `min` incluido, `max` excluido (números o fechas ISO). */
 export type GridFilter =
   | { key: string; op: "in"; values: string[] }
   | { key: string; op: "notIn"; values: string[] }
-  | { key: string; op: "range"; min?: number | string; max?: number | string }
+  | { key: string; op: "range"; min?: number | string; max?: number | string; rel?: GridDateRel }
   | { key: string; op: "contains"; value: string };
 
 export interface GridSort {
@@ -49,7 +57,7 @@ export interface GridSort {
   dir: 1 | -1;
 }
 
-/** Un histograma de cabecera: `counts` sobre todas las filas, `filtered` tras los filtros. */
+/** Las barras del filtro de una columna: `counts` sobre todas las filas, `filtered` tras los filtros. */
 export interface GridHistogram {
   kind: "bins" | "categories";
   labels: string[];
@@ -94,6 +102,41 @@ export interface GridLabels {
   redo: string;
   undone: string;
   redone: string;
+  filterBy: string;
+  filterOn: string;
+  left: string;
+  done: string;
+  reset: string;
+  allValues: string;
+  allMatching: string;
+  only: string;
+  onlyValue: string;
+  exceptValue: string;
+  searchIn: string;
+  enterOnly: string;
+  noValues: string;
+  from: string;
+  to: string;
+  fromValue: string;
+  toValue: string;
+  noMin: string;
+  noMax: string;
+  amountHint: string;
+  anyDate: string;
+  between: string;
+  past: string;
+  last30: string;
+  next30: string;
+  month: string;
+  lastMonth: string;
+  year: string;
+  barHint: string;
+  contains: string;
+  containsHint: string;
+  containsValue: string;
+  matches: string;
+  moreFilters: string;
+  relax: string;
 }
 
 /** Una faceta que manda el backend (modo `source`). */

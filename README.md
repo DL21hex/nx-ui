@@ -331,9 +331,20 @@ La referencia completa y la demo en vivo están en la galería.
 
 Una tabla de datos que se explora sola:
 
-- **Histogramas que filtran.** Cada cabecera muestra cómo se reparten los datos de su columna: el
-  total en gris y lo que queda tras los filtros en color. Un clic filtra: en una categoría suma o
-  quita el valor; en números y fechas elige un rango, y Mayús+clic lo extiende.
+- **Filtro por columna.** El embudo de cada cabecera (o Alt+↓) abre el filtro de la columna, que
+  sale del dato:
+  - estados y texto con pocos valores: una lista con cuántas filas quedan en cada uno, «Solo» y un
+    buscador si son muchos;
+  - montos y números: barras, dos manijas y campos que aceptan «5 M» o «5 millones»;
+  - fechas: «Antes de hoy», «Últimos 30 días», «Próximos 30 días», «Este mes», «Mes pasado», «Este
+    año» (se guardan relativos, con `rel`) o entre dos fechas;
+  - el resto: «contiene», con ejemplos de lo que coincide.
+
+  Se aplica mientras se elige y dice cuántas filas quedan; el chip lo vuelve a abrir. Con más de la
+  mitad marcada se guarda como exclusión («Proveedor: sin Aceros»). `filter` en la columna lo fuerza
+  o lo quita (`false`). El panel se carga aparte, la primera vez que hace falta.
+- **Filtrar desde una celda.** Clic derecho (o Mayús+F10): «Solo Aceros», «Sin Aceros», «Desde
+  $ 5.000.000». Si no queda ninguna fila, la tabla propone qué filtro quitar y cuántas volverían.
 - **Filtro en lenguaje natural.** «pendientes de marzo de más de 5 millones», «sin anulados»,
   «atraso mayor a 3». Lo resuelve un analizador local con el vocabulario de las columnas y los
   datos. Lo que no entiende lo dice; con `nl-endpoint`, esas frases van al backend.
@@ -341,8 +352,8 @@ Una tabla de datos que se explora sola:
   - las opciones de una faceta se suman (O) y las facetas se restringen entre sí (Y);
   - cada opción se cuenta con los demás filtros, nunca con el suyo;
   - una opción en 0 queda deshabilitada.
-- **Un solo modelo de filtros.** La barra, la casilla y la frase producen el mismo filtro y el mismo
-  chip.
+- **Un solo modelo de filtros.** El filtro de la columna, la casilla, el menú de la celda y la frase
+  producen el mismo filtro y el mismo chip.
 - **Hoja de cálculo.** Navegación con teclado, rangos con suma, promedio, mínimo y máximo, copiar y
   pegar con Excel (TSV) y edición en línea (`nx-grid-change`, cancelable). Deshacer y rehacer
   (Ctrl+Z, Ctrl+Y o Ctrl+Mayús+Z, y botones): cada edición, pegado o borrado es un paso; lo
@@ -357,7 +368,8 @@ Una tabla de datos que se explora sola:
 - **Columnas de IA.** Un nombre y un prompt; `ai-endpoint` recibe las filas visibles, en lotes, y
   responde celda por celda en streaming.
 - **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques
-  al desplazarse, y el backend devuelve los agregados.
+  al desplazarse, y el backend devuelve los agregados. En el servidor, el filtro de una columna
+  espera 250 ms tras el último cambio antes de pedir.
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
   En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo; más allá, `source`.
 - **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,
@@ -385,7 +397,7 @@ grid.addEventListener("nx-grid-change", (e) => guardar(e.detail.changes));
 source       POST {offset, limit, sort, filters} → {rows, total, histograms?, facets?, totals?}
 ai-endpoint  POST {prompt, column, label, columns, rows:[{id, …}]} → {"type":"cell","id":"2201","value":"Alto","tone":"danger"} por línea
 nl-endpoint  POST {q, columns} → {filters, unknown?}
-filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?} · {key, op:"contains", value}
+filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?, rel?} · {key, op:"contains", value}
 ```
 
 `source`, `ai-endpoint` y `nl-endpoint` solo se usan si son del mismo origen (o de uno permitido con
@@ -397,7 +409,7 @@ IA se vuelven a pedir, y lo que llegue tarde de la petición anterior se descart
 | | |
 |---|---|
 | Propiedades / atributos | `columns`, `rows`, `source`, `filters`, `sort`, `group-by`, `ai-endpoint`, `nl-endpoint`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
-| Métodos | `ask(frase)`, `clearFilters()`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
+| Métodos | `ask(frase)`, `clearFilters()`, `openFilter(key)`, `exportXlsx()`, `addAiColumn(nombre, prompt)`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
 | Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open` |
 
 ## `<nx-dialog>`, `nxToast()` y `nxConfirm()`

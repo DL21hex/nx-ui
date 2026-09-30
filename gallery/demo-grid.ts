@@ -3,7 +3,8 @@
  * cliente) y el servidor de desarrollo (modo servidor y la «IA» de las columnas calculadas).
  * No es parte de la librería.
  */
-import { applyFilters, facetColumns, facets, histogram, histogramSpec, sortRows } from "../src/components/grid/logic";
+import { histogram, histogramSpec } from "../src/components/grid/bars";
+import { applyFilters, facetColumns, facets, sortRows } from "../src/components/grid/logic";
 import type { GridColumn, GridFilter, GridPage, GridRow, GridSort } from "../src/components/grid/types";
 
 export const PURCHASE_COLUMNS: GridColumn[] = [

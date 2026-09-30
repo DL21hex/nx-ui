@@ -34,6 +34,13 @@ const column = (el: NxGrid, c: number) => [...el.querySelectorAll(`.nx-grid__row
 const chips = (el: NxGrid) => [...el.querySelectorAll(".nx-grid__chip")].map((c) => c.textContent);
 const key = (el: NxGrid, k: string, init: KeyboardEventInit = {}) => scroll(el).dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, ...init }));
 const foot = (el: NxGrid) => el.querySelector(".nx-grid__foot")!.textContent;
+/** El panel del filtro se carga aparte: espera a que muestre esa columna. */
+async function panel(el: NxGrid, title: string): Promise<HTMLElement> {
+  for (let i = 0; i < 200 && el.querySelector(".nx-grid__filter .nx-grid__f-head")?.textContent !== title; i++) await new Promise((r) => setTimeout(r, 10));
+  const pop = el.querySelector<HTMLElement>(".nx-grid__filter")!;
+  expect(pop.querySelector(".nx-grid__f-head")!.textContent).toBe(title);
+  return pop;
+}
 
 describe("<nx-grid>", () => {
   it("pinta cabeceras, filas y el pie; el texto va como texto", () => {
@@ -90,35 +97,176 @@ describe("<nx-grid>", () => {
     expect(el.sort).toBeNull();
   });
 
-  it("clic en una barra del histograma filtra; el chip lo quita", () => {
+  it("embudo → lista: conteos, desmarcar filtra al instante, «Solo», y el chip vuelve a abrir el filtro", async () => {
     const el = mount();
     const events: unknown[] = [];
     el.addEventListener("nx-grid-filter", (e) => events.push(e.detail));
-    const estado = el.querySelectorAll(".nx-grid__th")[2];
-    const bars = estado.querySelectorAll<HTMLElement>(".nx-grid__hbar");
-    expect(bars).toHaveLength(2);
-    bars[0].click();
+    const funnels = el.querySelectorAll<HTMLButtonElement>(".nx-grid__funnel");
+    expect(funnels).toHaveLength(4);
+    expect(funnels[2].getAttribute("aria-label")).toBe("Filtrar Estado");
+    expect(el.querySelector(".nx-grid__hist, .nx-grid__hbar")).toBeNull();
+    funnels[2].click();
+    const pop = await panel(el, "Estado");
+    expect(funnels[2].getAttribute("aria-expanded")).toBe("true");
+    const opt = (v: string) => pop.querySelector<HTMLInputElement>(`input[data-v="${v}"]`)!;
+    expect([opt("pend").checked, opt("apr").checked]).toEqual([true, true]);
+    expect([...pop.querySelectorAll(".nx-grid__opt-n")].map((x) => x.textContent)).toEqual(["2", "2"]);
+    opt("apr").click();
+    expect(el.filters).toEqual([{ key: "estado", op: "in", values: ["pend"] }]);
     expect(column(el, 0)).toEqual(["OC-1", "OC-4"]);
+    expect(pop.querySelector(".nx-grid__f-left")!.textContent).toBe("Quedan 2 de 4");
     expect(chips(el)).toEqual(["Estado: Pendiente"]);
-    expect(foot(el)).toContain("2 de 4 filas");
+    expect(funnels[2].classList.contains("is-on")).toBe(true);
+    expect(funnels[2].getAttribute("aria-label")).toBe("Cambiar el filtro «Estado: Pendiente»");
     expect(events).toHaveLength(1);
-    // La barra elegida queda marcada; la otra, fuera.
-    const after = el.querySelectorAll(".nx-grid__th")[2].querySelectorAll(".nx-grid__hbar");
-    expect([...after].map((b) => b.classList.contains("is-on"))).toEqual([true, false]);
-    el.querySelector<HTMLButtonElement>(".nx-grid__chip button")!.click();
-    expect(column(el, 0)).toHaveLength(4);
+    pop.querySelector<HTMLButtonElement>('[data-only="apr"]')!.click();
+    expect(el.filters).toEqual([{ key: "estado", op: "in", values: ["apr"] }]);
+    // «Listo» cierra; el chip lo vuelve a abrir; la × lo quita.
+    pop.querySelector<HTMLButtonElement>(".nx-grid__f-foot .nx-grid__btn")!.click();
+    expect(funnels[2].getAttribute("aria-expanded")).toBe("false");
+    el.querySelector<HTMLButtonElement>(".nx-grid__chip-edit")!.click();
+    await panel(el, "Estado");
+    expect(funnels[2].getAttribute("aria-expanded")).toBe("true");
+    el.querySelector<HTMLButtonElement>(".nx-grid__chip [data-i]")!.click();
     expect(el.filters).toEqual([]);
+    expect(opt("apr").checked).toBe(true);
   });
 
-  it("una barra de rango filtra ese rango y Mayús la extiende", () => {
+  it("con más de la mitad marcada se guarda como exclusión, y el panel de facetas la entiende", async () => {
+    const el = mount("facets-open");
+    await el.openFilter("prov");
+    const pop = await panel(el, "Proveedor");
+    pop.querySelector<HTMLInputElement>('input[data-v="Químicos"]')!.click();
+    expect(el.filters).toEqual([{ key: "prov", op: "notIn", values: ["Químicos"] }]);
+    expect(chips(el)).toEqual(["Proveedor: sin Químicos"]);
+    const aside = el.querySelector<HTMLElement>(".nx-grid__facets")!;
+    const box = (v: string) => aside.querySelector<HTMLInputElement>(`input[data-value="${v}"]`)!;
+    expect([box("Aceros").checked, box("Empaques").checked, box("Químicos").checked]).toEqual([true, true, false]);
+    box("Empaques").click();
+    expect(el.filters).toEqual([{ key: "prov", op: "in", values: ["Aceros"] }]);
+    expect(pop.querySelector<HTMLInputElement>('input[data-v="Empaques"]')!.checked).toBe(false);
+  });
+
+  it("rango: barras y campos que aceptan «1 M» o «3 millones»; «Hasta» incluye lo escrito", async () => {
     const el = mount();
-    const bars = () => el.querySelectorAll(".nx-grid__th")[3].querySelectorAll<HTMLElement>(".nx-grid__hbar");
-    bars()[0].click();
-    const [f] = el.filters as { min: number; max: number }[];
-    expect(f.min).toBeLessThanOrEqual(500_000);
-    bars()[bars().length - 1].dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
-    expect(column(el, 0)).toHaveLength(4);
-    expect(el.filters).toHaveLength(1);
+    await el.openFilter("monto");
+    const pop = await panel(el, "Monto");
+    expect(pop.querySelectorAll(".nx-grid__fbar").length).toBeGreaterThan(1);
+    const [from, to] = pop.querySelectorAll<HTMLInputElement>(".nx-grid__f-pair input");
+    from.value = "1 M";
+    from.dispatchEvent(new Event("change"));
+    expect(el.filters).toEqual([{ key: "monto", op: "range", min: 1_000_000 }]);
+    expect(column(el, 0)).toEqual(["OC-1", "OC-2", "OC-4"]);
+    to.value = "3 millones";
+    to.dispatchEvent(new Event("change"));
+    expect(column(el, 0)).toEqual(["OC-2", "OC-4"]);
+    expect(chips(el)).toEqual(["Monto: $1 M – $3 M"]);
+    expect(to.value).toBe("$ 3.000.000");
+    // Clic en una barra: ese tramo.
+    pop.querySelector<HTMLElement>(".nx-grid__fbar")!.click();
+    expect((el.filters[0] as { min?: number }).min).toBeUndefined();
+  });
+
+  it("fechas: tramos relativos con su conteo, que se guardan como `rel` y se recalculan al asignarlos", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 8, 29, 12));
+    try {
+      const el = mount();
+      el.columns = [...COLS, { key: "fecha", label: "Fecha", type: "date" }];
+      el.rows = ROWS.map((r, i) => ({ ...r, fecha: ["2026-09-02", "2026-09-28", "2026-10-10", "2026-08-15"][i] }));
+      await el.openFilter("fecha");
+      const pop = await panel(el, "Fecha");
+      const radio = (v: string) => pop.querySelector<HTMLInputElement>(`input[value="${v}"]`)!;
+      const n = (v: string) => radio(v).closest("label")!.querySelector(".nx-grid__opt-n")!.textContent;
+      expect([n("past"), n("next30"), n("month"), n("lastMonth")]).toEqual(["3", "1", "2", "1"]);
+      expect(radio("any").checked).toBe(true);
+      radio("month").click();
+      expect(el.filters).toEqual([{ key: "fecha", op: "range", rel: "month", min: "2026-09-01", max: "2026-10-01" }]);
+      expect(chips(el)).toEqual(["Fecha: este mes"]);
+      expect(column(el, 0)).toEqual(["OC-1", "OC-2"]);
+      // Entre dos fechas: «Hasta» incluye ese día.
+      radio("custom").click();
+      const [from, to] = pop.querySelectorAll<HTMLInputElement>(".nx-grid__f-pair input");
+      expect(from.value).toBe("2026-09-01");
+      to.value = "2026-09-28";
+      to.dispatchEvent(new Event("change"));
+      expect(el.filters).toEqual([{ key: "fecha", op: "range", min: "2026-09-01", max: "2026-09-29" }]);
+      expect(chips(el)).toEqual(["Fecha: 1 sept 2026 – 28 sept 2026"]);
+      // Una vista guardada otro mes se recalcula con la fecha de hoy.
+      el.filters = [{ key: "fecha", op: "range", rel: "month", min: "2020-01-01", max: "2020-02-01" }];
+      expect(el.filters[0]).toMatchObject({ min: "2026-09-01", max: "2026-10-01" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("texto con un valor por fila: «contiene», con ejemplos marcados", async () => {
+    const el = mount();
+    await el.openFilter("oc");
+    const pop = await panel(el, "Pedido");
+    const input = pop.querySelector<HTMLInputElement>('input[type="search"]')!;
+    input.value = "oc-3";
+    input.dispatchEvent(new Event("input"));
+    await new Promise((r) => setTimeout(r, 200));
+    expect(el.filters).toEqual([{ key: "oc", op: "contains", value: "oc-3" }]);
+    expect(column(el, 0)).toEqual(["OC-3"]);
+    expect(pop.querySelector(".nx-grid__f-sample mark")!.textContent).toBe("OC-3");
+    expect(pop.querySelector(".nx-grid__f-body [role=status]")!.textContent).toBe("1 fila coincide");
+  });
+
+  it("clic derecho en una celda: «Solo» o «Sin» ese valor, «Desde» un monto", async () => {
+    const el = mount();
+    const menuOn = async (r: number, c: number) => {
+      el.querySelector(".nx-grid__menu")?.replaceChildren();
+      el.querySelector(`[data-r="${r}"] > [data-c="${c}"]`)!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+      for (let i = 0; i < 100 && !el.querySelector(".nx-grid__menu-item"); i++) await new Promise((res) => setTimeout(res, 10));
+      return [...el.querySelectorAll<HTMLButtonElement>(".nx-grid__menu-item")];
+    };
+    const items = await menuOn(0, 1);
+    expect(items.map((b) => b.textContent)).toEqual(["Solo «Aceros»", "Sin «Aceros»", "Más filtros de Proveedor…"]);
+    items[1].click();
+    expect(el.filters).toEqual([{ key: "prov", op: "notIn", values: ["Aceros"] }]);
+    expect(column(el, 0)).toEqual(["OC-2", "OC-4"]);
+    const money = await menuOn(1, 3);
+    expect(money[0].textContent).toBe("Desde $ 3.000.000");
+    money[0].click();
+    expect(column(el, 0)).toEqual(["OC-4"]);
+  });
+
+  it("Alt+↓ abre el filtro de la columna activa; Escape lo cierra y devuelve el foco al embudo", async () => {
+    const el = mount();
+    key(el, "ArrowRight");
+    key(el, "ArrowRight");
+    key(el, "ArrowDown", { altKey: true });
+    const pop = await panel(el, "Estado");
+    const funnel = el.querySelectorAll<HTMLElement>(".nx-grid__funnel")[2];
+    expect(pop.contains(document.activeElement)).toBe(true);
+    document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await tick();
+    expect(funnel.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(funnel);
+  });
+
+  it("si no queda ninguna fila, propone qué filtro quitar y cuántas filas volverían", () => {
+    const el = mount();
+    el.filters = [
+      { key: "prov", op: "in", values: ["Químicos"] },
+      { key: "estado", op: "in", values: ["apr"] },
+    ];
+    const empty = el.querySelector<HTMLElement>(".nx-grid__empty")!;
+    expect(empty.hidden).toBe(false);
+    const btns = [...empty.querySelectorAll<HTMLButtonElement>("button")];
+    expect(btns.map((b) => b.textContent)).toEqual(["Quitar «Proveedor: Químicos»: vuelven 2 filas", "Quitar «Estado: Aprobado»: vuelve 1 fila"]);
+    btns[1].click();
+    expect(el.filters).toEqual([{ key: "prov", op: "in", values: ["Químicos"] }]);
+    expect(column(el, 0)).toEqual(["OC-4"]);
+  });
+
+  it("filter: false quita el embudo; las columnas de IA no lo tienen", () => {
+    const el = mount();
+    el.columns = COLS.map((c) => (c.key === "prov" ? { ...c, filter: false as const } : c));
+    el.addAiColumn("Riesgo", "p");
+    expect([...el.querySelectorAll(".nx-grid__th")].map((th) => !!th.querySelector(".nx-grid__funnel"))).toEqual([true, false, true, true, false]);
   });
 
   it("panel de facetas: conteos sin la propia faceta, opciones en 0 deshabilitadas", () => {
@@ -300,13 +448,24 @@ describe("<nx-grid>", () => {
     expect(JSON.parse((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)).toEqual({ offset: 0, limit: 100, sort: null, filters: [] });
     expect(foot(el)).toContain("250 filas");
     expect(foot(el)).toContain("$ 250.000");
-    expect(el.querySelectorAll(".nx-grid__th")[2].querySelectorAll(".nx-grid__hbar")).toHaveLength(2);
     expect(el.querySelector(".nx-grid__facet-title")!.textContent).toBe("Proveedor");
     expect(el.querySelector<HTMLElement>(".nx-grid__group")!.hidden).toBe(true);
-    el.querySelectorAll(".nx-grid__th")[2].querySelector<HTMLElement>(".nx-grid__hbar")!.click();
+    // El filtro de la columna: la lista sale de las opciones; los valores de texto, de las facetas.
+    await el.openFilter("prov");
+    let pop = await panel(el, "Proveedor");
+    expect(pop.querySelector(".nx-grid__opt-n")!.textContent).toBe("250");
+    await el.openFilter("estado");
+    pop = await panel(el, "Estado");
+    const calls = fetch.mock.calls.length;
+    pop.querySelector<HTMLInputElement>('input[data-v="apr"]')!.click();
+    expect(chips(el)).toEqual(["Estado: Pendiente"]);
+    // Espera a que se termine de elegir antes de pedir; sin opciones completas, nada de «sin».
     await tick();
+    expect(fetch.mock.calls.length).toBe(calls);
+    await new Promise((r) => setTimeout(r, 300));
     const last = JSON.parse((fetch.mock.calls.at(-1) as unknown as [string, RequestInit])[1].body as string);
     expect(last.filters).toEqual([{ key: "estado", op: "in", values: ["pend"] }]);
+    expect(pop.querySelector(".nx-grid__f-left")!.textContent).toBe("250 filas");
   });
 
   it("locale: formatos del atributo, o del lang más cercano", () => {

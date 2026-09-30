@@ -275,24 +275,36 @@ nx-grid .nx-glyph {
   animation: nx-grid-in var(--nx-motion-base) var(--nx-ease-out);
 
   & button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  & [data-i] {
     display: grid;
     place-items: center;
     inline-size: 20px;
     block-size: 20px;
-    padding: 0;
-    border: 0;
     border-radius: 50%;
-    background: none;
-    color: inherit;
-    cursor: pointer;
     &:hover {
       background: var(--nx-primary-soft);
     }
+  }
+  & :focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
+    border-radius: 4px;
   }
   & .nx-glyph {
     inline-size: 12px;
     block-size: 12px;
   }
+}
+.nx-grid__chip-edit:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .nx-grid__clear {
   padding: 2px 4px;
@@ -438,14 +450,17 @@ nx-grid .nx-glyph {
 .nx-grid__th {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 2px;
   min-inline-size: 0;
-  padding: 7px 10px 6px;
+  padding: 6px 6px 6px 10px;
   border-inline-end: 1px solid var(--nx-border-subtle);
 }
 .nx-grid__sort {
   display: flex;
+  flex: 1;
+  min-block-size: 24px;
   align-items: center;
   gap: 4px;
   min-inline-size: 0;
@@ -504,6 +519,7 @@ nx-grid .nx-grid__ai-mark {
   color: var(--nx-primary-ink);
 }
 .nx-grid__ai-prompt {
+  flex-basis: 100%;
   display: -webkit-box;
   block-size: 26px;
   overflow: hidden;
@@ -543,63 +559,52 @@ nx-grid .nx-grid__ai-mark {
   }
 }
 
-/* Histograma: la barra gris es el total; la de color, lo que queda tras los filtros. */
-.nx-grid__hist {
-  display: flex;
-  align-items: flex-end;
-  gap: 1px;
-  block-size: 26px;
-}
-.nx-grid__hbar {
-  position: relative;
-  flex: 1;
-  min-inline-size: 2px;
-  block-size: 100%;
+/* El embudo: aparece al pasar por la cabecera o con el foco; con un filtro puesto se queda, en color. */
+.nx-grid__funnel {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-text-tertiary);
+  opacity: 0;
   cursor: pointer;
+  transition:
+    opacity var(--nx-motion-fast),
+    background var(--nx-motion-fast);
 
-  &::before,
-  &::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    inset-block-end: 0;
-    border-radius: 2px 2px 0 0;
+  .nx-grid__th:hover > &,
+  &:focus-visible,
+  &[aria-expanded="true"],
+  &.is-on {
+    opacity: 1;
   }
-  &::before {
-    block-size: calc(var(--_a) * 100%);
-    background: var(--nx-border);
+  &:hover,
+  &[aria-expanded="true"] {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
   }
-  &::after {
-    block-size: calc(var(--_f) * 100%);
-    background: color-mix(in oklab, var(--nx-primary) 55%, transparent);
-    transition: block-size var(--nx-motion-base) var(--nx-ease-out);
+  &.is-on {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
   }
-  &:hover::before {
-    background: var(--nx-border-strong);
+  &.is-on path {
+    fill: currentColor;
   }
-  &:hover::after,
-  &.is-on::after {
-    background: var(--nx-primary);
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 1px;
   }
-}
-.nx-grid__peek {
-  position: absolute;
-  inset-block-start: 4px;
-  inset-inline: 6px;
-  z-index: 1;
-  padding: 2px 6px;
-  overflow: hidden;
-  border-radius: 4px;
-  background: var(--nx-foreground);
-  color: var(--nx-card);
-  font-size: 11px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
-
-  &:empty {
-    display: none;
+  & .nx-glyph {
+    inline-size: 13px;
+    block-size: 13px;
+  }
+  @media (hover: none) {
+    opacity: 0.7;
   }
 }
 
@@ -765,11 +770,19 @@ nx-grid .nx-grid__chev {
 }
 .nx-grid__empty {
   position: absolute;
-  inset-block-start: 55%;
+  inset-block-start: 45%;
   inset-inline: 0;
   margin: 0;
+  padding-inline: 16px;
   color: var(--nx-text-tertiary);
   text-align: center;
+}
+.nx-grid__relax {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-block-start: 12px;
 }
 
 /* ---------------------------------------------------------------- pie y columna IA */
@@ -830,6 +843,331 @@ nx-grid .nx-grid__chev {
   }
 }
 
+/* ---------------------------------------------------------------- filtro por columna */
+
+.nx-grid__filter,
+.nx-grid__menu {
+  position: fixed;
+  inset: auto;
+  inset-block-start: var(--_top, 64px);
+  inset-inline-start: var(--_left, 16px);
+  margin: 0;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.nx-grid__filter {
+  flex-direction: column;
+  inline-size: 304px;
+  max-inline-size: calc(100vw - 16px);
+  max-block-size: var(--_maxh, 70vh);
+  padding: 0;
+
+  &:popover-open {
+    display: flex;
+  }
+}
+.nx-grid__f-head {
+  padding: 12px 14px 8px;
+  font-size: 13px;
+}
+.nx-grid__f-body {
+  flex: 1;
+  min-block-size: 0;
+  padding: 0 14px 12px;
+  overflow: auto;
+}
+.nx-grid__f-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  & .nx-grid__field {
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+}
+.nx-grid__f-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-block-start: 1px solid var(--nx-border-subtle);
+}
+.nx-grid__f-foot .nx-grid__btn,
+.nx-grid__relax .nx-grid__btn {
+  block-size: 30px;
+}
+.nx-grid__f-left {
+  flex: 1;
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.nx-grid__f-hint {
+  margin: 0;
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+.nx-grid__f-opts {
+  display: flex;
+  flex-direction: column;
+  max-block-size: 248px;
+  margin-inline: -6px;
+  overflow: auto;
+
+  & .nx-grid__opt {
+    min-block-size: 30px;
+  }
+  & .nx-grid__opt.is-zero {
+    opacity: 1;
+    cursor: pointer;
+    & .nx-grid__opt-label {
+      color: var(--nx-text-quaternary);
+    }
+  }
+}
+.nx-grid__opt-all {
+  margin-block-end: 2px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+  color: var(--nx-muted-foreground);
+}
+.nx-grid__only {
+  display: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--nx-primary-ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+  .nx-grid__opt:is(:hover, :focus-within) > & {
+    display: inline;
+  }
+}
+/* Al pasar por una opción, «Solo» ocupa el lugar del conteo. */
+.nx-grid__opt:is(:hover, :focus-within) > .nx-grid__opt-n:has(+ .nx-grid__only) {
+  display: none;
+}
+.nx-grid__dot {
+  flex: none;
+  inline-size: 7px;
+  block-size: 7px;
+  border-radius: 50%;
+  background: var(--nx-text-quaternary);
+
+  &[data-tone="info"] {
+    background: var(--nx-primary);
+  }
+  &[data-tone="success"] {
+    background: var(--nx-success);
+  }
+  &[data-tone="warning"] {
+    background: var(--nx-grid-warn);
+  }
+  &[data-tone="danger"] {
+    background: var(--nx-danger);
+  }
+}
+nx-grid mark {
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--nx-grid-warn) 30%, transparent);
+  color: inherit;
+}
+.nx-grid__f-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+  & label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    color: var(--nx-muted-foreground);
+    font-size: 12px;
+  }
+}
+/* Las barras del panel: gris, todas las filas; color, las que quedan con los demás filtros. */
+.nx-grid__fbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  block-size: 44px;
+  margin-inline: 8px;
+}
+.nx-grid__fbar {
+  position: relative;
+  flex: 1;
+  block-size: 100%;
+  cursor: pointer;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    border-radius: 2px 2px 0 0;
+  }
+  &::before {
+    block-size: calc(var(--_a) * 100%);
+    background: var(--nx-border);
+  }
+  &::after {
+    block-size: calc(var(--_f) * 100%);
+    background: var(--nx-primary);
+  }
+  &.is-off::after {
+    background: color-mix(in oklab, var(--nx-primary) 35%, transparent);
+  }
+  &:hover::before {
+    background: var(--nx-border-strong);
+  }
+  &.is-today {
+    box-shadow: inset 0 -2px 0 var(--nx-danger);
+  }
+}
+.nx-grid__slider {
+  position: relative;
+  block-size: 22px;
+
+  & input {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    appearance: none;
+  }
+  & input::-webkit-slider-runnable-track {
+    background: none;
+  }
+  & input::-moz-range-track {
+    background: none;
+  }
+  & input::-webkit-slider-thumb {
+    inline-size: 16px;
+    block-size: 16px;
+    border: 2px solid var(--nx-primary);
+    border-radius: 50%;
+    background: var(--nx-card);
+    pointer-events: auto;
+    cursor: grab;
+    appearance: none;
+  }
+  & input::-moz-range-thumb {
+    inline-size: 12px;
+    block-size: 12px;
+    border: 2px solid var(--nx-primary);
+    border-radius: 50%;
+    background: var(--nx-card);
+    pointer-events: auto;
+    cursor: grab;
+  }
+  & input:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--nx-ring);
+  }
+  & input:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px var(--nx-ring);
+  }
+}
+.nx-grid__track {
+  position: absolute;
+  inset-block-start: 9px;
+  inset-inline: 8px;
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--nx-border);
+
+  & i {
+    position: absolute;
+    inset-block: 0;
+    border-radius: 2px;
+    background: var(--nx-primary);
+  }
+}
+.nx-grid__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-block-start: -4px;
+  color: var(--nx-text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.nx-grid__f-sample {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--nx-font-mono);
+  font-size: 12px;
+
+  & li {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.nx-grid__menu {
+  min-inline-size: 200px;
+  padding: 4px;
+  border-radius: var(--nx-radius-md);
+
+  & hr {
+    margin: 4px 2px;
+    border: 0;
+    border-block-start: 1px solid var(--nx-border-subtle);
+  }
+}
+.nx-grid__menu-item {
+  display: block;
+  inline-size: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:is(:hover, :focus) {
+    background: var(--nx-hover);
+    outline: 0;
+  }
+}
+/* En una pantalla angosta, el panel sube como hoja inferior. */
+@media (max-width: 600px) {
+  .nx-grid__filter {
+    inset: auto 0 0;
+    inline-size: auto;
+    max-inline-size: none;
+    max-block-size: 85vh;
+    padding-block-end: env(safe-area-inset-bottom, 0px);
+    border-radius: 14px 14px 0 0;
+
+    &::backdrop {
+      background: var(--nx-backdrop);
+    }
+  }
+}
+
 @container (width < 640px) {
   .nx-grid__main {
     flex-direction: column;
@@ -873,7 +1211,7 @@ nx-grid .nx-grid__chev {
     outline: 1px solid Highlight;
     outline-offset: -1px;
   }
-  .nx-grid__hbar::after {
+  .nx-grid__fbar::after {
     background: Highlight;
   }
 }

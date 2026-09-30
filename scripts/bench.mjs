@@ -7,7 +7,8 @@
 import { build } from "esbuild";
 
 const entry = `
-import { applyFilters, crossfilter, facetColumns, facetOrder, groupRows, histogram, histogramSpec, sortRows } from "./src/components/grid/logic";
+import { applyFilters, crossfilter, facetColumns, facetOrder, groupRows, sortRows } from "./src/components/grid/logic";
+import { histogram, histogramSpec } from "./src/components/grid/bars";
 import { parseNL } from "./src/components/grid/nl";
 import { searchOptions } from "./src/components/select/logic";
 import { filterItems } from "./src/components/sidemenu/logic";

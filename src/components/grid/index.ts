@@ -11,6 +11,7 @@ export type {
   GridChangeSource,
   GridColumn,
   GridColumnType,
+  GridDateRel,
   GridFacetData,
   GridFilter,
   GridHistogram,

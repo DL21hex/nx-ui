@@ -1,7 +1,8 @@
 // Casos límite de la lógica de <nx-grid> y del .xlsx que salieron de la revisión: datos del backend
 // que congelaban la pestaña, fórmulas al copiar y un libro que Excel tenía que «reparar».
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formulaSafe, histogram, histogramSpec, niceEdges, parseTSV, toTSV, unformulaSafe } from "../src/components/grid/logic";
+import { histogram, histogramSpec, niceEdges } from "../src/components/grid/bars";
+import { formulaSafe, parseTSV, toTSV, unformulaSafe } from "../src/components/grid/logic";
 import { buildXlsx, moneyFormat, sheetName, sheetXml } from "../src/components/grid/xlsx";
 
 afterEach(() => vi.unstubAllGlobals());

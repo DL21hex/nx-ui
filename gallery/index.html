@@ -211,8 +211,9 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
       <p class="eyebrow">Componentes</p>
       <h1>Tabla <code class="tag">&lt;nx-grid&gt;</code></h1>
       <p class="lead">
-        Una tabla que se explora sola. Cada columna muestra cómo se reparten sus datos y filtra con un clic. También
-        filtras escribiendo una frase o con el panel de filtros, trabajas como en una hoja de cálculo, agrupas con
+        Una tabla que se explora sola. El embudo de cada columna abre su filtro: una lista, un rango, fechas o
+        «contiene», según el dato. También filtras escribiendo una frase, con el panel de filtros o desde una celda
+        (clic derecho), trabajas como en una hoja de cálculo, agrupas con
         subtotales, exportas a Excel y agregas columnas que calcula una IA con los datos de cada fila.
       </p>
       <div class="grid-try">
@@ -239,7 +240,8 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
         <table>
           <thead><tr><th>Para</th><th>Haz esto</th></tr></thead>
           <tbody>
-            <tr><td>Filtrar con el histograma</td><td>Clic en una barra. En una categoría suma o quita el valor; en números y fechas elige ese rango, y <kbd>Mayús</kbd>+clic lo extiende. La barra gris es el total y la de color lo que queda tras los filtros.</td></tr>
+            <tr><td>Filtrar una columna</td><td>El embudo de la cabecera (aparece al pasar por ella; con <kbd>Alt</kbd>+<kbd>↓</kbd> desde la tabla o la cabecera). Estados y texto con pocos valores: una lista con cuántas filas quedan en cada uno y «Solo» para quedarse con uno. Montos: barras, manijas y dos campos que aceptan «5 M» o «5 millones». Fechas: «Antes de hoy», «Próximos 30 días», «Este mes»… (se guardan relativos) o entre dos fechas. Lo demás: «contiene». Se aplica mientras eliges; el chip lo vuelve a abrir.</td></tr>
+            <tr><td>Filtrar desde una celda</td><td>Clic derecho (o <kbd>Mayús</kbd>+<kbd>F10</kbd>): «Solo Aceros», «Sin Aceros», «Desde $ 5.000.000». Si no queda ninguna fila, la tabla propone qué filtro quitar y cuántas volverían.</td></tr>
             <tr><td>Filtrar con palabras</td><td>«pendientes de marzo de más de 5 millones», «sin anulados», «entre 1 y 2 millones», «atraso mayor a 3», o texto entre comillas. Lo que no entiende te lo dice. Con <code>nl-endpoint</code>, esas frases van al backend.</td></tr>
             <tr><td>Panel de filtros</td><td>Las opciones de una faceta se suman y las facetas se combinan entre sí. Cada conteo refleja los demás filtros; una opción en 0 queda deshabilitada.</td></tr>
             <tr><td>Hoja de cálculo</td><td>Flechas, <kbd>Inicio</kbd>/<kbd>Fin</kbd>, <kbd>RePág</kbd>/<kbd>AvPág</kbd>, <kbd>Mayús</kbd> para seleccionar un rango (o arrastrar); el pie muestra suma, promedio, mínimo y máximo. <kbd>Ctrl</kbd>+<kbd>C</kbd> copia para pegar en Excel, y <kbd>Ctrl</kbd>+<kbd>V</kbd> pega desde Excel en las columnas editables.</td></tr>
@@ -254,10 +256,10 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
         <table>
           <thead><tr><th>Endpoint</th><th>Petición → respuesta</th></tr></thead>
           <tbody>
-            <tr><td><code>source</code></td><td><code>POST {"offset":0,"limit":100,"sort":{"key":"monto","dir":-1},"filters":[…]}</code> → <code>{"rows":[…],"total":20000,"histograms":{"monto":{"kind":"bins","labels":[…],"counts":[…],"filtered":[…],"edges":[…]}},"facets":[{"key":"prov","label":"Proveedor","options":[{"value":"…","count":12}]}],"totals":{"monto":…}}</code>. Los agregados son opcionales; sin ellos, la tabla no muestra histogramas ni facetas.</td></tr>
+            <tr><td><code>source</code></td><td><code>POST {"offset":0,"limit":100,"sort":{"key":"monto","dir":-1},"filters":[…]}</code> → <code>{"rows":[…],"total":20000,"histograms":{"monto":{"kind":"bins","labels":[…],"counts":[…],"filtered":[…],"edges":[…]}},"facets":[{"key":"prov","label":"Proveedor","options":[{"value":"…","count":12}]}],"totals":{"monto":…}}</code>. Los agregados son opcionales: <code>histograms</code> da las barras del filtro de montos y fechas, y <code>facets</code> los valores (con su conteo) de las listas y del panel de filtros. Sin ellos, esos filtros quedan con sus campos.</td></tr>
             <tr><td><code>ai-endpoint</code></td><td><code>POST {"prompt","column","label","columns":[…],"rows":[{"id":"2201","monto":…}]}</code> → NDJSON o SSE, una línea por celda y en cualquier orden: <code>{"type":"cell","id":"2201","value":"Alto","tone":"danger"}</code>. El tono (<code>success</code>, <code>warning</code>, <code>danger</code>, <code>info</code>) es opcional.</td></tr>
             <tr><td><code>nl-endpoint</code></td><td><code>POST {"q","columns"}</code> → <code>{"filters":[…],"unknown":["…"]}</code>. Solo se llama si el analizador local no entendió todo.</td></tr>
-            <tr><td>Filtros</td><td><code>{"key","op":"in","values":[…]}</code>, <code>"notIn"</code>, <code>{"op":"range","min","max"}</code> (<code>min</code> incluido, <code>max</code> excluido; números o fechas ISO) y <code>{"op":"contains","value"}</code>.</td></tr>
+            <tr><td>Filtros</td><td><code>{"key","op":"in","values":[…]}</code>, <code>"notIn"</code>, <code>{"op":"range","min","max"}</code> (<code>min</code> incluido, <code>max</code> excluido; números o fechas ISO; con <code>"rel":"month"</code>, <code>"past"</code>, <code>"last30"</code>, <code>"next30"</code>, <code>"lastMonth"</code> o <code>"year"</code> el tramo se recalcula con la fecha de hoy) y <code>{"op":"contains","value"}</code>.</td></tr>
           </tbody>
         </table>
       </div>

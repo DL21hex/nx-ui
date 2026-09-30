@@ -53,7 +53,7 @@ test("copiar y pegar con el portapapeles del sistema (TSV, como Excel)", async (
   await expect(cell(page, 2, 7)).toHaveText("$ 222");
 });
 
-test("filtrar con una frase y con una barra del histograma", async ({ page }) => {
+test("filtrar con una frase y con el filtro de una columna", async ({ page }) => {
   await open(page, "#/grid");
   const ask = grid(page).getByRole("textbox", { name: /Filtra con tus palabras/ });
   await ask.fill("pendientes de más de 5 millones");
@@ -63,8 +63,16 @@ test("filtrar con una frase y con una barra del histograma", async ({ page }) =>
   await grid(page).locator(".nx-grid__chips .nx-grid__clear").click();
   await expect(chips).toHaveCount(0);
   const estado = grid(page).locator(".nx-grid__th", { hasText: "Estado" });
-  await estado.locator(".nx-grid__hbar").first().click();
+  await estado.hover();
+  await estado.locator(".nx-grid__funnel").click();
+  const panel = grid(page).locator(".nx-grid__filter");
+  await expect(panel).toBeVisible();
+  await panel.locator(".nx-grid__f-opts input[data-v]").first().uncheck();
   await expect(chips).toHaveCount(1);
+  await expect(panel.locator(".nx-grid__f-left")).toContainText("de 600");
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(estado.locator(".nx-grid__funnel")).toBeFocused();
   await expect(grid(page).locator(".nx-grid__foot")).toContainText("de 600 filas");
 });
 
