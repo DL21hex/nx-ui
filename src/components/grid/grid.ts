@@ -80,6 +80,7 @@ export const GRID_LABELS: GridLabels = {
   more: "Ver {n} más",
   less: "Ver menos",
   empty: "Ninguna fila coincide con los filtros",
+  loading: "Cargando…",
   selected: "{n} seleccionadas",
   selectedOne: "1 seleccionada",
   selectAll: "Seleccionar las {n}",
@@ -1324,8 +1325,12 @@ export class NxGrid extends Base {
     // Cabeceras.
     this.#ths.forEach((th, ci) => this.#paintTh(th, this.#columns[ci]));
     this.#scroll!.setAttribute("aria-rowcount", String(this.#count() + 1));
-    this.#empty!.hidden = this.#count() > 0 || (this.#server && this.#blocks.get(0) === "loading") || !this.#columns.length;
-    this.#empty!.replaceChildren(L.empty, ...(this.#empty!.hidden ? [] : this.#relax()));
+    // Sin filas todavía porque el servidor no ha respondido: «Cargando…», no una tabla en blanco
+    // (parecía que no había datos). Con filas ya contadas, las que faltan se pintan como esqueleto.
+    const loading = this.#server && this.#blocks.get(0) === "loading" && !this.#count() && this.#columns.length > 0;
+    this.#empty!.hidden = !loading && (this.#count() > 0 || !this.#columns.length);
+    this.#empty!.classList.toggle("is-loading", loading);
+    this.#empty!.replaceChildren(loading ? L.loading : L.empty, ...(this.#empty!.hidden || loading ? [] : this.#relax()));
     this.#paintFacets();
     this.#paintHistory();
     this.#panel?.refresh();

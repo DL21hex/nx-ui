@@ -46,6 +46,30 @@ describe("nx-grid trabajando", () => {
     warn.mockRestore();
   });
 
+  it("modo servidor: mientras llega el primer bloque dice «Cargando…», no queda una tabla en blanco", async () => {
+    let answer!: (r: Response) => void;
+    const pending = vi.fn(() => new Promise<Response>((r) => (answer = r)));
+    vi.stubGlobal("fetch", pending);
+    document.body.innerHTML = '<nx-grid source="/datos"></nx-grid>';
+    const el = document.querySelector("nx-grid")!;
+    el.columns = COLS;
+    await sleep(10);
+    const empty = el.querySelector<HTMLElement>(".nx-grid__empty")!;
+    expect(empty.hidden).toBe(false);
+    expect(empty.classList.contains("is-loading")).toBe(true);
+    expect(empty.textContent).toBe("Cargando…");
+    // Sin filas en la respuesta: el aviso de siempre.
+    answer(new Response(JSON.stringify({ rows: [], total: 0 })));
+    await sleep(10);
+    expect(empty.classList.contains("is-loading")).toBe(false);
+    expect(empty.textContent).toContain("Ninguna fila coincide");
+    // Con filas: sin aviso.
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ rows: ROWS, total: 2 }))));
+    el.refresh();
+    await sleep(10);
+    expect(empty.hidden).toBe(true);
+  });
+
   it("modo servidor: el aviso del lector de pantalla dice el total filtrado que llega, no el anterior", async () => {
     const fetch = vi.fn(async (_url: string, init: RequestInit) => {
       const q = JSON.parse(init.body as string);

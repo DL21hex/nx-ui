@@ -366,9 +366,11 @@ nx-grid .nx-glyph {
 
 /* ---------------------------------------------------------------- facetas */
 
+/* La tabla se estira hasta el alto del panel «Filtros» (sin bajar de `--nx-grid-height`): al lado
+   de un panel largo no queda un hueco debajo de ella. */
 .nx-grid__main {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 12px;
 }
 /* Al lado de la tabla, el panel crece con su contenido: nada de un segundo scroll dentro de él. */
@@ -467,7 +469,10 @@ nx-grid .nx-glyph {
   position: relative;
   flex: 1;
   min-inline-size: 0;
-  block-size: var(--nx-grid-height);
+  /* `contain: size`: las filas (su alto total, miles de px) no cuentan para el alto de la tabla;
+     lo ponen el mínimo y, con el panel abierto, el alto del panel. */
+  contain: size;
+  min-block-size: var(--nx-grid-height);
   overflow: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--nx-border);
@@ -702,6 +707,19 @@ nx-grid .nx-grid__sort-icon {
     --_bg: var(--nx-danger-soft);
     --_fg: var(--nx-danger);
   }
+}
+/* El primer bloque del servidor todavía no llega. */
+.nx-grid__empty.is-loading::before {
+  content: "";
+  display: inline-block;
+  inline-size: 12px;
+  block-size: 12px;
+  margin-inline-end: 8px;
+  border: 2px solid var(--nx-border-strong);
+  border-block-start-color: var(--nx-primary);
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: nx-grid-spin 0.8s linear infinite;
 }
 /* Una fila del servidor que todavía no llega. */
 .is-loading .nx-grid__cell::before {

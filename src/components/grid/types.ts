@@ -88,6 +88,7 @@ export interface GridLabels {
   more: string;
   less: string;
   empty: string;
+  loading: string;
   selected: string;
   selectedOne: string;
   selectAll: string;
