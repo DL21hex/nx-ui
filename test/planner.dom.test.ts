@@ -208,8 +208,8 @@ describe("<nx-planner>: arrastre", () => {
     // Optimista: ya está en su nuevo lugar.
     expect(place(el, "e3")).toBe("c1 12:30–13:30");
     expect(rowName(bk(el, "e3"))).toBe("Camión TKR-512");
-    await sleep(30);
-    expect(toastText()).toContain("Entrega Aceros Norte → Camión TKR-512");
+    // El aviso se carga con `import()` la primera vez: con la máquina ocupada tarda más que un frame.
+    await vi.waitFor(() => expect(toastText()).toContain("Entrega Aceros Norte → Camión TKR-512"));
   });
 
   it("cambiar la duración por los bordes y no menos de una franja", () => {
@@ -290,8 +290,7 @@ describe("<nx-planner>: optimista, reversión y deshacer", () => {
     drag(el, bk(el, "e3"), [X(11, 15), Y.c2], [X(11, 15), Y.c1]);
     expect(place(el, "e3")).toBe("c2 11:00–12:00");
     expect(live(el)).toBe("El TKR-512 no entra a zona franca. Entrega Aceros Norte volvió a su lugar.");
-    await sleep(30);
-    expect(toastText()).toContain("volvió a su lugar");
+    await vi.waitFor(() => expect(toastText()).toContain("volvió a su lugar"));
   });
 
   it("deshacer con el método, con Ctrl+Z y con el botón del aviso", async () => {
