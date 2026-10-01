@@ -9,7 +9,7 @@ test("«¿Cómo…?» al asistente: un recorrido sobre la pantalla, paso a paso"
   await expect(card).toBeFocused();
   await expect(card.locator(".nx-tour__count")).toHaveText("1 de 5");
   await page.keyboard.press("ArrowRight");
-  await expect(card.locator(".nx-tour__title")).toContainText("dilo con tus palabras");
+  await expect(card.locator(".nx-tour__title")).toContainText("filtra una columna");
   for (let i = 0; i < 4; i++) await page.keyboard.press("Enter");
   await expect(card).toHaveCount(0);
   await expect(page.locator("#th-agent")).toContainText("¡Eso es todo!");

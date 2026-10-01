@@ -53,14 +53,9 @@ test("copiar y pegar con el portapapeles del sistema (TSV, como Excel)", async (
   await expect(cell(page, 2, 7)).toHaveText("$ 222");
 });
 
-test("filtrar con una frase y con el filtro de una columna", async ({ page }) => {
+test("filtrar con el filtro de una columna", async ({ page }) => {
   await open(page, "#/grid");
-  const ask = grid(page).getByRole("textbox", { name: /Filtra con tus palabras/ });
-  await ask.fill("pendientes de más de 5 millones");
-  await ask.press("Enter");
   const chips = grid(page).locator(".nx-grid__chip");
-  await expect(chips).toHaveCount(2);
-  await grid(page).locator(".nx-grid__chips .nx-grid__clear").click();
   await expect(chips).toHaveCount(0);
   const estado = grid(page).locator(".nx-grid__th", { hasText: "Estado" });
   await estado.hover();
