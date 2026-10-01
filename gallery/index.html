@@ -2834,6 +2834,65 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
         </template>
 
         <!-- ================================================================ Tarjetas con zoom -->
+        <template id="page-org">
+          <p class="eyebrow">Componentes</p>
+          <h1>Organigrama <code class="tag">&lt;nx-org&gt;</code></h1>
+          <p class="lead">
+            Un grupo de tres empresas con unas 300 personas, con dos lentes sobre los mismos datos. <strong>Yo</strong> muestra el
+            lugar de quien mira: su cadena hacia arriba, su jefe, quienes comparten jefe, su equipo y a quién acude para cada cosa.
+            <strong>Organización</strong> muestra la empresa como bloques proporcionales a la gente, y se entra en ellos hasta
+            llegar a las personas.
+          </p>
+          <nx-org id="org-demo" locale="es-CO" searchable></nx-org>
+          <p class="sel-tip">
+            Pulsa a cualquier persona para centrarte en ella: arriba aparece el camino desde ti («Tu jefe común con… es…»). En
+            <em>Organización</em>, «Tú» marca el bloque que lleva a tu lugar en cada nivel; <kbd>Esc</kbd> sube un nivel y las
+            flechas se mueven entre bloques. El menú <em>Color</em> pinta el mapa con una sola cifra a la vez.
+          </p>
+          <ol class="stage__log btn-events" id="org-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Yo</td><td>La persona del centro (por defecto, <code>me</code>) con su cadena en una línea, su jefe, quienes comparten jefe (los primeros ocho y «+n») y su equipo directo, con cuántos tiene cada uno a cargo. Para quien mira, <code>contacts</code>: «Para… / Acudes a…».</td></tr>
+                <tr><td>Camino</td><td>Si el centro es otra persona, el jefe común más cercano y cuántos niveles hay hasta él. «Volver a mí» regresa.</td></tr>
+                <tr><td>Organización</td><td>Bloques de tamaño proporcional a las personas (<em>treemap</em>), como mucho 18 por nivel; el resto va en «Otras n unidades». Una unidad sin subunidades se abre en sus cargos, y un cargo, en sus personas.</td></tr>
+                <tr><td>Color</td><td>Una cifra de <code>unit.metrics</code> a la vez (<code>metrics</code>), en el acento, ámbar o rojo; con <code>per: "count"</code>, por persona de la unidad.</td></tr>
+                <tr><td>Por partes</td><td>Con <code>source</code>, un POST pide lo que falta: <code>{unit}</code> (sus personas), <code>{person}</code> (su cadena, sus pares y su equipo) o <code>{search}</code>, y responde <code>{people?, units?}</code>. Lo que llega completo de arranque no se vuelve a pedir. Una persona con <code>locked</code> se ve pero no se abre.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-org id="org" me="e214" searchable&gt;&lt;/nx-org&gt;
+
+    org.units = [
+      { id: "agro", name: "Agrovid", kind: "Empresa", count: 230 },
+      { id: "agro-esp", name: "Finca La Esperanza", parent: "agro", kind: "Subdivisión", count: 74,
+        metrics: { vacantes: 3 } },
+    ];
+    org.people = [
+      { id: "e214", name: "Ana Díaz", title: "Analista de rutas", unit: "log-baq", boss: "e180" },
+    ];
+    org.metrics = [{ key: "vacantes", label: "Vacantes", tone: "warning" }];
+    org.contacts = [{ label: "Aprobar permisos y vacaciones", person: "e180" }];
+    // Para una organización grande, por partes:
+    org.source = "/api/organigrama";</code></pre>
+            <pre role="tabpanel" hidden><code>import { Org } from "nx32-elements/solid/org";
+
+    &lt;Org units={unidades()} people={personas()} me={yo()} searchable
+      metrics={[{ key: "vacantes", label: "Vacantes", tone: "warning" }]}
+      onFocusChange={(e) =&gt; console.log(e.detail.view, e.detail.id)} /&gt;</code></pre>
+          </div>
+        </template>
+
         <template id="page-cards">
           <p class="eyebrow">Componentes</p>
           <h1>Tarjetas con zoom <code class="tag">&lt;nx-cards&gt;</code></h1>

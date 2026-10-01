@@ -22,6 +22,8 @@ import type { NxFields } from "../components/fields/fields";
 import type { FieldItem, FieldsActionDetail, FieldsLabels, FieldsVariant } from "../components/fields/types";
 import type { NxTabs } from "../components/tabs/tabs";
 import type { TabChangeDetail, TabItem, TabsLabels } from "../components/tabs/types";
+import type { NxOrg } from "../components/org/org";
+import type { OrgContact, OrgFocusDetail, OrgLabels, OrgMetric, OrgPerson, OrgUnit, OrgView } from "../components/org/types";
 import type { NxAgent } from "../components/agent/agent";
 import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool } from "../components/agent/types";
 import type { NxCommand } from "../components/command/command";
@@ -128,8 +130,12 @@ declare module "solid-js" {
       me: PresenceUser | ChecklistPerson | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | ChecklistSummaryItem[] | FieldItem[] | undefined;
       tabs: TabItem[] | null | undefined;
+      units: OrgUnit[] | null | undefined;
+      people: OrgPerson[] | null | undefined;
+      contacts: OrgContact[] | null | undefined;
+      metrics: OrgMetric[] | null | undefined;
       errors: Record<string, string> | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | Partial<RecurrenceLabels> | Partial<JobsLabels> | Partial<FieldsLabels> | Partial<TabsLabels> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | Partial<RecurrenceLabels> | Partial<JobsLabels> | Partial<FieldsLabels> | Partial<TabsLabels> | Partial<OrgLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -191,7 +197,9 @@ declare module "solid-js" {
       "max-silent": string | undefined;
       empty: "notice" | undefined;
       rebase: "false" | undefined;
-      view: PlannerView | undefined;
+      view: PlannerView | OrgView | undefined;
+      me: string | undefined;
+      metric: string | undefined;
       date: string | undefined;
       snap: string | undefined;
       hours: string | undefined;
@@ -301,6 +309,7 @@ declare module "solid-js" {
       geo: boolean;
       auto: boolean;
       search: boolean;
+      searchable: boolean;
       lock: boolean;
       autostart: boolean;
       muted: boolean;
@@ -360,6 +369,7 @@ declare module "solid-js" {
       "nx-cards-open": CustomEvent<CardsOpenDetail>;
       "nx-cards-action": CustomEvent<CardsActionDetail>;
       "nx-cards-level": CustomEvent<{ level: CardsLevel }>;
+      "nx-org-focus": CustomEvent<OrgFocusDetail>;
       "nx-award-advise": CustomEvent<AwardAdviseDetail>;
       "nx-award-change": CustomEvent<AwardChangeDetail>;
       "nx-award-submit": CustomEvent<AwardSubmitDetail>;
@@ -458,6 +468,7 @@ declare module "solid-js" {
       "nx-notice": HTMLAttributes<NxNotice>;
       "nx-fields": HTMLAttributes<NxFields>;
       "nx-tabs": HTMLAttributes<NxTabs>;
+      "nx-org": HTMLAttributes<NxOrg> & { source?: string };
       "nx-award": HTMLAttributes<NxAward> & { heading?: string; endpoint?: string };
       "nx-account": HTMLAttributes<NxAccount>;
       "nx-launcher": HTMLAttributes<NxLauncher>;

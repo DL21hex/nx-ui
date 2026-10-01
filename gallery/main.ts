@@ -49,6 +49,7 @@ import { mountHandoffDemo } from "./demo-handoff";
 import { mountAwardDemo } from "./demo-award";
 import { mountLauncherDemo } from "./demo-launcher";
 import { mountCardsDemo } from "./demo-cards";
+import { mountOrgDemo } from "./demo-org";
 import "./pages/launcher.css";
 import "./pages/handoff.css";
 import { mountGuardDemo } from "./demo-guard";
@@ -152,6 +153,7 @@ const NAV: MenuItem[] = [
   { id: "account", label: "Cuenta", href: "#/account", icon: "user", section: "Componentes", badge: "Nuevo" },
   { id: "launcher", label: "Launcher", href: "#/launcher", icon: "layout-grid", section: "Componentes", badge: "Nuevo" },
   { id: "cards", label: "Tarjetas con zoom", href: "#/cards", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
+  { id: "org", label: "Organigrama", href: "#/org", icon: "users", section: "Componentes", badge: "Nuevo" },
   { id: "print", label: "Imprimir documentos", href: "#/print", icon: "printer", section: "Componentes", badge: "Nuevo" },
   { id: "drawer", label: "Ficha lateral", href: "#/drawer", icon: "panel-right", section: "Componentes", badge: "Nuevo" },
   { id: "signature", label: "Firma", href: "#/signature", icon: "pen-line", section: "Componentes", badge: "Nuevo" },
@@ -198,6 +200,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/award": { template: "page-award", mount: mountAwardDemo },
   "#/launcher": { template: "page-launcher", mount: mountLauncherDemo },
   "#/cards": { template: "page-cards", mount: mountCardsDemo },
+  "#/org": { template: "page-org", mount: mountOrgDemo },
   "#/account": { template: "page-account", mount: mountAccountDemo },
   "#/print": { template: "page-print", mount: mountPrintDemo },
   "#/drawer": { template: "page-drawer", mount: mountDrawerDemo },

@@ -51,6 +51,7 @@ export * from "./award";
 export * from "./account";
 export * from "./launcher";
 export * from "./cards";
+export * from "./org";
 export * from "./print";
 export * from "./badge";
 export * from "./notice";

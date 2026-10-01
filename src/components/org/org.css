@@ -1,0 +1,614 @@
+/*
+ * <nx-org>. Variables propias:
+ *   --nx-org-top (0px): dónde se pega la barra al desplazarse (bajo un encabezado fijo de la app)
+ *
+ * `[data-view]` en la raíz dice qué lente se ve. Los bloques del mapa llevan `--i` (0–1): la
+ * intensidad del color, por la gente o por la cifra elegida.
+ */
+
+nx-org {
+  display: block;
+  color: var(--nx-foreground);
+  font: 14px/1.45 var(--nx-font-sans);
+}
+nx-org[hidden] {
+  display: none;
+}
+nx-org * {
+  box-sizing: border-box;
+}
+nx-org button,
+nx-org input,
+nx-org select {
+  font: inherit;
+  color: inherit;
+}
+nx-org :focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- barra */
+
+.nx-org__bar {
+  position: sticky;
+  inset-block-start: var(--nx-org-top, 0px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding-block: 10px;
+  background: color-mix(in oklch, var(--nx-canvas, var(--nx-background)) 92%, transparent);
+  backdrop-filter: blur(10px);
+}
+.nx-org__bar:empty {
+  display: none;
+}
+.nx-org__views {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+}
+.nx-org__view {
+  min-block-size: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-muted-foreground);
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &[aria-pressed="true"] {
+    background: var(--nx-primary-soft);
+    color: var(--nx-primary-ink);
+    font-weight: 600;
+  }
+}
+.nx-org__search {
+  position: relative;
+  flex: 1 1 220px;
+  max-inline-size: 360px;
+}
+.nx-org__search-icon {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 10px;
+  translate: 0 -50%;
+  inline-size: 16px;
+  block-size: 16px;
+  color: var(--nx-text-tertiary);
+  pointer-events: none;
+}
+.nx-org__input,
+.nx-org__select {
+  block-size: 34px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+}
+.nx-org__input {
+  inline-size: 100%;
+  padding: 0 10px 0 32px;
+}
+.nx-org__select {
+  padding: 0 8px;
+}
+.nx-org__metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+.nx-org__label {
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+}
+.nx-org__results {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(100% + 4px);
+  z-index: 20;
+  max-block-size: 340px;
+  overflow: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  box-shadow: var(--nx-shadow-popover);
+}
+.nx-org__result {
+  display: grid;
+  padding: 7px 10px;
+  border-radius: var(--nx-radius-md);
+  cursor: pointer;
+  &:hover,
+  &[aria-selected="true"] {
+    background: var(--nx-hover);
+  }
+}
+.nx-org__result-meta,
+.nx-org__noresult {
+  font-size: 12.5px;
+  color: var(--nx-text-tertiary);
+}
+.nx-org__noresult {
+  padding: 8px 10px;
+}
+
+/* ---------------------------------------------------------------- migas */
+
+.nx-org__crumbs:empty {
+  display: none;
+}
+.nx-org__trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  > li + li::before {
+    content: "›";
+    margin-inline: 4px;
+    color: var(--nx-text-quaternary);
+  }
+}
+.nx-org__crumb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+  &:is(button) {
+    cursor: pointer;
+  }
+  &:is(button):hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &[aria-current] {
+    color: var(--nx-foreground);
+    font-weight: 600;
+  }
+}
+.nx-org__crumb-title {
+  font-size: 12px;
+  color: var(--nx-text-tertiary);
+}
+
+/* ---------------------------------------------------------------- comunes */
+
+.nx-org__h {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.nx-org__muted,
+.nx-org__empty {
+  margin: 0;
+  color: var(--nx-text-tertiary);
+}
+.nx-org__empty {
+  padding: 32px 0;
+  text-align: center;
+}
+.nx-org__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--nx-primary-ink);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+.nx-org__more {
+  display: block;
+  margin: 12px auto 0;
+  padding: 6px 14px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  cursor: pointer;
+  &:hover {
+    background: var(--nx-hover);
+  }
+}
+.nx-org__you {
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--nx-primary);
+  color: var(--nx-primary-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.nx-org__live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- personas */
+
+.nx-org__avatar,
+.nx-org__mini {
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  display: inline-grid;
+  place-items: center;
+  font-weight: 600;
+}
+.nx-org__avatar {
+  inline-size: 40px;
+  block-size: 40px;
+  font-size: 14px;
+}
+.nx-org__mini {
+  inline-size: 22px;
+  block-size: 22px;
+  font-size: 10px;
+}
+.nx-org__person {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  text-align: start;
+  &:is(button) {
+    cursor: pointer;
+    transition:
+      border-color var(--nx-motion-fast),
+      box-shadow var(--nx-motion-fast);
+  }
+  &:is(button):hover {
+    border-color: var(--nx-border-strong);
+    box-shadow: var(--nx-shadow-popover);
+  }
+  &.is-me {
+    border-color: var(--nx-primary-border);
+  }
+}
+.nx-org__who {
+  display: grid;
+  min-inline-size: 0;
+  gap: 1px;
+}
+.nx-org__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.nx-org__title {
+  color: var(--nx-muted-foreground);
+  font-size: 13px;
+}
+.nx-org__unit,
+.nx-org__span {
+  color: var(--nx-text-tertiary);
+  font-size: 12px;
+}
+.nx-org__span {
+  font-variant-numeric: tabular-nums;
+}
+.nx-org__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-org__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-inline-size: 220px;
+  padding: 3px 10px 3px 3px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  font-size: 13px;
+  &:is(button) {
+    cursor: pointer;
+  }
+  &:is(button):hover {
+    background: var(--nx-hover);
+  }
+}
+.nx-org__chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nx-org__chip--more {
+  padding-inline-start: 10px;
+  color: var(--nx-muted-foreground);
+}
+
+/* ---------------------------------------------------------------- lente «Yo» */
+
+.nx-org__me {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  max-inline-size: 920px;
+  margin-inline: auto;
+}
+.nx-org__path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 14px;
+  margin-block-end: 16px;
+  padding: 8px 14px;
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-primary-soft);
+  color: var(--nx-foreground);
+  font-size: 13.5px;
+  text-align: center;
+}
+.nx-org__level {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  inline-size: 100%;
+  /* La línea de mando: un trazo vertical entre los niveles. */
+  & + &::before {
+    content: "";
+    display: block;
+    inline-size: 1px;
+    block-size: 22px;
+    background: var(--nx-border-strong);
+  }
+}
+.nx-org__level--boss .nx-org__person,
+.nx-org__level--center > .nx-org__person {
+  inline-size: min(100%, 380px);
+}
+.nx-org__noboss {
+  padding: 8px 14px;
+  border: 1px dashed var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+}
+.nx-org__person--center {
+  position: relative;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  border: 1.5px solid var(--nx-primary-border);
+  box-shadow:
+    0 0 0 4px var(--nx-primary-soft),
+    var(--nx-shadow-popover);
+  .nx-org__avatar {
+    inline-size: 56px;
+    block-size: 56px;
+    font-size: 18px;
+  }
+  .nx-org__name {
+    font-size: 17px;
+  }
+  .nx-org__who {
+    flex: 1;
+  }
+}
+.nx-org__open,
+.nx-org__tomap {
+  margin-inline-start: 66px;
+}
+.nx-org__open + .nx-org__tomap {
+  margin-inline-start: 14px;
+}
+.nx-org__peerbox {
+  display: grid;
+  justify-items: center;
+  margin-block-start: 14px;
+}
+.nx-org__peers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nx-org__level--team,
+.nx-org__level--contacts {
+  justify-items: stretch;
+  > .nx-org__h {
+    justify-self: center;
+  }
+  &::before {
+    justify-self: center;
+  }
+}
+.nx-org__level--contacts {
+  margin-block-start: 18px;
+  &::before {
+    display: none !important;
+  }
+}
+.nx-org__contacts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-card);
+  overflow: hidden;
+  > dt,
+  > dd {
+    margin: 0;
+    padding: 9px 14px;
+    border-block-start: 1px solid var(--nx-border-subtle);
+    display: flex;
+    align-items: center;
+  }
+  > dt {
+    color: var(--nx-muted-foreground);
+  }
+  > .nx-org__contacts-head {
+    border-block-start: 0;
+    background: var(--nx-sidebar, var(--nx-canvas));
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--nx-muted-foreground);
+  }
+}
+
+/* ---------------------------------------------------------------- lente «Organización» */
+
+.nx-org__map {
+  display: grid;
+  gap: 18px;
+}
+.nx-org__tiles {
+  --tone: var(--nx-primary);
+  position: relative;
+  border-radius: var(--nx-radius-lg);
+  overflow: hidden;
+  background: var(--nx-canvas, var(--nx-background));
+  &[data-tone="warning"] {
+    --tone: var(--nx-warning, oklch(0.74 0.15 70));
+  }
+  &[data-tone="danger"] {
+    --tone: var(--nx-danger);
+  }
+}
+.nx-org__tile {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  overflow: hidden;
+  border: 2px solid var(--nx-canvas, var(--nx-background));
+  border-radius: calc(var(--nx-radius-lg) + 2px);
+  background-clip: padding-box;
+  background-color: color-mix(in oklch, var(--tone) calc(5% + var(--i, 0) * 30%), var(--nx-card));
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color var(--nx-motion-base),
+    box-shadow var(--nx-motion-fast);
+  &:hover {
+    background-color: color-mix(in oklch, var(--tone) calc(9% + var(--i, 0) * 30%), var(--nx-card));
+    box-shadow: inset 0 0 0 1px var(--nx-border-strong);
+  }
+  &:focus-visible {
+    outline-offset: -3px;
+  }
+  &.is-xs {
+    padding: 4px;
+  }
+  &.is-rest {
+    background-color: var(--nx-card);
+    background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--nx-border-subtle) 6px 7px);
+  }
+  &.is-you {
+    box-shadow: inset 0 0 0 2px var(--nx-primary);
+  }
+  > .nx-org__you {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+  }
+  &.is-xs > .nx-org__you {
+    inset-block-start: 3px;
+    inset-inline-end: 3px;
+    inline-size: 10px;
+    block-size: 10px;
+    padding: 0;
+    font-size: 0;
+  }
+}
+.nx-org__kind {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--nx-muted-foreground);
+}
+.nx-org__tile-name {
+  max-inline-size: calc(100% - 28px);
+  font-weight: 600;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  .is-sm > & {
+    -webkit-line-clamp: 1;
+    font-size: 13px;
+  }
+}
+.nx-org__count,
+.nx-org__tile-metric,
+.nx-org__tile-leader {
+  font-size: 12.5px;
+  color: var(--nx-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.is-sm > .nx-org__count {
+  font-size: 12px;
+}
+.is-lg > .nx-org__count {
+  font-size: 13.5px;
+  color: var(--nx-foreground);
+}
+.nx-org__preview {
+  position: absolute;
+  inset-inline: 12px;
+  inset-block-end: 12px;
+  block-size: min(46%, 140px);
+  opacity: 0.7;
+}
+.nx-org__cell {
+  position: absolute;
+  border: 1.5px solid color-mix(in oklch, var(--nx-foreground) 14%, transparent);
+  border-radius: 4px;
+  background-clip: padding-box;
+}
+.nx-org__members > .nx-org__h {
+  margin-block-end: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-org__tile,
+  .nx-org__person {
+    transition: none;
+  }
+}

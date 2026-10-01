@@ -39,6 +39,7 @@ export * from "./components/badge/index";
 export * from "./components/notice/index";
 export * from "./components/fields/index";
 export * from "./components/tabs/index";
+export * from "./components/org/index";
 export * from "./components/account/index";
 export * from "./components/launcher/index";
 export * from "./components/cards/index";

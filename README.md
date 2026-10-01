@@ -27,6 +27,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB), el bloqueo (≈ 3,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,3 KB |
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
+| `<nx-org>` + núcleo (ESM) | ≈ 12,2 KB |
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
@@ -1612,6 +1613,52 @@ Los datos llegan tal como salen de la base de datos (`rows`); `fields` dice qué
 | Eventos | `nx-cards-level` `{level}`, `nx-cards-open` `{row, open}`, `nx-cards-action` `{action, row}` |
 | CSS | `--nx-cards-top` (dónde se pega la barra), `--nx-cards-warn` / `--nx-cards-ink` |
 | Funciones | `formatCardsField()`, `groupCards()`, `matchCard()`, `sortCards()`, `stepLevel()`, `weightRanks()` |
+
+## `<nx-org>`
+
+**El organigrama, con dos lentes sobre los mismos datos.**
+
+- **Yo:** una persona en el centro (por defecto, `me`: quien mira) con lo que tiene alrededor: su
+  cadena hacia arriba en una línea, su jefe, quienes comparten jefe (los primeros ocho y «+n») y su
+  equipo directo, con cuántos tiene a cargo cada uno. Para quien mira, `contacts`: «Para… /
+  Acudes a…» («Aprobar vacaciones → Laura Gómez»).
+- **El camino:** al centrarse en otra persona, el jefe común más cercano y cuántos niveles hay hasta
+  él («Tu jefe común con Ana es Marta Ríos · 2 niveles arriba de ti»), y «Volver a mí».
+- **Organización:** la empresa como bloques de tamaño proporcional a la gente (*treemap*), hasta 18
+  por nivel; el resto va en «Otras n unidades». Se entra en un bloque al pulsarlo y crece desde él;
+  una unidad sin subunidades se abre en sus cargos, y un cargo, en sus personas. Con una sola raíz
+  (el grupo) arranca dentro de ella. «Tú» marca, en cada nivel, el bloque que lleva a quien mira.
+- **Color:** una sola cifra a la vez (`metrics` sobre `unit.metrics`: vacantes, ingresos,
+  rotación), en el acento, ámbar o rojo; con `per: "count"`, por persona de la unidad.
+- **Teclado:** las flechas pasan de un bloque a otro por geometría; `Esc` (o `Retroceso`) sube un
+  nivel. La búsqueda (`searchable`) encuentra personas sin tildes y unidades.
+
+Para una organización grande, `source` entrega por partes con un POST de JSON: `{unit}` (sus
+personas), `{person}` (su cadena, sus pares y su equipo) o `{search}`, y responde `{people?, units?}`.
+Lo que llega completo de arranque no se vuelve a pedir (`reports` y `direct` dicen cuántos hay).
+Quien no puede ver el entorno de alguien lo recibe con `locked`: se ve, pero no se abre.
+
+```html
+<nx-org id="org" me="e214" searchable></nx-org>
+<script>
+  org.units = [
+    { id: "agro", name: "Agrovid", kind: "Empresa", count: 230 },
+    { id: "agro-esp", name: "Finca La Esperanza", parent: "agro", kind: "Subdivisión", count: 74, metrics: { vacantes: 3 } },
+  ];
+  org.people = [{ id: "e214", name: "Ana Díaz", title: "Analista de rutas", unit: "log-baq", boss: "e180" }];
+  org.metrics = [{ key: "vacantes", label: "Vacantes", tone: "warning" }];
+  org.contacts = [{ label: "Aprobar permisos y vacaciones", person: "e180" }];
+  org.source = "/api/organigrama";
+</script>
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | `units` (`[{id, name, parent?, kind?, count?, direct?, leader?, metrics?}]`), `people` (`[{id, name, title?, unit?, boss?, avatar?, href?, reports?, team?, locked?}]`), `me`, `view` (`me`, `map`), `contacts` (`[{label, person?, text?, href?}]`), `metrics` (`[{key, label, tone?, per?}]`), `metric`, `source`, `searchable`, `locale`, `labels` · `center` (solo lectura) |
+| Métodos | `focusPerson(id)`, `focusUnit(id)` |
+| Eventos | `nx-org-focus` `{view, id}` |
+| CSS | `--nx-org-top` (dónde se pega la barra) |
+| Funciones | `buildOrgIndex()`, `chainOf()`, `commonBoss()`, `groupByTitle()`, `squarify()`, `topWithRest()` |
 
 ## `<nx-print>`
 
