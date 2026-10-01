@@ -18,10 +18,15 @@ import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
-import type { CloseReason, DialogLabels, DialogMode, DialogSize } from "./types";
+import type { BadgeTone } from "../badge/types";
+import type { DialogHead } from "./dialog-head";
+import type { CloseReason, DialogAction, DialogLabels, DialogMode, DialogSize } from "./types";
 
 export const DIALOG_LABELS: DialogLabels = {
   close: "Cerrar",
+  prev: "Registro anterior",
+  next: "Registro siguiente",
+  more: "Más acciones",
   unsaved: "Tienes cambios sin guardar",
   discard: "Descartar",
   keep: "Seguir editando",
@@ -142,7 +147,7 @@ function morph(from: Element | null, to: Element | null, update: () => void): vo
 }
 
 export class NxDialog extends Base {
-  static observedAttributes = ["heading", "description", "labels", "open", "mode"];
+  static observedAttributes = ["heading", "description", "labels", "open", "mode", "badge", "badge-tone", "avatar", "nav", "actions"];
 
   #uid = `nx-dialog${++uid}`;
   #labels: DialogLabels = DIALOG_LABELS;
@@ -166,6 +171,9 @@ export class NxDialog extends Base {
   #desc?: HTMLParagraphElement;
   #closeBtn?: HTMLButtonElement;
   #guard?: HTMLDivElement;
+  #actions: DialogAction[] = [];
+  /** La cabecera de ficha (avatar, estado, pasar de registro, «Más»): un chunk aparte. */
+  #extras?: Promise<DialogHead>;
 
   // ---------------------------------------------------------------- propiedades
 
@@ -223,6 +231,43 @@ export class NxDialog extends Base {
   set dirty(v: boolean) {
     this.#dirty = !!v;
     if (!v) this.#showGuard(false);
+  }
+  /** El estado del registro, en una píldora al lado del título («Activa»). */
+  get badge(): string | null {
+    return this.getAttribute("badge");
+  }
+  set badge(v: string | null | undefined) {
+    this.#attr("badge", v);
+  }
+  /** Tono de la píldora: `neutral`, `success`, `info`, `warning` o `danger`. */
+  get badgeTone(): BadgeTone | null {
+    return this.getAttribute("badge-tone") as BadgeTone | null;
+  }
+  set badgeTone(v: BadgeTone | null | undefined) {
+    this.#attr("badge-tone", v);
+  }
+  /** Quién o qué es: una imagen (URL https o del mismo origen) o un nombre, del que salen las iniciales. */
+  get avatar(): string | null {
+    return this.getAttribute("avatar");
+  }
+  set avatar(v: string | null | undefined) {
+    this.#attr("avatar", v);
+  }
+  /** Pasar al registro anterior o siguiente sin cerrar (abierto desde una tabla): `"prev next"`,
+   *  `"next"`, `"prev"` o `""` (los dos botones, deshabilitados). Avisa con `nx-dialog-nav`. */
+  get nav(): string | null {
+    return this.getAttribute("nav");
+  }
+  set nav(v: string | null | undefined) {
+    this.#attr("nav", v);
+  }
+  /** El menú «Más» de la cabecera. El atributo acepta el mismo arreglo como JSON. */
+  get actions(): DialogAction[] {
+    return this.#actions;
+  }
+  set actions(v: DialogAction[] | null | undefined) {
+    this.#actions = Array.isArray(v) ? v.filter((a) => a && typeof a === "object" && a.id != null && typeof a.label === "string").map((a) => ({ ...a, id: String(a.id) })) : [];
+    this.#paint();
   }
   get labels(): DialogLabels {
     return this.#labels;
@@ -323,11 +368,13 @@ export class NxDialog extends Base {
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
-    if (name === "labels" && value !== null) {
+    if ((name === "labels" || name === "actions") && value !== null) {
       try {
-        this.labels = JSON.parse(value);
+        const parsed = JSON.parse(value);
+        if (name === "labels") this.labels = parsed;
+        else this.actions = parsed;
       } catch {
-        console.warn('[nx-dialog] el atributo "labels" no es JSON válido');
+        console.warn(`[nx-dialog] el atributo "${name}" no es JSON válido`);
       }
       return;
     }
@@ -405,14 +452,15 @@ export class NxDialog extends Base {
     this.#crumbs = h("nav", { class: "nx-dialog__crumbs", hidden: true });
     this.#title = h("h2", { class: "nx-dialog__title", id: `${this.#uid}-h` });
     this.#desc = h("p", { class: "nx-dialog__desc", id: `${this.#uid}-d` });
-    this.#closeBtn = h("button", { type: "button", class: "nx-dialog__x" }, glyph(X));
+    this.#closeBtn = h("button", { type: "button", class: "nx-dialog__x nx-dialog__tool" }, glyph(X));
+    // `__id`, `__trow` y `__tools` reciben lo de la cabecera de ficha cuando se carga.
     this.#head = h(
       "div",
       { class: "nx-dialog__head" },
       h("span", { class: "nx-dialog__handle", "aria-hidden": "true" }),
       this.#crumbs,
-      h("div", { class: "nx-dialog__titles" }, this.#title, this.#desc),
-      this.#closeBtn,
+      h("div", { class: "nx-dialog__id" }, h("div", { class: "nx-dialog__titles" }, h("div", { class: "nx-dialog__trow" }, this.#title), this.#desc)),
+      h("div", { class: "nx-dialog__tools" }, this.#closeBtn),
     );
     this.#guard = h(
       "div",
@@ -430,6 +478,8 @@ export class NxDialog extends Base {
       }).observe(this, { childList: true });
 
     this.#closeBtn.addEventListener("click", () => this.close(undefined, "button"));
+    // La cabecera es pegajosa: las pestañas (`<nx-tabs sticky>`) se pegan justo debajo.
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => this.style.setProperty("--nx-sticky-top", `${this.#head!.offsetHeight}px`)).observe(this.#head);
     this.#crumbs.addEventListener("click", (e) => {
       const id = (e.target as Element).closest<HTMLElement>("[data-crumb]")?.dataset.crumb;
       const target = stack.find((d) => d.#uid === id);
@@ -585,6 +635,12 @@ export class NxDialog extends Base {
     if (this.description) this.setAttribute("aria-describedby", this.#desc!.id);
     else this.removeAttribute("aria-describedby");
     this.#closeBtn!.setAttribute("aria-label", L.close);
+
+    // Cabecera de ficha: se trae solo si el diálogo la usa (los modales no la pagan).
+    if (this.#extras || this.avatar || this.badge || this.nav !== null || this.#actions.length) {
+      this.#extras ??= import("./dialog-head").then((m) => new m.DialogHead(this, this.#head!, this.#uid));
+      void this.#extras.then((x) => x.paint(this.#labels));
+    }
     this.#crumbs!.setAttribute("aria-label", L.stack);
     const [msg, keep, discard] = this.#guard!.children;
     msg.textContent = L.unsaved;

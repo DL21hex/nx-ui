@@ -12,6 +12,9 @@ import { Guard } from "../src/solid/guard";
 import { PasteFill } from "../src/solid/paste-fill";
 import { Explain } from "../src/solid/explain";
 import { SideMenu } from "../src/solid/sidemenu";
+import { Tabs } from "../src/solid/tabs";
+import { Notice } from "../src/solid/notice";
+import { Badge } from "../src/solid/badge";
 
 const CASES: [string, (kids: () => JSX.Element) => JSX.Element][] = [
   ["grid", (k) => <Grid columns={[{ key: "a", label: "A" }]} rows={[{ id: 1, a: "x" }]} selectable>{k()}</Grid>],
@@ -22,6 +25,9 @@ const CASES: [string, (kids: () => JSX.Element) => JSX.Element][] = [
   ["paste-fill", (k) => <PasteFill fields={[]}>{k()}</PasteFill>],
   ["explain", (k) => <Explain>{k()}</Explain>],
   ["sidemenu", (k) => <SideMenu items={[{ id: "a", label: "A", href: "/" }]}>{k()}</SideMenu>],
+  ["tabs", (k) => <Tabs><section data-tab="Uno">1</section>{k()}</Tabs>],
+  ["notice", (k) => <Notice tone="warning" action="Renovar">{k()}</Notice>],
+  ["badge", (k) => <Badge label="Activa">{k()}</Badge>],
 ];
 
 const own = (el: Element) => [...el.children].filter((x) => !x.classList.contains("autor") && x.localName !== "template");

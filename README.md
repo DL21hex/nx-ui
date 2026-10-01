@@ -488,7 +488,7 @@ if (await nxConfirm({ heading: "Anular OC-2291", impact: "/compras/oc/2291/impac
 
 | | |
 |---|---|
-| `<nx-dialog>` | `heading`, `description`, `mode` (`modal` / `panel`), `size` (`sm` / `md` / `lg` / `full`), `persistent`, `url`, `open`, `dirty`, `labels` · `show(origen?)` → promesa con el valor, `close(valor?)` · `nx-dialog-close` (cancelable), `nx-open-change` |
+| `<nx-dialog>` | `heading`, `description`, `mode` (`modal` / `panel`), `size` (`sm` / `md` / `lg` / `full`), `persistent`, `url`, `open`, `dirty`, `labels` · `show(origen?)` → promesa con el valor, `close(valor?)` · `nx-dialog-close` (cancelable), `nx-open-change` · cabecera de ficha (`avatar`, `badge`, `nav`, `actions`): ver [La ficha lateral](#la-ficha-lateral-nx-tabs-nx-fields-nx-notice-y-nx-badge) |
 | `nxToast()` | `{message, tone?, undo?, action?, duration?, signal?}` → `"undo"`, `"action"`, `"timeout"` o `"dismiss"`. Abortar `signal` lo cierra con `"dismiss"`. Se pausa con el mouse o el foco encima; al cerrar la página, los pendientes terminan como `"timeout"`. Un `tone` desconocido es neutro; `duration` se acota a lo que acepta `setTimeout` (0 = hasta cerrarlo) |
 | `nxConfirm()` | `{heading, message?, impact?, body?, confirmLabel?, tone?, hold?, failOpen?}` → `true` / `false`. Con `impact` como URL (mismo origen o `allowOrigins`) falla cerrado: si hay un error de red o del servidor, un evento `error` o el stream termina sin `done`, no se puede confirmar; `failOpen: true` deja confirmar igual, con el aviso a la vista |
 | `<nx-button hold>` | Mantener pulsado (ms, 1000 por defecto) para activarlo; con teclado, mantener Enter o Espacio |
@@ -1661,6 +1661,69 @@ hijas directas del elemento.
 | Eventos | `nx-print-paginate` `{pages}`, `nx-print-before` `{pages}` (cancelable), `nx-print-after` `{pages}` |
 | En el documento | `slot="header"`, `slot="footer"`, `{page}`, `{pages}`, `data-print-page`, `data-print-keep`, `data-print-keep-with-next`, `data-print-break`, `data-print-sum` (`number` para cantidades), `data-currency`, `data-value` |
 | Funciones | `paginatePrint(blocks, {pageHeight, minRows?})`, `parsePrintSize()`, `parsePrintMargin()`, `fillPageText()`, `PRINT_SIZES`, `PRINT_LABELS` |
+
+## La ficha lateral: `<nx-tabs>`, `<nx-fields>`, `<nx-notice>` y `<nx-badge>`
+
+**El registro que se abre desde una tabla**, en un panel lateral (`<nx-dialog mode="panel">`), con
+seis zonas siempre en el mismo orden: arriba orienta, en medio informa o edita, abajo decide.
+
+1. **Cabecera** (la del diálogo): quién es (`avatar`), su estado (`badge`), pasar al registro
+   anterior o siguiente sin cerrar (`nav`, también con J y K) y el menú «Más» (`actions`: lo poco
+   usado y lo destructivo, separado al final). Se carga aparte, solo si se usa.
+2. **Resumen**: `<nx-fields variant="summary">`, tres o cuatro datos clave, solo lectura.
+3. **Aviso**: `<nx-notice>`, uno solo y solo si hay algo que hacer, con su acción adentro.
+4. **Pestañas**: `<nx-tabs sticky>`, temas y no pasos, pegadas bajo la cabecera al desplazarse.
+5. **Cuerpo**: secciones con `<nx-fields heading action>`, tus indicadores y listas.
+6. **Pie**: `slot="footer"`, una acción primaria; al editar, Cancelar · Guardar.
+
+- **`<nx-fields>`: leer y editar en la misma rejilla.** Etiqueta arriba, valor abajo, dos columnas;
+  `wide` ocupa la fila. Un dato vacío se ve «—» (y se lee «Sin dato»): no se oculta, así la ficha no
+  cambia de forma entre registros. Montos, números y fechas con el locale; `href` (enlace a otro
+  registro), `copy` (botón para copiar) y `mono`. Con `editing`, cada valor se vuelve un campo en su
+  sitio (texto, correo, teléfono, número, monto, fecha, lista o área de texto) con `name`, así que
+  sirve dentro de un `<form>` y marca los cambios sin guardar de `<nx-dialog>`; `readonly` sigue como
+  texto con candado. `values` devuelve lo escrito ya convertido, `validate()` revisa lo obligatorio y
+  el formato y enfoca el primer error, y `errors` muestra los del servidor.
+- **`<nx-tabs>`**: los paneles son tus hijos con `data-tab` (no se mueven: la hidratación de Solid
+  sigue intacta), con `data-count` o `data-errors` (en rojo, para un formulario largo). Teclado de la
+  APG; `nx-tab-change` es cancelable. Con `tabs` (BDUI), la lista sale de ahí.
+- **`<nx-notice>`**: `info`, `success`, `warning` o `danger` (este se anuncia), con `action` (botón,
+  `nx-notice-action`) o `action-href` (enlace).
+- **`<nx-badge>`**: el estado en una píldora; el texto lo dice, el color lo refuerza.
+
+```html
+<nx-dialog mode="panel" heading="Laura Gómez Restrepo" description="Analista de nómina · EMP-0482"
+  avatar="Laura Gómez" badge="Activa" badge-tone="success" nav="prev next"
+  actions='[{"id":"copiar","label":"Copiar código"},{"id":"retirar","label":"Retirar empleada","danger":true}]'>
+  <nx-fields variant="summary" items='[{"label":"Área","value":"Nómina"},{"label":"Salario","value":4850000,"format":"money"}]'></nx-fields>
+  <nx-notice tone="warning" action="Renovar">El contrato vence el 12 de octubre.</nx-notice>
+  <nx-tabs sticky label="Secciones del empleado">
+    <section data-tab="Resumen">…</section>
+    <section data-tab="Datos"><nx-fields id="contrato" heading="Contrato" action="Editar" items='[…]'></nx-fields></section>
+    <section data-tab="Documentos" data-count="12">…</section>
+  </nx-tabs>
+  <div slot="footer"><button id="guardar">Guardar cambios</button></div>
+</nx-dialog>
+```
+
+```js
+contrato.addEventListener("nx-fields-action", () => (contrato.editing = true));
+guardar.onclick = async () => {
+  if (!contrato.validate()) return;
+  const r = await api.guardar(contrato.values);
+  if (r.errors) contrato.errors = r.errors; // {correo: "Ya existe"}
+  else contrato.editing = false;
+};
+```
+
+| | |
+|---|---|
+| `<nx-dialog>` (ficha) | `avatar`, `badge`, `badge-tone`, `nav` (`"prev next"`, `"next"`, `"prev"`, `""`), `actions` (`[{id, label, danger?, disabled?, icon?}]`) · `nx-dialog-nav` `{dir}`, `nx-dialog-action` `{id}` · pone `--nx-sticky-top` (alto de su cabecera) |
+| `<nx-fields>` | `items` (`[{key?, label, value, wide?, format?, currency?, href?, copy?, mono?, readonly?, input?}]`; `format`: `text`, `number`, `money`, `date`; `input`: `{type?, options?, required?, placeholder?, hint?, rows?}`), `variant` (`grid` / `summary`), `columns` (1–4), `heading`, `action`, `editing`, `errors`, `locale`, `currency`, `labels` · `values`, `validate()`, `focusField(key)` · `nx-fields-action` `{action}` |
+| `<nx-tabs>` | hijos con `data-tab`, `data-value`, `data-count`, `data-errors`, `data-disabled`, o `tabs` (`[{value, label, count?, errors?, disabled?}]`) · `value`, `sticky`, `label`, `labels` · `nx-tab-change` `{value, previous}` (cancelable) |
+| `<nx-notice>` | `tone` (`info`, `success`, `warning`, `danger`), `text`, `action`, `action-href` · `nx-notice-action` `{action}` |
+| `<nx-badge>` | `tone` (`neutral`, `success`, `info`, `warning`, `danger`), `label` (si no va como contenido) |
+| Tokens nuevos | `--nx-warning`, `--nx-warning-ink` (texto e íconos), `--nx-warning-soft` |
 
 ## `<nx-signature>`
 

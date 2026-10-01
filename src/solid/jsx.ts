@@ -14,7 +14,14 @@ import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetai
 import type { NxGrid } from "../components/grid/grid";
 import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridPreset, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
 import type { NxDialog } from "../components/dialog/dialog";
-import type { CloseReason, DialogCloseDetail, DialogLabels, DialogMode, DialogSize } from "../components/dialog/types";
+import type { CloseReason, DialogAction, DialogActionDetail, DialogCloseDetail, DialogLabels, DialogMode, DialogNavDetail, DialogSize } from "../components/dialog/types";
+import type { NxBadge } from "../components/badge/badge";
+import type { NxNotice } from "../components/notice/notice";
+import type { NoticeActionDetail } from "../components/notice/types";
+import type { NxFields } from "../components/fields/fields";
+import type { FieldItem, FieldsActionDetail, FieldsLabels, FieldsVariant } from "../components/fields/types";
+import type { NxTabs } from "../components/tabs/tabs";
+import type { TabChangeDetail, TabItem, TabsLabels } from "../components/tabs/types";
 import type { NxAgent } from "../components/agent/agent";
 import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool } from "../components/agent/types";
 import type { NxCommand } from "../components/command/command";
@@ -101,7 +108,7 @@ declare module "solid-js" {
       holidays: string[] | undefined;
       query: string | undefined;
       layout: CardsLayout | null | undefined;
-      actions: CardsAction[] | undefined;
+      actions: CardsAction[] | DialogAction[] | undefined;
       suppliers: AwardSupplier[] | undefined;
       quotes: AwardQuote[] | undefined;
       criteria: AwardCriterion[] | undefined;
@@ -119,8 +126,10 @@ declare module "solid-js" {
       outputs: WhatIfMetric[] | undefined;
       inputs: WhatIfInput[] | undefined;
       me: PresenceUser | ChecklistPerson | null | undefined;
-      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | ChecklistSummaryItem[] | undefined;
-      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | Partial<RecurrenceLabels> | Partial<JobsLabels> | undefined;
+      items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | ChecklistSummaryItem[] | FieldItem[] | undefined;
+      tabs: TabItem[] | null | undefined;
+      errors: Record<string, string> | undefined;
+      labels: Partial<SidemenuLabels> | Partial<ButtonLabels> | Partial<SelectLabels> | Partial<AiLabels> | Partial<CaptureLabels> | Partial<GridLabels> | Partial<DialogLabels> | Partial<AgentLabels> | Partial<CommandLabels> | Partial<ExplainLabels> | Partial<InboxLabels> | Partial<SurveyLabels> | Partial<NumberLabels> | Partial<KanbanLabels> | Partial<HistoryLabels> | Partial<DateRangeLabels> | Partial<PasteFillLabels> | Partial<PresenceLabels> | Partial<WhatIfLabels> | Partial<TrendLabels> | Partial<ScanLabels> | Partial<SyncLabels> | Partial<ImportLabels> | Partial<KeytipsLabels> | Partial<GuardLabels> | Partial<HandoffLabels & HandoffPhoneLabels> | Partial<AwardLabels> | Partial<AccountLabels> | Partial<LauncherLabels> | Partial<CardsLabels> | Partial<PrintLabels> | Partial<SignatureLabels> | Partial<PlannerLabels> | Partial<ReviewLabels> | Partial<VoiceLabels> | Partial<ThreadLabels> | Partial<ChecklistLabels> | Partial<RecurrenceLabels> | Partial<JobsLabels> | Partial<FieldsLabels> | Partial<TabsLabels> | undefined;
       schema: CaptureSchemaItem[] | undefined;
       suggestions: string[] | undefined;
       context: unknown;
@@ -159,6 +168,13 @@ declare module "solid-js" {
       results: SurveyResults | null | undefined;
     }
     interface ExplicitAttributes {
+      tone: string | undefined;
+      text: string | undefined;
+      "action-href": string | undefined;
+      nav: string | undefined;
+      badge: string | undefined;
+      "badge-tone": string | undefined;
+      avatar: string | undefined;
       recent: string | undefined;
       "holidays-mode": "add" | "replace" | undefined;
       count: string | undefined;
@@ -215,7 +231,7 @@ declare module "solid-js" {
       active: string | undefined;
       label: string | undefined;
       icon: string | undefined;
-      variant: ButtonVariant | undefined;
+      variant: ButtonVariant | FieldsVariant | undefined;
       type: "button" | "submit" | undefined;
       "log-mode": LogMode | undefined;
       stream: string | undefined;
@@ -275,6 +291,8 @@ declare module "solid-js" {
       "week-start": string | undefined;
     }
     interface ExplicitBoolAttributes {
+      sticky: boolean;
+      editing: boolean;
       notify: boolean;
       always: boolean;
       hold: boolean;
@@ -394,6 +412,11 @@ declare module "solid-js" {
       "nx-grid-change": CustomEvent<{ changes: GridChange[]; source: GridChangeSource }>;
       "nx-grid-columns": CustomEvent<{ columns: GridColumn[] }>;
       "nx-dialog-close": CustomEvent<DialogCloseDetail>;
+      "nx-dialog-nav": CustomEvent<DialogNavDetail>;
+      "nx-dialog-action": CustomEvent<DialogActionDetail>;
+      "nx-notice-action": CustomEvent<NoticeActionDetail>;
+      "nx-fields-action": CustomEvent<FieldsActionDetail>;
+      "nx-tab-change": CustomEvent<TabChangeDetail>;
       "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
       "nx-agent-tool": CustomEvent<AgentToolDetail>;
       "nx-agent-state": CustomEvent<{ state: unknown }>;
@@ -431,6 +454,10 @@ declare module "solid-js" {
       "nx-planner": HTMLAttributes<NxPlanner>;
       "nx-signature": HTMLAttributes<NxSignature>;
       "nx-print": HTMLAttributes<NxPrint> & { heading?: string };
+      "nx-badge": HTMLAttributes<NxBadge>;
+      "nx-notice": HTMLAttributes<NxNotice>;
+      "nx-fields": HTMLAttributes<NxFields>;
+      "nx-tabs": HTMLAttributes<NxTabs>;
       "nx-award": HTMLAttributes<NxAward> & { heading?: string; endpoint?: string };
       "nx-account": HTMLAttributes<NxAccount>;
       "nx-launcher": HTMLAttributes<NxLauncher>;

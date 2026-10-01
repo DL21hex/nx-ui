@@ -1,0 +1,259 @@
+/*
+ * <nx-fields>. La misma rejilla para leer y para editar: etiqueta arriba (12,5 px), valor abajo
+ * (14 px), 4 px entre ellos, 16 entre filas y 24 entre columnas.
+ * Variables: --nx-fields-gap-row (16px) · --nx-fields-gap-col (24px)
+ */
+
+nx-fields {
+  display: block;
+  container-type: inline-size;
+  font-family: var(--nx-font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--nx-foreground);
+}
+nx-fields [hidden] {
+  display: none !important;
+}
+
+.nx-fields__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-block-size: 28px;
+  margin-block-end: 12px;
+}
+.nx-fields__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nx-fields__action {
+  display: inline-flex;
+  align-items: center;
+  block-size: 28px;
+  margin-inline-end: -8px;
+  padding-inline: 8px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-primary-ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--nx-primary-soft);
+  }
+}
+
+.nx-fields__list {
+  display: grid;
+  grid-template-columns: repeat(var(--_cols, 2), minmax(0, 1fr));
+  gap: var(--nx-fields-gap-row, 16px) var(--nx-fields-gap-col, 24px);
+  margin: 0;
+}
+.nx-fields__f {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 0;
+}
+.nx-fields__f.is-wide {
+  grid-column: 1 / -1;
+}
+.nx-fields__l {
+  color: var(--nx-muted-foreground);
+  font-size: 12.5px;
+}
+.nx-fields__v {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+
+  & a {
+    color: var(--nx-primary-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--nx-primary-border);
+    text-underline-offset: 3px;
+  }
+}
+.nx-fields__mono {
+  font-family: var(--nx-font-mono);
+  font-size: 13px;
+}
+.nx-fields__empty {
+  color: var(--nx-text-quaternary);
+}
+.nx-fields__copy {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 24px;
+  block-size: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--nx-motion-fast);
+
+  & svg {
+    display: block;
+    inline-size: 14px;
+    block-size: 14px;
+  }
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &[data-copied] {
+    color: var(--nx-success);
+    opacity: 1;
+  }
+}
+.nx-fields__f:hover .nx-fields__copy,
+.nx-fields__copy:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .nx-fields__copy {
+    opacity: 1;
+  }
+}
+.nx-fields__lock svg {
+  display: block;
+  inline-size: 13px;
+  block-size: 13px;
+  color: var(--nx-text-quaternary);
+}
+.nx-fields__f.is-ro .nx-fields__v {
+  color: var(--nx-text-tertiary);
+}
+nx-fields :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- edición */
+
+.nx-fields__input {
+  inline-size: 100%;
+  block-size: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-background);
+  color: inherit;
+  font: inherit;
+
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+}
+nx-fields .nx-fields__input:focus-visible {
+  border-color: var(--nx-primary);
+  outline-offset: 0;
+}
+textarea.nx-fields__input {
+  block-size: auto;
+  min-block-size: 76px;
+  padding-block: 8px;
+  resize: vertical;
+}
+.nx-fields__affix {
+  position: relative;
+  display: block;
+
+  & .nx-fields__input {
+    padding-inline-start: calc(var(--_sym, 1ch) + 16px);
+    font-variant-numeric: tabular-nums;
+  }
+  &.is-after .nx-fields__input {
+    padding-inline: 10px calc(var(--_sym, 1ch) + 16px);
+  }
+}
+.nx-fields__sym {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 10px;
+  display: flex;
+  align-items: center;
+  color: var(--nx-text-tertiary);
+  pointer-events: none;
+}
+.is-after > .nx-fields__sym {
+  inset-inline: auto 10px;
+}
+.nx-fields__req {
+  margin-inline-start: 2px;
+  color: var(--nx-danger);
+}
+.nx-fields__hint {
+  color: var(--nx-text-tertiary);
+  font-size: 12.5px;
+}
+.nx-fields__err {
+  color: var(--nx-danger);
+  font-size: 12.5px;
+}
+.nx-fields__f.is-invalid {
+  & .nx-fields__input {
+    border-color: var(--nx-danger);
+  }
+  & .nx-fields__hint {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- resumen */
+
+nx-fields[variant="summary"] {
+  & .nx-fields__list {
+    grid-template-columns: repeat(var(--_n, 4), minmax(0, 1fr));
+    gap: 14px 0;
+  }
+  & .nx-fields__f {
+    gap: 2px;
+    padding-inline: 14px;
+    border-inline-start: 1px solid var(--nx-border-subtle);
+  }
+  & .nx-fields__f:first-child {
+    padding-inline-start: 0;
+    border: 0;
+  }
+  & .nx-fields__v {
+    display: block;
+    overflow: hidden;
+    font-weight: 550;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  & .nx-fields__copy {
+    display: none;
+  }
+}
+
+/* El contenedor es el propio elemento: estas reglas cambian a sus descendientes. */
+@container (max-width: 480px) {
+  nx-fields[variant="summary"] .nx-fields__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  nx-fields[variant="summary"] .nx-fields__f:nth-child(odd) {
+    padding-inline-start: 0;
+    border: 0;
+  }
+}
+@container (max-width: 400px) {
+  nx-fields:not([variant="summary"]) .nx-fields__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

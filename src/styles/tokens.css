@@ -67,6 +67,10 @@
   --nx-danger: light-dark(oklch(0.52 0.2 27), oklch(0.72 0.16 27));
   --nx-danger-foreground: light-dark(oklch(0.99 0 0), oklch(0.18 0.03 27));
   --nx-danger-soft: light-dark(oklch(0.55 0.2 27 / 0.1), oklch(0.7 0.17 27 / 0.15));
+  /* Advertencia: `-ink` para texto e íconos (el ámbar puro no llega a 4.5:1 sobre blanco). */
+  --nx-warning: light-dark(oklch(0.74 0.15 70), oklch(0.8 0.14 78));
+  --nx-warning-ink: light-dark(oklch(0.5 0.12 60), oklch(0.84 0.13 80));
+  --nx-warning-soft: light-dark(oklch(0.75 0.15 70 / 0.16), oklch(0.8 0.14 78 / 0.15));
 
   --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
     0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));

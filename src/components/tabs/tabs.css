@@ -1,0 +1,122 @@
+/*
+ * <nx-tabs>. La lista la agrega el componente al final y `order` la sube.
+ * Variables: --nx-tabs-bg (fondo de la lista pegada; en un nx-dialog, el del diálogo)
+ *            --nx-sticky-top (dónde se pega; nx-dialog lo pone a la altura de su cabecera)
+ */
+
+nx-tabs {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  font-family: var(--nx-font-sans);
+  font-size: 14px;
+  color: var(--nx-foreground);
+}
+nx-tabs > [hidden] {
+  display: none !important;
+}
+
+.nx-tabs__list {
+  order: -1;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* La línea de abajo como sombra: con `overflow`, un borde recortaría el subrayado. */
+  box-shadow: inset 0 -1px 0 var(--nx-border-subtle);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+nx-tabs[sticky] > .nx-tabs__list {
+  position: sticky;
+  inset-block-start: var(--nx-sticky-top, 0px);
+  /* Igual que la cabecera de nx-dialog (que va después en el DOM): su menú queda encima. */
+  z-index: 1;
+  background: var(--nx-tabs-bg, var(--nx-background));
+}
+
+.nx-tabs__tab {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  block-size: 42px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--nx-muted-foreground);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--nx-foreground);
+  }
+  &[aria-selected="true"] {
+    color: var(--nx-foreground);
+  }
+  &[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    inset-inline: 8px;
+    inset-block-end: 0;
+    block-size: 2px;
+    border-radius: 2px;
+    background: var(--nx-primary);
+  }
+  &:disabled {
+    color: var(--nx-text-quaternary);
+    cursor: default;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: -4px;
+    border-radius: var(--nx-radius-md);
+  }
+}
+.nx-tabs__count {
+  min-inline-size: 20px;
+  block-size: 18px;
+  padding-inline: 6px;
+  border-radius: 999px;
+  background: var(--nx-hover);
+  color: var(--nx-muted-foreground);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+
+  &.is-error {
+    background: var(--nx-danger-soft);
+    color: var(--nx-danger);
+  }
+}
+
+:where(nx-tabs > [role="tabpanel"]) {
+  padding-block-start: 16px;
+  /* Al cambiar de pestaña con la lista pegada, el panel queda justo debajo de ella. */
+  scroll-margin-block-start: calc(var(--nx-sticky-top, 0px) + 48px);
+}
+:where(nx-tabs > [role="tabpanel"]):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+
+/* Dentro de un panel lateral: la lista de borde a borde y el texto alineado con el resto (20 px).
+   `:not(.nx-dialog__head)` sube la especificidad por encima del margen que nx-dialog da a sus hijos. */
+nx-dialog > nx-tabs:not(.nx-dialog__head) {
+  --nx-tabs-bg: var(--nx-popover);
+  margin-inline: 0;
+
+  & > .nx-tabs__list {
+    padding-inline: 12px;
+  }
+  & > [role="tabpanel"] {
+    padding: 20px 20px 4px;
+  }
+}

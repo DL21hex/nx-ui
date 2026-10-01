@@ -1,0 +1,48 @@
+/*
+ * <nx-badge>: el estado en una píldora. El punto toma el color del texto.
+ * Funciona aunque el elemento no esté definido (lo pinta <nx-dialog> en su cabecera).
+ */
+
+nx-badge {
+  --_bg: var(--nx-hover);
+  --_fg: var(--nx-muted-foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  block-size: 22px;
+  padding-inline: 8px;
+  border-radius: 999px;
+  background: var(--_bg);
+  color: var(--_fg);
+  font-family: var(--nx-font-sans);
+  font-size: 12.5px;
+  font-weight: 550;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+
+  &::before {
+    content: "";
+    flex: none;
+    inline-size: 6px;
+    block-size: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+nx-badge[tone="success"] {
+  --_bg: var(--nx-success-soft);
+  --_fg: var(--nx-success);
+}
+nx-badge[tone="info"] {
+  --_bg: var(--nx-primary-soft);
+  --_fg: var(--nx-primary-ink);
+}
+nx-badge[tone="warning"] {
+  --_bg: var(--nx-warning-soft);
+  --_fg: var(--nx-warning-ink);
+}
+nx-badge[tone="danger"] {
+  --_bg: var(--nx-danger-soft);
+  --_fg: var(--nx-danger);
+}

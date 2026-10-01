@@ -9,12 +9,36 @@ export type CloseReason = "button" | "escape" | "backdrop" | "drag" | "history" 
 
 export interface DialogLabels {
   close: string;
+  /** Botones de la cabecera para pasar al registro anterior o siguiente (`nav`). */
+  prev: string;
+  next: string;
+  /** El botón del menú de acciones (`actions`). */
+  more: string;
   /** Aviso al cerrar con cambios sin guardar. */
   unsaved: string;
   discard: string;
   keep: string;
   /** `aria-label` de las migas de los paneles apilados. */
   stack: string;
+}
+
+/** Una acción del menú «Más» de la cabecera: las poco usadas y las destructivas. */
+export interface DialogAction {
+  id: string;
+  label: string;
+  /** Destructiva: va al final, separada, en rojo. */
+  danger?: boolean;
+  disabled?: boolean;
+  /** Nombre de un ícono registrado (`registerIcons`). */
+  icon?: string;
+}
+
+export interface DialogActionDetail {
+  id: string;
+}
+
+export interface DialogNavDetail {
+  dir: "prev" | "next";
 }
 
 export interface DialogCloseDetail {

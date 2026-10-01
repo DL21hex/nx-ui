@@ -19,6 +19,7 @@ const pairs = [
   ["--nx-primary-ink", "--nx-nav-active-bg", "--nx-sidebar"],
   ["--nx-success", "--nx-success-soft", "--nx-canvas"],
   ["--nx-danger", "--nx-danger-soft", "--nx-canvas"],
+  ["--nx-warning-ink", "--nx-warning-soft", "--nx-canvas"],
   ["--nx-primary-foreground", "--nx-primary", "--nx-card"],
   ["--nx-danger-foreground", "--nx-danger", "--nx-card"],
 ];

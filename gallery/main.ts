@@ -41,6 +41,8 @@ import { mountSignatureDemo } from "./demo-signature";
 import "./pages/signature.css";
 import { mountPrintDemo } from "./demo-print";
 import "./pages/print.css";
+import { mountDrawerDemo } from "./demo-drawer";
+import "./pages/drawer.css";
 import { mountAccountDemo } from "./demo-account";
 import "./pages/account.css";
 import { mountHandoffDemo } from "./demo-handoff";
@@ -151,6 +153,7 @@ const NAV: MenuItem[] = [
   { id: "launcher", label: "Launcher", href: "#/launcher", icon: "layout-grid", section: "Componentes", badge: "Nuevo" },
   { id: "cards", label: "Tarjetas con zoom", href: "#/cards", icon: "layout-dashboard", section: "Componentes", badge: "Nuevo" },
   { id: "print", label: "Imprimir documentos", href: "#/print", icon: "printer", section: "Componentes", badge: "Nuevo" },
+  { id: "drawer", label: "Ficha lateral", href: "#/drawer", icon: "panel-right", section: "Componentes", badge: "Nuevo" },
   { id: "signature", label: "Firma", href: "#/signature", icon: "pen-line", section: "Componentes", badge: "Nuevo" },
   { id: "planner", label: "Agenda de recursos", href: "#/planner", icon: "calendar-range", section: "Componentes", badge: "Nuevo" },
   { id: "review", label: "Resumen antes de guardar", href: "#/review", icon: "list-checks", section: "Componentes", badge: "Nuevo" },
@@ -197,6 +200,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/cards": { template: "page-cards", mount: mountCardsDemo },
   "#/account": { template: "page-account", mount: mountAccountDemo },
   "#/print": { template: "page-print", mount: mountPrintDemo },
+  "#/drawer": { template: "page-drawer", mount: mountDrawerDemo },
   "#/signature": { template: "page-signature", mount: mountSignatureDemo },
   "#/planner": { template: "page-planner", mount: mountPlannerDemo },
   "#/review": { template: "page-review", mount: mountReviewDemo },

@@ -1,7 +1,9 @@
 /*
  * <nx-dialog>. Variables propias:
  *   --nx-dialog-width-sm/md/lg (400/560/800px) · --nx-dialog-panel-width (560px)
+ * Pone --nx-sticky-top (la altura de su cabecera) para que <nx-tabs sticky> se pegue debajo.
  */
+@import "../badge/badge.css";
 
 nx-dialog {
   --_w: var(--nx-dialog-width-md, 560px);
@@ -207,8 +209,42 @@ nx-dialog[mode="panel"]:dir(rtl) {
     color: var(--nx-foreground);
   }
 }
+.nx-dialog__id {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-inline-size: 0;
+}
+.nx-dialog__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--nx-primary-soft);
+  color: var(--nx-primary-ink);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  & img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+}
 .nx-dialog__titles {
   min-inline-size: 0;
+}
+.nx-dialog__trow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.nx-dialog__avatar:not([hidden]) + .nx-dialog__titles {
+  align-self: center;
 }
 .nx-dialog__title {
   margin: 0;
@@ -221,12 +257,24 @@ nx-dialog[mode="panel"]:dir(rtl) {
   color: var(--nx-muted-foreground);
   font-size: 13px;
 }
-.nx-dialog__x {
+.nx-dialog__tools {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: -4px -4px 0 0;
+}
+.nx-dialog__sep {
+  inline-size: 1px;
+  block-size: 18px;
+  margin-inline: 4px;
+  background: var(--nx-border);
+}
+.nx-dialog__tool {
   display: grid;
   place-items: center;
   inline-size: 32px;
   block-size: 32px;
-  margin: -4px -4px 0 0;
   padding: 0;
   border: 0;
   border-radius: var(--nx-radius-md);
@@ -234,9 +282,14 @@ nx-dialog[mode="panel"]:dir(rtl) {
   color: var(--nx-text-tertiary);
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled),
+  &[aria-expanded="true"] {
     background: var(--nx-hover);
     color: var(--nx-foreground);
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   & .nx-glyph,
   & svg {
@@ -244,6 +297,61 @@ nx-dialog[mode="panel"]:dir(rtl) {
     inline-size: 18px;
     block-size: 18px;
   }
+}
+/* Con el menú abierto, la cabecera sube por encima de lo pegajoso de adentro (las pestañas). */
+.nx-dialog__head:has(> .nx-dialog__tools > .nx-dialog__menu:not([hidden])) {
+  z-index: 3;
+}
+.nx-dialog__menu {
+  position: absolute;
+  z-index: 3;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-end: 0;
+  min-inline-size: 220px;
+  padding: 4px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  box-shadow: var(--nx-shadow-popover);
+}
+.nx-dialog__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: var(--nx-foreground);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: var(--nx-hover);
+  }
+  &:disabled {
+    color: var(--nx-text-quaternary);
+    cursor: default;
+  }
+  &.is-danger {
+    color: var(--nx-danger);
+  }
+  & .nx-icon,
+  & svg {
+    inline-size: 16px;
+    block-size: 16px;
+    color: inherit;
+  }
+}
+nx-dialog .nx-dialog__item:focus-visible {
+  outline-offset: -2px;
+}
+.nx-dialog__msep {
+  margin: 4px 6px;
+  border-block-start: 1px solid var(--nx-border-subtle);
 }
 nx-dialog :is(button, a, input, select, textarea):focus-visible,
 nx-dialog:focus-visible {

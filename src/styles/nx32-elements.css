@@ -7,6 +7,10 @@
 @import "../components/capture/doc-capture.css";
 @import "../components/grid/grid.css";
 @import "../components/dialog/dialog.css";
+@import "../components/badge/badge.css";
+@import "../components/notice/notice.css";
+@import "../components/fields/fields.css";
+@import "../components/tabs/tabs.css";
 @import "../components/confirm/confirm.css";
 @import "../components/toast/toast.css";
 @import "../components/agent/agent.css";

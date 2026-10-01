@@ -1,0 +1,86 @@
+/*
+ * <nx-notice>. El contenido del autor va en la columna del medio; el ícono y la acción, que el
+ * componente agrega al final, se ubican con la rejilla.
+ */
+
+nx-notice {
+  --_bg: var(--nx-primary-soft);
+  --_ic: var(--nx-primary-ink);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border-radius: var(--nx-radius-lg);
+  background: var(--_bg);
+  color: var(--nx-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+nx-notice[tone="success"] {
+  --_bg: var(--nx-success-soft);
+  --_ic: var(--nx-success);
+}
+nx-notice[tone="warning"] {
+  --_bg: var(--nx-warning-soft);
+  --_ic: var(--nx-warning-ink);
+}
+nx-notice[tone="danger"] {
+  --_bg: var(--nx-danger-soft);
+  --_ic: var(--nx-danger);
+}
+nx-notice > * {
+  grid-column: 2;
+  margin: 0;
+}
+nx-notice > .nx-notice__icon {
+  grid-column: 1;
+  grid-row: 1;
+  margin-block-start: 2px;
+  color: var(--_ic);
+
+  & svg {
+    display: block;
+    inline-size: 16px;
+    block-size: 16px;
+  }
+}
+nx-notice > .nx-notice__act {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  block-size: 28px;
+  margin-block: -2px;
+  padding-inline: 10px;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-foreground);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--nx-border-strong);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--nx-ring);
+    outline-offset: 2px;
+  }
+}
+/* En un teléfono, la acción baja debajo del texto. */
+@media (max-width: 480px) {
+  nx-notice > .nx-notice__act {
+    grid-column: 2;
+    grid-row: auto;
+    justify-self: start;
+    margin-block: 8px 0;
+  }
+}
