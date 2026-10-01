@@ -396,6 +396,19 @@ Una tabla de datos que se explora sola:
   exactos, filtros al instante y agrupación. `grid.mode` dice dónde quedó. Las filas traídas son
   una foto: `refresh()` las vuelve a pedir (y vuelve a mirar el total). Es opcional: sin
   `client-max` nada cambia.
+- **Barra horizontal también arriba.** Una tabla ancha lleva su barra de desplazamiento horizontal
+  también encima de las columnas: la propia queda al pie de su caja y había que bajar hasta allá
+  para moverla. Viene encendida; `top-scrollbar="false"` (`topScrollbar={false}` en Solid y en BDUI)
+  la quita, y entonces la tabla se maqueta como antes. Es un espejo del scroller de la tabla, con un
+  relleno del ancho de las columnas: aparece justo cuando no caben, en el mismo pase de maquetación
+  (sin medir ni observar nada, y sin saltos al cargar). Es fina (4 px) y se ensancha a 8 px, más
+  oscura, con el puntero encima o al arrastrar, dentro de una franja fija de 12 px que se puede
+  agarrar entera; en Firefox es su barra fina nativa. Las dos se mueven juntas en proporción a sus
+  recorridos, así que desde arriba se llega a la última columna aunque la barra vertical le quite
+  ancho a la tabla (también en RTL). Va en su propia fila, solo sobre la tabla y al lado del panel
+  «Filtros»: aparecer o irse no cambia el alto de la tabla. Si las columnas caben queda una franja
+  vacía de 1 px, y en una pantalla táctil no se muestra (la tabla se desplaza con el dedo). Va con
+  `aria-hidden` y fuera del orden del teclado (lo que se recorre es la tabla).
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
   En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo; más allá, `source`.
 - **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,
@@ -438,7 +451,7 @@ posición se pierde al cambiar de filtro u orden.
 
 | | |
 |---|---|
-| Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `search`, `view`, `views-storage`, `views`, `group-by`, `facets-open`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
+| Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `search`, `view`, `views-storage`, `views`, `group-by`, `facets-open`, `top-scrollbar`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
 | Métodos | `clearFilters()`, `openFilter(key)`, `applyView(id)`, `activeView`, `exportXlsx()`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
 | Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open`, `nx-grid-views` |
 

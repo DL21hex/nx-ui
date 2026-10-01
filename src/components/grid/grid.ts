@@ -215,7 +215,7 @@ export class NxGrid extends Base {
     attrProps(this, ["height"]);
   }
   declare height: string | null;
-  static observedAttributes = ["columns", "rows", "filters", "labels", "presets", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable", "views-storage"];
+  static observedAttributes = ["columns", "rows", "filters", "labels", "presets", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable", "views-storage", "top-scrollbar"];
 
   #uid = `nx-grid${++uid}`;
   #labels: GridLabels = GRID_LABELS;
@@ -316,6 +316,10 @@ export class NxGrid extends Base {
   #chips?: HTMLDivElement;
   #aside?: HTMLElement;
   #scroll?: HTMLDivElement;
+  /** La barra horizontal de arriba (`top-scrollbar`) y, de ella y de la tabla, el último `scrollLeft`
+   *  que ya está reflejado en la otra. */
+  #hbar?: HTMLDivElement;
+  #synced = new Map<Element, number>();
   #head?: HTMLDivElement;
   #body?: HTMLDivElement;
   #rowsEl?: HTMLDivElement;
@@ -467,6 +471,14 @@ export class NxGrid extends Base {
   }
   set facetsOpen(v: boolean) {
     this.toggleAttribute("facets-open", !!v);
+  }
+  /** La barra de desplazamiento horizontal también arriba de la tabla (la propia queda al pie de su
+   *  caja), solo si las columnas no caben a lo ancho. Viene encendida; `top-scrollbar="false"` la quita. */
+  get topScrollbar(): boolean {
+    return this.getAttribute("top-scrollbar") !== "false";
+  }
+  set topScrollbar(v: boolean | null | undefined) {
+    this.#attr("top-scrollbar", v === false ? "false" : null);
   }
   /** Atajos: tarjetas con un filtro y su conteo sobre la tabla. Con `source`, los conteos los manda
    *  el servidor (`presets` en la respuesta); con las filas aquí, se cuentan aquí. */
@@ -673,6 +685,11 @@ export class NxGrid extends Base {
       this.#activeView = null;
       this.#bootViews();
       this.#paintChrome();
+    } else if (name === "top-scrollbar") {
+      // Vuelta a encender con la tabla ya desplazada: la barra arranca en 0 y, al tocarla, la tabla saltaría.
+      // En el siguiente frame (ya visible y maquetada) toma la posición de la tabla.
+      this.#synced.clear();
+      requestAnimationFrame(() => this.#follow(this.#scroll!, this.#hbar!));
     } else if (name === "locale" || name === "selectable") this.#dataChanged(name === "selectable");
     else if (name === "group-by") {
       this.#collapsed.clear();
@@ -1010,7 +1027,11 @@ export class NxGrid extends Base {
     const widths = this.#columns.map((c) => this.#widthOf(c));
     const check = this.selectable ? "36px " : "";
     this.#scroll!.style.setProperty("--_cols", check + widths.map((w, i) => (i === widths.length - 1 ? `minmax(${w}px, 1fr)` : `${w}px`)).join(" "));
-    this.#scroll!.style.setProperty("--_w", `${widths.reduce((a, b) => a + b, check ? 36 : 0)}px`);
+    const w = `${widths.reduce((a, b) => a + b, check ? 36 : 0)}px`;
+    this.#scroll!.style.setProperty("--_w", w);
+    // El relleno de la barra de arriba mide lo mismo que las columnas: su barra nativa aparece justo
+    // cuando la tabla desborda, en el mismo pase de maquetación (sin medir ni observar nada).
+    this.#hbar!.style.setProperty("--_w", w);
     this.#ths.forEach((th, i) => th.querySelector(".nx-grid__resize")?.setAttribute("aria-valuenow", String(widths[i])));
   }
 
@@ -1224,7 +1245,20 @@ export class NxGrid extends Base {
       else this.search = "";
     });
     this.#scroll = h("div", { class: "nx-grid__scroll", role: "grid", tabindex: 0, "aria-multiselectable": "true" }, this.#head, this.#body, this.#empty);
-    this.#scroll.addEventListener("scroll", () => this.#soon(), { passive: true });
+    this.#scroll.addEventListener(
+      "scroll",
+      () => {
+        this.#follow(this.#scroll!, this.#hbar!);
+        this.#soon();
+      },
+      { passive: true },
+    );
+    // La barra de arriba (`top-scrollbar`) es un espejo: otro scroller con un relleno del ancho de
+    // las columnas. Con `top-scrollbar="false"`, el CSS la deja en `display: none`. Fuera de la tabla y del árbol
+    // de accesibilidad (el que se recorre es el `role="grid"`), y fuera del orden del teclado: Chrome
+    // enfoca un scroller sin hijos enfocables.
+    this.#hbar = h("div", { class: "nx-grid__hscroll", "aria-hidden": "true", tabindex: -1 }, h("div"));
+    this.#hbar.addEventListener("scroll", () => this.#follow(this.#hbar!, this.#scroll!), { passive: true });
     this.#scroll.addEventListener("keydown", (e) => this.#onKey(e));
     this.#scroll.addEventListener("copy", (e) => this.#copy(e));
     this.#scroll.addEventListener("paste", (e) => this.#paste(e));
@@ -1269,7 +1303,7 @@ export class NxGrid extends Base {
     this.#head.addEventListener("change", (e) => {
       if ((e.target as HTMLInputElement).dataset.pickAll !== undefined) this.#pickAll((e.target as HTMLInputElement).checked);
     });
-    const main = h("div", { class: "nx-grid__main" }, this.#aside, this.#scroll);
+    const main = h("div", { class: "nx-grid__main" }, this.#aside, this.#hbar, this.#scroll);
 
     this.#foot = h("div", { class: "nx-grid__foot" });
     this.#live = h("span", { class: "nx-sr-only", role: "status" });
@@ -1541,6 +1575,26 @@ export class NxGrid extends Base {
       el?.focus();
       if (el instanceof HTMLInputElement && el.type === "search") el.setSelectionRange(el.value.length, el.value.length);
     }
+  }
+
+  /** Lleva el desplazamiento horizontal de `from` a `to`, en proporción a sus recorridos: la barra
+   *  de arriba es más ancha que el área visible de la tabla (no tiene su barra vertical ni sus bordes)
+   *  y así los dos extremos coinciden, también en RTL (`scrollLeft` negativo). Con la barra apagada no
+   *  lee nada; un desplazamiento vertical no lee más que `scrollLeft`. */
+  #follow(from: HTMLElement, to: HTMLElement): void {
+    if (!this.topScrollbar) return;
+    const x = from.scrollLeft;
+    const seen = this.#synced;
+    // Ya reflejado: un desplazamiento vertical, o el eco de lo que se le asignó aquí. El eco llega
+    // después, quizá con la persona ya más adelante en la otra: devolverlo la haría retroceder en
+    // pleno arrastre. (Sin valor anotado, `x - undefined` es NaN y no lo detiene.)
+    if (Math.abs(x - seen.get(from)!) < 1) return;
+    seen.set(from, x);
+    const k = (to.scrollWidth - to.clientWidth) / (from.scrollWidth - from.clientWidth);
+    // Sin recorrido en alguna de las dos (la tabla cabe, o aún sin maquetar): nada que llevar.
+    if (!(k > 0 && k < Infinity) || Math.abs(to.scrollLeft - x * k) < 1) return;
+    to.scrollLeft = x * k;
+    seen.set(to, to.scrollLeft);
   }
 
   #soon(): void {

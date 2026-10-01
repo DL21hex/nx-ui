@@ -79,3 +79,88 @@ test("el desplazamiento virtual pinta pocas filas aunque haya 600", async ({ pag
   await grid(page).locator(".nx-grid__scroll").evaluate((s) => (s.scrollTop = 32 * 400));
   await expect(grid(page).locator('.nx-grid__row[data-r="405"]')).toBeVisible();
 });
+
+/** Cajas de la barra de arriba, la tabla y el panel «Filtros», y el recorrido horizontal de cada scroller. */
+const boxes = (page: Page) =>
+  grid(page).evaluate((g) => {
+    const box = (sel: string) => {
+      const el = g.querySelector<HTMLElement>(sel)!;
+      const r = el.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width, height: r.height, range: el.scrollWidth - el.clientWidth, x: el.scrollLeft };
+    };
+    return { bar: box(".nx-grid__hscroll"), table: box(".nx-grid__scroll"), facets: box(".nx-grid__facets") };
+  });
+type Topbar = { topScrollbar: boolean; columns: unknown[] };
+
+test("barra de arriba: aparece si no cabe, va sobre la tabla, la lleva hasta el final y no cambia su caja", async ({ page }) => {
+  // Un «ResizeObserver loop…» no sale en la consola: llega como `error` a window.
+  await page.addInitScript(() => addEventListener("error", (e) => ((window as unknown as { errs: string[] }).errs ??= []).push(e.message)));
+  await open(page, "#/grid");
+  const bar = grid(page).locator(".nx-grid__hscroll");
+  const table = grid(page).locator(".nx-grid__scroll");
+  await expect(bar).toHaveAttribute("aria-hidden", "true");
+  await expect(bar).toHaveAttribute("tabindex", "-1");
+
+  // Las nueve columnas no caben junto al panel: las dos tienen recorrido. La barra va encima de la
+  // tabla, entre sus bordes, y el panel queda al lado de la tabla.
+  const on = await boxes(page);
+  expect(on.table.range).toBeGreaterThan(0);
+  expect(on.bar.range).toBeGreaterThan(0);
+  expect(on.bar.bottom).toBeLessThanOrEqual(on.table.top);
+  expect(on.table.top - on.bar.bottom).toBeLessThanOrEqual(8);
+  expect(Math.abs(on.bar.left - on.table.left - 1)).toBeLessThan(1);
+  expect(Math.abs(on.table.right - on.bar.right - 1)).toBeLessThan(1);
+  expect(Math.abs(on.facets.top - on.table.top)).toBeLessThan(1);
+
+  // Desde arriba se llega a la última columna, y la barra sigue a la tabla.
+  await bar.evaluate((b) => (b.scrollLeft = b.scrollWidth));
+  await expect.poll(() => table.evaluate((s) => s.scrollWidth - s.clientWidth - s.scrollLeft)).toBeLessThanOrEqual(1);
+  await table.evaluate((s) => (s.scrollLeft = 0));
+  await expect.poll(() => bar.evaluate((b) => b.scrollLeft)).toBe(0);
+
+  // Apagada (`top-scrollbar="false"`), la tabla se maqueta como antes: la misma caja para la tabla y el panel.
+  await grid(page).evaluate((g) => ((g as unknown as Topbar).topScrollbar = false));
+  await expect(bar).toBeHidden();
+  const off = await boxes(page);
+  for (const k of ["width", "height", "left"] as const) {
+    expect(off.table[k]).toBeCloseTo(on.table[k], 1);
+    expect(off.facets[k]).toBeCloseTo(on.facets[k], 1);
+  }
+
+  // Con columnas que caben, la barra no tiene recorrido: no hay barra que mostrar.
+  await grid(page).evaluate((g) => {
+    const el = g as unknown as Topbar;
+    el.topScrollbar = true;
+    el.columns = el.columns.slice(0, 2);
+  });
+  const fits = await boxes(page);
+  expect(fits.table.range).toBe(0);
+  expect(fits.bar.range).toBe(0);
+  expect(await page.evaluate(() => (window as unknown as { errs?: string[] }).errs ?? [])).toEqual([]);
+});
+
+test("barra de arriba: en una pantalla angosta va entre el panel y la tabla; en RTL llega al final", async ({ page }) => {
+  await page.setViewportSize({ width: 560, height: 900 });
+  await open(page, "#/grid");
+  const on = await boxes(page);
+  expect(on.facets.bottom).toBeLessThanOrEqual(on.bar.top);
+  expect(on.bar.bottom).toBeLessThanOrEqual(on.table.top);
+  await grid(page).evaluate((g) => ((g as unknown as Topbar).topScrollbar = false));
+  const off = await boxes(page);
+  for (const k of ["width", "height"] as const) {
+    expect(off.table[k]).toBeCloseTo(on.table[k], 1);
+    expect(off.facets[k]).toBeCloseTo(on.facets[k], 1);
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await grid(page).evaluate((g) => {
+    g.setAttribute("dir", "rtl");
+    (g as unknown as Topbar).topScrollbar = true;
+  });
+  const bar = grid(page).locator(".nx-grid__hscroll");
+  const table = grid(page).locator(".nx-grid__scroll");
+  await bar.evaluate((b) => (b.scrollLeft = -b.scrollWidth));
+  await expect.poll(() => table.evaluate((s) => s.scrollWidth - s.clientWidth + s.scrollLeft)).toBeLessThanOrEqual(1);
+  await table.evaluate((s) => (s.scrollLeft = 0));
+  await expect.poll(() => bar.evaluate((b) => b.scrollLeft)).toBe(0);
+});

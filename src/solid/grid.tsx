@@ -29,6 +29,8 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
   groupBy?: string;
   rowKey?: string;
   facetsOpen?: boolean;
+  /** La barra de desplazamiento horizontal también arriba de la tabla (solo si no cabe a lo ancho). Viene encendida: `false` la quita. */
+  topScrollbar?: boolean;
   /** Atajos: tarjetas con un filtro y su conteo sobre la tabla. */
   presets?: GridPreset[];
   /** Casillas para seleccionar filas; las acciones van como hijo con `slot="bulk"`. */
@@ -52,7 +54,7 @@ export interface GridProps extends Omit<JSX.HTMLAttributes<NxGrid>, "onChange"> 
 }
 
 export function Grid(props: GridProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["columns", "rows", "view", "views", "viewsStorage", "onViews", "source", "clientMax", "filters", "sort", "search", "groupBy", "rowKey", "facetsOpen", "presets", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
+  const [local, rest] = splitProps(props, ["columns", "rows", "view", "views", "viewsStorage", "onViews", "source", "clientMax", "filters", "sort", "search", "groupBy", "rowKey", "facetsOpen", "topScrollbar", "presets", "height", "filename", "locale", "labels", "onFilter", "onChange", "onColumns", "selectable", "selected", "onSelection", "onOpen", "children"]);
   return (
     <nx-grid
       {...rest}
@@ -75,6 +77,7 @@ export function Grid(props: GridProps): JSX.Element {
       attr:filename={local.filename}
       attr:locale={local.locale}
       bool:facets-open={!!local.facetsOpen}
+      attr:top-scrollbar={local.topScrollbar === false ? "false" : undefined}
       on:nx-grid-filter={(e) => local.onFilter?.(e)}
       on:nx-grid-change={(e) => local.onChange?.(e)}
       on:nx-grid-columns={(e) => local.onColumns?.(e)}

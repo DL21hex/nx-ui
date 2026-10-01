@@ -543,6 +543,83 @@ nx-grid .nx-glyph {
     box-shadow: 0 0 0 2px var(--nx-ring);
   }
 }
+
+/* ---------------------------------------------------------------- barra de arriba (`top-scrollbar`) */
+
+/* Un espejo del scroller de la tabla. El relleno mide lo que las columnas (`--_w`, lo pone la tabla):
+   la barra aparece justo cuando la tabla desborda, en el mismo pase de maquetación; si cabe, queda
+   una franja vacía de 1 px. Los márgenes de los lados son los bordes de la tabla. */
+.nx-grid__hscroll {
+  display: none;
+  margin: 0 1px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Un `scrollbar-color` heredado de la app apagaría en Chrome los pseudoelementos de abajo. */
+  scrollbar-color: auto;
+  --_thumb: color-mix(in oklab, var(--nx-border-strong), var(--nx-text-tertiary));
+
+  & > div {
+    inline-size: var(--_w, 0);
+    block-size: 1px;
+  }
+}
+/* Chrome, Edge y Safari: 12 px de alto para agarrarla, pero el pulgar se dibuja como un hilo de 4 px
+   (el borde transparente se come el resto) y se ensancha a 8 px, más oscuro, con el puntero encima o
+   al arrastrar. El alto no cambia: nada salta. En reposo va en un gris medio, no el de un borde: se
+   tiene que leer como algo que se arrastra. Con `nx-grid` delante para ganarle a un
+   `::-webkit-scrollbar-thumb` global de la app. */
+nx-grid .nx-grid__hscroll {
+  &::-webkit-scrollbar {
+    height: 12px;
+  }
+  &::-webkit-scrollbar-thumb {
+    border: 4px solid transparent;
+    border-radius: 6px;
+    background: var(--_thumb) padding-box;
+  }
+  &:hover::-webkit-scrollbar-thumb,
+  &::-webkit-scrollbar-thumb:active {
+    border-width: 2px;
+    background-color: var(--nx-text-tertiary);
+  }
+}
+/* Firefox no tiene esos pseudoelementos: su barra fina, con los colores del tema. */
+@supports not selector(::-webkit-scrollbar) {
+  .nx-grid__hscroll {
+    margin-block-end: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--_thumb) transparent;
+  }
+}
+/* Viene encendida (`top-scrollbar="false"` la quita, y entonces la tabla se maqueta como antes). La
+   barra va en su propia fila, solo sobre la tabla; el panel «Filtros» queda en la fila de la tabla,
+   alineado con ella. Así aparecer o irse no cambia el alto de la tabla. Sin `gap` (un panel oculto
+   dejaría su hueco): separa el margen del panel. */
+nx-grid:not([top-scrollbar="false"]) {
+  & > .nx-grid__main {
+    display: grid;
+    grid-template: ". hscroll" "facets table" / auto minmax(0, 1fr);
+    gap: 0;
+  }
+  & .nx-grid__hscroll {
+    display: block;
+    grid-area: hscroll;
+  }
+  & .nx-grid__facets {
+    grid-area: facets;
+    inline-size: var(--nx-grid-facets-width, 248px);
+    margin-inline-end: 12px;
+  }
+  & .nx-grid__scroll {
+    grid-area: table;
+  }
+}
+/* Sin puntero (celulares, tabletas): la tabla se desplaza con el dedo; la barra sobra. */
+@media (hover: none) {
+  nx-grid:not([top-scrollbar="false"]) .nx-grid__hscroll {
+    display: none;
+  }
+}
 .nx-grid__head,
 .nx-grid__row {
   display: grid;
@@ -1352,6 +1429,15 @@ nx-grid mark {
   }
   .nx-grid__search {
     flex-basis: 100%;
+  }
+  nx-grid:not([top-scrollbar="false"]) {
+    & > .nx-grid__main {
+      grid-template: "facets" "hscroll" "table" / minmax(0, 1fr);
+    }
+    & .nx-grid__facets {
+      inline-size: auto;
+      margin: 0 0 12px;
+    }
   }
 }
 
