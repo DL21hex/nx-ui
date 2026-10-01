@@ -164,3 +164,39 @@ test("barra de arriba: en una pantalla angosta va entre el panel y la tabla; en 
   await table.evaluate((s) => (s.scrollLeft = 0));
   await expect.poll(() => bar.evaluate((b) => b.scrollLeft)).toBe(0);
 });
+
+test("las líneas de las columnas llegan al fondo con pocas filas: alineadas, sin scroll de más y sin filas, ninguna", async ({ page }) => {
+  await open(page, "#/grid");
+  const measure = () =>
+    grid(page).evaluate((g) => {
+      const s = g.querySelector<HTMLElement>(".nx-grid__scroll")!;
+      const fill = g.querySelector<HTMLElement>(".nx-grid__fill")!;
+      const head = g.querySelector<HTMLElement>(".nx-grid__head")!;
+      const rights = (el: Element) => [...el.children].map((c) => c.getBoundingClientRect().right);
+      const fr = fill.getBoundingClientRect();
+      return { shown: getComputedStyle(fill).display !== "none", lines: rights(fill), ths: rights(head), fillH: fr.height, fillW: fr.width, headW: head.getBoundingClientRect().width, top: fr.top - s.getBoundingClientRect().top - s.clientTop, clientH: s.clientHeight, scrollH: s.scrollHeight, headH: head.offsetHeight };
+    });
+  type Grid = { rows: unknown[] };
+
+  // Con 600 filas el relleno queda detrás y lo que se desplaza mide lo mismo que antes.
+  const many = await measure();
+  expect(Math.abs(many.scrollH - (many.headH + 600 * 32))).toBeLessThanOrEqual(1);
+
+  // Con pocas filas llega al fondo de lo visible, cada línea en el borde de su cabecera, sin scroll.
+  await grid(page).evaluate((g) => ((g as unknown as Grid).rows = (g as unknown as Grid).rows.slice(0, 5)));
+  for (const dir of ["ltr", "rtl"]) {
+    await grid(page).evaluate((g, d) => g.setAttribute("dir", d), dir);
+    const few = await measure();
+    expect(few.shown).toBe(true);
+    expect(few.lines).toHaveLength(few.ths.length);
+    few.lines.forEach((x, i) => expect(Math.abs(x - few.ths[i]), `${dir}: línea ${i}`).toBeLessThan(1));
+    expect(Math.abs(few.top)).toBeLessThan(1);
+    expect(few.fillH).toBeCloseTo(few.clientH, 0);
+    expect(few.fillW).toBeCloseTo(few.headW, 0);
+    expect(few.scrollH).toBe(few.clientH);
+  }
+
+  // Sin filas, el aviso queda limpio.
+  await grid(page).evaluate((g) => ((g as unknown as Grid).rows = []));
+  expect((await measure()).shown).toBe(false);
+});

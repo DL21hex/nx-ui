@@ -411,6 +411,8 @@ Una tabla de datos que se explora sola:
   `aria-hidden` y fuera del orden del teclado (lo que se recorre es la tabla).
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
   En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo; más allá, `source`.
+  Con pocas filas, las líneas de las columnas siguen hasta el fondo de la tabla (solo las
+  verticales: no se dibujan filas vacías), sin agregar scroll; sin filas, el aviso queda limpio.
 - **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,
   «seleccionar las n» filtradas); lo que la app ponga con `slot="bulk"` aparece junto al conteo.
   Una columna `link` abre el detalle (`nx-grid-open`, también con Enter) y `avatar` muestra las

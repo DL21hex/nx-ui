@@ -626,6 +626,23 @@ nx-grid:not([top-scrollbar="false"]) {
   grid-template-columns: var(--_cols);
   inline-size: max(100%, var(--_w));
 }
+/* Las líneas de las columnas siguen hasta el fondo: con pocas filas no queda un recuadro en blanco
+   debajo de ellas. Un relleno con las mismas columnas, detrás de las filas (que lo tapan donde las
+   hay: sus bordes caen en el mismo sitio) y del alto de lo visible, así que no agrega scroll. Solo
+   líneas verticales: no son filas vacías. */
+.nx-grid__fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  display: grid;
+  grid-template-columns: var(--_cols);
+  inline-size: max(100%, var(--_w));
+  pointer-events: none;
+
+  & > i {
+    border-inline-end: 1px solid var(--nx-border-subtle);
+  }
+}
 .nx-grid__head {
   position: sticky;
   inset-block-start: 0;

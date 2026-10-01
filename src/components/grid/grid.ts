@@ -320,6 +320,7 @@ export class NxGrid extends Base {
    *  que ya está reflejado en la otra. */
   #hbar?: HTMLDivElement;
   #synced = new Map<Element, number>();
+  #fill?: HTMLDivElement;
   #head?: HTMLDivElement;
   #body?: HTMLDivElement;
   #rowsEl?: HTMLDivElement;
@@ -1244,7 +1245,10 @@ export class NxGrid extends Base {
       if (k) this.#setFilters(this.#filters.filter((f) => f.key !== k));
       else this.search = "";
     });
-    this.#scroll = h("div", { class: "nx-grid__scroll", role: "grid", tabindex: 0, "aria-multiselectable": "true" }, this.#head, this.#body, this.#empty);
+    // Las líneas de las columnas hasta el fondo (con pocas filas, sin un recuadro en blanco debajo):
+    // un relleno con las mismas columnas, primero en el árbol para quedar detrás de las filas.
+    this.#fill = h("div", { class: "nx-grid__fill", "aria-hidden": "true" });
+    this.#scroll = h("div", { class: "nx-grid__scroll", role: "grid", tabindex: 0, "aria-multiselectable": "true" }, this.#fill, this.#head, this.#body, this.#empty);
     this.#scroll.addEventListener(
       "scroll",
       () => {
@@ -1339,6 +1343,7 @@ export class NxGrid extends Base {
     this.#panel?.close();
     this.#headCheck = this.selectable ? h("input", { type: "checkbox", "data-pick-all": "", "data-nx-ephemeral": "", "aria-label": this.#labels.selectAll.replace("{n}", "").trim() }) : undefined;
     this.#head!.replaceChildren(...(this.#headCheck ? [h("div", { role: "columnheader", class: "nx-grid__th nx-grid__check" }, this.#headCheck)] : []), ...this.#ths);
+    this.#fill!.replaceChildren(...[...this.#head!.children].map(() => h("i")));
     this.#win = { start: -1, end: -1 };
   }
 
@@ -1398,6 +1403,8 @@ export class NxGrid extends Base {
     // (parecía que no había datos). Con filas ya contadas, las que faltan se pintan como esqueleto.
     const loading = this.#server && this.#blocks.get(0) === "loading" && !this.#count() && this.#columns.length > 0;
     this.#empty!.hidden = !loading && (this.#count() > 0 || !this.#columns.length);
+    // Sin filas, las líneas cruzarían el aviso: solo con filas.
+    this.#fill!.hidden = !this.#count();
     this.#empty!.classList.toggle("is-loading", loading);
     this.#empty!.replaceChildren(loading ? L.loading : L.empty, ...(this.#empty!.hidden || loading ? [] : this.#relax()));
     this.#paintFacets();
