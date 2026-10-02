@@ -1,0 +1,328 @@
+/*
+ * <nx-breadcrumb>. El componente agrega su <nav> al final y esconde los hijos del autor; antes de
+ * cargar (o sin JavaScript), esos hijos se ven como una ruta de enlaces con «›» entre ellos.
+ */
+
+nx-breadcrumb {
+  display: block;
+  min-inline-size: 0;
+  color: var(--nx-muted-foreground);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------- sin JavaScript */
+nx-breadcrumb:not([data-ready]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+
+  & > :is(a, span) {
+    color: inherit;
+    text-decoration: none;
+  }
+  & > :last-child:not(a) {
+    color: var(--nx-foreground);
+    font-weight: 550;
+  }
+  & > * + *::before {
+    content: "›";
+    margin-inline-end: 8px;
+    color: var(--nx-text-quaternary);
+  }
+}
+nx-breadcrumb[data-ready] > :not(.nx-breadcrumb__nav, .nx-breadcrumb__menu) {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- la ruta */
+.nx-breadcrumb__nav {
+  display: flex;
+  min-block-size: 28px;
+  margin-inline: -6px;
+}
+.nx-breadcrumb__list {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+.nx-breadcrumb__nav[data-compact] > .nx-breadcrumb__list,
+.nx-breadcrumb__nav:not([data-compact]) > .nx-breadcrumb__back,
+.nx-breadcrumb__item[hidden] {
+  display: none;
+}
+.nx-breadcrumb__item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-inline-size: 0;
+}
+.nx-breadcrumb__item.is-last {
+  flex: 0 1 auto;
+}
+.nx-breadcrumb__list.is-measuring > .nx-breadcrumb__item {
+  flex: none;
+}
+/* Colapsado: del nivel que queda junto al «…» solo se ve su separador. */
+.nx-breadcrumb__item.is-tail > .nx-breadcrumb__link {
+  display: none;
+}
+
+.nx-breadcrumb__link,
+.nx-breadcrumb__current,
+.nx-breadcrumb__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+  block-size: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.nx-breadcrumb__link,
+.nx-breadcrumb__back {
+  cursor: pointer;
+  transition: background var(--nx-motion-fast), color var(--nx-motion-fast);
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+}
+.nx-breadcrumb__current {
+  color: var(--nx-foreground);
+  font-weight: 550;
+}
+.nx-breadcrumb__back {
+  gap: 2px;
+  padding-inline-start: 2px;
+  font-weight: 500;
+}
+.nx-breadcrumb__text {
+  display: block;
+  max-inline-size: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nx-breadcrumb__current > .nx-breadcrumb__text,
+.nx-breadcrumb__back > .nx-breadcrumb__text,
+.is-measuring .nx-breadcrumb__current > .nx-breadcrumb__text {
+  max-inline-size: none;
+}
+:is(.nx-breadcrumb__link, .nx-breadcrumb__current, .nx-breadcrumb__back) :is(.nx-icon, .nx-glyph) {
+  display: grid;
+  flex: none;
+  color: var(--nx-text-tertiary);
+
+  & svg {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+}
+
+/* Separadores y «…»: un `›` tenue; los que se abren tienen zona de clic y giran al abrir. */
+.nx-breadcrumb__sep,
+.nx-breadcrumb__more {
+  display: grid;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: none;
+  color: var(--nx-text-quaternary);
+
+  & svg {
+    display: block;
+    inline-size: 14px;
+    block-size: 14px;
+  }
+}
+.nx-breadcrumb__sep {
+  inline-size: 20px;
+  block-size: 22px;
+
+  & .nx-glyph {
+    transition: rotate var(--nx-motion-fast) var(--nx-ease-out);
+  }
+  &:dir(rtl) .nx-glyph {
+    scale: -1 1;
+  }
+}
+.nx-breadcrumb__more {
+  inline-size: 28px;
+  block-size: 26px;
+  color: var(--nx-muted-foreground);
+
+  & svg {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+}
+button.nx-breadcrumb__sep,
+.nx-breadcrumb__more {
+  cursor: pointer;
+  transition: background var(--nx-motion-fast), color var(--nx-motion-fast);
+
+  &:hover {
+    background: var(--nx-hover);
+    color: var(--nx-foreground);
+  }
+  &[aria-expanded="true"] {
+    background: var(--nx-nav-active-bg);
+    color: var(--nx-primary-ink);
+  }
+}
+button.nx-breadcrumb__sep[aria-expanded="true"] .nx-glyph {
+  rotate: 90deg;
+}
+
+@keyframes nx-breadcrumb-in {
+  from {
+    opacity: 0;
+    translate: -6px 0;
+  }
+}
+.nx-breadcrumb__item.is-new {
+  animation: nx-breadcrumb-in var(--nx-motion-base) var(--nx-ease-out) both;
+}
+
+/* ---------------------------------------------------------------- menú */
+.nx-breadcrumb__menu {
+  position: fixed;
+  inset: auto;
+  z-index: 50;
+  inline-size: 256px;
+  max-inline-size: calc(100vw - 16px);
+  margin: 0;
+  padding: 4px;
+  overflow: visible;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 13px;
+  transform-origin: top left;
+  animation: nx-breadcrumb-menu var(--nx-motion-fast) var(--nx-ease-out);
+
+  &[hidden] {
+    display: none;
+  }
+  & ul {
+    max-block-size: var(--_max, 320px);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    list-style: none;
+  }
+}
+@keyframes nx-breadcrumb-menu {
+  from {
+    opacity: 0;
+    scale: 0.97;
+    translate: 0 -2px;
+  }
+}
+.nx-breadcrumb__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  block-size: 34px;
+  margin: -4px -4px 4px;
+  padding: 0 12px;
+  border-block-end: 1px solid var(--nx-border-subtle);
+  color: var(--nx-text-tertiary);
+
+  & svg {
+    display: block;
+    inline-size: 16px;
+    block-size: 16px;
+  }
+  & input {
+    flex: 1;
+    min-inline-size: 0;
+    border: 0;
+    outline: none;
+    background: none;
+    color: var(--nx-foreground);
+    font: inherit;
+  }
+  & input::placeholder {
+    color: var(--nx-text-tertiary);
+  }
+}
+.nx-breadcrumb__mitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 100%;
+  block-size: 30px;
+  padding: 0 8px;
+  padding-inline-start: calc(8px + var(--_lvl, 0) * 12px);
+  border: 0;
+  border-radius: var(--nx-radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: var(--nx-hover);
+  }
+  &[aria-checked="true"] {
+    font-weight: 550;
+  }
+  & > .nx-breadcrumb__text {
+    flex: 1;
+    max-inline-size: none;
+    white-space: nowrap;
+  }
+  & .nx-icon,
+  & .nx-glyph {
+    display: grid;
+    flex: none;
+    color: var(--nx-text-tertiary);
+  }
+  & svg {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+  & .nx-breadcrumb__check {
+    color: var(--nx-primary-ink);
+  }
+}
+.nx-breadcrumb__status {
+  margin: 0;
+  padding: 6px 8px 8px;
+  color: var(--nx-text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-breadcrumb__item.is-new,
+  .nx-breadcrumb__menu {
+    animation: none;
+  }
+  .nx-breadcrumb__sep .nx-glyph {
+    transition: none;
+  }
+}

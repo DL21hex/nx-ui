@@ -28,6 +28,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
 | `<nx-org>` + núcleo (ESM) | ≈ 12,5 KB |
+| `<nx-breadcrumb>` + núcleo (ESM); el menú de hermanos, ≈ 2,1 KB, se carga al abrir el primero | ≈ 4,3 KB |
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
@@ -1798,6 +1799,52 @@ guardar.onclick = async () => {
 | `<nx-notice>` | `tone` (`info`, `success`, `warning`, `danger`), `text`, `action`, `action-href` · `nx-notice-action` `{action}` |
 | `<nx-badge>` | `tone` (`neutral`, `success`, `info`, `warning`, `danger`), `label` (si no va como contenido) |
 | Tokens nuevos | `--nx-warning`, `--nx-warning-ink` (texto e íconos), `--nx-warning-soft` |
+
+## `<nx-breadcrumb>`
+
+**La ruta hasta la página actual, con un atajo:** cada `›` se abre con los hermanos del nivel
+siguiente. De «Personas › Empleados › Laura Gómez › Contratos» se pasa a Andrés sin volver a la
+lista.
+
+- **Nombres:** suben a ese nivel. El último es la página actual (`aria-current="page"`) y no es un
+  enlace. Los largos se cortan y muestran el nombre completo al pasar el ratón.
+- **Separadores:** abren los hijos del nivel, con el actual marcado. Llegan en `children` o se
+  piden con `loadChildren(item, level)` al abrir, una vez por nivel. Si no hay alternativas, el `›`
+  no se abre (`expandable: false` o `data-expandable="false"` lo apaga). Con más de 7 aparece un
+  buscador que no distingue tildes. El menú se carga aparte (`import()`) al abrir el primero.
+- **Colapso:** si no cabe, los niveles del medio pasan a un «…» que se abre como menú. Siempre
+  quedan el primero y los dos últimos. Por debajo de 480 px de ancho del componente queda solo
+  «‹ Padre», porque el título de la página ya dice dónde estás.
+- **Navegar:** `nx-breadcrumb-navigate` es cancelable: un router SPA lo cancela y navega él. Si
+  nadie lo cancela, se sigue el `href`. Para conservar la sección al cambiar de persona («de Laura ›
+  Contratos a Andrés › Contratos»), el `href` de cada hermano ya apunta a ella. `Alt+↑` sube un
+  nivel (en la ruta visible de más abajo de la página, la de un diálogo abierto).
+- **Sin JavaScript:** los hijos son enlaces normales y se ven como una ruta con `›`.
+
+```html
+<nx-breadcrumb id="ruta" label="Ruta">
+  <a href="/hcm" data-icon="users">Personas</a>
+  <a href="/hcm/empleados">Empleados</a>
+  <a href="/hcm/empleados/482">Laura Gómez</a>
+  <span>Contratos</span>
+</nx-breadcrumb>
+<script>
+  ruta.loadChildren = (item, level) => fetch(`/api/hermanos?de=${item.href}`).then((r) => r.json());
+</script>
+```
+
+```tsx
+import { Breadcrumb } from "nx32-elements/solid/breadcrumb";
+
+<Breadcrumb items={ruta()} loadChildren={hermanos}
+  onNavigate={(e) => { e.preventDefault(); navigate(e.detail.item.href!); }} />
+```
+
+| | |
+|---|---|
+| Propiedades / atributos | hijos (`<a href>` con `data-icon`, `data-id`, `data-expandable`; el último, un `<span>`) o `items` (`[{id?, label, href?, icon?, children?, expandable?}]`), `loadChildren`, `label`, `labels` · `path` (solo lectura) |
+| Eventos | `nx-breadcrumb-navigate` `{item, level, via}` (cancelable; `via`: `link`, `menu`, `back`, `key`) |
+| Funciones | `cleanBreadcrumbItems()`, `collapseCount()` |
 
 ## `<nx-signature>`
 

@@ -44,6 +44,7 @@ const entries = {
   "notice": "src/components/notice/notice.css",
   "fields": "src/components/fields/fields.css",
   "tabs": "src/components/tabs/tabs.css",
+  "breadcrumb": "src/components/breadcrumb/breadcrumb.css",
   "org": "src/components/org/org.css",
   "account": "src/components/account/account.css",
   "launcher": "src/components/launcher/launcher.css",

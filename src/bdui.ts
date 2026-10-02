@@ -53,6 +53,7 @@ const registry = new Map<string, Entry>(
     Notice: "notice",
     Fields: "fields",
     Tabs: "tabs",
+    Breadcrumb: "breadcrumb",
     Org: "org",
     Signature: "signature",
     Planner: "planner",

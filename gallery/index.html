@@ -4194,6 +4194,74 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
           </div>
         </template>
 
+        <!-- ================================================================ Ruta navegable -->
+        <template id="page-breadcrumb">
+          <p class="eyebrow">Componentes</p>
+          <h1>Ruta navegable <code class="tag">&lt;nx-breadcrumb&gt;</code></h1>
+          <p class="lead">
+            Una ruta sobria con un atajo: cada <strong>›</strong> se abre con los hermanos del nivel siguiente. Pasa de Laura a
+            Andrés sin volver a la lista y, si estabas en sus contratos, sigues en sus contratos. Si no cabe, los niveles del
+            medio se recogen en un «…»; en lo angosto queda solo «‹ Padre».
+          </p>
+          <div class="bc-demo">
+            <div class="bc-demo__ctl">
+              <label for="bc-width">Ancho</label>
+              <input type="range" id="bc-width" min="320" max="1000" step="10" value="1000" />
+              <output id="bc-width-out" for="bc-width"></output>
+            </div>
+            <div class="bc-demo__stage">
+              <div class="bc-app" id="bc-app">
+                <nx-breadcrumb id="bc-demo"></nx-breadcrumb>
+                <h2 class="bc-app__title" id="bc-title" tabindex="-1"></h2>
+                <p class="bc-app__meta" id="bc-meta"></p>
+                <div id="bc-body"></div>
+              </div>
+            </div>
+          </div>
+          <p class="sel-tip">
+            Abre el <strong>›</strong> que sigue a «Empleados» y elige a otra persona: llegas a sus contratos. Con más de 7
+            opciones aparece un buscador (sin tildes: «oscar» encuentra a Óscar). Estrecha el ancho para ver el «…» y, por debajo
+            de 480 px, «‹ Padre». <kbd>Alt</kbd> + <kbd>↑</kbd> sube un nivel.
+          </p>
+          <ol class="stage__log btn-events" id="bc-log"></ol>
+
+          <h2>Cómo funciona</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
+              <tbody>
+                <tr><td>Nombres</td><td>Suben a ese nivel. El último es la página actual (<code>aria-current="page"</code>) y no es un enlace. Los largos se cortan y muestran el nombre completo al pasar el ratón.</td></tr>
+                <tr><td>Separadores</td><td>Abren los hijos del nivel (los hermanos del siguiente), con el actual marcado. Llegan en <code>children</code> o se piden con <code>loadChildren</code> al abrir, una vez por nivel. Sin alternativas, el <strong>›</strong> no se abre. Más de 7 traen buscador.</td></tr>
+                <tr><td>Colapso</td><td>Si no cabe, los niveles del medio pasan a un «…» que se abre como menú. Siempre quedan el primero y los dos últimos; si aun así no cabe, se corta el último.</td></tr>
+                <tr><td>Angosto</td><td>Por debajo de 480 px de ancho del componente queda «‹ Padre»: el título de la página ya dice dónde estás.</td></tr>
+                <tr><td>Navegar</td><td><code>nx-breadcrumb-navigate</code> <code>{item, level, via}</code> es cancelable: un router SPA lo cancela y navega él. Si nadie lo cancela, se sigue el <code>href</code>. Para conservar la sección al cambiar de persona, el <code>href</code> de cada hermano ya apunta a ella.</td></tr>
+                <tr><td>Teclado</td><td><kbd>Alt</kbd> + <kbd>↑</kbd> sube un nivel (en la ruta visible de más abajo de la página). En los menús: flechas, <kbd>Enter</kbd>, <kbd>Esc</kbd> y escribir para filtrar o saltar por inicial.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Uso</h2>
+          <div class="tabs" data-tabs>
+            <div role="tablist">
+              <button role="tab" aria-selected="true">HTML</button>
+              <button role="tab" aria-selected="false">SolidJS</button>
+            </div>
+            <pre role="tabpanel"><code>&lt;nx-breadcrumb id="ruta" label="Ruta"&gt;
+      &lt;a href="/hcm" data-icon="users"&gt;Personas&lt;/a&gt;
+      &lt;a href="/hcm/empleados"&gt;Empleados&lt;/a&gt;
+      &lt;a href="/hcm/empleados/482"&gt;Laura Gómez&lt;/a&gt;
+      &lt;span&gt;Contratos&lt;/span&gt;
+    &lt;/nx-breadcrumb&gt;
+
+    // Los hermanos se piden al abrir un separador (una vez por nivel).
+    ruta.loadChildren = (item, level) =&gt; fetch(`/api/hermanos?de=${item.href}`).then((r) =&gt; r.json());</code></pre>
+            <pre role="tabpanel" hidden><code>import { Breadcrumb } from "nx32-elements/solid/breadcrumb";
+
+    &lt;Breadcrumb items={ruta()} loadChildren={hermanos}
+      onNavigate={(e) =&gt; { e.preventDefault(); navigate(e.detail.item.href!); }} /&gt;</code></pre>
+          </div>
+        </template>
+
         <!-- ================================================================ Trabajos largos -->
         <template id="page-jobs">
           <p class="eyebrow">Componentes</p>

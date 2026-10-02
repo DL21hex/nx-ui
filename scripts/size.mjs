@@ -69,6 +69,9 @@ const BUDGET = [
   ["dist/notice.js", 1.75 * 1024, "notice + núcleo (ESM)"],
   ["dist/fields.js", 5.25 * 1024, "fields + núcleo (ESM; lectura, resumen y edición en la misma rejilla)"],
   ["dist/tabs.js", 2.75 * 1024, "tabs + núcleo (ESM)"],
+  ["dist/breadcrumb.js", 4.5 * 1024, "breadcrumb + núcleo (ESM; colapso y «‹ Padre»)"],
+  // Importa el chunk del componente (ya cargado en la página): la cifra lo incluye; el menú solo son ~2,1 KB.
+  [lazy("breadcrumb-menu"), 5.75 * 1024, "nx-breadcrumb con su menú de hermanos y niveles ocultos (al abrir el primero)"],
   ["dist/org.js", 13 * 1024, "org + núcleo (ESM; «Yo» y el árbol de unidades, con ramas, caras, View Transitions y la búsqueda)"],
   ["dist/signature.js", 7.25 * 1024, "signature + núcleo (ESM; PNG, ubicación y el celular con import())"],
   [lazy("signature-extras"), 0.75 * 1024, "extras de nx-signature: PNG, ubicación y <nx-handoff> (se cargan al usarlos)"],
@@ -135,6 +138,7 @@ const BUDGET = [
   ["dist/notice.css", 1 * 1024, "notice (CSS)"],
   ["dist/fields.css", 1.75 * 1024, "fields (CSS)"],
   ["dist/tabs.css", 1 * 1024, "tabs (CSS)"],
+  ["dist/breadcrumb.css", 1.5 * 1024, "breadcrumb (CSS)"],
   ["dist/org.css", 4 * 1024, "org (CSS)"],
   ["dist/signature.css", 1.25 * 1024, "signature (CSS)"],
   ["dist/planner.css", 3 * 1024, "planner (CSS)"],

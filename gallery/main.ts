@@ -50,6 +50,8 @@ import { mountAwardDemo } from "./demo-award";
 import { mountLauncherDemo } from "./demo-launcher";
 import { mountCardsDemo } from "./demo-cards";
 import { mountOrgDemo } from "./demo-org";
+import { mountBreadcrumbDemo } from "./demo-breadcrumb";
+import "./pages/breadcrumb.css";
 import "./pages/launcher.css";
 import "./pages/handoff.css";
 import { mountGuardDemo } from "./demo-guard";
@@ -156,6 +158,7 @@ const NAV: MenuItem[] = [
   { id: "org", label: "Organigrama", href: "#/org", icon: "users", section: "Componentes", badge: "Nuevo" },
   { id: "print", label: "Imprimir documentos", href: "#/print", icon: "printer", section: "Componentes", badge: "Nuevo" },
   { id: "drawer", label: "Ficha lateral", href: "#/drawer", icon: "panel-right", section: "Componentes", badge: "Nuevo" },
+  { id: "breadcrumb", label: "Ruta navegable", href: "#/breadcrumb", icon: "folder", section: "Componentes", badge: "Nuevo" },
   { id: "signature", label: "Firma", href: "#/signature", icon: "pen-line", section: "Componentes", badge: "Nuevo" },
   { id: "planner", label: "Agenda de recursos", href: "#/planner", icon: "calendar-range", section: "Componentes", badge: "Nuevo" },
   { id: "review", label: "Resumen antes de guardar", href: "#/review", icon: "list-checks", section: "Componentes", badge: "Nuevo" },
@@ -204,6 +207,7 @@ const PAGES: Record<string, { template: string; mount?: (root: HTMLElement) => v
   "#/account": { template: "page-account", mount: mountAccountDemo },
   "#/print": { template: "page-print", mount: mountPrintDemo },
   "#/drawer": { template: "page-drawer", mount: mountDrawerDemo },
+  "#/breadcrumb": { template: "page-breadcrumb", mount: mountBreadcrumbDemo },
   "#/signature": { template: "page-signature", mount: mountSignatureDemo },
   "#/planner": { template: "page-planner", mount: mountPlannerDemo },
   "#/review": { template: "page-review", mount: mountReviewDemo },

@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breadcrumb navegable</title>
+<style>
+/* Tokens de nx32-elements (src/styles/tokens.css), recortados a lo que usa la maqueta. */
+:root {
+  color-scheme: light dark;
+  --_h: 262; --_c: 0.19; --_l: 0.54; --_ld: 0.72; --_n: 260; --_t: 1;
+  --nx-canvas: light-dark(oklch(0.985 calc(0.002 * var(--_t)) var(--_n)), oklch(0.165 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-background: light-dark(oklch(1 0 0), oklch(0.185 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-popover: light-dark(oklch(1 0 0), oklch(0.235 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-border-subtle: light-dark(oklch(0.925 calc(0.004 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 calc(0.005 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 calc(0.006 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.17));
+  --nx-foreground: light-dark(oklch(0.2 calc(0.008 * var(--_t)) var(--_n)), oklch(0.955 calc(0.003 * var(--_t)) var(--_n)));
+  --nx-muted-foreground: light-dark(oklch(0.44 calc(0.01 * var(--_t)) var(--_n)), oklch(0.76 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-text-tertiary: light-dark(oklch(0.51 calc(0.01 * var(--_t)) var(--_n)), oklch(0.64 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-text-quaternary: light-dark(oklch(0.66 calc(0.008 * var(--_t)) var(--_n)), oklch(0.53 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-primary: light-dark(oklch(var(--_l) var(--_c) var(--_h)), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h)));
+  --nx-primary-ink: light-dark(oklch(calc(var(--_l) - 0.07) var(--_c) var(--_h)), oklch(calc(var(--_ld) + 0.05) calc(var(--_c) * 0.7) var(--_h)));
+  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 calc(var(--_c) * 0.1) var(--_h)));
+  --nx-primary-soft: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.1), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.15));
+  --nx-hover: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.05), oklch(1 0 0 / 0.06));
+  --nx-nav-active-bg: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.09), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.13));
+  --nx-ring: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.6), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.7));
+  --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
+    0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
+  --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --nx-radius-sm: 5px; --nx-radius-md: 7px; --nx-radius-lg: 10px;
+  --nx-motion-fast: 140ms; --nx-motion-base: 220ms;
+  --nx-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--nx-canvas); color: var(--nx-foreground); font: 14px/1.45 var(--nx-font-sans); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+code, pre { font-family: var(--nx-font-mono); font-size: 0.9em; }
+code { padding: 1px 5px; border-radius: 4px; background: var(--nx-hover); }
+kbd { padding: 1px 5px; border: 1px solid var(--nx-border); border-bottom-width: 2px; border-radius: 4px; font: 12px var(--nx-font-sans); }
+svg.i { width: 16px; height: 16px; flex: none; display: block; }
+:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+
+.page { max-width: 1440px; margin-inline: auto; padding-inline: clamp(16px, 3vw, 32px); padding-block: 28px 64px; }
+
+/* ------------------------------------------------------------------ portada */
+.intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; margin-block-end: 24px; }
+.eyebrow { margin: 0 0 6px; color: var(--nx-text-tertiary); font-size: 12.5px; }
+.intro h1 { margin: 0; font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -0.015em; text-wrap: balance; }
+.lede { margin: 8px 0 0; max-width: 72ch; color: var(--nx-muted-foreground); text-wrap: pretty; }
+.width-ctl { display: grid; grid-template-columns: auto auto; align-items: center; gap: 4px 12px; padding: 10px 14px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg); background: var(--nx-card); }
+.width-ctl label { font-weight: 550; font-size: 13px; }
+.width-ctl output { justify-self: end; color: var(--nx-text-tertiary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.width-ctl input { grid-column: 1 / -1; width: min(260px, 70vw); accent-color: var(--nx-primary); }
+.width-ctl p { grid-column: 1 / -1; margin: 0; color: var(--nx-text-tertiary); font-size: 12px; }
+
+.layout { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 28px; align-items: start; }
+
+/* ------------------------------------------------------------------ guía */
+.guide { display: flex; flex-direction: column; gap: 32px; }
+.g-sec h2 { margin: 0 0 12px; color: var(--nx-text-tertiary); font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.zones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.zones li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; }
+.zones h3 { margin: 1px 0 3px; font-size: 14px; font-weight: 600; }
+.zones p { margin: 0; color: var(--nx-muted-foreground); line-height: 1.5; text-wrap: pretty; }
+.num { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--nx-primary); color: var(--nx-primary-foreground); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rules li { color: var(--nx-muted-foreground); line-height: 1.5; text-wrap: pretty; }
+.rules b { color: var(--nx-foreground); font-weight: 600; }
+pre { margin: 0; padding: 12px 14px; overflow-x: auto; border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-lg); background: var(--nx-card); line-height: 1.55; }
+.foot-note { margin: 10px 0 0; color: var(--nx-text-tertiary); font-size: 12.5px; line-height: 1.5; }
+
+/* ------------------------------------------------------------------ escenario */
+.stage { position: sticky; top: 20px; height: clamp(560px, calc(100dvh - 40px), 820px); overflow: hidden; border: 1px solid var(--nx-border); border-radius: 14px;
+  background: repeating-linear-gradient(135deg, transparent 0 7px, var(--nx-hover) 7px 8px), var(--nx-canvas); }
+.frame { position: relative; height: 100%; margin-inline: auto; display: flex; flex-direction: column; overflow: hidden; background: var(--nx-background); container: frame / inline-size; }
+.frame.narrow { border-inline: 1px solid var(--nx-border); }
+
+.app-bar { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 20px; border-bottom: 1px solid var(--nx-border-subtle); }
+.brand { display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--nx-radius-md); background: var(--nx-primary); color: var(--nx-primary-foreground); font-size: 11px; font-weight: 700; }
+.app-name { font-weight: 600; }
+.app-search { display: flex; align-items: center; gap: 8px; flex: 0 1 220px; height: 30px; margin-left: auto; padding: 0 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); color: var(--nx-text-tertiary); font-size: 13px; }
+.me { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--nx-hover); color: var(--nx-muted-foreground); font-size: 11px; font-weight: 600; }
+
+.pg { flex: 1; overflow: auto; padding: 18px 28px 32px; }
+.pg-head { margin-bottom: 14px; }
+.pg-head h1 { margin: 4px 0 2px; font-size: 22px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; }
+.pg-head h1:focus { outline: none; }
+.pg-meta { margin: 0; color: var(--nx-text-tertiary); font-size: 13px; }
+
+.rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--nx-border-subtle); max-width: 760px; }
+.row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--nx-border-subtle); background: none; text-align: left; cursor: pointer; }
+.row:hover { background: var(--nx-hover); }
+.row .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.row-n { color: var(--nx-text-tertiary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.row > .i:first-child { color: var(--nx-text-tertiary); }
+.row > .i:last-child { color: var(--nx-text-quaternary); }
+.mini { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--nx-primary-soft); color: var(--nx-primary-ink); font-size: 11px; font-weight: 600; }
+.fields { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 28px; margin: 0; padding-top: 14px; border-top: 1px solid var(--nx-border-subtle); max-width: 560px; }
+.fields dt { color: var(--nx-text-tertiary); }
+.fields dd { margin: 0; }
+@container frame (max-width: 479px) {
+  .app-bar { padding: 0 16px; }
+  .app-search { display: none; }
+  .me { margin-left: auto; }
+  .pg { padding: 12px 16px 24px; }
+}
+
+/* ------------------------------------------------------------------ nx-breadcrumb */
+.bc { display: flex; min-height: 28px; margin-inline: -6px; }
+.bc-list { display: flex; align-items: center; flex: 1; min-width: 0; margin: 0; padding: 0; list-style: none; overflow: hidden; }
+.bc-item { display: flex; align-items: center; flex: none; min-width: 0; }
+.bc-item.last { flex: 0 1 auto; }
+.bc-list.measuring .bc-item { flex: none; }
+.bc-link, .bc-current, .bc-back, .bc-root { display: inline-flex; align-items: center; gap: 6px; min-width: 0; height: 26px; padding: 0 6px; border-radius: var(--nx-radius-sm); font-size: 13px; white-space: nowrap; }
+.bc-link, .bc-back { color: var(--nx-muted-foreground); text-decoration: none; transition: background var(--nx-motion-fast), color var(--nx-motion-fast); }
+.bc-link:hover, .bc-back:hover { background: var(--nx-hover); color: var(--nx-foreground); }
+.bc-link .i, .bc-root .i { color: var(--nx-text-tertiary); }
+.bc-text { display: block; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; }
+.bc-current { color: var(--nx-foreground); font-weight: 550; }
+.bc-current .bc-text { max-width: none; }
+.bc-sep, .bc-more { display: grid; place-items: center; flex: none; padding: 0; border: 0; border-radius: var(--nx-radius-sm); background: none; color: var(--nx-text-quaternary); }
+.bc-sep { width: 20px; height: 22px; }
+.bc-sep .i { width: 14px; height: 14px; transition: rotate var(--nx-motion-fast) var(--nx-ease-out); }
+.bc-more { width: 28px; height: 26px; color: var(--nx-muted-foreground); }
+button.bc-sep, .bc-more { cursor: pointer; transition: background var(--nx-motion-fast), color var(--nx-motion-fast); }
+button.bc-sep:hover, .bc-more:hover { background: var(--nx-hover); color: var(--nx-foreground); }
+button.bc-sep[aria-expanded="true"], .bc-more[aria-expanded="true"] { background: var(--nx-nav-active-bg); color: var(--nx-primary-ink); }
+button.bc-sep[aria-expanded="true"] .i { rotate: 90deg; }
+.bc-back { gap: 2px; padding-left: 2px; font-weight: 500; }
+.bc-root { color: var(--nx-muted-foreground); }
+@keyframes bc-in { from { opacity: 0; translate: -6px 0; } }
+.bc-item.enter { animation: bc-in var(--nx-motion-base) var(--nx-ease-out) both; }
+
+.menu { position: absolute; z-index: 20; width: 256px; max-width: calc(100% - 16px); padding: 4px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg); background: var(--nx-popover); box-shadow: var(--nx-shadow-popover); transform-origin: top left; animation: menu-in var(--nx-motion-fast) var(--nx-ease-out); }
+@keyframes menu-in { from { opacity: 0; scale: 0.97; translate: 0 -2px; } }
+.menu-search { display: flex; align-items: center; gap: 8px; height: 34px; margin: -4px -4px 4px; padding: 0 12px; border-bottom: 1px solid var(--nx-border-subtle); color: var(--nx-text-tertiary); }
+.menu-search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--nx-foreground); font-size: 13px; }
+.menu-search input::placeholder { color: var(--nx-text-quaternary); }
+.menu ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; }
+.menu-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: var(--nx-radius-md); background: none; font-size: 13px; text-align: left; cursor: pointer; }
+.menu-item:hover, .menu-item:focus-visible { outline: none; background: var(--nx-hover); }
+.menu-item[aria-checked="true"] { font-weight: 550; }
+.menu-item .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-item .chk { color: var(--nx-primary); }
+.menu-item > .i:first-child { color: var(--nx-text-tertiary); }
+.menu-item.lvl { padding-left: calc(8px + var(--lvl) * 12px); }
+.menu .mini { width: 20px; height: 20px; font-size: 9.5px; }
+.menu-empty { margin: 0; padding: 6px 8px 8px; color: var(--nx-text-tertiary); font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-item.enter, .menu { animation: none; }
+  .bc-sep .i { transition: none; }
+}
+
+@media (max-width: 899px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .stage { position: static; height: 620px; order: -1; }
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <div>
+      <p class="eyebrow">nx32-elements · maqueta de <code>&lt;nx-breadcrumb&gt;</code></p>
+      <h1>Breadcrumb navegable</h1>
+      <p class="lede">Una ruta sobria con un atajo: cada <b>›</b> se abre con los hermanos del nivel siguiente. Pasa de Laura a Andrés sin volver a la lista y, si estabas en sus contratos, sigues en sus contratos. Estrecha la pantalla para ver el colapso y la versión móvil.</p>
+    </div>
+    <div class="width-ctl">
+      <label for="w">Ancho de la pantalla</label>
+      <output id="wv" for="w"></output>
+      <input type="range" id="w" min="340" max="1100" step="10" value="1100">
+      <p>Por debajo de 480 px pasa a la versión móvil.</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="guide">
+      <section class="g-sec">
+        <h2>Cómo funciona</h2>
+        <ol class="zones">
+          <li><span class="num">1</span><div><h3>Nombres</h3><p>Suben a ese nivel. El último es la página actual y no es un enlace. Los largos se cortan y muestran el nombre completo al pasar el ratón.</p></div></li>
+          <li><span class="num">2</span><div><h3>Separadores</h3><p>Abren los hermanos del nivel siguiente, con el actual marcado. Al cambiar de persona se conserva la sección. Con más de 7 opciones aparece un buscador. Si no hay alternativas, el <b>›</b> no se abre.</p></div></li>
+          <li><span class="num">3</span><div><h3>Colapso</h3><p>Cuando no cabe, los niveles del medio pasan a un <b>…</b> que se abre como menú. Siempre quedan el primero y los dos últimos.</p></div></li>
+          <li><span class="num">4</span><div><h3>Móvil</h3><p>Por debajo de 480 px queda solo <b>‹ Padre</b>, porque el título de la página ya dice dónde estás.</p></div></li>
+          <li><span class="num">5</span><div><h3>Teclado</h3><p><kbd>Alt</kbd> + <kbd>↑</kbd> sube un nivel. En los menús: flechas, <kbd>Enter</kbd>, <kbd>Esc</kbd> y escribir para filtrar o saltar por inicial. Los atajos no se anuncian en la interfaz.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="g-sec">
+        <h2>Uso</h2>
+<pre>&lt;nx-breadcrumb label="Ruta"&gt;
+  &lt;a href="/hcm" data-icon="people"&gt;Personas&lt;/a&gt;
+  &lt;a href="/hcm/empleados"&gt;Empleados&lt;/a&gt;
+  &lt;a href="/hcm/empleados/482"&gt;Laura Gómez&lt;/a&gt;
+  &lt;span&gt;Contratos&lt;/span&gt;
+&lt;/nx-breadcrumb&gt;</pre>
+        <p class="foot-note">Sin JavaScript sigue siendo una ruta de enlaces. Los hermanos se piden al abrir el menú con <code>loadChildren(item)</code> o con el evento <code>nx-breadcrumb-expand</code>. <code>nx-breadcrumb-navigate</code> es cancelable para los routers SPA. Para BDUI acepta también <code>items</code>.</p>
+      </section>
+
+      <section class="g-sec">
+        <h2>Lo que queda fuera</h2>
+        <ul class="rules">
+          <li><b>Pastillas y flechas con forma de paso.</b> Parecen un asistente, no una ruta.</li>
+          <li><b>Iconos en cada nivel.</b> Solo el primero lleva el del módulo.</li>
+          <li><b>Historial y renombrar desde la ruta.</b> Son capas que no hacen falta.</li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="stage" id="stage" aria-label="Pantalla de ejemplo">
+      <div class="frame" id="frame">
+        <div class="app-bar">
+          <span class="brand" aria-hidden="true">nx</span>
+          <span class="app-name">nx32</span>
+          <span class="app-search" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>Buscar</span>
+          <span class="me" aria-hidden="true">MR</span>
+        </div>
+        <main class="pg" id="pg">
+          <div class="pg-head">
+            <nav class="bc" id="bc" aria-label="Ruta"><ol class="bc-list" id="bc-list"></ol></nav>
+            <h1 id="pg-title" tabindex="-1"></h1>
+            <p class="pg-meta" id="pg-meta"></p>
+          </div>
+          <div id="pg-body"></div>
+        </main>
+        <div class="menu" id="menu" hidden></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  /* ------------------------------------------------------------ utilidades */
+  const IC = {
+    right: '<path d="m9 18 6-6-6-6"/>',
+    left: '<path d="m15 18-6-6 6-6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    people: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+    file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
+  };
+  const ic = (n, cls = "i") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const norm = (s) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  const initials = (s) => s.split(/\s+/).slice(0, 2).map((w) => w[0]).join("");
+
+  /* ------------------------------------------------------------ datos de ejemplo */
+  let seq = 0;
+  const node = (label, extra = {}) => ({ id: "n" + ++seq, label, ...extra });
+
+  const PEOPLE = ["Laura Gómez Restrepo", "Andrés Pardo Villa", "Marcela Ruiz Ospina", "Camilo Arango Mejía", "Daniela Henao Toro", "Felipe Zapata Ríos",
+    "Juliana Cardona Gil", "Santiago Montoya Uribe", "Valentina Correa Mesa", "Sebastián Londoño Vélez", "Natalia Escobar Duque", "Mateo Jaramillo Soto",
+    "Isabela Ochoa Patiño", "Óscar Bedoya Lara"];
+  const CONTRACTS = [
+    ["Contrato indefinido 2024", "Prórroga 2023", "Contrato a término fijo 2022"],
+    ["Contrato indefinido 2021", "Contrato a término fijo 2020"],
+    ["Contrato a término fijo 2025"],
+  ];
+  const contract = (label, j) => {
+    const year = label.match(/\d{4}/)[0];
+    const kind = label.startsWith("Prórroga") ? "Prórroga" : label.includes("indefinido") ? "Indefinido" : "Término fijo";
+    return node(label, {
+      fields: [["Tipo", kind], ["Inicio", `13 oct ${year}`], ["Jornada", "Completa · 47 h"], ["Sede", "Medellín · El Poblado"]],
+      children: j === 0 ? [node("Otrosí n.º 3 · prórroga"), node("Otrosí n.º 2 · cambio de salario"), node("Otrosí n.º 1 · cambio de sede")] : undefined,
+    });
+  };
+  const person = (name, i) => node(name, {
+    kind: "person",
+    children: [
+      node("Contratos", { key: "contratos", children: CONTRACTS[i % CONTRACTS.length].map(contract) }),
+      node("Ausencias", { key: "ausencias", children: [node("Vacaciones · agosto 2026"), node("Incapacidad · marzo 2026"), node("Permiso · enero 2026")] }),
+      node("Documentos", { key: "documentos", children: [node("Cédula de ciudadanía"), node("Título profesional"), node("Certificación bancaria"), node("Afiliación a EPS")] }),
+      node("Evaluaciones", { key: "evaluaciones", children: [node("Evaluación 2025"), node("Evaluación 2024")] }),
+    ],
+  });
+  const ROOT = node("Personas", {
+    icon: "people",
+    children: [
+      node("Empleados", { children: PEOPLE.map(person) }),
+      node("Vacantes", { children: [node("Analista de datos"), node("Auxiliar de nómina"), node("Diseñadora de producto")] }),
+      node("Ausencias", { children: [node("Solicitudes pendientes"), node("Calendario del equipo")] }),
+      node("Organigrama"),
+    ],
+  });
+  const DEFAULT_FIELDS = [["Estado", "Vigente"], ["Actualizado", "29 sep 2026"], ["Responsable", "Marcela Ruiz"]];
+
+  /* ------------------------------------------------------------ estado */
+  const frame = $("#frame"), bc = $("#bc"), list = $("#bc-list"), menu = $("#menu");
+  const title = $("#pg-title"), meta = $("#pg-meta"), body = $("#pg-body"), pg = $("#pg");
+  const laura = ROOT.children[0].children[0];
+  let path = [ROOT, ROOT.children[0], laura, laura.children[0], laura.children[0].children[0]];
+  let hidden = 0;          // niveles del medio escondidos en «…»
+  let fresh = new Set();   // segmentos que entran con animación
+  let open = null;         // { trigger, kind, d }
+
+  /* ------------------------------------------------------------ breadcrumb */
+  const sep = (i) => (path[i].children?.length > 1
+    ? `<button type="button" class="bc-sep" data-sep="${i}" aria-haspopup="menu" aria-expanded="false" aria-label="Otros en ${esc(path[i].label)}">${ic("right")}</button>`
+    : `<span class="bc-sep" aria-hidden="true">${ic("right")}</span>`);
+
+  function fullHtml(h) {
+    const n = path.length;
+    let html = "";
+    path.forEach((nd, i) => {
+      if (h && i === 1) {
+        html += `<li class="bc-item"><button type="button" class="bc-more" data-more aria-haspopup="menu" aria-expanded="false" aria-label="Mostrar ${h} ${h === 1 ? "nivel oculto" : "niveles ocultos"}">${ic("more")}</button>${sep(h)}</li>`;
+      }
+      if (i >= 1 && i <= h) return;
+      const cls = `bc-item${i === n - 1 ? " last" : ""}${fresh.has(nd.id) ? " enter" : ""}`;
+      const text = `${nd.icon ? ic(nd.icon) : ""}<span class="bc-text">${esc(nd.label)}</span>`;
+      html += i === n - 1
+        ? `<li class="${cls}"><span class="bc-current" aria-current="page">${text}</span></li>`
+        : `<li class="${cls}"><a class="bc-link" href="#${nd.id}" data-go="${i}">${text}</a>${sep(i)}</li>`;
+    });
+    return html;
+  }
+
+  function compactHtml() {
+    if (path.length < 2) return `<li class="bc-item"><span class="bc-root">${ic(ROOT.icon)}${esc(ROOT.label)}</span></li>`;
+    const parent = path[path.length - 2];
+    return `<li class="bc-item last"><a class="bc-back" href="#${parent.id}" data-go="${path.length - 2}">${ic("left")}<span class="bc-text">${esc(parent.label)}</span></a></li>`;
+  }
+
+  function layout() {
+    closeMenu(false);
+    const compact = frame.clientWidth < 480;
+    bc.classList.toggle("compact", compact);
+    hidden = 0;
+    if (compact) {
+      list.innerHTML = compactHtml();
+    } else {
+      const max = Math.max(0, path.length - 3);
+      list.classList.add("measuring");
+      list.innerHTML = fullHtml(0);
+      while (hidden < max && list.scrollWidth > list.clientWidth + 1) list.innerHTML = fullHtml(++hidden);
+      list.classList.remove("measuring");
+    }
+    for (const t of $$(".bc-text", list)) {
+      const host = t.parentElement;
+      if (t.scrollWidth > t.clientWidth) host.title = t.textContent;
+      else host.removeAttribute("title");
+    }
+  }
+
+  /* ------------------------------------------------------------ página */
+  function renderPage() {
+    const cur = path[path.length - 1];
+    title.textContent = cur.label;
+    const kids = cur.children || [];
+    if (kids.length) {
+      meta.textContent = cur.kind === "person" ? `Ficha de empleado · ${kids.length} secciones` : `${kids.length} ${kids.length === 1 ? "elemento" : "elementos"}`;
+      body.innerHTML = `<ul class="rows">${kids.map((k, i) => `<li><button type="button" class="row" data-i="${i}">${
+        k.kind === "person" ? `<span class="mini" aria-hidden="true">${esc(initials(k.label))}</span>` : ic(k.children ? "folder" : "file")
+      }<span class="lbl">${esc(k.label)}</span>${k.children ? `<span class="row-n">${k.children.length}</span>` : ""}${ic("right")}</button></li>`).join("")}</ul>`;
+    } else {
+      meta.textContent = `En ${path[path.length - 2]?.label ?? ""}`;
+      body.innerHTML = `<dl class="fields">${(cur.fields || DEFAULT_FIELDS).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
+    }
+    pg.scrollTop = 0;
+  }
+
+  function navigate(next, focus) {
+    fresh = new Set(next.filter((nd, i) => path[i] !== nd).map((nd) => nd.id));
+    path = next;
+    layout();
+    renderPage();
+    fresh = new Set();
+    if (focus === "title") title.focus();
+    else if (focus) ($(focus, list) || title).focus();
+  }
+
+  // De Laura › Contratos a Andrés › Contratos: tras cambiar un nivel se sigue la ruta por sección mientras exista.
+  function follow(d, child) {
+    const next = [...path.slice(0, d + 1), child];
+    let cur = child;
+    for (const t of path.slice(d + 2)) {
+      const m = t.key && cur.children?.find((c) => c.key === t.key);
+      if (!m) break;
+      next.push(m);
+      cur = m;
+    }
+    return next;
+  }
+
+  /* ------------------------------------------------------------ menú */
+  function toggleMenu(trigger, kind, d) {
+    if (open?.trigger === trigger) return closeMenu(true);
+    closeMenu(false);
+    open = { trigger, kind, d };
+    trigger.setAttribute("aria-expanded", "true");
+
+    let html;
+    if (kind === "sep") {
+      const items = path[d].children, current = path[d + 1];
+      const ph = `Buscar en ${path[d].label}…`;
+      html = (items.length > 7 ? `<div class="menu-search">${ic("search")}<input type="text" aria-label="${esc(ph)}" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false"></div>` : "")
+        + `<ul role="menu" aria-label="${esc(path[d].label)}">${items.map((nd, i) => `<li role="none"><button type="button" class="menu-item" role="menuitemradio" aria-checked="${nd === current}" data-i="${i}">${
+          nd.kind === "person" ? `<span class="mini" aria-hidden="true">${esc(initials(nd.label))}</span>` : ""
+        }<span class="lbl">${esc(nd.label)}</span>${nd === current ? ic("check", "i chk") : ""}</button></li>`).join("")}</ul>`
+        + `<p class="menu-empty" hidden>Sin resultados</p>`;
+    } else {
+      html = `<ul role="menu" aria-label="Niveles ocultos">${path.slice(1, 1 + hidden).map((nd, i) =>
+        `<li role="none"><button type="button" class="menu-item lvl" role="menuitem" style="--lvl:${i}" data-i="${i}">${ic("folder")}<span class="lbl">${esc(nd.label)}</span></button></li>`).join("")}</ul>`;
+    }
+    menu.innerHTML = html;
+    menu.hidden = false;
+
+    const fr = frame.getBoundingClientRect(), tr = trigger.getBoundingClientRect();
+    const top = tr.bottom - fr.top + 6;
+    menu.style.top = top + "px";
+    menu.style.left = Math.max(8, Math.min(tr.left - fr.left - 8, fr.width - menu.offsetWidth - 8)) + "px";
+    $("ul", menu).style.maxHeight = Math.max(120, Math.min(300, fr.height - top - 60)) + "px";
+
+    const target = $("input", menu) || $('[aria-checked="true"]', menu) || $(".menu-item", menu);
+    target.focus();
+    if (target.classList.contains("menu-item")) target.scrollIntoView({ block: "nearest" });
+  }
+
+  function closeMenu(returnFocus) {
+    if (!open) return;
+    const t = open.trigger;
+    open = null;
+    menu.hidden = true;
+    menu.innerHTML = "";
+    t.setAttribute("aria-expanded", "false");
+    if (returnFocus && t.isConnected) t.focus();
+  }
+
+  function pick(btn) {
+    const { kind, d } = open;
+    const i = +btn.dataset.i;
+    if (kind === "sep") {
+      const child = path[d].children[i];
+      if (child === path[d + 1]) return closeMenu(true);
+      navigate(follow(d, child), `button[data-sep="${d}"]`);
+    } else {
+      navigate(path.slice(0, i + 2), "title");
+    }
+  }
+
+  /* ------------------------------------------------------------ eventos */
+  list.addEventListener("click", (e) => {
+    const go = e.target.closest("[data-go]");
+    if (go) { e.preventDefault(); navigate(path.slice(0, +go.dataset.go + 1), "title"); return; }
+    const s = e.target.closest("button[data-sep]");
+    if (s) { toggleMenu(s, "sep", +s.dataset.sep); return; }
+    const m = e.target.closest("[data-more]");
+    if (m) toggleMenu(m, "more");
+  });
+
+  body.addEventListener("click", (e) => {
+    const r = e.target.closest(".row");
+    if (r) navigate([...path, path[path.length - 1].children[+r.dataset.i]], "title");
+  });
+
+  menu.addEventListener("click", (e) => {
+    const b = e.target.closest(".menu-item");
+    if (b) pick(b);
+  });
+
+  menu.addEventListener("input", (e) => {
+    const q = norm(e.target.value.trim());
+    let n = 0;
+    for (const b of $$(".menu-item", menu)) {
+      const hit = norm($(".lbl", b).textContent).includes(q);
+      b.parentElement.hidden = !hit;
+      n += hit;
+    }
+    $(".menu-empty", menu).hidden = n > 0;
+  });
+
+  menu.addEventListener("keydown", (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const input = $("input", menu);
+    const items = $$(".menu-item", menu).filter((b) => !b.parentElement.hidden);
+    const idx = items.indexOf(document.activeElement);
+    const at = (k) => items.length && items[(k + items.length) % items.length].focus();
+    switch (e.key) {
+      case "ArrowDown": e.preventDefault(); at(idx + 1); break;
+      case "ArrowUp":
+        e.preventDefault();
+        if (idx <= 0 && input) input.focus();
+        else at(idx === -1 ? items.length - 1 : idx - 1);
+        break;
+      case "Home": if (e.target !== input) { e.preventDefault(); at(0); } break;
+      case "End": if (e.target !== input) { e.preventDefault(); at(items.length - 1); } break;
+      case "Enter": if (e.target === input) { e.preventDefault(); if (items[0]) pick(items[0]); } break;
+      case "Escape": e.preventDefault(); closeMenu(true); break;
+      case "Tab": closeMenu(false); break;
+      default:
+        if (e.target === input || e.key.length !== 1 || e.key === " ") break;
+        if (input) { input.focus(); break; }   // la letra cae en el buscador
+        {
+          const k = norm(e.key);
+          for (let j = 1; j <= items.length; j++) {
+            const b = items[(idx + j) % items.length];
+            if (norm($(".lbl", b).textContent).startsWith(k)) { b.focus(); break; }
+          }
+        }
+    }
+  });
+
+  document.addEventListener("pointerdown", (e) => {
+    if (open && !menu.contains(e.target) && !open.trigger.contains(e.target)) closeMenu(false);
+  });
+  pg.addEventListener("scroll", () => closeMenu(false), { passive: true });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.altKey && e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey && path.length > 1) {
+      e.preventDefault();
+      navigate(path.slice(0, -1), "title");
+    }
+  });
+
+  /* ------------------------------------------------------------ ancho */
+  const range = $("#w"), out = $("#wv"), stage = $("#stage");
+  let full = true;
+  const apply = () => {
+    frame.style.width = full ? "100%" : range.value + "px";
+    frame.classList.toggle("narrow", !full);
+    out.textContent = Math.round(frame.getBoundingClientRect().width) + " px";
+  };
+  range.addEventListener("input", () => { full = +range.value >= +range.max; apply(); });
+  new ResizeObserver(() => {
+    range.max = Math.max(+range.min, Math.floor(stage.clientWidth));
+    if (full) range.value = range.max;
+    apply();
+  }).observe(stage);
+  let lastW = 0;
+  new ResizeObserver(() => {
+    if (frame.clientWidth === lastW) return;
+    lastW = frame.clientWidth;
+    layout();
+  }).observe(frame);
+
+  renderPage();
+  layout();
+})();
+</script>
+</html>

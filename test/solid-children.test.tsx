@@ -13,6 +13,7 @@ import { PasteFill } from "../src/solid/paste-fill";
 import { Explain } from "../src/solid/explain";
 import { SideMenu } from "../src/solid/sidemenu";
 import { Tabs } from "../src/solid/tabs";
+import { Breadcrumb } from "../src/solid/breadcrumb";
 import { Notice } from "../src/solid/notice";
 import { Badge } from "../src/solid/badge";
 
@@ -26,6 +27,7 @@ const CASES: [string, (kids: () => JSX.Element) => JSX.Element][] = [
   ["explain", (k) => <Explain>{k()}</Explain>],
   ["sidemenu", (k) => <SideMenu items={[{ id: "a", label: "A", href: "/" }]}>{k()}</SideMenu>],
   ["tabs", (k) => <Tabs><section data-tab="Uno">1</section>{k()}</Tabs>],
+  ["breadcrumb", (k) => <Breadcrumb items={[{ label: "Inicio", href: "/" }, { label: "Aquí" }]}>{k()}</Breadcrumb>],
   ["notice", (k) => <Notice tone="warning" action="Renovar">{k()}</Notice>],
   ["badge", (k) => <Badge label="Activa">{k()}</Badge>],
 ];
