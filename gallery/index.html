@@ -2842,14 +2842,15 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           <p class="lead">
             Un grupo de tres empresas con unas 300 personas, con dos lentes sobre los mismos datos. <strong>Yo</strong> muestra el
             lugar de quien mira: su cadena hacia arriba, su jefe, quienes comparten jefe, su equipo y a quién acude para cada cosa.
-            <strong>Organización</strong> muestra la empresa como bloques proporcionales a la gente, y se entra en ellos hasta
-            llegar a las personas.
+            <strong>Organización</strong> muestra el árbol de unidades, cada una con quien la dirige, y al abrir una, su gente
+            con las mismas ramas.
           </p>
           <nx-org id="org-demo" locale="es-CO" searchable></nx-org>
           <p class="sel-tip">
             Pulsa a cualquier persona para centrarte en ella: arriba aparece el camino desde ti («Tu jefe común con… es…»). En
-            <em>Organización</em>, «Tú» marca el bloque que lleva a tu lugar en cada nivel; <kbd>Esc</kbd> sube un nivel y las
-            flechas se mueven entre bloques. El menú <em>Color</em> pinta el mapa con una sola cifra a la vez.
+            <em>Organización</em>, el camino hasta tu unidad llega abierto y marcado; pulsa una unidad para ver su gente
+            (<kbd>Esc</kbd> vuelve al árbol), y «n subunidades» o las flechas <kbd>→</kbd> / <kbd>←</kbd> las despliegan o pliegan.
+            El menú <em>Color</em> muestra una sola cifra a la vez en cada unidad.
           </p>
           <ol class="stage__log btn-events" id="org-log"></ol>
 
@@ -2860,8 +2861,8 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
               <tbody>
                 <tr><td>Yo</td><td>La persona del centro (por defecto, <code>me</code>) con su cadena en una línea, su jefe, quienes comparten jefe (los primeros ocho y «+n») y su equipo directo, con cuántos tiene cada uno a cargo. Para quien mira, <code>contacts</code>: «Para… / Acudes a…».</td></tr>
                 <tr><td>Camino</td><td>Si el centro es otra persona, el jefe común más cercano y cuántos niveles hay hasta él. «Volver a mí» regresa.</td></tr>
-                <tr><td>Organización</td><td>Bloques de tamaño proporcional a las personas (<em>treemap</em>), como mucho 18 por nivel; el resto va en «Otras n unidades». Una unidad sin subunidades se abre en sus cargos, y un cargo, en sus personas.</td></tr>
-                <tr><td>Color</td><td>Una cifra de <code>unit.metrics</code> a la vez (<code>metrics</code>), en el acento, ámbar o rojo; con <code>per: "count"</code>, por persona de la unidad.</td></tr>
+                <tr><td>Organización</td><td>El árbol de unidades: la raíz arriba, sus hijas en fila con ramas y debajo de cada una sus subunidades sobre un riel (hasta 12 y «+n»). Cada unidad lleva el tono de su rama, su líder (<code>leader</code>), cuántas personas tiene y algunas caras. Al abrir una, su gente como en «Yo»: el líder, cada jefe con su equipo en pila y los directos aparte.</td></tr>
+                <tr><td>Color</td><td>Una cifra de <code>unit.metrics</code> a la vez (<code>metrics</code>) en cada unidad, en el acento, ámbar o rojo, más intensa cuanto más alta entre sus hermanas; con <code>per: "count"</code>, por persona de la unidad.</td></tr>
                 <tr><td>Por partes</td><td>Con <code>source</code>, un POST pide lo que falta: <code>{unit}</code> (sus personas), <code>{person}</code> (su cadena, sus pares y su equipo) o <code>{search}</code>, y responde <code>{people?, units?}</code>. Lo que llega completo de arranque no se vuelve a pedir. Una persona con <code>locked</code> se ve pero no se abre.</td></tr>
               </tbody>
             </table>
@@ -2876,8 +2877,8 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
             <pre role="tabpanel"><code>&lt;nx-org id="org" me="e214" searchable&gt;&lt;/nx-org&gt;
 
     org.units = [
-      { id: "agro", name: "Agrovid", kind: "Empresa", count: 230 },
-      { id: "agro-esp", name: "Finca La Esperanza", parent: "agro", kind: "Subdivisión", count: 74,
+      { id: "agro", name: "Agrovid", kind: "Empresa", count: 230, leader: "e3" },
+      { id: "agro-esp", name: "Finca La Esperanza", parent: "agro", kind: "Subdivisión", count: 74, leader: "e5",
         metrics: { vacantes: 3 } },
     ];
     org.people = [

@@ -27,7 +27,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB), el bloqueo (≈ 3,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,3 KB |
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
-| `<nx-org>` + núcleo (ESM) | ≈ 12,2 KB |
+| `<nx-org>` + núcleo (ESM) | ≈ 12,5 KB |
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
@@ -1634,19 +1634,31 @@ Los datos llegan tal como salen de la base de datos (`rows`); `fields` dice qué
 **El organigrama, con dos lentes sobre los mismos datos.**
 
 - **Yo:** una persona en el centro (por defecto, `me`: quien mira) con lo que tiene alrededor: su
-  cadena hacia arriba en una línea, su jefe, quienes comparten jefe (los primeros ocho y «+n») y su
-  equipo directo, con cuántos tiene a cargo cada uno. Para quien mira, `contacts`: «Para… /
-  Acudes a…» («Aprobar vacaciones → Laura Gómez»).
-- **El camino:** al centrarse en otra persona, el jefe común más cercano y cuántos niveles hay hasta
-  él («Tu jefe común con Ana es Marta Ríos · 2 niveles arriba de ti»), y «Volver a mí».
-- **Organización:** la empresa como bloques de tamaño proporcional a la gente (*treemap*), hasta 18
-  por nivel; el resto va en «Otras n unidades». Se entra en un bloque al pulsarlo y crece desde él;
-  una unidad sin subunidades se abre en sus cargos, y un cargo, en sus personas. Con una sola raíz
-  (el grupo) arranca dentro de ella. «Tú» marca, en cada nivel, el bloque que lleva a quien mira.
-- **Color:** una sola cifra a la vez (`metrics` sobre `unit.metrics`: vacantes, ingresos,
-  rotación), en el acento, ámbar o rojo; con `per: "count"`, por persona de la unidad.
-- **Teclado:** las flechas pasan de un bloque a otro por geometría; `Esc` (o `Retroceso`) sube un
-  nivel. La búsqueda (`searchable`) encuentra personas sin tildes y unidades.
+  cadena hacia arriba en caras solapadas (el nombre se abre al pasar por encima), su jefe, quienes
+  comparten jefe a los dos lados (los primeros ocho y «+n»; debajo, en lo angosto) y su equipo
+  directo colgando de ramas, con las caras y el número de quienes tiene a cargo cada uno. Para
+  quien mira, `contacts`: «Para… / Acudes a…» («Aprobar vacaciones → Laura Gómez»).
+- **Caras:** sin `avatar`, las iniciales llevan un tono propio de cada persona (sale de su `id`):
+  el mismo en todas las vistas. Al cambiar de persona, con View Transitions, cada tarjeta viaja a
+  su nuevo lugar (la pulsada sube al centro); sin la API o con movimiento reducido, cambia directo.
+- **El camino:** al centrarse en otra persona, dibujado en caras (Tú —↑2— el jefe común —↓1— la
+  otra persona) y en una frase («Tu jefe común con Ana es Marta Ríos · 2 niveles arriba de ti»),
+  con «Volver a mí».
+- **Organización:** el árbol de unidades. Con una sola raíz (el grupo), ella arriba y sus hijas en
+  fila con ramas; debajo de cada una, sus subunidades colgando de un riel (hasta 12 y «+n»), que se
+  pliegan y despliegan. Cada unidad lleva la franja del tono de su rama (sus subunidades lo
+  heredan), su líder con su cara (`leader`), cuántas personas tiene y algunas caras. El camino hasta
+  quien mira llega abierto y marcado, y «Tú» va en su unidad.
+- **Una unidad abierta:** su gente con las ramas de «Yo»: el líder arriba, cada jefe en su columna
+  con su equipo en pila (8 y «+n»), los directos del líder aparte, y quien no cuelga de nadie dentro
+  de la unidad, en tarjetas. Debajo, sus subunidades. Las migas suben; con View Transitions, la
+  tarjeta de la unidad se vuelve la cabecera, y al volver, regresa a su lugar del árbol.
+- **Color por cifra:** una sola cifra a la vez en cada unidad (`metrics` sobre `unit.metrics`:
+  vacantes, ingresos, rotación), en el acento, ámbar o rojo, más intensa cuanto más alta entre sus
+  hermanas; con `per: "count"`, por persona de la unidad.
+- **Teclado:** en el árbol, `→` despliega y `←` pliega las subunidades de la tarjeta enfocada; en
+  una unidad, `Esc` (o `Retroceso`) vuelve al árbol con el foco en ella. La búsqueda (`searchable`)
+  encuentra personas sin tildes y unidades.
 
 Para una organización grande, `source` entrega por partes con un POST de JSON: `{unit}` (sus
 personas), `{person}` (su cadena, sus pares y su equipo) o `{search}`, y responde `{people?, units?}`.

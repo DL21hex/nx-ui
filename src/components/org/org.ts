@@ -5,10 +5,11 @@
  *   cadena hacia arriba en una línea, su jefe, quienes comparten jefe y su equipo directo. Para
  *   quien mira, «Para… / Acudes a…»: a quién acude para cada cosa. Si el centro es otra persona,
  *   el camino entre las dos: «Tu jefe común con Ana es Marta Ríos».
- * - **Organización:** la empresa como bloques anidados, de tamaño proporcional a la gente. Al
- *   pulsar un bloque se entra en él (zoom); en una unidad sin subunidades, los bloques son los
- *   cargos, y en un cargo, las personas. «Tú» marca el camino hasta quien mira en todos los niveles,
- *   y una sola cifra a la vez (vacantes, ingresos…) colorea el mapa.
+ * - **Organización:** el árbol de unidades, cada una con quien la dirige, su gente y el tono de su
+ *   rama. Arriba en fila (con ramas); debajo de cada una, sus subunidades colgando de un riel, que
+ *   se pliegan y despliegan. El camino hasta quien mira llega abierto y marcado. Al abrir una
+ *   unidad, su gente con las ramas de «Yo»: el líder, cada jefe con su equipo y los directos.
+ *   Una sola cifra a la vez (vacantes, ingresos…) se ve en cada unidad.
  *
  * Los datos son JSON (BDUI): `units`, `people` y `me`. Para una organización grande, `source`
  * entrega por partes (POST): las personas de una unidad, el entorno de una persona o una búsqueda.
@@ -21,28 +22,23 @@ import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
-import { moveIndex } from "../../core/nav";
 import {
   buildIndex,
+  byName,
   chainOf,
-  childOnPath,
   cleanPerson,
   cleanUnit,
   commonBoss,
   directCount,
-  groupByTitle,
   matchPerson,
   metricLevels,
   peersOf,
   reportsOf,
-  squarify,
   teamSize,
-  topWithRest,
   unitCount,
   unitLine,
   unitPath,
   type OrgIndex,
-  type Rect,
 } from "./logic";
 import type { OrgContact, OrgLabels, OrgMetric, OrgPage, OrgPerson, OrgRequest, OrgUnit, OrgView } from "./types";
 
@@ -56,6 +52,7 @@ export const ORG_LABELS: OrgLabels = {
   people: "{n} personas",
   peopleOne: "1 persona",
   boss: "Jefe",
+  chain: "Cadena de mando",
   peers: "Comparten jefe",
   reports: "Equipo directo",
   teamOf: "Equipo de {name}",
@@ -63,9 +60,10 @@ export const ORG_LABELS: OrgLabels = {
   contactsFor: "Para…",
   contactsWho: "Acudes a…",
   more: "+{n}",
-  rest: "Otras {n} unidades",
-  restTitles: "Otros {n} cargos",
-  noTitle: "Sin cargo",
+  subunits: "{n} subunidades",
+  subunitOne: "1 subunidad",
+  fold: "Plegar",
+  direct: "Directos con {name}",
   span: "{n} a cargo",
   spanTotal: "{n} en total",
   peopleIn: "Personas en {name}",
@@ -77,12 +75,10 @@ export const ORG_LABELS: OrgLabels = {
   levels: "{n} niveles arriba de ti",
   levelOne: "un nivel arriba de ti",
   noPath: "No hay una línea de mando conocida entre tú y {name}",
-  seeMap: "Ver en el mapa",
+  seeMap: "Ver en la organización",
   seeMe: "Volver a mí",
-  up: "Subir un nivel",
   metric: "Color",
   noMetric: "Personas",
-  leader: "Líder",
   loading: "Cargando…",
   error: "No se pudo cargar.",
   retry: "Reintentar",
@@ -95,36 +91,32 @@ export const ORG_LABELS: OrgLabels = {
   phone: "Teléfono",
 };
 
-/** Bloques por nivel del mapa: más, y los nombres ya no caben. */
-const MAX_TILES = 18;
+/** Subunidades visibles debajo de una unidad, y personas en cada pila, antes de «+n». */
+const STACK = 12;
+const PILE = 8;
 /** Tarjetas de personas antes de «Ver más». */
 const PAGE = 48;
 /** Compañeros visibles antes del «+n». */
 const PEERS = 8;
 const EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
-
-/** Un paso del recorrido del mapa: una unidad, lo que no cupo en una, o un cargo de una unidad. */
-type Step = { t: "unit"; id: string } | { t: "rest"; id: string | null; skip: number } | { t: "title"; id: string; title: string };
-
-interface Tile {
-  key: string;
-  label: string;
-  kind?: string;
-  value: number;
-  /** Intensidad 0–1 del color. */
-  level: number;
-  you: boolean;
-  metric?: string;
-  leader?: string;
-  preview?: number[];
-  go: () => void;
-}
+/** Ancho mínimo de una tarjeta del equipo (con el espacio entre ellas): decide las columnas del árbol. */
+const CARD = 226;
+/** Tonos de las ramas del árbol (oklch), en orden de tamaño: bien separados entre vecinos. */
+const BRANCH = [255, 160, 40, 320, 200, 95, 10, 285, 130, 65];
 
 let uid = 0;
 
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const isField = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 const fill = (tpl: string, vars: Record<string, string | number>) => tpl.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+/** Un tono estable por persona: el mismo `id`, el mismo color en cada vista. */
+const hueOf = (key: string) => {
+  let x = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) x = Math.imul(x ^ key.charCodeAt(i), 16777619);
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b);
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35);
+  return ((x ^ (x >>> 16)) >>> 0) % 360;
+};
 
 export class NxOrg extends Base {
   static {
@@ -147,7 +139,15 @@ export class NxOrg extends Base {
   #view: OrgView = "me";
   #viewSet = false;
   #center: string | null = null;
-  #trail: Step[] = [];
+  /** La unidad abierta en «Organización» (su gente), o `null`: el árbol. */
+  #unit: string | null = null;
+  /** Lo que se abrió o plegó a mano en el árbol; lo demás sigue la regla (ver `#isOpen`). */
+  #opened = new Set<string>();
+  #folded = new Set<string>();
+  /** Listas que se ven completas: subunidades (`u:id`) y pilas de personas (`p:id`). */
+  #full = new Set<string>();
+  /** Al volver al árbol, la unidad que se enfoca. */
+  #reveal: string | null = null;
   #page = PAGE;
   #peersOpen = false;
 
@@ -165,11 +165,10 @@ export class NxOrg extends Base {
   #abort?: AbortController;
   #ro?: ResizeObserver;
   #queued = false;
-  #from: DOMRect | null = null;
-  /** Lo que hace cada bloque del mapa pintado, por su clave. */
-  #gos = new Map<string, () => void>();
   #dir = 0;
-  #size = { w: 0, h: 0 };
+  #w = 0;
+  /** Número de cada persona para su `view-transition-name` (los `id` pueden no ser identificadores CSS). */
+  #vt = new Map<string, number>();
 
   #root?: HTMLDivElement;
   #bar?: HTMLDivElement;
@@ -208,7 +207,7 @@ export class NxOrg extends Base {
     this.#schedule();
   }
 
-  /** Las cifras que pueden colorear el mapa: `[{key, label, tone?, per?}]`. */
+  /** Las cifras que pueden verse en cada unidad: `[{key, label, tone?, per?}]`. */
   get metrics(): OrgMetric[] {
     return this.#metrics;
   }
@@ -227,7 +226,7 @@ export class NxOrg extends Base {
     this.#schedule();
   }
 
-  /** El `id` de la persona que mira: el centro de «Yo» y el «Tú» del mapa. */
+  /** El `id` de la persona que mira: el centro de «Yo» y el «Tú» de «Organización». */
   get me(): string | null {
     return this.getAttribute("me");
   }
@@ -271,18 +270,9 @@ export class NxOrg extends Base {
     this.#goPerson(id === null ? null : String(id), 1);
   }
 
-  /** Abre el mapa en una unidad (`null`: la organización entera). */
+  /** Abre una unidad en «Organización» (`null`: el árbol entero). */
   focusUnit(id: string | number | null): void {
-    const key = id === null ? null : String(id);
-    const sole = this.#soleRoot();
-    this.#trail = key
-      ? unitPath(this.#index(), key)
-          .filter((u) => u.id !== sole)
-          .map((u) => ({ t: "unit", id: u.id }) as Step)
-      : [];
-    this.#page = PAGE;
-    this.#setView("map");
-    this.#announce(key ? (this.#index().units.get(key)?.name ?? "") : this.#labels.map);
+    this.#openUnit(id === null ? null : String(id), 1);
   }
 
   // ---------------------------------------------------------------- ciclo de vida
@@ -306,7 +296,7 @@ export class NxOrg extends Base {
     if (typeof ResizeObserver === "function") {
       this.#ro = new ResizeObserver(() => {
         const w = this.#stage?.clientWidth ?? 0;
-        if (Math.abs(w - this.#size.w) > 24) this.#schedule();
+        if (Math.abs(w - this.#w) > 24) this.#schedule();
       });
       this.#ro.observe(this);
     }
@@ -467,7 +457,7 @@ export class NxOrg extends Base {
 
   #emitFocus(): void {
     const view = this.#currentView();
-    const id = view === "me" ? this.center : (this.#trail.at(-1)?.id ?? this.#soleRoot());
+    const id = view === "me" ? this.center : this.#unit;
     this.dispatchEvent(new CustomEvent("nx-org-focus", { detail: { view, id }, bubbles: true, composed: true }));
   }
 
@@ -477,48 +467,77 @@ export class NxOrg extends Base {
 
   #goPerson(id: string | null, dir: number): void {
     const target = id && id !== this.me ? id : null;
-    this.#center = target;
-    this.#peersOpen = false;
-    this.#dir = dir;
-    this.#closeResults();
+    this.#morph(() => {
+      this.#center = target;
+      this.#peersOpen = false;
+      this.#dir = dir;
+      this.#closeResults();
+      const who = target ?? this.me;
+      if (who) void this.#ensurePerson(who);
+      this.#setView("me");
+    });
     const who = target ?? this.me;
-    if (who) void this.#ensurePerson(who);
-    this.#setView("me");
     const p = who ? this.#index().people.get(who) : undefined;
     if (p) this.#announce(p.name);
   }
 
-  #push(step: Step, from?: Element | null): void {
-    this.#from = from?.getBoundingClientRect() ?? null;
-    this.#dir = 1;
-    this.#trail = [...this.#trail, step];
-    this.#page = PAGE;
-    this.#schedule();
-    this.#emitFocus();
+  /**
+   * Cambia de persona con View Transitions: cada tarjeta que está antes y después viaja a su nuevo
+   * lugar (la pulsada sube al centro, el centro pasa a jefe o a compañero). Sin la API, o con
+   * movimiento reducido, el cambio es directo y anima `#animate`.
+   */
+  #morph(update: () => void): void {
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void>; ready: Promise<void>; updateCallbackDone: Promise<void> } };
+    if (!doc.startViewTransition || reduced() || !this.#stage?.getClientRects().length) return update();
+    this.#names(true);
+    const t = doc.startViewTransition(() => {
+      this.#names(false);
+      update();
+      this.#dir = 0;
+      this.#render();
+      this.#names(true);
+    });
+    const quiet = () => {};
+    t.ready.catch(quiet);
+    t.updateCallbackDone.catch(quiet);
+    t.finished.catch(quiet).finally(() => this.#names(false));
   }
 
-  #up(to = this.#trail.length - 1): void {
-    if (to < 0 || to >= this.#trail.length) return;
-    this.#dir = -1;
-    this.#from = null;
-    this.#trail = this.#trail.slice(0, to);
-    this.#page = PAGE;
-    this.#schedule();
-    this.#emitFocus();
-    const step = this.#trail.at(-1);
-    this.#announce(step ? this.#stepName(step) : this.#labels.map);
+  /** Un `view-transition-name` por persona y por unidad (la primera vez que aparece), o ninguno. */
+  #names(on: boolean): void {
+    const seen = new Set<string>();
+    for (const el of this.#stage?.querySelectorAll<HTMLElement>(".nx-org__person[data-person], .nx-org__peer[data-person], .nx-org__ucard, .nx-org__uhead") ?? []) {
+      const id = el.dataset.person ? `p${el.dataset.person}` : `u${el.dataset.unit}`;
+      let n = this.#vt.get(id);
+      if (n === undefined) this.#vt.set(id, (n = this.#vt.size));
+      el.style.setProperty("view-transition-name", on && !seen.has(id) ? `${this.#uid}-${n}` : "");
+      seen.add(id);
+    }
   }
 
-  /** Con una sola raíz (el grupo), el mapa arranca dentro de ella: un bloque solo no dice nada. */
+  /** Abre una unidad (su gente) o vuelve al árbol, con su camino desplegado para encontrarla. */
+  #openUnit(id: string | null, dir: number): void {
+    const was = this.#unit;
+    this.#morph(() => {
+      // Sus antecesoras quedan desplegadas: al volver al árbol, la unidad está a la vista.
+      for (const u of unitPath(this.#index(), id).slice(0, -1)) {
+        this.#folded.delete(u.id);
+        this.#opened.add(u.id);
+      }
+      this.#unit = id;
+      this.#reveal = id ? null : was;
+      this.#page = PAGE;
+      this.#dir = dir;
+      this.#closeResults();
+      this.#setView("map");
+    });
+    this.#announce(id ? (this.#index().units.get(id)?.name ?? "") : this.#labels.map);
+  }
+
+  /** La raíz, si es una sola (el grupo): va arriba del árbol y sus hijas en fila. */
   #soleRoot(): string | null {
     const roots = this.#index().childUnits.get("") ?? [];
     return roots.length === 1 ? roots[0].id : null;
-  }
-
-  #stepName(s: Step): string {
-    if (s.t === "title") return s.title;
-    if (s.t === "rest") return "…";
-    return this.#index().units.get(s.id)?.name ?? s.id;
   }
 
   // ---------------------------------------------------------------- render
@@ -527,12 +546,13 @@ export class NxOrg extends Base {
     if (this.#queued) return;
     this.#queued = true;
     queueMicrotask(() => {
-      this.#queued = false;
-      if (this.isConnected && this.#root) this.#render();
+      // Un render directo (el de una View Transition) ya lo hizo.
+      if (this.#queued && this.isConnected && this.#root) this.#render();
     });
   }
 
   #render(): void {
+    this.#queued = false;
     const root = this.#root!;
     const view = this.#currentView();
     root.dataset.view = view;
@@ -550,9 +570,16 @@ export class NxOrg extends Base {
     }
 
     const focus = this.#focusSnapshot();
+    this.#w = this.#stage!.clientWidth;
     const body = view === "map" ? this.#renderMap() : this.#renderMe();
     this.#stage!.replaceChildren(body);
     this.#restoreFocus(focus);
+    const back = this.#reveal && this.#stage!.querySelector<HTMLElement>(`[data-open="${CSS.escape(this.#reveal)}"]`);
+    this.#reveal = null;
+    if (back) {
+      back.focus({ preventScroll: true });
+      back.scrollIntoView?.({ block: "nearest" });
+    }
     this.#animate(body);
   }
 
@@ -630,19 +657,19 @@ export class NxOrg extends Base {
       return wrap;
     }
 
-    // La cadena hacia arriba, en una línea: del más alto al jefe inmediato.
+    // La cadena hacia arriba, en caras solapadas: del más alto al jefe inmediato (el nombre se
+    // despliega al pasar por encima o con el foco).
     const chain = chainOf(ix, id);
     if (chain.length) {
-      crumbs.setAttribute("aria-label", L.boss);
-      const ol = h("ol", { class: "nx-org__trail" });
-      for (const b of [...chain].reverse()) ol.append(h("li", null, this.#personLink(b, "nx-org__crumb")));
-      crumbs.append(ol);
+      crumbs.setAttribute("aria-label", L.chain);
+      const ol = h("ol", { class: "nx-org__trail nx-org__chain" });
+      for (const b of [...chain].reverse()) ol.append(h("li", null, this.#personLink(b, "nx-org__crumb nx-org__face")));
+      crumbs.append(h("div", { class: "nx-org__chainbox" }, h("span", { class: "nx-org__label" }, L.chain), ol));
     }
 
-    // El camino entre quien mira y el centro.
+    // El camino entre quien mira y el centro: dibujado, y en una frase.
     if (this.me && id !== this.me) {
-      const note = h("div", { class: "nx-org__path" }, h("span", null, this.#pathText(this.me, p)), h("button", { type: "button", class: "nx-org__link", "data-act": "home" }, L.seeMe));
-      wrap.append(note);
+      wrap.append(h("div", { class: "nx-org__path" }, this.#route(this.me, p), h("p", null, h("span", null, this.#pathText(this.me, p)), " ", h("button", { type: "button", class: "nx-org__link", "data-act": "home" }, L.seeMe))));
     }
 
     const boss = chain[0];
@@ -654,26 +681,34 @@ export class NxOrg extends Base {
       ),
     );
 
-    const center = this.#card(p, "center");
+    // El centro, con quienes comparten jefe a los dos lados (debajo, en lo angosto).
+    const team = reportsOf(ix, id);
+    const expected = directCount(ix, p);
+    const axis = h("div", { class: `nx-org__axis${team.length || expected ? " has-team" : ""}` }, this.#card(p, "center"));
+    const mid = h("section", { class: "nx-org__level nx-org__level--center" }, axis);
     const peers = peersOf(ix, id).sort((a, b) => a.name.localeCompare(b.name, "es"));
-    const mid = h("section", { class: "nx-org__level nx-org__level--center" }, center);
     if (peers.length) {
       const shown = this.#peersOpen ? peers : peers.slice(0, PEERS);
-      const ul = h("ul", { class: "nx-org__peers", role: "list" });
-      for (const q of shown) ul.append(h("li", null, this.#chip(q)));
-      if (peers.length > shown.length) ul.append(h("li", null, h("button", { type: "button", class: "nx-org__chip nx-org__chip--more", "data-act": "peers" }, fill(L.more, { n: peers.length - shown.length }))));
-      mid.append(h("div", { class: "nx-org__peerbox" }, h("h3", { class: "nx-org__h" }, `${L.peers} · ${this.#fmtNum(peers.length)}`), ul));
+      const half = Math.ceil(shown.length / 2);
+      const side = (list: OrgPerson[], cls: string) => {
+        const ul = h("ul", { class: `nx-org__peers ${cls}`, role: "list", "aria-label": `${L.peers} · ${this.#fmtNum(peers.length)}` });
+        for (const q of list) ul.append(h("li", null, this.#peer(q)));
+        return ul;
+      };
+      const left = side(shown.slice(0, half), "is-l");
+      const right = side(shown.slice(half), "is-r");
+      left.prepend(h("li", { class: "nx-org__h", "aria-hidden": "true" }, `${L.peers} · ${this.#fmtNum(peers.length)}`));
+      if (peers.length > shown.length) (half < shown.length ? right : left).append(h("li", null, h("button", { type: "button", class: "nx-org__chip nx-org__chip--more", "data-act": "peers" }, fill(L.more, { n: peers.length - shown.length }))));
+      mid.prepend(left);
+      mid.append(right);
     }
     wrap.append(mid);
 
-    const team = reportsOf(ix, id);
-    const expected = directCount(ix, p);
     if (team.length || expected) {
-      const sec = h("section", { class: "nx-org__level nx-org__level--team" }, h("h3", { class: "nx-org__h" }, `${L.reports} · ${this.#fmtNum(Math.max(team.length, expected))}`));
+      const sec = h("section", { class: "nx-org__level nx-org__level--team" }, h("h3", { class: "nx-org__h nx-org__pill" }, `${L.reports} · ${this.#fmtNum(Math.max(team.length, expected))}`));
       if (team.length) {
-        const ul = h("ul", { class: "nx-org__cards", role: "list" });
-        for (const q of team.slice(0, this.#page)) ul.append(h("li", null, this.#card(q, "team")));
-        sec.append(ul);
+        const page = team.slice(0, this.#page);
+        sec.append(this.#tree(page.map((q) => [this.#card(q, "team")]), CARD, 920));
         if (team.length > this.#page) sec.append(h("button", { type: "button", class: "nx-org__more", "data-act": "page" }, L.showMore));
       } else sec.append(this.#status(key, () => void this.#ensurePerson(id)));
       wrap.append(sec);
@@ -695,6 +730,34 @@ export class NxOrg extends Base {
     return `${fill(L.common, { name: to.name, boss: r.boss.name })} · ${levels}`;
   }
 
+  /** El camino en caras: Tú —↑2— jefe común —↓1— la otra persona. Sin línea de mando, nada. */
+  #route(me: string, to: OrgPerson): HTMLElement | null {
+    const ix = this.#index();
+    const r = commonBoss(ix, me, to.id);
+    const mine = ix.people.get(me);
+    if (!r?.boss || !mine) return null;
+    const node = (p: OrgPerson, label = p.name) => {
+      const body = [this.#avatar(p, "nx-org__mini"), h("span", { class: "nx-org__node-name" }, label)];
+      return p.id === to.id || p.locked ? h("span", { class: "nx-org__node" }, ...body) : h("button", { type: "button", class: "nx-org__node", ...(p.id === me ? { "data-act": "home" } : { "data-person": p.id }) }, ...body);
+    };
+    const edge = (n: number, up: boolean) => h("span", { class: "nx-org__edge", "aria-hidden": "true" }, `${up ? "↑" : "↓"} ${n}`);
+    const out = h("div", { class: "nx-org__route" }, node(mine, this.#labels.you));
+    if (r.up) out.append(edge(r.up, true));
+    if (r.boss.id !== me && r.boss.id !== to.id) out.append(node(r.boss));
+    if (r.down) out.append(edge(r.down, false), node(to));
+    else if (r.boss.id === to.id) out.append(node(to));
+    return out;
+  }
+
+  /** Quien comparte jefe con el centro: pequeña, a un lado. */
+  #peer(p: OrgPerson): HTMLElement {
+    const body = [this.#avatar(p, "nx-org__mini"), h("span", { class: "nx-org__who" }, h("span", { class: "nx-org__peer-name" }, p.name), p.title ? h("span", { class: "nx-org__peer-title" }, p.title) : null)];
+    const title = p.title ? `${p.name} · ${p.title}` : p.name;
+    const cls = `nx-org__peer${p.id === this.me ? " is-me" : ""}`;
+    if (p.locked) return h("span", { class: cls, "data-person": p.id, title }, ...body);
+    return h("button", { type: "button", class: cls, "data-person": p.id, title }, ...body);
+  }
+
   #renderContacts(): HTMLElement {
     const L = this.#labels;
     const ix = this.#index();
@@ -711,16 +774,17 @@ export class NxOrg extends Base {
   #avatar(p: OrgPerson, cls = "nx-org__avatar"): HTMLElement {
     const src = safeImageSrc(p.avatar);
     if (src) return h("img", { class: cls, src, alt: "", loading: "lazy", referrerpolicy: "no-referrer", decoding: "async" });
-    return h("span", { class: `${cls} ${cls}--initials`, "aria-hidden": "true" }, initials(p.name));
+    return h("span", { class: `${cls} ${cls}--initials`, "aria-hidden": "true", style: `--h:${hueOf(p.id)}` }, initials(p.name));
   }
 
-  /** Una tarjeta de persona. Se centra en ella al pulsarla, salvo que esté `locked` o ya sea el centro. */
-  #card(p: OrgPerson, role: "boss" | "center" | "team"): HTMLElement {
+  /** Una tarjeta de persona. Se centra en ella al pulsarla, salvo que esté `locked` o ya sea el centro.
+   *  `bare`: sin la unidad (dentro de una unidad abierta, sobra). */
+  #card(p: OrgPerson, role: "boss" | "center" | "team", bare = false): HTMLElement {
     const L = this.#labels;
     const ix = this.#index();
     const team = teamSize(ix, p);
     const direct = directCount(ix, p);
-    const line = unitLine(ix, p.unit);
+    const line = bare ? "" : unitLine(ix, p.unit);
     const isMe = p.id === this.me;
     const body = [
       this.#avatar(p),
@@ -730,7 +794,7 @@ export class NxOrg extends Base {
         h("span", { class: "nx-org__name" }, p.name, isMe && role !== "center" ? h("span", { class: "nx-org__you" }, L.you) : null),
         p.title ? h("span", { class: "nx-org__title" }, p.title) : null,
         line ? h("span", { class: "nx-org__unit" }, line) : null,
-        direct || team ? h("span", { class: "nx-org__span" }, this.#spanText(direct, team)) : null,
+        direct || team ? h("span", { class: "nx-org__span" }, role === "team" ? this.#faces(ix.reports.get(p.id) ?? []) : null, this.#spanText(direct, team)) : null,
       ),
     ];
     const cls = `nx-org__person nx-org__person--${role}${isMe ? " is-me" : ""}`;
@@ -751,6 +815,11 @@ export class NxOrg extends Base {
     return team > direct && direct ? `${first} · ${fill(L.spanTotal, { n: this.#fmtNum(team) })}` : first;
   }
 
+  /** Hasta cuatro caras solapadas (las de su equipo, o las de una unidad). */
+  #faces(people: OrgPerson[]): HTMLElement | null {
+    return people.length ? h("span", { class: "nx-org__faces", "aria-hidden": "true" }, ...people.slice(0, 4).map((q) => this.#avatar(q, "nx-org__mini"))) : null;
+  }
+
   #chip(p: OrgPerson): HTMLElement {
     const body = [this.#avatar(p, "nx-org__mini"), h("span", { class: "nx-org__chip-name" }, p.name)];
     const title = p.title ? `${p.name} · ${p.title}` : p.name;
@@ -759,9 +828,10 @@ export class NxOrg extends Base {
   }
 
   #personLink(p: OrgPerson, cls: string): HTMLElement {
-    const text = [h("span", { class: "nx-org__crumb-name" }, p.name), p.title ? h("span", { class: "nx-org__crumb-title" }, p.title) : null];
-    if (p.locked) return h("span", { class: cls }, ...text);
-    return h("button", { type: "button", class: cls, "data-person": p.id }, ...text);
+    const text = [this.#avatar(p, "nx-org__mini"), h("span", { class: "nx-org__crumb-name" }, p.name)];
+    const title = p.title ? `${p.name} · ${p.title}` : p.name;
+    if (p.locked) return h("span", { class: cls, title }, ...text);
+    return h("button", { type: "button", class: cls, "data-person": p.id, title, "aria-label": title }, ...text);
   }
 
   #status(key: string, retry: () => void): HTMLElement {
@@ -778,180 +848,258 @@ export class NxOrg extends Base {
   // ---------------------------------------------------------------- lente «Organización»
 
   #renderMap(): HTMLElement {
-    const L = this.#labels;
+    const id = this.#unit && this.#index().units.has(this.#unit) ? this.#unit : null;
+    this.#renderTrail(id);
+    return id ? this.#renderUnit(id) : this.#renderTree();
+  }
+
+  /** Las migas: «Organización › Grupo › Empresa › la unidad abierta». En el árbol, nada. */
+  #renderTrail(id: string | null): void {
+    const crumbs = this.#crumbs!;
+    crumbs.setAttribute("aria-label", this.#labels.map);
+    if (!id) return crumbs.replaceChildren();
+    const ol = h("ol", { class: "nx-org__trail" });
+    const path = unitPath(this.#index(), id);
+    ol.append(h("li", null, h("button", { type: "button", class: "nx-org__crumb", "data-go": "" }, this.#labels.map)));
+    path.forEach((u, i) => ol.append(h("li", null, i === path.length - 1 ? h("span", { class: "nx-org__crumb", "aria-current": "page" }, u.name) : h("button", { type: "button", class: "nx-org__crumb", "data-go": u.id }, u.name))));
+    crumbs.replaceChildren(ol);
+  }
+
+  /** Las unidades del camino hasta quien mira. */
+  #myPath(): Set<string> {
+    const me = this.me ? this.#index().people.get(this.me) : undefined;
+    return new Set(unitPath(this.#index(), me?.unit).map((u) => u.id));
+  }
+
+  /** Abierta: lo que se tocó a mano manda; si no, la fila de arriba y el camino hasta quien mira. */
+  #isOpen(u: OrgUnit, depth: number, mine: Set<string>): boolean {
+    if (this.#folded.has(u.id)) return false;
+    if (this.#opened.has(u.id)) return true;
+    const myUnit = this.me ? this.#index().people.get(this.me)?.unit : null;
+    return depth === 0 || (mine.has(u.id) && u.id !== myUnit);
+  }
+
+  #sorted(list: readonly OrgUnit[]): OrgUnit[] {
+    const ix = this.#index();
+    return [...list].sort((a, b) => unitCount(ix, b) - unitCount(ix, a) || byName(a, b));
+  }
+
+  /** El árbol: la raíz (si es una sola), sus hijas en fila con ramas y el resto colgando debajo. */
+  #renderTree(): HTMLElement {
     const ix = this.#index();
     const wrap = h("div", { class: "nx-org__map" });
-    const step = this.#trail.at(-1);
-    this.#renderTrail();
-
-    const me = this.me ? ix.people.get(this.me) : undefined;
-    const myUnit = me?.unit ?? null;
-
-    // En un cargo: las personas.
-    if (step?.t === "title") {
-      const groups = groupByTitle(ix.members.get(step.id) ?? [], L.noTitle);
-      const people = groups.find((g) => g.title === step.title)?.people ?? [];
-      wrap.append(this.#peopleGrid(people, step.title));
-      return wrap;
+    const sole = this.#soleRoot();
+    const top = this.#sorted(ix.childUnits.get(sole ?? "") ?? []);
+    const mine = this.#myPath();
+    if (sole) {
+      wrap.append(this.#ucard(ix.units.get(sole)!, [], mine, -1));
+      if (top.length) wrap.append(h("div", { class: `nx-org__trunk${mine.has(sole) ? " is-on" : ""}` }));
     }
+    if (top.length)
+      wrap.append(
+        this.#tree(
+          top.map((u) => [this.#ucard(u, top, mine, 0), this.#substack(u, 0, mine)]),
+          270,
+          Infinity,
+          !!sole,
+          top.map((u) => mine.has(u.id)),
+        ),
+      );
+    else if (!sole) wrap.append(h("p", { class: "nx-org__empty" }, this.#labels.empty));
+    return wrap;
+  }
 
-    const unitId = step ? step.id : this.#soleRoot();
-    const unit = unitId ? ix.units.get(unitId) : undefined;
-    const children = ix.childUnits.get(unitId ?? "") ?? [];
+  /** Las subunidades de `u`, en columna sobre un riel (si está abierta), con «+n» pasadas `STACK`. */
+  #substack(u: OrgUnit, depth: number, mine: Set<string>): HTMLElement | null {
+    const kids = this.#sorted(this.#index().childUnits.get(u.id) ?? []);
+    if (!kids.length || !this.#isOpen(u, depth, mine)) return null;
+    const key = `u:${u.id}`;
+    const shown = this.#full.has(key) ? kids : kids.slice(0, STACK);
+    const box = h("div", null, this.#stack(shown.map((k) => [this.#ucard(k, kids, mine, depth + 1), this.#substack(k, depth + 1, mine)]), shown.map((k) => mine.has(k.id))));
+    if (kids.length > shown.length) box.append(this.#moreBtn(key, kids.length - shown.length));
+    return box;
+  }
 
-    let tiles: Tile[] = [];
-    let pinned: string | null = null;
-    if (children.length) {
-      pinned = childOnPath(ix, unitId, myUnit);
-      const skip = step?.t === "rest" ? step.skip : 0;
-      const ordered = [...children].sort((a, b) => unitCount(ix, b) - unitCount(ix, a) || a.name.localeCompare(b.name, "es"));
-      const pool = ordered.slice(skip);
-      const { shown, rest, restValue } = topWithRest(pool, (u) => unitCount(ix, u), MAX_TILES);
-      const metric = this.#metricDef();
-      const total = Math.max(1, ...shown.map((s) => s.value));
-      const levels = metricLevels(ix, shown.map((s) => s.item), metric);
-      tiles = shown.map(({ item: u, value }) => {
-        const m = metric ? u.metrics?.[metric.key] : undefined;
-        const leader = u.leader ? ix.people.get(u.leader) : undefined;
-        const kids = ix.childUnits.get(u.id) ?? [];
-        return {
-          key: u.id,
-          label: u.name,
-          kind: u.kind,
-          value,
-          level: metric ? (levels.get(u.id) ?? 0) : value / total,
-          you: pinned === u.id || (!!myUnit && myUnit === u.id),
-          metric: metric && typeof m === "number" ? `${metric.label}: ${this.#fmtNum(m)}` : undefined,
-          leader: leader ? `${L.leader}: ${leader.name}` : undefined,
-          preview: kids.length > 1 ? kids.map((k) => unitCount(ix, k)).sort((a, b) => b - a).slice(0, 12) : undefined,
-          go: () => {
-            const el = this.querySelector(`[data-tile="${CSS.escape(u.id)}"]`);
-            this.#push({ t: "unit", id: u.id }, el);
-            if (!(ix.childUnits.get(u.id) ?? []).length) void this.#ensureUnit(u.id);
-          },
-        };
-      });
-      if (rest.length) {
-        const where = unitId;
-        const nextSkip = skip + shown.length;
-        tiles.push({
-          key: "#rest",
-          label: fill(L.rest, { n: this.#fmtNum(rest.length) }),
-          value: Math.max(restValue, (shown.at(-1)?.value ?? 1) * 1.5),
-          level: 0,
-          you: !!pinned && rest.some((u) => u.id === pinned),
-          go: () => this.#push({ t: "rest", id: where, skip: nextSkip }, this.querySelector('[data-tile="#rest"]')),
-        });
-      }
-    } else if (unitId) {
-      // Una unidad sin subunidades: sus cargos.
-      const key = `u:${unitId}`;
-      // Las que ya se ven pueden ser solo las del entorno de alguien: se piden todas, una vez.
-      if (!this.#failed.has(key)) void this.#ensureUnit(unitId);
-      const members = this.#index().members.get(unitId) ?? [];
-      if (!members.length || this.#pending.has(key)) {
-        wrap.append(this.#status(key, () => void this.#ensureUnit(unitId)));
-        return wrap;
-      }
-      const groups = groupByTitle(members, L.noTitle);
-      const myTitle = me && me.unit === unitId ? me.title?.trim() || L.noTitle : null;
-      if (groups.length <= 1) {
-        wrap.append(this.#peopleGrid(members, unit?.name ?? ""));
-        return wrap;
-      }
-      const { shown, rest } = topWithRest(groups, (g) => g.people.length, MAX_TILES);
-      const total = Math.max(1, ...shown.map((s) => s.value));
-      tiles = shown.map(({ item: g, value }) => ({
-        key: `t:${g.title}`,
-        label: g.title,
-        value,
-        level: value / total,
-        you: g.title === myTitle,
-        go: () => this.#push({ t: "title", id: unitId, title: g.title }, this.querySelector(`[data-tile="${CSS.escape(`t:${g.title}`)}"]`)),
-      }));
-      if (rest.length) {
-        const people = rest.flatMap((g) => g.people);
-        wrap.append(this.#tiles(tiles), this.#peopleGrid(people, fill(L.restTitles, { n: this.#fmtNum(rest.length) })));
-        return wrap;
-      }
+  #moreBtn(key: string, n: number): HTMLElement {
+    return h("button", { type: "button", class: "nx-org__more nx-org__more--stack", "data-act": "full", "data-key": key }, fill(this.#labels.more, { n: this.#fmtNum(n) }));
+  }
+
+  /**
+   * Una fila de columnas: con `bus`, una barra con ramas a la primera fila (como el equipo de «Yo»).
+   * Las columnas salen del ancho; `on` marca la que lleva a quien mira.
+   */
+  #tree(cols: (Node | null)[][], card: number, cap = Infinity, bus = true, on: boolean[] = []): HTMLElement {
+    const w = Math.min(this.#w || 960, cap);
+    const n = Math.max(1, Math.min(cols.length, Math.floor((w + 16) / card)));
+    const ul = h("ul", { class: "nx-org__cards nx-org__tree", role: "list", style: `--cols:${n}` });
+    cols.forEach((c, i) => ul.append(h("li", { class: [bus && i < n ? `is-top${i === n - 1 ? " is-end" : ""}` : "", on[i] ? "is-on" : ""].join(" ").trim() || null }, ...c)));
+    return ul;
+  }
+
+  /** Una columna sobre un riel; `on` tiñe el riel hasta la fila que lleva a quien mira. */
+  #stack(rows: (Node | null)[][], on: boolean[] = []): HTMLElement {
+    const at = on.indexOf(true);
+    const ul = h("ul", { class: "nx-org__stack", role: "list" });
+    rows.forEach((r, i) => ul.append(h("li", { class: i === at ? "is-on" : i < at ? "is-rail" : null }, ...r)));
+    return ul;
+  }
+
+  /**
+   * La tarjeta de una unidad: abrirla (su gente) y, si tiene subunidades, plegarlas o desplegarlas.
+   * `depth`: -1 la raíz, 0 la fila de arriba, y así hacia abajo.
+   */
+  #ucard(u: OrgUnit, sibs: OrgUnit[], mine: Set<string>, depth: number): HTMLElement {
+    const L = this.#labels;
+    const ix = this.#index();
+    const kids = ix.childUnits.get(u.id) ?? [];
+    const lead = u.leader ? ix.people.get(u.leader) : undefined;
+    const hue = this.#branchHue(u.id);
+    const card = h(
+      "div",
+      { class: `nx-org__ucard${depth < 0 ? " is-root" : ""}${mine.has(u.id) ? " is-on" : ""}`, "data-unit": u.id, style: hue === undefined ? null : `--h:${hue}` },
+      h(
+        "button",
+        { type: "button", class: "nx-org__uopen", "data-open": u.id },
+        u.kind ? h("span", { class: "nx-org__kind" }, u.kind) : null,
+        h("span", { class: "nx-org__uname" }, u.name),
+        lead ? h("span", { class: "nx-org__ulead" }, this.#avatar(lead), h("span", { class: "nx-org__who" }, h("span", { class: "nx-org__peer-name" }, lead.name), lead.title ? h("span", { class: "nx-org__peer-title" }, lead.title) : null)) : null,
+        h("span", { class: "nx-org__ufoot" }, this.#bigCount(unitCount(ix, u)), this.#faces(this.#someMembers(u.id, lead?.id))),
+        this.#metricChip(u, sibs),
+      ),
+      this.me && ix.people.get(this.me)?.unit === u.id ? h("span", { class: "nx-org__you", "aria-hidden": "true" }, L.you) : null,
+    );
+    if (kids.length && depth >= 0) {
+      const open = this.#isOpen(u, depth, mine);
+      card.append(h("button", { type: "button", class: "nx-org__utoggle", "data-toggle": u.id, "aria-expanded": String(open) }, open ? L.fold : kids.length === 1 ? L.subunitOne : fill(L.subunits, { n: this.#fmtNum(kids.length) })));
     }
+    return card;
+  }
 
-    if (tiles.length) wrap.append(this.#tiles(tiles));
-    else wrap.append(h("p", { class: "nx-org__empty" }, L.empty));
+  /** La cifra elegida, con su intensidad entre las hermanas. */
+  #metricChip(u: OrgUnit, sibs: OrgUnit[]): HTMLElement | null {
+    const metric = this.#metricDef();
+    const v = metric ? u.metrics?.[metric.key] : undefined;
+    if (!metric || typeof v !== "number") return null;
+    const level = metricLevels(this.#index(), sibs.length ? sibs : [u], metric).get(u.id) ?? 0;
+    return h("span", { class: "nx-org__metric-chip", "data-tone": metric.tone ?? null, style: `--i:${level.toFixed(3)}` }, `${metric.label}: ${this.#fmtNum(v)}`);
+  }
 
-    // Quienes están directamente en una unidad con subunidades (la gerencia de una empresa).
-    if (unitId && children.length && step?.t !== "rest") {
-      const direct = ix.members.get(unitId) ?? [];
-      if (direct.length) wrap.append(this.#peopleGrid(direct, fill(L.peopleIn, { name: unit?.name ?? "" })));
+  /** Una unidad abierta: su cabecera, su gente en árbol (como «Yo») y sus subunidades. */
+  #renderUnit(id: string): HTMLElement {
+    const L = this.#labels;
+    const ix = this.#index();
+    const u = ix.units.get(id)!;
+    const sibs = u.parent ? (ix.childUnits.get(u.parent) ?? []) : [];
+    const hue = this.#branchHue(id);
+    const wrap = h(
+      "div",
+      { class: "nx-org__map nx-org__unitview" },
+      h(
+        "div",
+        { class: "nx-org__uhead", "data-unit": id, style: hue === undefined ? null : `--h:${hue}` },
+        u.kind ? h("span", { class: "nx-org__kind" }, u.kind) : null,
+        h("h2", { class: "nx-org__uname" }, u.name),
+        h("span", { class: "nx-org__ufoot" }, this.#bigCount(unitCount(ix, u)), this.#metricChip(u, sibs)),
+      ),
+    );
+    const key = `u:${id}`;
+    if (!this.#failed.has(key)) void this.#ensureUnit(id);
+    const members = this.#index().members.get(id) ?? [];
+    const kids = this.#sorted(ix.childUnits.get(id) ?? []);
+    if (members.length && !this.#pending.has(key)) wrap.append(...this.#peopleTree(u, members));
+    // Sin gente directa, una unidad con subunidades no necesita aviso: se ven sus subunidades.
+    else if (!kids.length || this.#pending.has(key) || this.#failed.has(key)) wrap.append(this.#status(key, () => void this.#ensureUnit(id)));
+    if (kids.length) {
+      const mine = this.#myPath();
+      const ul = h("ul", { class: "nx-org__cards nx-org__subunits", role: "list" });
+      for (const k of kids) ul.append(h("li", null, this.#ucard(k, kids, mine, -2)));
+      wrap.append(h("section", { class: "nx-org__members" }, h("h3", { class: "nx-org__h" }, kids.length === 1 ? L.subunitOne : fill(L.subunits, { n: this.#fmtNum(kids.length) })), ul));
     }
     return wrap;
   }
 
-  #renderTrail(): void {
+  /**
+   * La gente de una unidad como en «Yo»: quien no tiene jefe dentro de la unidad (el líder) arriba,
+   * sus jefes en columnas con su equipo en pila, y sus directos aparte. Sin línea de mando, en tarjetas.
+   */
+  #peopleTree(u: OrgUnit, members: OrgPerson[]): HTMLElement[] {
     const L = this.#labels;
-    const crumbs = this.#crumbs!;
-    crumbs.setAttribute("aria-label", L.map);
-    const ol = h("ol", { class: "nx-org__trail" });
-    const steps = this.#trail;
-    const sole = this.#soleRoot();
-    const items: { label: string; to: number }[] = [{ label: (sole && this.#index().units.get(sole)?.name) || L.map, to: 0 }];
-    steps.forEach((s, i) => items.push({ label: this.#stepName(s), to: i + 1 }));
-    items.forEach((it, i) => {
-      const last = i === items.length - 1;
-      ol.append(h("li", null, last ? h("span", { class: "nx-org__crumb", "aria-current": "page" }, it.label) : h("button", { type: "button", class: "nx-org__crumb", "data-to": it.to }, it.label)));
-    });
-    crumbs.replaceChildren(ol);
-  }
-
-  #tiles(tiles: Tile[]): HTMLElement {
-    const L = this.#labels;
-    const box = h("div", { class: "nx-org__tiles" });
-    // El ancho real decide la forma: apaisado en el escritorio, alto en el celular.
-    const w = this.#stage?.clientWidth || 960;
-    const hgt = Math.round(Math.min(Math.max(w * (w < 560 ? 1.25 : 0.56), 320), 640));
-    this.#size = { w, h: hgt };
-    box.style.blockSize = `${hgt}px`;
-    const rects = squarify(
-      tiles.map((t) => t.value),
-      { x: 0, y: 0, w, h: hgt },
-    );
-    const metric = this.#metricDef();
-    if (metric?.tone && metric.tone !== "accent") box.dataset.tone = metric.tone;
-    this.#gos = new Map(tiles.map((t) => [t.key, t.go]));
-    tiles.forEach((t, i) => {
-      const r = rects[i];
-      if (!r.w || !r.h) return;
-      const size = r.w < 76 || r.h < 46 ? "xs" : r.w < 150 || r.h < 92 ? "sm" : "lg";
-      const count = t.key.startsWith("#") ? "" : this.#fmtCount(t.value);
-      const btn = h(
-        "button",
-        {
-          type: "button",
-          class: `nx-org__tile is-${size}${t.you ? " is-you" : ""}${t.key === "#rest" ? " is-rest" : ""}`,
-          "data-tile": t.key,
-          "aria-label": [t.kind, t.label, count, t.metric, t.you ? L.you : ""].filter(Boolean).join(", "),
-          title: size === "xs" ? [t.label, count].filter(Boolean).join(" · ") : null,
-          style: `left:${(r.x / w) * 100}%;top:${(r.y / hgt) * 100}%;width:${(r.w / w) * 100}%;height:${(r.h / hgt) * 100}%;--i:${t.level.toFixed(3)}`,
-        },
-        t.kind && size === "lg" ? h("span", { class: "nx-org__kind" }, t.kind) : null,
-        size !== "xs" ? h("span", { class: "nx-org__tile-name" }, t.label) : null,
-        count && size !== "xs" ? h("span", { class: "nx-org__count" }, count) : null,
-        t.metric && size === "lg" ? h("span", { class: "nx-org__tile-metric" }, t.metric) : null,
-        t.leader && size === "lg" ? h("span", { class: "nx-org__tile-leader" }, t.leader) : null,
-        t.you ? h("span", { class: "nx-org__you", "aria-hidden": "true" }, L.you) : null,
-        t.preview && size === "lg" && r.h > 150 && r.w > 200 ? this.#preview(t.preview) : null,
+    const ix = this.#index();
+    const inUnit = new Set(members.map((p) => p.id));
+    const below = (p: OrgPerson) => (ix.reports.get(p.id) ?? []).filter((q) => inUnit.has(q.id));
+    const has = (list: OrgPerson[]) => !!this.me && list.some((q) => q.id === this.me);
+    const roots = members.filter((p) => !p.boss || !inUnit.has(p.boss)).sort((a, b) => Number(b.id === u.leader) - Number(a.id === u.leader) || byName(a, b));
+    const trees = roots.filter((r) => below(r).length);
+    const loose = roots.filter((r) => !below(r).length);
+    const out: HTMLElement[] = [];
+    for (const r of trees) {
+      const kids = below(r);
+      const inner = kids.filter((k) => below(k).length).sort((a, b) => below(b).length - below(a).length || byName(a, b));
+      const leaves = kids.filter((k) => !below(k).length);
+      let total = 0;
+      for (const queue = [r]; queue.length; )
+        for (const q of below(queue.pop()!)) {
+          total++;
+          queue.push(q);
+        }
+      const first = r.name.split(" ")[0];
+      const cols: (Node | null)[][] = inner.map((k) => [this.#card(k, "team", true), this.#pile(below(k), `p:${k.id}`)]);
+      const on = inner.map((k) => k.id === this.me || has(below(k)));
+      if (leaves.length) {
+        cols.push([h("div", { class: "nx-org__colhead" }, `${fill(L.direct, { name: first })} · ${this.#fmtNum(leaves.length)}`), this.#pile(leaves, `p:${r.id}`)]);
+        on.push(has(leaves));
+      }
+      out.push(
+        h(
+          "section",
+          { class: "nx-org__level nx-org__level--team nx-org__level--root" },
+          h("div", { class: "nx-org__lead" }, this.#card(r, "boss", true)),
+          h("h3", { class: "nx-org__h nx-org__pill" }, `${fill(L.teamOf, { name: first })} · ${this.#fmtNum(total)}`),
+          this.#tree(cols, 250, Infinity, true, on),
+        ),
       );
-      box.append(btn);
-    });
+    }
+    if (loose.length) out.push(this.#peopleGrid(loose, trees.length ? fill(L.peopleIn, { name: u.name }) : ""));
+    return out;
+  }
+
+  /** Una pila de personas sobre un riel (quien mira primero), con «+n» pasadas `PILE`. */
+  #pile(list: OrgPerson[], key: string): HTMLElement {
+    const sorted = [...list].sort((a, b) => Number(b.id === this.me) - Number(a.id === this.me) || byName(a, b));
+    const shown = this.#full.has(key) ? sorted : sorted.slice(0, PILE);
+    const box = h("div", null, this.#stack(shown.map((p) => [this.#peer(p)]), shown.map((p) => p.id === this.me)));
+    if (sorted.length > shown.length) box.append(this.#moreBtn(key, sorted.length - shown.length));
     return box;
   }
 
-  /** Las subunidades de un bloque grande, en miniatura, para leer su forma sin entrar. */
-  #preview(values: number[]): HTMLElement {
-    const box = h("span", { class: "nx-org__preview", "aria-hidden": "true" });
-    const rects: Rect[] = squarify(values, { x: 0, y: 0, w: 100, h: 100 });
-    for (const r of rects) if (r.w && r.h) box.append(h("span", { class: "nx-org__cell", style: `left:${r.x}%;top:${r.y}%;width:${r.w}%;height:${r.h}%` }));
-    return box;
+  /** El tono de la rama de primer nivel a la que pertenece la unidad (por su tamaño entre sus hermanas). */
+  #branchHue(id: string): number | undefined {
+    const ix = this.#index();
+    const path = unitPath(ix, id);
+    const at = path.findIndex((u) => u.id !== this.#soleRoot());
+    if (at < 0) return undefined;
+    return BRANCH[Math.max(0, this.#sorted(ix.childUnits.get(at ? path[at - 1].id : "") ?? []).indexOf(path[at])) % BRANCH.length];
+  }
+
+  /** Unas pocas personas ya cargadas de la unidad o de sus subunidades, sin el líder. */
+  #someMembers(id: string, skip?: string): OrgPerson[] {
+    const ix = this.#index();
+    const out: OrgPerson[] = [];
+    const queue = [id];
+    for (let i = 0; i < queue.length && i < 40 && out.length < 4; i++) {
+      for (const p of ix.members.get(queue[i]) ?? []) if (p.id !== skip && out.length < 4) out.push(p);
+      for (const c of ix.childUnits.get(queue[i]) ?? []) queue.push(c.id);
+    }
+    return out;
+  }
+
+  /** «1.234 personas» con la cifra grande (la plantilla decide dónde va). */
+  #bigCount(n: number): HTMLElement {
+    const L = this.#labels;
+    const [tpl, mark] = n === 1 ? [L.peopleOne, "1"] : [L.people, "{n}"];
+    const at = tpl.indexOf(mark);
+    if (at < 0) return h("span", { class: "nx-org__count" }, this.#fmtCount(n));
+    return h("span", { class: "nx-org__count" }, tpl.slice(0, at), h("b", { class: "nx-org__big" }, this.#fmtNum(n)), tpl.slice(at + mark.length));
   }
 
   #peopleGrid(people: OrgPerson[], heading: string): HTMLElement {
@@ -967,29 +1115,19 @@ export class NxOrg extends Base {
 
   // ---------------------------------------------------------------- movimiento
 
-  /** Entrar: el contenido nuevo crece desde el bloque pulsado. Salir: se acerca un poco. */
+  /** Sin View Transitions: entrar se acerca un poco; salir, se aleja. */
   #animate(el: HTMLElement): void {
-    const from = this.#from;
     const dir = this.#dir;
-    this.#from = null;
     this.#dir = 0;
     if (!dir || reduced() || typeof el.animate !== "function") return;
-    const to = el.getBoundingClientRect();
-    if (from && to.width && to.height) {
-      const sx = from.width / to.width;
-      const sy = from.height / to.height;
-      const dx = from.left - to.left;
-      const dy = from.top - to.top;
-      el.animate([{ transformOrigin: "0 0", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: 0.4 }, { transformOrigin: "0 0", transform: "none", opacity: 1 }], { duration: 320, easing: EASE });
-      return;
-    }
     el.animate([{ transform: `scale(${dir > 0 ? 0.97 : 1.03})`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 220, easing: EASE });
   }
 
   #focusSnapshot(): string | null {
     const a = document.activeElement;
     if (!(a instanceof HTMLElement) || !this.#stage?.contains(a)) return null;
-    return a.dataset.tile ? `[data-tile="${CSS.escape(a.dataset.tile)}"]` : a.dataset.person ? `[data-person="${CSS.escape(a.dataset.person)}"]` : a.dataset.act ? `[data-act="${a.dataset.act}"]` : null;
+    const d = a.dataset;
+    return d.open ? `[data-open="${CSS.escape(d.open)}"]` : d.toggle ? `[data-toggle="${CSS.escape(d.toggle)}"]` : d.person ? `[data-person="${CSS.escape(d.person)}"]` : d.act ? `[data-act="${d.act}"]` : null;
   }
 
   #restoreFocus(sel: string | null): void {
@@ -1001,7 +1139,7 @@ export class NxOrg extends Base {
   #focusStage(): void {
     queueMicrotask(() =>
       queueMicrotask(() => {
-        const first = this.#stage?.querySelector<HTMLElement>(".nx-org__tile, .nx-org__person--center, button.nx-org__person, .nx-org__empty");
+        const first = this.#stage?.querySelector<HTMLElement>(".nx-org__uhead, .nx-org__uopen, .nx-org__person--center, button.nx-org__person, .nx-org__empty");
         if (first) {
           if (!first.matches("button")) first.tabIndex = -1;
           first.focus({ preventScroll: true });
@@ -1123,20 +1261,21 @@ export class NxOrg extends Base {
       }
       return;
     }
-    const tile = t.closest<HTMLElement>("[data-tile]");
-    if (tile && this.contains(tile)) {
-      this.#tileGo(tile.dataset.tile!);
-      return;
-    }
-    const crumb = t.closest<HTMLElement>("[data-to]");
-    if (crumb) {
-      this.#up(Number(crumb.dataset.to));
-      return;
-    }
+    const open = t.closest<HTMLElement>("[data-open]");
+    if (open) return this.#openUnit(open.dataset.open!, 1);
+    const go = t.closest<HTMLElement>("[data-go]");
+    if (go) return this.#openUnit(go.dataset.go || null, -1);
+    const toggle = t.closest<HTMLElement>("[data-toggle]");
+    if (toggle) return this.#toggle(toggle.dataset.toggle!, toggle.getAttribute("aria-expanded") !== "true");
     const act = t.closest<HTMLElement>("[data-act]")?.dataset.act;
     if (act === "home") return this.#goPerson(null, -1);
     if (act === "peers") {
       this.#peersOpen = true;
+      this.#schedule();
+      return;
+    }
+    if (act === "full") {
+      this.#full.add(t.closest<HTMLElement>("[data-key]")!.dataset.key!);
       this.#schedule();
       return;
     }
@@ -1154,11 +1293,13 @@ export class NxOrg extends Base {
     if (person && this.contains(person)) this.#goPerson(person.dataset.person!, 1);
   };
 
-  #tileGo(key: string): void {
-    const el = this.querySelector<HTMLElement>(`[data-tile="${CSS.escape(key)}"]`);
-    this.#gos.get(key)?.();
-    const name = el?.querySelector(".nx-org__tile-name")?.textContent;
-    if (name) this.#announce(name);
+  /** Pliega o despliega las subunidades; la tarjeta conserva el foco. */
+  #toggle(id: string, open: boolean): void {
+    this.#morph(() => {
+      (open ? this.#opened : this.#folded).add(id);
+      (open ? this.#folded : this.#opened).delete(id);
+      this.#schedule();
+    });
   }
 
   #onKey = (e: KeyboardEvent): void => {
@@ -1183,10 +1324,9 @@ export class NxOrg extends Base {
     }
     if (isField(t)) return;
     const view = this.#currentView();
-    if ((e.key === "Escape" || e.key === "Backspace" || (e.altKey && e.key === "ArrowUp")) && view === "map" && this.#trail.length) {
+    if ((e.key === "Escape" || e.key === "Backspace" || (e.altKey && e.key === "ArrowUp")) && view === "map" && this.#unit) {
       e.preventDefault();
-      this.#up();
-      this.#focusStage();
+      this.#openUnit(null, -1);
       return;
     }
     if (e.key === "Backspace" && view === "me" && this.#center) {
@@ -1195,15 +1335,14 @@ export class NxOrg extends Base {
       this.#focusStage();
       return;
     }
-    // Flechas entre bloques, por geometría.
-    if (t.matches(".nx-org__tile")) {
-      const tiles = [...this.querySelectorAll<HTMLElement>(".nx-org__tile")];
-      const boxes = tiles.map((el) => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }));
-      const next = moveIndex(boxes, tiles.indexOf(t), e.key);
-      if (next !== null) {
-        e.preventDefault();
-        tiles[next]?.focus();
-      }
+    // Como en un árbol: → despliega y ← pliega las subunidades de la tarjeta enfocada.
+    const card = t.closest<HTMLElement>(".nx-org__ucard");
+    const btn = card?.querySelector<HTMLElement>("[data-toggle]");
+    if (btn && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+      const open = e.key === "ArrowRight";
+      if ((btn.getAttribute("aria-expanded") === "true") === open) return;
+      e.preventDefault();
+      this.#toggle(card!.dataset.unit!, open);
     }
   };
 }

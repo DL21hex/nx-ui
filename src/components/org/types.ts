@@ -4,7 +4,7 @@
  * personas por partes.
  */
 
-/** Las dos lentes: «Yo» (alrededor de una persona) y «Organización» (el mapa por unidades). */
+/** Las dos lentes: «Yo» (alrededor de una persona) y «Organización» (el árbol de unidades). */
 export type OrgView = "me" | "map";
 
 /** Una unidad de la estructura. Las raíces no tienen `parent`. */
@@ -57,7 +57,7 @@ export interface OrgContact {
   href?: string;
 }
 
-/** Una cifra para colorear el mapa: la clave en `unit.metrics` y su nombre. */
+/** Una cifra para mostrar en cada unidad: la clave en `unit.metrics` y su nombre. */
 export interface OrgMetric {
   key: string;
   label: string;
@@ -79,7 +79,7 @@ export type OrgRequest = { unit: string } | { person: string } | { search: strin
 
 export interface OrgFocusDetail {
   view: OrgView;
-  /** La unidad (mapa) o la persona («Yo») en el centro. */
+  /** La unidad abierta en «Organización» (`null`: el árbol) o la persona en el centro de «Yo». */
   id: string | null;
 }
 
@@ -98,6 +98,8 @@ export interface OrgLabels {
   people: string;
   peopleOne: string;
   boss: string;
+  /** Junto a las caras de la cadena hacia arriba, en «Yo». */
+  chain: string;
   peers: string;
   reports: string;
   /** «Equipo de {name}» */
@@ -107,11 +109,13 @@ export interface OrgLabels {
   contactsWho: string;
   /** «+{n}» */
   more: string;
-  /** «Otras {n} unidades» */
-  rest: string;
-  /** «Otros {n} cargos» */
-  restTitles: string;
-  noTitle: string;
+  /** «{n} subunidades» (el botón que las despliega) */
+  subunits: string;
+  subunitOne: string;
+  /** El botón que pliega las subunidades. */
+  fold: string;
+  /** «Directos con {name}»: quienes dependen del líder sin equipo propio. */
+  direct: string;
   /** «{n} a cargo» */
   span: string;
   /** «{n} en total» */
@@ -132,10 +136,8 @@ export interface OrgLabels {
   noPath: string;
   seeMap: string;
   seeMe: string;
-  up: string;
   metric: string;
   noMetric: string;
-  leader: string;
   loading: string;
   error: string;
   retry: string;

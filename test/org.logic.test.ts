@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildIndex, chainOf, childOnPath, cleanPerson, cleanUnit, commonBoss, groupByTitle, metricLevels, peersOf, reportsOf, squarify, teamSize, topWithRest, unitCount, unitLine, unitPath } from "../src/components/org/logic";
+import { buildIndex, chainOf, cleanPerson, cleanUnit, commonBoss, metricLevels, peersOf, reportsOf, teamSize, unitCount, unitLine, unitPath } from "../src/components/org/logic";
 import type { OrgPerson, OrgUnit } from "../src/components/org/types";
 
 const units: OrgUnit[] = [
@@ -16,30 +16,6 @@ const people: OrgPerson[] = [
   { id: "6", name: "Juan Mora", title: "Contador", unit: "s2", boss: "1" },
 ];
 const ix = buildIndex(units, people);
-
-describe("squarify", () => {
-  it("cubre el rectángulo entero con áreas proporcionales", () => {
-    const rects = squarify([6, 6, 4, 3, 2, 2, 1], { x: 0, y: 0, w: 600, h: 400 });
-    const total = rects.reduce((s, r) => s + r.w * r.h, 0);
-    expect(total).toBeCloseTo(600 * 400, 3);
-    expect(rects[0].w * rects[0].h).toBeCloseTo((6 / 24) * 600 * 400, 3);
-    for (const r of rects) {
-      expect(r.x + r.w).toBeLessThanOrEqual(600.001);
-      expect(r.y + r.h).toBeLessThanOrEqual(400.001);
-    }
-  });
-
-  it("deja en cero los valores nulos sin correr los índices", () => {
-    const rects = squarify([5, 0, 5], { x: 0, y: 0, w: 100, h: 100 });
-    expect(rects[1].w * rects[1].h).toBe(0);
-    expect(rects[0].w * rects[0].h + rects[2].w * rects[2].h).toBeCloseTo(10000, 3);
-  });
-
-  it("no revienta sin valores ni área", () => {
-    expect(squarify([], { x: 0, y: 0, w: 10, h: 10 })).toEqual([]);
-    expect(squarify([1, 2], { x: 0, y: 0, w: 0, h: 10 }).every((r) => r.w === 0)).toBe(true);
-  });
-});
 
 describe("índice y cadenas", () => {
   it("la cadena hacia arriba, del jefe inmediato al más alto", () => {
@@ -80,29 +56,6 @@ describe("unidades", () => {
   it("el camino y la línea de unidad", () => {
     expect(unitPath(ix, "s1").map((u) => u.id)).toEqual(["c1", "s1"]);
     expect(unitLine(ix, "s1")).toBe("Agrovid · Finca La Esperanza");
-  });
-
-  it("el hijo del foco que lleva a una unidad (el «Tú» del mapa)", () => {
-    expect(childOnPath(ix, null, "s1")).toBe("c1");
-    expect(childOnPath(ix, "c1", "s1")).toBe("s1");
-    expect(childOnPath(ix, "s2", "s1")).toBeNull();
-  });
-
-  it("los más grandes y el resto en un bloque", () => {
-    const r = topWithRest([5, 1, 9, 3, 2], (n) => n, 3);
-    expect(r.shown.map((s) => s.item)).toEqual([9, 5]);
-    expect(r.rest).toEqual([3, 2, 1]);
-    expect(r.restValue).toBe(6);
-    expect(topWithRest([1, 2], (n) => n, 3).rest).toEqual([]);
-  });
-
-  it("agrupa por cargo, el más numeroso primero", () => {
-    const g = groupByTitle(ix.members.get("s1")!, "Sin cargo");
-    expect(g.map((x) => [x.title, x.people.length])).toEqual([
-      ["Analista", 2],
-      ["Operaria", 1],
-    ]);
-    expect(groupByTitle([{ id: "q", name: "Q" }], "Sin cargo")[0].title).toBe("Sin cargo");
   });
 
   it("la intensidad de una cifra, absoluta o por persona", () => {

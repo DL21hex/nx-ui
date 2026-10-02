@@ -123,21 +123,51 @@ describe("<nx-org>: lente «Yo»", () => {
 });
 
 describe("<nx-org>: lente «Organización»", () => {
-  it("bloques de las raíces con su conteo y el «Tú» en el camino", async () => {
+  const ids = (el: Element) => [...el.querySelectorAll<HTMLElement>(".nx-org__ucard")].map((c) => c.dataset.unit);
+
+  it("las raíces en fila, sus subunidades colgando y el camino hasta ti abierto y marcado", async () => {
     const el = await mount((o) => {
       o.units = units;
       o.people = people;
       o.me = "5";
       o.view = "map";
     });
-    const tiles = [...el.querySelectorAll<HTMLElement>(".nx-org__tile")];
-    expect(tiles.map((t) => t.dataset.tile)).toEqual(["c1", "c2"]);
-    expect(tiles[0].getAttribute("aria-label")).toContain("6 personas");
-    expect(tiles[0].classList.contains("is-you")).toBe(true);
-    expect(tiles[1].classList.contains("is-you")).toBe(false);
+    expect(ids(el)).toEqual(["c1", "s2", "s1", "c2", "s3"]);
+    const card = (id: string) => el.querySelector<HTMLElement>(`.nx-org__ucard[data-unit="${id}"]`)!;
+    expect(text(card("c1").querySelector(".nx-org__big"))).toBe("6");
+    expect(card("c1").classList.contains("is-on")).toBe(true);
+    expect(card("s1").classList.contains("is-on")).toBe(true);
+    expect(card("s2").classList.contains("is-on")).toBe(false);
+    expect(card("s1").querySelector(".nx-org__you")).not.toBeNull();
+    expect(card("c1").querySelector(".nx-org__you")).toBeNull();
+    expect([...card("c1").parentElement!.querySelectorAll(".nx-org__stack > li")].map((li) => li.className)).toEqual(["is-rail", "is-on"]);
+    expect(card("c1").querySelector("[data-toggle]")!.getAttribute("aria-expanded")).toBe("true");
+    expect(card("s1").querySelector("[data-toggle]")).toBeNull();
+    // Sin una sola raíz no hay barra: las raíces van en fila sin ramas.
+    expect(el.querySelector(".nx-org__tree > .is-top")).toBeNull();
+    expect(el.querySelector(".nx-org__crumbs")!.children).toHaveLength(0);
   });
 
-  it("entra a una unidad, luego a sus cargos y a las personas; las migas suben", async () => {
+  it("pliega y despliega con el botón y con las flechas", async () => {
+    const el = await mount((o) => {
+      o.units = units;
+      o.people = people;
+      o.view = "map";
+    });
+    const toggle = () => el.querySelector<HTMLButtonElement>('[data-toggle="c1"]')!;
+    toggle().focus();
+    toggle().click();
+    await tick();
+    expect(ids(el)).toEqual(["c1", "c2", "s3"]);
+    expect(text(toggle())).toBe("2 subunidades");
+    expect(document.activeElement).toBe(toggle());
+    el.querySelector<HTMLButtonElement>('[data-open="c1"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    await tick();
+    expect(ids(el)).toEqual(["c1", "s2", "s1", "c2", "s3"]);
+    expect(text(toggle())).toBe("Plegar");
+  });
+
+  it("al abrir una unidad: su gente en ramas, las migas, y Escape vuelve al árbol con el foco en ella", async () => {
     const el = await mount((o) => {
       o.units = units;
       o.people = people;
@@ -146,99 +176,97 @@ describe("<nx-org>: lente «Organización»", () => {
     });
     const focus = vi.fn();
     el.addEventListener("nx-org-focus", (e) => focus(e.detail));
-    el.querySelector<HTMLButtonElement>('[data-tile="c1"]')!.click();
+    el.querySelector<HTMLButtonElement>('[data-open="s1"]')!.click();
     await tick();
-    expect([...el.querySelectorAll<HTMLElement>(".nx-org__tile")].map((t) => t.dataset.tile).sort()).toEqual(["s1", "s2"]);
-    expect(focus).toHaveBeenLastCalledWith({ view: "map", id: "c1" });
-    el.querySelector<HTMLButtonElement>('[data-tile="s1"]')!.click();
+    expect(focus).toHaveBeenLastCalledWith({ view: "map", id: "s1" });
+    expect(text(el.querySelector(".nx-org__uhead"))).toContain("Finca La Esperanza");
+    expect(text(el.querySelector(".nx-org__crumbs"))).toBe("OrganizaciónAgrovidFinca La Esperanza");
+    const tree = el.querySelector(".nx-org__level--root")!;
+    expect(text(tree.querySelector(".nx-org__lead"))).toContain("Pedro Ruiz");
+    expect(text(tree.querySelector(".nx-org__colhead"))).toBe("Directos con Pedro · 1");
+    expect(tree.querySelector(".nx-org__peer.is-me")!.getAttribute("data-person")).toBe("5");
+    // Quien no cuelga de nadie dentro de la unidad va aparte, en tarjetas.
+    expect(text(el.querySelector(".nx-org__members"))).toContain("Sofía León");
+    // Dentro de la unidad, las tarjetas no repiten la unidad.
+    expect(text(tree.querySelector(".nx-org__lead"))).not.toContain("Agrovid");
+    el.querySelector<HTMLElement>(".nx-org__uhead")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await tick();
-    const titles = [...el.querySelectorAll<HTMLElement>(".nx-org__tile")].map((t) => t.dataset.tile);
-    expect(titles).toEqual(["t:Analista", "t:Operaria"]);
-    expect(el.querySelector('[data-tile="t:Operaria"]')!.classList.contains("is-you")).toBe(true);
-    el.querySelector<HTMLButtonElement>('[data-tile="t:Analista"]')!.click();
-    await tick();
-    expect(text(el.querySelector(".nx-org__members"))).toContain("Pedro Ruiz");
-    expect(text(el.querySelector(".nx-org__crumbs"))).toContain("Organización › Agrovid › Finca La Esperanza › Analista".replace(/ › /g, ""));
-    el.querySelector<HTMLButtonElement>('.nx-org__crumbs [data-to="1"]')!.click();
-    await tick();
-    expect(el.querySelector('[data-tile="s1"]')).not.toBeNull();
+    expect(el.querySelector(".nx-org__uhead")).toBeNull();
+    expect(document.activeElement).toBe(el.querySelector('[data-open="s1"]'));
+    expect(focus).toHaveBeenLastCalledWith({ view: "map", id: null });
   });
 
-  it("Escape sube un nivel", async () => {
+  it("una unidad con subunidades: sus subunidades debajo, sin avisos de vacío; las migas suben", async () => {
     const el = await mount((o) => {
       o.units = units;
       o.people = people;
-      o.view = "map";
     });
     el.focusUnit("c1");
     await tick();
-    const tile = el.querySelector<HTMLButtonElement>(".nx-org__tile")!;
-    tile.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(el.view).toBe("map");
+    expect(el.querySelector(".nx-org__empty")).toBeNull();
+    expect(ids(el.querySelector(".nx-org__subunits")!)).toEqual(["s2", "s1"]);
+    el.querySelector<HTMLButtonElement>('.nx-org__subunits [data-open="s2"]')!.click();
     await tick();
-    expect([...el.querySelectorAll<HTMLElement>(".nx-org__tile")].map((t) => t.dataset.tile)).toEqual(["c1", "c2"]);
+    expect(text(el.querySelector(".nx-org__lead"))).toContain("Marta Ríos");
+    expect(text(el.querySelector(".nx-org__level--root .nx-org__tree"))).toContain("Laura Gómez");
+    el.querySelector<HTMLButtonElement>('.nx-org__crumbs [data-go="c1"]')!.click();
+    await tick();
+    expect(text(el.querySelector(".nx-org__uhead"))).toContain("Agrovid");
+    el.querySelector<HTMLButtonElement>('.nx-org__crumbs [data-go=""]')!.click();
+    await tick();
+    expect(el.querySelector(".nx-org__uhead")).toBeNull();
   });
 
-  it("con muchas unidades, un bloque «Otras» lleva al resto", async () => {
-    const many: OrgUnit[] = Array.from({ length: 25 }, (_, i) => ({ id: `u${i}`, name: `Unidad ${i}`, count: 100 - i }));
+  it("con una sola raíz, ella arriba y sus hijas en fila con ramas", async () => {
     const el = await mount((o) => {
-      o.units = many;
+      o.units = [{ id: "g", name: "Grupo" }, ...units.map((u) => (u.parent ? u : { ...u, parent: "g" }))];
+      o.people = people;
+      o.me = "5";
       o.view = "map";
     });
-    expect(el.querySelectorAll(".nx-org__tile")).toHaveLength(18);
-    const rest = el.querySelector<HTMLButtonElement>('[data-tile="#rest"]')!;
-    expect(text(rest)).toContain("Otras 8 unidades");
-    rest.click();
-    await tick();
-    const ids = [...el.querySelectorAll<HTMLElement>(".nx-org__tile")].map((t) => t.dataset.tile);
-    expect(ids).toHaveLength(8);
-    expect(ids[0]).toBe("u17");
+    const root = el.querySelector<HTMLElement>(".nx-org__ucard.is-root")!;
+    expect(root.dataset.unit).toBe("g");
+    expect(root.querySelector("[data-toggle]")).toBeNull();
+    expect(el.querySelector(".nx-org__trunk")!.classList.contains("is-on")).toBe(true);
+    expect([...el.querySelectorAll(".nx-org__map > .nx-org__tree > li")].map((li) => li.className)).toEqual(["is-top is-on", "is-top is-end"]);
   });
 
-  it("la cifra elegida colorea y se anuncia en el bloque", async () => {
+  it("«+n» abre la lista completa de subunidades", async () => {
+    const kids = Array.from({ length: 15 }, (_, i) => ({ id: `k${i}`, name: `Área ${i}`, parent: "r", count: 20 - i }));
+    const el = await mount((o) => {
+      o.units = [{ id: "r", name: "Raíz" }, { id: "a", name: "A", parent: "r", count: 200 }, ...kids.map((k) => ({ ...k, parent: "a" }))];
+      o.view = "map";
+    });
+    expect(el.querySelectorAll(".nx-org__stack > li")).toHaveLength(12);
+    const more = el.querySelector<HTMLButtonElement>('[data-act="full"]')!;
+    expect(text(more)).toBe("+3");
+    more.click();
+    await tick();
+    expect(el.querySelectorAll(".nx-org__stack > li")).toHaveLength(15);
+  });
+
+  it("la cifra elegida aparece en cada unidad, con su intensidad entre hermanas, sin rehacer la barra", async () => {
     const el = await mount((o) => {
       o.units = [
         { id: "a", name: "A", count: 10, metrics: { vac: 4 } },
         { id: "b", name: "B", count: 30, metrics: { vac: 1 } },
       ];
       o.metrics = [{ key: "vac", label: "Vacantes", tone: "warning" }];
-      o.metric = "vac";
       o.view = "map";
     });
-    const a = el.querySelector<HTMLElement>('[data-tile="a"]')!;
-    expect(a.style.getPropertyValue("--i")).toBe("1.000");
-    expect(a.getAttribute("aria-label")).toContain("Vacantes: 4");
-    expect(el.querySelector<HTMLElement>(".nx-org__tiles")!.dataset.tone).toBe("warning");
-  });
-
-  it("con una sola raíz arranca dentro de ella", async () => {
-    const el = await mount((o) => {
-      o.units = [{ id: "g", name: "Grupo" }, ...units.map((u) => (u.parent ? u : { ...u, parent: "g" }))];
-      o.people = people;
-      o.view = "map";
-    });
-    expect([...el.querySelectorAll<HTMLElement>(".nx-org__tile")].map((t) => t.dataset.tile)).toEqual(["c1", "c2"]);
-    expect(text(el.querySelector(".nx-org__crumbs"))).toBe("Grupo");
-    el.focusUnit("s1");
-    await tick();
-    expect(text(el.querySelector(".nx-org__crumbs"))).toContain("Grupo›Agrovid›Finca La Esperanza".replace(/›/g, ""));
-  });
-
-  it("el selector «Color» elige la cifra sin rehacer la barra", async () => {
-    const el = await mount((o) => {
-      o.units = [
-        { id: "a", name: "A", count: 10, metrics: { vac: 4 } },
-        { id: "b", name: "B", count: 30, metrics: { vac: 1 } },
-      ];
-      o.metrics = [{ key: "vac", label: "Vacantes" }];
-      o.view = "map";
-    });
+    expect(el.querySelector(".nx-org__metric-chip")).toBeNull();
     const sel = el.querySelector<HTMLSelectElement>(".nx-org__select")!;
     sel.value = "vac";
     sel.dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
     expect(el.metric).toBe("vac");
     expect(el.querySelector(".nx-org__select")).toBe(sel);
-    expect(el.querySelector<HTMLElement>('[data-tile="a"]')!.style.getPropertyValue("--i")).toBe("1.000");
+    const chip = el.querySelector<HTMLElement>('[data-unit="a"] .nx-org__metric-chip')!;
+    expect(text(chip)).toBe("Vacantes: 4");
+    expect(chip.dataset.tone).toBe("warning");
+    expect(chip.style.getPropertyValue("--i")).toBe("1.000");
+    expect(el.querySelector<HTMLElement>('[data-unit="b"] .nx-org__metric-chip')!.style.getPropertyValue("--i")).toBe("0.250");
   });
 
   it("cambia de lente con el selector", async () => {
@@ -285,9 +313,6 @@ describe("<nx-org>: datos por partes", () => {
     await tick();
     await tick();
     expect(calls).toContainEqual({ unit: "s1" });
-    expect(el.querySelector('[data-tile="t:Tractorista"]')).not.toBeNull();
-    el.querySelector<HTMLButtonElement>('[data-tile="t:Tractorista"]')!.click();
-    await tick();
     expect(text(el.querySelector(".nx-org__members"))).toContain("Luis Paz");
     expect(calls.filter((c) => JSON.stringify(c) === '{"unit":"s1"}')).toHaveLength(1);
   });
@@ -353,5 +378,85 @@ describe("<nx-org>: búsqueda", () => {
     await tick();
     expect(el.view).toBe("map");
     expect(text(el.querySelector(".nx-org__members"))).toContain("Rosa Pinto");
+  });
+});
+
+describe("<nx-org>: aspecto", () => {
+  it("el equipo cuelga de ramas: columnas por ancho y la primera fila marcada", async () => {
+    const el = await mount((o) => {
+      o.people = people;
+      o.me = "2";
+    });
+    const tree = el.querySelector<HTMLElement>(".nx-org__tree")!;
+    expect(tree.style.getPropertyValue("--cols")).toBe("2");
+    const lis = [...tree.children] as HTMLElement[];
+    expect(lis.map((li) => li.className)).toEqual(["is-top", "is-top is-end"]);
+    expect(el.querySelector(".nx-org__axis")!.classList.contains("has-team")).toBe(true);
+    // Los compañeros, a los dos lados del centro.
+    expect(text(el.querySelector(".nx-org__peers.is-l"))).toContain("Juan Mora");
+    expect(el.querySelector(".nx-org__peers.is-r")!.children).toHaveLength(0);
+  });
+
+  it("cada persona tiene su tono, el mismo en todas partes", async () => {
+    const el = await mount((o) => {
+      o.people = people;
+      o.me = "3";
+    });
+    const hues = (id: string) => [...el.querySelectorAll<HTMLElement>(`[data-person="${id}"] .nx-org__avatar--initials, [data-person="${id}"] .nx-org__mini--initials`)].map((a) => a.style.getPropertyValue("--h"));
+    const laura = hues("2");
+    expect(laura.length).toBeGreaterThan(1);
+    expect(new Set(laura).size).toBe(1);
+    expect(laura[0]).not.toBe(hues("4")[0]);
+  });
+
+  it("dibuja el camino en caras: tú, el jefe común y la otra persona", async () => {
+    const el = await mount((o) => {
+      o.people = people;
+      o.me = "5";
+      o.focusPerson("6");
+    });
+    const nodes = [...el.querySelectorAll<HTMLElement>(".nx-org__route .nx-org__node")];
+    expect(nodes.map((n) => text(n.querySelector(".nx-org__node-name")))).toEqual(["Tú", "Marta Ríos", "Juan Mora"]);
+    expect(nodes[1].dataset.person).toBe("1");
+    expect([...el.querySelectorAll(".nx-org__edge")].map((e) => e.textContent)).toEqual(["↑ 3", "↓ 1"]);
+  });
+
+  it("en el árbol, cada rama con su tono: sus subunidades lo heredan", async () => {
+    const el = await mount((o) => {
+      o.units = units;
+      o.people = people;
+      o.view = "map";
+    });
+    const hue = (id: string) => el.querySelector<HTMLElement>(`.nx-org__ucard[data-unit="${id}"]`)!.style.getPropertyValue("--h");
+    expect(hue("c1")).not.toBe(hue("c2"));
+    expect(hue("s1")).toBe(hue("c1"));
+    expect(hue("s2")).toBe(hue("c1"));
+  });
+
+  it("con View Transitions, las tarjetas llevan nombre durante el cambio y lo sueltan al final", async () => {
+    const el = await mount((o) => {
+      o.people = people;
+      o.me = "3";
+    });
+    let finish!: () => void;
+    let during = "";
+    const doc = document as unknown as { startViewTransition?: unknown };
+    doc.startViewTransition = (cb: () => void) => {
+      cb();
+      during = el.querySelector<HTMLElement>(".nx-org__person--center")!.style.getPropertyValue("view-transition-name");
+      return { ready: Promise.resolve(), updateCallbackDone: Promise.resolve(), finished: new Promise<void>((r) => (finish = r)) };
+    };
+    vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([{}] as unknown as DOMRectList);
+    try {
+      el.querySelector<HTMLButtonElement>('.nx-org__level--team button[data-person="5"]')!.click();
+      expect(el.center).toBe("5");
+      expect(text(el.querySelector(".nx-org__person--center"))).toContain("Ana Díaz");
+      expect(during).toMatch(/^nx-org\d+-\d+$/);
+      finish();
+      await tick();
+      expect(el.querySelector<HTMLElement>(".nx-org__person--center")!.style.getPropertyValue("view-transition-name")).toBe("");
+    } finally {
+      delete doc.startViewTransition;
+    }
   });
 });

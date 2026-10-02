@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta de nx-org: Organización</title>
+<style>
+/* Tokens de nx32-elements (src/styles/tokens.css), recortados a lo que usa la maqueta. */
+:root {
+  color-scheme: light dark;
+  --_h: 262; --_c: 0.19; --_l: 0.54; --_ld: 0.72; --_n: 260; --_t: 1;
+  --nx-canvas: light-dark(oklch(0.985 calc(0.002 * var(--_t)) var(--_n)), oklch(0.165 calc(0.004 * var(--_t)) var(--_n)));
+  --nx-card: light-dark(oklch(1 0 0), oklch(0.225 calc(0.005 * var(--_t)) var(--_n)));
+  --nx-popover: light-dark(oklch(1 0 0), oklch(0.235 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-border-subtle: light-dark(oklch(0.925 calc(0.004 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.07));
+  --nx-border: light-dark(oklch(0.885 calc(0.005 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.11));
+  --nx-border-strong: light-dark(oklch(0.82 calc(0.006 * var(--_t)) var(--_n)), oklch(1 0 0 / 0.17));
+  --nx-foreground: light-dark(oklch(0.2 calc(0.008 * var(--_t)) var(--_n)), oklch(0.955 calc(0.003 * var(--_t)) var(--_n)));
+  --nx-muted-foreground: light-dark(oklch(0.44 calc(0.01 * var(--_t)) var(--_n)), oklch(0.76 calc(0.006 * var(--_t)) var(--_n)));
+  --nx-text-tertiary: light-dark(oklch(0.51 calc(0.01 * var(--_t)) var(--_n)), oklch(0.64 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-text-quaternary: light-dark(oklch(0.66 calc(0.008 * var(--_t)) var(--_n)), oklch(0.53 calc(0.007 * var(--_t)) var(--_n)));
+  --nx-primary: light-dark(oklch(var(--_l) var(--_c) var(--_h)), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h)));
+  --nx-primary-ink: light-dark(oklch(calc(var(--_l) - 0.07) var(--_c) var(--_h)), oklch(calc(var(--_ld) + 0.05) calc(var(--_c) * 0.7) var(--_h)));
+  --nx-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.17 calc(var(--_c) * 0.1) var(--_h)));
+  --nx-primary-soft: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.1), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.15));
+  --nx-primary-border: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.35), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.4));
+  --nx-hover: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.05), oklch(1 0 0 / 0.06));
+  --nx-ring: light-dark(oklch(var(--_l) var(--_c) var(--_h) / 0.6), oklch(var(--_ld) calc(var(--_c) * 0.74) var(--_h) / 0.7));
+  --nx-danger: light-dark(oklch(0.52 0.2 27), oklch(0.72 0.16 27));
+  --nx-warning: light-dark(oklch(0.74 0.15 70), oklch(0.8 0.14 78));
+  --nx-shadow-popover: 0 1px 2px light-dark(rgb(15 20 30 / 0.06), rgb(0 0 0 / 0.3)),
+    0 10px 30px -4px light-dark(rgb(15 20 30 / 0.16), rgb(0 0 0 / 0.55));
+  --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --nx-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --nx-radius-sm: 5px; --nx-radius-md: 7px; --nx-radius-lg: 10px;
+  --nx-motion-fast: 140ms; --nx-motion-base: 220ms;
+  --nx-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --line: var(--nx-border-strong);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--nx-canvas);
+  color: var(--nx-foreground);
+  font: 14px/1.45 var(--nx-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--nx-ring); outline-offset: 2px; }
+.page { max-width: 1280px; margin-inline: auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 28px 72px; }
+
+/* ---------------------------------------------------------------- encabezado y barra */
+.intro { display: grid; gap: 6px; margin-bottom: 18px; }
+.eyebrow { font: 12px/1.3 var(--nx-font-mono); color: var(--nx-primary-ink); letter-spacing: 0.02em; margin: 0; }
+h1 { font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.intro p { margin: 0; max-width: 78ch; color: var(--nx-muted-foreground); }
+.bar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding-block: 10px; margin-bottom: 8px;
+  background: color-mix(in oklch, var(--nx-canvas) 92%, transparent);
+  backdrop-filter: blur(10px);
+}
+.seg { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg); background: var(--nx-card); }
+.seg button {
+  min-height: 30px; padding: 0 14px; border: 0; border-radius: var(--nx-radius-md);
+  background: none; color: var(--nx-muted-foreground); cursor: pointer;
+}
+.seg button:hover { background: var(--nx-hover); }
+.seg button[aria-pressed="true"] { background: var(--nx-primary-soft); color: var(--nx-primary-ink); font-weight: 600; }
+.seg--small button { min-height: 26px; padding: 0 10px; font-size: 12.5px; }
+.field { display: inline-flex; align-items: center; gap: 8px; }
+.field span { font-size: 12.5px; color: var(--nx-muted-foreground); }
+select, .input {
+  height: 34px; padding: 0 8px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); background: var(--nx-card);
+}
+.spacer { flex: 1; }
+.hint { margin: 0 0 14px; font-size: 13px; color: var(--nx-text-tertiary); }
+
+/* ---------------------------------------------------------------- comunes */
+.av {
+  flex: none; display: inline-grid; place-items: center; border-radius: 50%;
+  inline-size: 32px; block-size: 32px; font-size: 12px; font-weight: 600;
+  background: light-dark(oklch(0.93 0.045 var(--h, 250)), oklch(0.36 0.07 var(--h, 250)));
+  color: light-dark(oklch(0.42 0.11 var(--h, 250)), oklch(0.9 0.06 var(--h, 250)));
+}
+.av--sm { inline-size: 24px; block-size: 24px; font-size: 9.5px; }
+.av--xs { inline-size: 20px; block-size: 20px; font-size: 8.5px; }
+.av--lg { inline-size: 48px; block-size: 48px; font-size: 16px; }
+.faces { display: inline-flex; }
+.faces > .av { box-shadow: 0 0 0 2px var(--nx-card); }
+.faces > .av + .av { margin-inline-start: -6px; }
+.you {
+  display: inline-block; padding: 0 7px; border-radius: 999px;
+  background: var(--nx-primary); color: var(--nx-primary-foreground);
+  font-size: 11px; font-weight: 600; line-height: 18px;
+}
+.chip {
+  --tone: var(--nx-primary);
+  display: inline-flex; align-items: center; gap: 6px; padding: 1px 8px; border-radius: 999px;
+  background: color-mix(in oklch, var(--tone) calc(10% + var(--i, 0) * 32%), var(--nx-card));
+  color: var(--nx-foreground); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+}
+.chip[data-tone="warning"] { --tone: var(--nx-warning); }
+.chip[data-tone="danger"] { --tone: var(--nx-danger); }
+.toast {
+  position: fixed; inset-inline: 0; inset-block-end: 24px; margin-inline: auto; z-index: 50;
+  inline-size: fit-content; max-inline-size: calc(100% - 32px); padding: 10px 16px;
+  border-radius: var(--nx-radius-lg); background: var(--nx-foreground); color: var(--nx-canvas);
+  box-shadow: var(--nx-shadow-popover); font-size: 13.5px;
+  opacity: 0; translate: 0 8px; transition: opacity var(--nx-motion-base), translate var(--nx-motion-base); pointer-events: none;
+}
+.toast.is-on { opacity: 1; translate: 0 0; }
+
+/* ================================================================ A · árbol de unidades */
+.a-wrap { display: grid; justify-items: center; container: a / inline-size; }
+.a-node {
+  --tone: oklch(0.64 0.14 var(--h, 262));
+  position: relative; display: grid; gap: 6px; inline-size: 100%;
+  padding: 14px 14px 12px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg);
+  background: var(--nx-card) linear-gradient(var(--tone), var(--tone)) top / 100% 3px no-repeat;
+  text-align: start; color: inherit;
+  transition: border-color var(--nx-motion-fast), box-shadow var(--nx-motion-fast);
+}
+button.a-node { cursor: pointer; }
+button.a-node:hover { border-color: var(--nx-border-strong); box-shadow: var(--nx-shadow-popover); }
+.a-node.is-root { --tone: var(--nx-primary); inline-size: min(100%, 340px); }
+.a-node.on-path { border-color: var(--nx-primary-border); box-shadow: 0 0 0 3px var(--nx-primary-soft); }
+.a-node > .you { position: absolute; inset-block-start: 10px; inset-inline-end: 10px; }
+.a-kind { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--nx-muted-foreground); }
+.a-name { font-size: 15.5px; font-weight: 650; line-height: 1.25; padding-inline-end: 36px; }
+.a-lead { display: flex; align-items: center; gap: 8px; min-inline-size: 0; }
+.a-lead > span:last-child { display: grid; min-inline-size: 0; }
+.a-lead b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-lead small { font-size: 12px; color: var(--nx-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.a-count { font-size: 12.5px; color: var(--nx-muted-foreground); }
+.a-count b { font-size: 22px; font-weight: 650; color: var(--nx-foreground); letter-spacing: -0.01em; margin-inline-end: 2px; }
+.a-toggle { font-size: 12.5px; color: var(--nx-primary-ink); }
+.a-trunk { inline-size: 2px; block-size: 22px; background: var(--line); }
+.a-trunk.on { background: var(--nx-primary); }
+
+/* Fila con barra: igual que el equipo de «Yo». */
+.a-row {
+  --g: 20px;
+  display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 24px var(--g);
+  inline-size: min(100%, calc(var(--cols) * 300px)); margin: 0; padding: 0; list-style: none;
+}
+.a-row > li { position: relative; min-inline-size: 0; }
+.a-row > li.is-top { padding-block-start: 20px; }
+.a-row > li.is-top::before, .a-row > li.is-top::after { content: ""; position: absolute; inset-block-start: 0; background: var(--line); }
+.a-row > li.is-top::before { inset-inline: calc(var(--g) / -2); block-size: 2px; }
+.a-row > li.is-top:first-child::before { inset-inline-start: 50%; }
+.a-row > li.is-top.is-end::before { inset-inline-end: 50%; }
+.a-row > li.is-top::after { inset-inline-start: calc(50% - 1px); inline-size: 2px; block-size: 20px; }
+.a-row > li.is-top.on::after { background: var(--nx-primary); }
+
+/* Debajo de cada tarjeta, sus hijas en columna, colgando de un riel. */
+.a-stack { margin: 0; padding: 0; list-style: none; }
+.a-stack > li { --pt: 8px; position: relative; padding: var(--pt) 0 0 26px; }
+.a-stack > li:first-child { --pt: 12px; }
+.a-stack > li::before { content: ""; position: absolute; inset-inline-start: 11px; inset-block: 0; inline-size: 2px; background: var(--line); }
+.a-stack > li:last-child::before { inset-block-end: auto; block-size: calc(var(--pt) + 24px); }
+.a-stack > li::after { content: ""; position: absolute; inset-inline-start: 11px; inset-block-start: calc(var(--pt) + 23px); inline-size: 15px; block-size: 2px; background: var(--line); }
+.a-stack > li.on::after { background: var(--nx-primary); }
+.a-stack .a-node { padding: 12px 12px 10px; }
+.a-stack .a-name { font-size: 14px; }
+
+/* Angosto: todo en una columna, sin barra. */
+@container a (max-width: 640px) {
+  .a-row { grid-template-columns: minmax(0, 1fr); inline-size: 100%; }
+  .a-row > li.is-top::before { display: none; }
+  .a-row > li + li.is-top::after { display: none; }
+  .a-row > li + li { padding-block-start: 0; }
+}
+
+/* Una unidad abierta: su gente, con las ramas de «Yo». */
+.a-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin: 0 0 14px; padding: 0; list-style: none; font-size: 13px; }
+.a-crumbs li + li::before { content: "›"; margin-inline: 4px; color: var(--nx-text-quaternary); }
+.a-crumbs button { padding: 3px 6px; border: 0; border-radius: var(--nx-radius-sm); background: none; color: var(--nx-muted-foreground); cursor: pointer; }
+.a-crumbs button:hover { background: var(--nx-hover); color: var(--nx-foreground); }
+.a-crumbs [aria-current] { padding: 3px 6px; font-weight: 600; }
+.a-unithead { inline-size: min(100%, 520px); margin-inline: auto; }
+.a-unithead .a-node { padding: 16px 18px 14px; }
+.a-unithead .a-name { font-size: 18px; }
+.a-people { display: grid; justify-items: center; margin-block-start: 0; container: ap / inline-size; }
+.a-pill {
+  position: relative; margin: 0 0 16px; padding: 2px 12px; border: 1px solid var(--nx-border); border-radius: 999px;
+  background: var(--nx-card); font-size: 12.5px; font-weight: 600; color: var(--nx-muted-foreground);
+}
+.a-pill::after { content: ""; position: absolute; inset-block-start: 100%; inset-inline-start: calc(50% - 1px); inline-size: 2px; block-size: 17px; background: var(--line); }
+.a-person {
+  display: flex; align-items: flex-start; gap: 10px; inline-size: 100%;
+  padding: 10px 12px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg);
+  background: var(--nx-card); text-align: start; cursor: pointer;
+}
+.a-person:hover { border-color: var(--nx-border-strong); box-shadow: var(--nx-shadow-popover); }
+.a-person > span:nth-child(2) { display: grid; gap: 1px; min-inline-size: 0; flex: 1; }
+.a-person b { font-weight: 600; }
+.a-person small { font-size: 12.5px; color: var(--nx-muted-foreground); }
+.a-person small + small { color: var(--nx-text-tertiary); font-size: 12px; }
+.a-person.is-me { border-color: var(--nx-primary-border); box-shadow: 0 0 0 3px var(--nx-primary-soft); }
+.a-person.is-lead { inline-size: min(100%, 360px); padding: 14px 16px; }
+.a-colhead {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-block-size: 44px;
+  padding: 8px 12px; border: 1px dashed var(--nx-border-strong); border-radius: var(--nx-radius-lg);
+  font-size: 12.5px; font-weight: 600; color: var(--nx-muted-foreground);
+}
+.a-stack .a-mini {
+  display: flex; align-items: center; gap: 8px; inline-size: 100%; padding: 5px 8px 5px 5px;
+  border: 1px solid var(--nx-border-subtle); border-radius: var(--nx-radius-md); background: var(--nx-card);
+  text-align: start; cursor: pointer;
+}
+.a-stack > li:has(.a-mini) { --pt: 5px; }
+.a-stack > li:has(.a-mini)::after { inset-block-start: calc(var(--pt) + 17px); inline-size: 15px; }
+.a-stack > li:has(.a-mini):last-child::before { block-size: calc(var(--pt) + 18px); }
+.a-mini:hover { border-color: var(--nx-border-strong); }
+.a-mini > span:last-child { display: grid; min-inline-size: 0; }
+.a-mini b { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-mini small { font-size: 11.5px; color: var(--nx-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-mini.is-me { border-color: var(--nx-primary-border); background: var(--nx-primary-soft); }
+.a-more { margin: 6px 0 0 26px; padding: 4px 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); background: var(--nx-card); font-size: 12.5px; cursor: pointer; }
+.a-more:hover { background: var(--nx-hover); }
+@container ap (max-width: 640px) {
+  .a-row { grid-template-columns: minmax(0, 1fr); inline-size: 100%; }
+  .a-row > li.is-top::before { display: none; }
+  .a-row > li + li.is-top::after { display: none; }
+  .a-row > li + li { padding-block-start: 0; }
+}
+::view-transition-group(a-focus) { animation-duration: 360ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* ================================================================ C · lienzo */
+.c-view {
+  position: relative; block-size: clamp(480px, 72vh, 780px); overflow: hidden;
+  border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg);
+  background-color: var(--nx-canvas);
+  background-image: radial-gradient(circle, color-mix(in oklch, var(--nx-foreground) 13%, transparent) 1px, transparent 1.2px);
+  touch-action: none; cursor: grab; user-select: none;
+}
+.c-view.is-dragging { cursor: grabbing; }
+.c-world { position: absolute; inset-block-start: 0; inset-inline-start: 0; transform-origin: 0 0; will-change: transform; }
+.c-world.is-flying { transition: transform 560ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.c-edges { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.c-edges path { fill: none; stroke: var(--line); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.c-edges path.on { stroke: var(--nx-primary); stroke-width: 2.5; }
+
+.c-region {
+  --tone: oklch(0.64 0.14 var(--h, 262));
+  position: absolute; border-radius: 18px;
+  background: color-mix(in oklch, var(--tone) var(--mix, 7%), transparent);
+  border: 1.5px solid color-mix(in oklch, var(--tone) 28%, transparent);
+}
+.c-region.is-co { --mix: 4%; border-style: dashed; border-radius: 28px; }
+.c-region.is-metric { --tone: var(--metric-tone); --mix: calc(4% + var(--i, 0) * 34%); }
+.c-label {
+  position: absolute; inset-inline: 14px; inset-block-start: 8px;
+  display: flex; align-items: baseline; gap: 8px; white-space: nowrap;
+  font-size: max(12px, calc(12px / var(--s, 1))); font-weight: 650; color: color-mix(in oklch, var(--tone) 55%, var(--nx-foreground));
+  pointer-events: none;
+}
+.c-region.is-co > .c-label { font-size: max(14px, calc(15px / var(--s, 1))); inset-block-start: 12px; inset-inline: 22px; }
+.c-label small { font-size: 0.82em; font-weight: 500; color: var(--nx-muted-foreground); }
+.c-label .chip { font-size: 0.8em; }
+
+.c-card {
+  position: absolute; display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px 6px 6px; border: 1px solid var(--nx-border); border-radius: 10px;
+  background: var(--nx-card); text-align: start; cursor: pointer;
+}
+.c-card:hover { border-color: var(--nx-border-strong); box-shadow: var(--nx-shadow-popover); z-index: 2; }
+.c-card > span:last-child { display: grid; min-inline-size: 0; }
+.c-card b { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-card small { font-size: 11px; color: var(--nx-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-card.is-lead { padding: 8px 10px 8px 8px; border-color: color-mix(in oklch, oklch(0.64 0.14 var(--bh, 262)) 45%, var(--nx-border)); }
+.c-card.is-lead b { font-size: 13.5px; }
+.c-card.is-lead small { font-size: 11.5px; color: var(--nx-muted-foreground); }
+.c-card.is-me { border-color: var(--nx-primary); box-shadow: 0 0 0 3px var(--nx-primary-soft); }
+.c-card.is-sel { border-color: var(--nx-foreground); box-shadow: 0 0 0 3px var(--nx-hover), var(--nx-shadow-popover); z-index: 3; }
+/* «Tú», como el alfiler de un mapa: del mismo tamaño en pantalla a cualquier zoom. */
+.c-pin {
+  position: absolute; inset-inline-start: 50%; inset-block-end: 100%; z-index: 4;
+  transform-origin: 50% 100%; translate: -50% -6px; scale: max(1, calc(1 / var(--s, 1)));
+  padding: 2px 9px; border-radius: 999px; background: var(--nx-primary); color: var(--nx-primary-foreground);
+  font-size: 11.5px; font-weight: 650; white-space: nowrap; box-shadow: var(--nx-shadow-popover); pointer-events: none;
+}
+.c-pin::after { content: ""; position: absolute; inset-inline-start: calc(50% - 4px); inset-block-start: 100%; border: 4px solid transparent; border-block-start-color: var(--nx-primary); }
+
+/* Zoom semántico: lejos, territorios con nombre y la gente como puntos; cerca, las tarjetas. */
+.c-view[data-z="far"] .c-card { padding: 0; border-color: transparent; background: none; box-shadow: none; justify-content: center; }
+.c-view[data-z="far"] .c-card > span:last-child { display: none; }
+.c-view[data-z="far"] .c-card .av { scale: 1.5; }
+.c-view[data-z="far"] .c-card.is-lead .av { scale: 2.6; box-shadow: 0 0 0 1.5px var(--nx-card); }
+.c-view[data-z="far"] .c-region:not(.is-co) > .c-label {
+  inset: 0; display: grid; place-content: center; justify-items: center; gap: 0; white-space: normal; text-align: center;
+  font-size: min(calc(17px / var(--s, 1)), calc(var(--rw) * 0.12)); line-height: 1.1; padding: 12px;
+  text-shadow: 0 0 calc(6px / var(--s, 1)) var(--nx-canvas);
+}
+.c-view[data-z="far"] .c-region:not(.is-co) > .c-label small { font-size: 0.7em; }
+.c-view[data-z="mid"] .c-card:not(.is-lead) small { display: none; }
+
+.c-overlay { position: absolute; z-index: 10; }
+.c-tools { inset-block-start: 12px; inset-inline-end: 12px; display: flex; gap: 6px; }
+.c-tools button, .c-close {
+  min-inline-size: 34px; block-size: 34px; padding: 0 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md);
+  background: var(--nx-popover); box-shadow: var(--nx-shadow-popover); cursor: pointer;
+}
+.c-tools button:hover { background: color-mix(in oklch, var(--nx-hover), var(--nx-popover)); }
+.c-search { inset-block-start: 12px; inset-inline-start: 12px; inline-size: min(300px, calc(100% - 210px)); }
+.c-search .input { inline-size: 100%; box-shadow: var(--nx-shadow-popover); background: var(--nx-popover); padding-inline: 10px; }
+.c-results {
+  margin: 4px 0 0; padding: 4px; list-style: none; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover); box-shadow: var(--nx-shadow-popover); max-block-size: 300px; overflow: auto;
+}
+.c-results li { display: grid; padding: 6px 10px; border-radius: var(--nx-radius-md); cursor: pointer; }
+.c-results li:hover, .c-results li[aria-selected="true"] { background: var(--nx-hover); }
+.c-results small { font-size: 12px; color: var(--nx-text-tertiary); }
+.c-mini {
+  inset-block-end: 12px; inset-inline-end: 12px; inline-size: 200px; block-size: 130px;
+  border: 1px solid var(--nx-border); border-radius: var(--nx-radius-md); background: var(--nx-popover);
+  box-shadow: var(--nx-shadow-popover); cursor: pointer; overflow: hidden;
+}
+.c-mini svg { display: block; inline-size: 100%; block-size: 100%; }
+.c-mini .vp { fill: color-mix(in oklch, var(--nx-primary) 12%, transparent); stroke: var(--nx-primary); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.c-detail {
+  inset-block-end: 12px; inset-inline-start: 12px; inline-size: min(320px, calc(100% - 240px));
+  display: grid; gap: 10px; padding: 14px; border: 1px solid var(--nx-border); border-radius: var(--nx-radius-lg);
+  background: var(--nx-popover); box-shadow: var(--nx-shadow-popover); cursor: default;
+}
+.c-detail header { display: flex; gap: 10px; align-items: center; }
+.c-detail header > span:nth-child(2) { display: grid; flex: 1; min-inline-size: 0; }
+.c-detail small { color: var(--nx-muted-foreground); font-size: 12.5px; }
+.c-detail dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+.c-detail dt { color: var(--nx-text-tertiary); }
+.c-detail dd { margin: 0; }
+.c-detail .link { padding: 0; border: 0; background: none; color: var(--nx-primary-ink); cursor: pointer; text-align: start; }
+.c-detail .link:hover { text-decoration: underline; }
+.c-detail .primary {
+  justify-self: start; padding: 6px 12px; border: 0; border-radius: var(--nx-radius-md);
+  background: var(--nx-primary); color: var(--nx-primary-foreground); font-weight: 600; cursor: pointer;
+}
+.c-close { position: absolute; inset-block-start: 8px; inset-inline-end: 8px; min-inline-size: 28px; block-size: 28px; padding: 0; box-shadow: none; }
+.c-keys { inset-block-end: 12px; inset-inline-start: 50%; translate: -50% 0; font-size: 12px; color: var(--nx-text-tertiary); white-space: nowrap; pointer-events: none; }
+@media (max-width: 640px) {
+  .c-mini { inline-size: 120px; block-size: 80px; }
+  .c-detail { inline-size: calc(100% - 24px); }
+  .c-search { inline-size: calc(100% - 24px); inset-block-start: 56px; }
+  .c-keys { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .c-world.is-flying { transition: none; }
+  .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">nx-org · maqueta · lente «Organización»</p>
+    <h1>Dos maneras de ver la organización</h1>
+    <p><b>A:</b> el árbol de unidades con quien las dirige; al abrir una unidad, su gente con las ramas de «Yo».
+      <b>C:</b> toda la organización en un lienzo con zoom: de lejos, territorios con nombre; de cerca, cada persona.
+      Mismos datos que la galería (Grupo Andino, 3 empresas, unas 300 personas). Tú eres la analista de rutas de Logística Caribe.</p>
+  </header>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Propuesta">
+      <button type="button" data-mode="a" aria-pressed="true">A · Árbol de unidades</button>
+      <button type="button" data-mode="c" aria-pressed="false">C · Lienzo</button>
+    </div>
+    <label class="field"><span>Color</span>
+      <select id="metric">
+        <option value="">Ramas</option>
+        <option value="vacantes">Vacantes</option>
+        <option value="ingresos">Ingresos en 90 días</option>
+        <option value="retiros">Rotación</option>
+      </select>
+    </label>
+    <span class="spacer"></span>
+    <div class="seg seg--small" role="group" aria-label="Tema">
+      <button type="button" data-theme-set="" aria-pressed="true">Sistema</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Claro</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Oscuro</button>
+    </div>
+  </div>
+
+  <section id="view-a" aria-label="A · Árbol de unidades">
+    <p class="hint" id="a-hint">Pulsa una empresa para plegarla o desplegarla, y una subdivisión para ver su gente.</p>
+    <div id="a-root"></div>
+  </section>
+
+  <section id="view-c" aria-label="C · Lienzo" hidden>
+    <p class="hint">Arrastra para moverte; rueda o pellizco para acercarte. Pulsa a alguien para ver su ficha y su línea de mando.</p>
+    <div class="c-view" id="c-view" tabindex="0" aria-label="Lienzo de la organización" data-z="far">
+      <div class="c-world" id="c-world"></div>
+      <div class="c-overlay c-search">
+        <input class="input" id="c-q" type="search" placeholder="Ir a una persona o unidad…" aria-label="Ir a una persona o unidad" autocomplete="off">
+        <ul class="c-results" id="c-results" role="listbox" hidden></ul>
+      </div>
+      <div class="c-overlay c-tools">
+        <button type="button" data-z="out" aria-label="Alejar">−</button>
+        <button type="button" data-z="in" aria-label="Acercar">+</button>
+        <button type="button" data-z="fit">Encuadrar</button>
+        <button type="button" data-z="me">Ir a mí</button>
+      </div>
+      <div class="c-overlay c-detail" id="c-detail" hidden></div>
+      <div class="c-overlay c-mini" id="c-mini" aria-hidden="true"></div>
+      <div class="c-overlay c-keys">Flechas: mover · + / −: zoom · 0: encuadrar</div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// ================================================================ datos (los mismos de gallery/demo-org.ts)
+let seed = 77;
+const rnd = () => {
+  seed |= 0;
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+const pick = (a) => a[Math.floor(rnd() * a.length)];
+const int = (a, b) => Math.floor(a + rnd() * (b - a + 1));
+const FIRST = ["Ana", "Luis", "María", "Carlos", "Laura", "Andrés", "Sofía", "Jorge", "Valentina", "Felipe", "Camila", "Julián", "Paula", "Diego", "Natalia", "Sebastián", "Daniela", "Mateo", "Isabel", "Tomás", "Lucía", "Samuel", "Mariana", "Esteban", "Juana", "Óscar", "Rosa", "Héctor", "Gloria", "Iván"];
+const LAST = ["Gómez", "Rodríguez", "Martínez", "López", "Ríos", "Pérez", "Díaz", "Moreno", "Rojas", "Vargas", "Castro", "Ortiz", "Suárez", "Mendoza", "Peña", "Cárdenas", "Herrera", "Salazar", "Navarro", "Acosta", "Mejía", "Pardo", "Restrepo", "Ospina", "Quintero"];
+const name = () => `${pick(FIRST)} ${pick(LAST)} ${pick(LAST)}`;
+const PLAN = [
+  { id: "agro", name: "Agrovid", subs: [
+    { id: "agro-esp", name: "Finca La Esperanza", lead: "Jefe de finca", sup: "Supervisor de campo", roles: [["Operario agrícola", 48], ["Tractorista", 6], ["Auxiliar de bodega", 4]] },
+    { id: "agro-pal", name: "Finca Las Palmas", lead: "Jefe de finca", sup: "Supervisor de campo", roles: [["Operario agrícola", 34], ["Tractorista", 4], ["Fumigador", 5]] },
+    { id: "agro-emp", name: "Empacadora", lead: "Jefe de planta", sup: "Supervisor de turno", roles: [["Operario de empaque", 30], ["Montacarguista", 3], ["Inspector de calidad", 4]] },
+    { id: "agro-adm", name: "Administración", lead: "Directora administrativa", sup: "Coordinador", roles: [["Analista contable", 5], ["Auxiliar de nómina", 3], ["Asistente", 2]] },
+  ] },
+  { id: "qual", name: "Quality", subs: [
+    { id: "qual-lab", name: "Laboratorio", lead: "Jefa de laboratorio", sup: "Coordinadora de análisis", roles: [["Analista de laboratorio", 12], ["Auxiliar de muestras", 6]] },
+    { id: "qual-cert", name: "Certificaciones", lead: "Jefe de certificaciones", sup: "Auditor líder", roles: [["Auditor", 8], ["Asistente", 2]] },
+    { id: "qual-com", name: "Comercial", lead: "Gerente comercial", sup: "Ejecutivo senior", roles: [["Ejecutivo de cuenta", 7]] },
+  ] },
+  { id: "log", name: "Logística Caribe", subs: [
+    { id: "log-baq", name: "Centro Barranquilla", lead: "Jefe de centro", sup: "Supervisor de operación", roles: [["Conductor", 22], ["Auxiliar de despacho", 10], ["Analista de rutas", 4]] },
+    { id: "log-ctg", name: "Centro Cartagena", lead: "Jefe de centro", sup: "Supervisor de operación", roles: [["Conductor", 14], ["Auxiliar de despacho", 6]] },
+    { id: "log-tal", name: "Taller", lead: "Jefe de taller", sup: "Mecánico líder", roles: [["Mecánico", 8], ["Electricista automotriz", 2]] },
+  ] },
+];
+const units = [{ id: "grupo", name: "Grupo Andino", kind: "Grupo" }];
+const people = [];
+let n = 0;
+const add = (p) => { const person = { id: `e${++n}`, name: name(), ...p }; people.push(person); return person; };
+const ceo = add({ title: "Presidente", unit: "grupo" });
+units[0].leader = ceo.id;
+add({ title: "Asistente de presidencia", unit: "grupo", boss: ceo.id });
+let me;
+for (const co of PLAN) {
+  const cu = { id: co.id, name: co.name, parent: "grupo", kind: "Empresa" };
+  units.push(cu);
+  const gm = add({ title: "Gerente general", unit: co.id, boss: ceo.id });
+  cu.leader = gm.id;
+  add({ title: "Analista de talento humano", unit: co.id, boss: gm.id });
+  for (const sub of co.subs) {
+    const headcount = sub.roles.reduce((s, [, k]) => s + k, 0);
+    const su = { id: sub.id, name: sub.name, parent: co.id, kind: "Subdivisión",
+      metrics: { vacantes: int(0, Math.ceil(headcount / 12)), ingresos: int(0, Math.ceil(headcount / 8)), retiros: int(0, Math.ceil(headcount / 10)) } };
+    units.push(su);
+    const lead = add({ title: sub.lead, unit: sub.id, boss: gm.id });
+    su.leader = lead.id;
+    const sups = Array.from({ length: Math.max(1, Math.round(headcount / 18)) }, () => add({ title: sub.sup, unit: sub.id, boss: lead.id }));
+    for (const [role, k] of sub.roles)
+      for (let i = 0; i < k; i++) {
+        const p = add({ title: role, unit: sub.id, boss: role.startsWith("Analista") || role === "Asistente" ? lead.id : pick(sups).id });
+        if (!me && role === "Analista de rutas") me = p;
+      }
+  }
+}
+for (const u of [...units].reverse()) {
+  const kids = units.filter((k) => k.parent === u.id);
+  if (kids.length) u.metrics = Object.fromEntries(["vacantes", "ingresos", "retiros"].map((k) => [k, kids.reduce((s, c) => s + (c.metrics?.[k] ?? 0), 0)]));
+}
+
+// ================================================================ índice y utilidades
+const ME = me.id;
+const byId = new Map(people.map((p) => [p.id, p]));
+const unitById = new Map(units.map((u) => [u.id, u]));
+const reports = new Map();
+for (const p of people) if (p.boss) (reports.get(p.boss) ?? reports.set(p.boss, []).get(p.boss)).push(p);
+const kidsOf = (id) => units.filter((u) => u.parent === id);
+const membersOf = (id) => people.filter((p) => p.unit === id);
+const countMemo = new Map();
+const countOf = (id) => {
+  if (!countMemo.has(id)) countMemo.set(id, membersOf(id).length + kidsOf(id).reduce((s, k) => s + countOf(k.id), 0));
+  return countMemo.get(id);
+};
+const chainOf = (id) => { const out = []; let b = byId.get(id)?.boss; while (b && byId.has(b)) { out.push(byId.get(b)); b = byId.get(b).boss; } return out; };
+const unitPath = (id) => { const out = []; let u = unitById.get(id); while (u) { out.unshift(u); u = u.parent ? unitById.get(u.parent) : undefined; } return out; };
+const MY_PATH = new Set(unitPath(byId.get(ME).unit).map((u) => u.id));
+const fmt = new Intl.NumberFormat("es-CO");
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const initials = (s) => { const w = s.trim().split(/\s+/); return (w[0][0] + (w[1]?.[0] ?? "")).toUpperCase(); };
+const hueOf = (key) => {
+  let x = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) x = Math.imul(x ^ key.charCodeAt(i), 16777619);
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b);
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35);
+  return ((x ^ (x >>> 16)) >>> 0) % 360;
+};
+const avatar = (p, size = "") => `<span class="av${size ? ` av--${size}` : ""}" style="--h:${hueOf(p.id)}" aria-hidden="true">${esc(initials(p.name))}</span>`;
+const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Tono de cada rama (empresa), por tamaño, como en el componente.
+const BRANCH = [255, 160, 40, 320, 200, 95, 10, 285, 130, 65];
+const companies = kidsOf("grupo").sort((a, b) => countOf(b.id) - countOf(a.id));
+const branchHue = (id) => { const co = unitPath(id)[1]; return co ? BRANCH[companies.indexOf(co) % BRANCH.length] : 262; };
+
+// La cifra elegida: el valor de la unidad y su intensidad entre sus hermanas.
+const METRIC = {
+  vacantes: { label: "Vacantes", tone: "warning", val: (u) => u.metrics?.vacantes ?? 0, txt: (v) => fmt.format(v) },
+  ingresos: { label: "Ingresos", tone: "", val: (u) => u.metrics?.ingresos ?? 0, txt: (v) => fmt.format(v) },
+  retiros: { label: "Rotación", tone: "danger", val: (u) => (u.metrics?.retiros ?? 0) / Math.max(1, countOf(u.id)), txt: (v) => `${(v * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 })} %` },
+};
+let metric = "";
+const levelOf = (u) => {
+  const m = METRIC[metric];
+  const sibs = u.parent ? kidsOf(u.parent) : [u];
+  const max = Math.max(...sibs.map(m.val), 1e-9);
+  return m.val(u) / max;
+};
+const metricChip = (u) => {
+  if (!metric) return "";
+  const m = METRIC[metric];
+  return `<span class="chip" data-tone="${m.tone}" style="--i:${levelOf(u).toFixed(2)}">${m.label}: ${m.txt(m.val(u))}</span>`;
+};
+
+const toastEl = document.getElementById("toast");
+let toastTimer = 0;
+const toast = (msg) => {
+  toastEl.textContent = msg;
+  toastEl.classList.add("is-on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("is-on"), 2600);
+};
+const openInMe = (id) => toast(`En el componente, esto abre «Yo» centrado en ${byId.get(id).name}.`);
+
+// ================================================================ A · árbol de unidades
+const A = { open: null, collapsed: new Set(), full: new Set() };
+const aRoot = document.getElementById("a-root");
+
+/** Unas pocas caras de la unidad (o de sus subunidades), sin el líder. */
+function someFaces(id, skip) {
+  const out = [];
+  const queue = [id];
+  for (let i = 0; i < queue.length && out.length < 4; i++) {
+    for (const p of membersOf(queue[i])) if (p.id !== skip && out.length < 4) out.push(p);
+    for (const k of kidsOf(queue[i])) queue.push(k.id);
+  }
+  return out.length ? `<span class="faces">${out.map((p) => avatar(p, "xs")).join("")}</span>` : "";
+}
+
+function unitNode(u, { tag = "button", vt = "" } = {}) {
+  const lead = byId.get(u.leader);
+  const onPath = MY_PATH.has(u.id);
+  const isCo = u.kind === "Empresa";
+  const subs = kidsOf(u.id).length;
+  const attrs = tag === "button" ? ` type="button" data-unit="${u.id}"${isCo ? ` aria-expanded="${!A.collapsed.has(u.id)}"` : ""}` : "";
+  return `<${tag} class="a-node${u.id === "grupo" ? " is-root" : ""}${onPath ? " on-path" : ""}"${attrs} style="--h:${branchHue(u.id)}${vt ? `;view-transition-name:${vt}` : ""}">
+    <span class="a-kind">${esc(u.kind)}</span>
+    ${onPath ? `<span class="you">Tú</span>` : ""}
+    <span class="a-name">${esc(u.name)}</span>
+    ${lead ? `<span class="a-lead">${avatar(lead)}<span><b>${esc(lead.name)}</b><small>${esc(lead.title)}</small></span></span>` : ""}
+    <span class="a-foot"><span class="a-count"><b>${fmt.format(countOf(u.id))}</b> personas</span>${someFaces(u.id, u.leader)}</span>
+    ${metricChip(u) ? `<span>${metricChip(u)}</span>` : ""}
+    ${isCo && tag === "button" ? `<span class="a-toggle">${A.collapsed.has(u.id) ? `Ver ${subs} subdivisiones` : "Plegar"}</span>` : ""}
+  </${tag}>`;
+}
+
+function renderStructure() {
+  const root = unitById.get("grupo");
+  const cos = kidsOf("grupo");
+  const w = aRoot.clientWidth || 1200;
+  const cols = Math.max(1, Math.min(cos.length, Math.floor((w + 20) / 270)));
+  const lis = cos.map((co, i) => {
+    const top = i < cols ? ` is-top${i === cols - 1 ? " is-end" : ""}` : "";
+    const on = MY_PATH.has(co.id) ? " on" : "";
+    const subs = A.collapsed.has(co.id) ? "" : `<ul class="a-stack">${kidsOf(co.id).sort((a, b) => countOf(b.id) - countOf(a.id))
+      .map((s) => `<li class="${MY_PATH.has(s.id) ? "on" : ""}">${unitNode(s)}</li>`).join("")}</ul>`;
+    return `<li class="${(top + on).trim()}">${unitNode(co)}${subs}</li>`;
+  });
+  aRoot.innerHTML = `<div class="a-wrap">${unitNode(root, { tag: "div" })}<div class="a-trunk on"></div>
+    <ul class="a-row" style="--cols:${cols}">${lis.join("")}</ul></div>`;
+  document.getElementById("a-hint").hidden = false;
+}
+
+function personCard(p, cls = "") {
+  const team = reports.get(p.id)?.length ?? 0;
+  const isMe = p.id === ME;
+  return `<button type="button" class="a-person${cls}${isMe ? " is-me" : ""}" data-person="${p.id}">${avatar(p, cls.includes("is-lead") ? "lg" : "")}
+    <span><b>${esc(p.name)}</b><small>${esc(p.title)}</small>${team ? `<small>${team} a cargo</small>` : ""}</span>${isMe ? `<span class="you">Tú</span>` : ""}</button>`;
+}
+
+function stack(list, key) {
+  const MAX = 8;
+  const sorted = [...list].sort((a, b) => (b.id === ME) - (a.id === ME) || a.name.localeCompare(b.name, "es"));
+  const shown = A.full.has(key) ? sorted : sorted.slice(0, MAX);
+  const rows = shown.map((p) => `<li class="${p.id === ME ? "on" : ""}"><button type="button" class="a-mini${p.id === ME ? " is-me" : ""}" data-person="${p.id}">${avatar(p, "sm")}<span><b>${esc(p.name)}${p.id === ME ? " · Tú" : ""}</b><small>${esc(p.title)}</small></span></button></li>`);
+  const more = sorted.length > shown.length ? `<button type="button" class="a-more" data-more="${key}">+${sorted.length - shown.length} más</button>` : "";
+  return `<ul class="a-stack">${rows.join("")}</ul>${more}`;
+}
+
+function renderUnit() {
+  const u = unitById.get(A.open);
+  const lead = byId.get(u.leader);
+  const path = unitPath(u.id);
+  const crumbs = path.map((x, i) => i === path.length - 1 ? `<li><span aria-current="page">${esc(x.name)}</span></li>` : `<li><button type="button" data-back="${x.id}">${esc(x.name)}</button></li>`).join("");
+  const kids = reports.get(lead.id) ?? [];
+  const inner = kids.filter((k) => reports.get(k.id)?.length);
+  const leaves = kids.filter((k) => !reports.get(k.id)?.length);
+  const cols = [...inner.map((s) => ({ head: personCard(s), body: stack(reports.get(s.id), s.id), on: [s, ...reports.get(s.id)].some((q) => q.id === ME) })),
+    ...(leaves.length ? [{ head: `<div class="a-colhead">Directos con ${esc(lead.name.split(" ")[0])} · ${leaves.length}</div>`, body: stack(leaves, "leaves"), on: leaves.some((q) => q.id === ME) }] : [])];
+  const w = aRoot.clientWidth || 1200;
+  const n = Math.max(1, Math.min(cols.length, Math.floor((w + 20) / 250)));
+  const lis = cols.map((c, i) => `<li class="${i < n ? `is-top${i === n - 1 ? " is-end" : ""}` : ""}${c.on ? " on" : ""}">${c.head}${c.body}</li>`).join("");
+  aRoot.innerHTML = `<nav aria-label="Organización"><ol class="a-crumbs">${crumbs}</ol></nav>
+    <div class="a-unithead">${unitNode(u, { tag: "div", vt: "a-focus" })}</div>
+    <div class="a-people"><div class="a-trunk"></div>${personCard(lead, " is-lead")}<div class="a-trunk"></div>
+      <h3 class="a-pill">Equipo de ${esc(lead.name.split(" ")[0])} · ${fmt.format(countOf(u.id) - 1)}</h3>
+      <ul class="a-row" style="--cols:${n}">${lis}</ul></div>`;
+  document.getElementById("a-hint").hidden = true;
+}
+
+const renderA = () => (A.open ? renderUnit() : renderStructure());
+
+/** Cambia con View Transitions: la tarjeta pulsada se vuelve la cabecera (y al revés). */
+function morph(from, update, after) {
+  if (!document.startViewTransition || reduced()) { update(); after?.(); return; }
+  if (from) from.style.viewTransitionName = "a-focus";
+  const t = document.startViewTransition(() => { if (from) from.style.viewTransitionName = ""; update(); after?.(); });
+  t.finished.catch(() => {}).finally(() => document.querySelectorAll(".a-node[data-unit]").forEach((el) => (el.style.viewTransitionName = "")));
+  t.ready.catch(() => {});
+}
+
+aRoot.addEventListener("click", (e) => {
+  const t = e.target;
+  const node = t.closest("button[data-unit]");
+  if (node) {
+    const u = unitById.get(node.dataset.unit);
+    if (u.kind === "Empresa") {
+      A.collapsed.has(u.id) ? A.collapsed.delete(u.id) : A.collapsed.add(u.id);
+      renderA();
+      aRoot.querySelector(`[data-unit="${u.id}"]`)?.focus();
+    } else {
+      morph(node, () => { A.open = u.id; renderA(); scrollTo({ top: 0 }); });
+    }
+    return;
+  }
+  const back = t.closest("[data-back]");
+  if (back) {
+    const was = A.open;
+    morph(null, () => { A.open = null; renderA(); }, () => {
+      const el = aRoot.querySelector(`[data-unit="${was}"]`);
+      if (el) { el.style.viewTransitionName = "a-focus"; el.focus({ preventScroll: true }); el.scrollIntoView({ block: "center" }); }
+    });
+    return;
+  }
+  const more = t.closest("[data-more]");
+  if (more) { A.full.add(more.dataset.more); renderA(); return; }
+  const person = t.closest("[data-person]");
+  if (person) openInMe(person.dataset.person);
+});
+
+// ================================================================ C · lienzo
+const view = document.getElementById("c-view");
+const world = document.getElementById("c-world");
+const CW = 188, CH = 44, LW = 220, LH = 58, GX = 30, GY = 70, SG = 6, IND = 24, PAD_SUB = 22, PAD_CO = 44;
+const LEADERS = new Set(units.map((u) => u.leader));
+const pos = new Map();
+const edges = [];
+const dims = (p) => (LEADERS.has(p.id) ? [LW, LH] : [CW, CH]);
+const kidsP = (p) => reports.get(p.id) ?? [];
+// Entre empresas y entre subdivisiones hace falta más aire: ahí van los recuadros con su nombre.
+const isUnitLeader = (p, kind) => units.some((u) => u.leader === p.id && u.kind === kind);
+const gapX = (p) => (isUnitLeader(p, "Grupo") ? 2 * PAD_CO + 40 : isUnitLeader(p, "Empresa") ? 2 * PAD_SUB + 24 : GX);
+const gapY = (p) => (isUnitLeader(p, "Grupo") ? GY + PAD_CO + 46 + 10 : isUnitLeader(p, "Empresa") ? GY + PAD_SUB + 34 : GY);
+const hasKids = (p) => kidsP(p).length > 0;
+
+// Tamaño de cada subárbol: arriba en árbol; quien solo tiene gente sin equipo la apila debajo.
+const sz = new Map();
+function measure(p) {
+  const [W, H] = dims(p);
+  const kids = kidsP(p);
+  let s;
+  if (!kids.length) s = { w: W, h: H };
+  else {
+    const inner = kids.filter(hasKids);
+    const leaves = kids.filter((k) => !hasKids(k));
+    if (!inner.length) s = { w: Math.max(W, IND + CW), h: H + 16 + leaves.length * (CH + SG), stack: leaves };
+    else {
+      const cols = inner.map((k) => ({ p: k, ...measure(k) }));
+      if (leaves.length) cols.unshift({ leaves, w: IND + CW, h: 16 + leaves.length * (CH + SG) });
+      const wsum = cols.reduce((a, c) => a + c.w, 0) + gapX(p) * (cols.length - 1);
+      s = { w: Math.max(W, wsum), h: H + gapY(p) + Math.max(...cols.map((c) => c.h)), cols, wsum };
+    }
+  }
+  sz.set(p.id, s);
+  return s;
+}
+function placeStack(list, x, y, parentId) {
+  // Un riel a la izquierda, en tramos (cada tramo sirve a quienes están de ahí para abajo).
+  const railX = x + 11;
+  let yy = y;
+  let prev = y;
+  list.forEach((q, i) => {
+    pos.set(q.id, { x: x + IND, y: yy, w: CW, h: CH });
+    const mid = yy + CH / 2;
+    edges.push({ d: `M${railX} ${prev}V${mid}`, rail: list.map((r) => r.id), i });
+    edges.push({ d: `M${railX} ${mid}H${x + IND}`, child: q.id });
+    prev = mid;
+    yy += CH + SG;
+  });
+}
+function place(p, x, y) {
+  const s = sz.get(p.id);
+  const [W, H] = dims(p);
+  if (s.stack) {
+    pos.set(p.id, { x, y, w: W, h: H });
+    placeStack(s.stack, x, y + H + 16, p.id);
+    edges.push({ d: `M${x + 11} ${y + H}V${y + H + 16}`, rail: s.stack.map((r) => r.id), i: 0 });
+    return;
+  }
+  const cx = x + s.w / 2;
+  pos.set(p.id, { x: cx - W / 2, y, w: W, h: H });
+  if (!s.cols) return;
+  let xx = x + (s.w - s.wsum) / 2;
+  const midY = y + H + Math.min(GY, gapY(p)) / 2;
+  const top = y + H + gapY(p);
+  for (const c of s.cols) {
+    if (c.leaves) {
+      edges.push({ d: `M${cx} ${y + H}V${midY}H${xx + 11}V${top}`, rail: c.leaves.map((r) => r.id), i: 0 });
+      placeStack(c.leaves, xx, top + 16, p.id);
+      edges.push({ d: `M${xx + 11} ${top}V${top + 16}`, rail: c.leaves.map((r) => r.id), i: 0 });
+    } else {
+      const cs = sz.get(c.p.id);
+      const [cw] = dims(c.p);
+      const landX = cs.stack ? xx + cw / 2 : xx + c.w / 2;
+      edges.push({ d: `M${cx} ${y + H}V${midY}H${landX}V${top}`, child: c.p.id });
+      place(c.p, xx, top);
+    }
+    xx += c.w + gapX(p);
+  }
+}
+const MARGIN = 80;
+measure(ceo);
+place(ceo, MARGIN, MARGIN + 30);
+
+// El recuadro de cada unidad: el subárbol de su líder.
+function bbox(p) {
+  const r = pos.get(p.id);
+  let b = { x1: r.x, y1: r.y, x2: r.x + r.w, y2: r.y + r.h };
+  for (const k of kidsP(p)) { const c = bbox(k); b = { x1: Math.min(b.x1, c.x1), y1: Math.min(b.y1, c.y1), x2: Math.max(b.x2, c.x2), y2: Math.max(b.y2, c.y2) }; }
+  return b;
+}
+const regions = units.filter((u) => u.id !== "grupo").map((u) => {
+  const b = bbox(byId.get(u.leader));
+  const pad = u.kind === "Empresa" ? PAD_CO : PAD_SUB;
+  const top = u.kind === "Empresa" ? 46 : 34;
+  return { u, x: b.x1 - pad, y: b.y1 - pad - top, w: b.x2 - b.x1 + pad * 2, h: b.y2 - b.y1 + pad * 2 + top };
+});
+let WW = 0, WH = 0;
+for (const r of pos.values()) { WW = Math.max(WW, r.x + r.w); WH = Math.max(WH, r.y + r.h); }
+for (const r of regions) { WW = Math.max(WW, r.x + r.w); WH = Math.max(WH, r.y + r.h); }
+WW += MARGIN; WH += MARGIN;
+
+function buildWorld() {
+  world.style.width = `${WW}px`;
+  world.style.height = `${WH}px`;
+  const regs = regions.sort((a, b) => (a.u.kind === "Empresa" ? 0 : 1) - (b.u.kind === "Empresa" ? 0 : 1)).map((r) => {
+    const m = metric && r.u.kind !== "Empresa";
+    const style = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--rw:${Math.round(r.w)}px;--h:${branchHue(r.u.id)}${m ? `;--i:${levelOf(r.u).toFixed(2)};--metric-tone:${METRIC[metric].tone === "warning" ? "var(--nx-warning)" : METRIC[metric].tone === "danger" ? "var(--nx-danger)" : "var(--nx-primary)"}` : ""}`;
+    return `<div class="c-region${r.u.kind === "Empresa" ? " is-co" : ""}${m ? " is-metric" : ""}" data-region="${r.u.id}" style="${style}">
+      <div class="c-label"><span>${esc(r.u.name)}</span><small>${fmt.format(countOf(r.u.id))} personas</small>${metricChip(r.u)}</div></div>`;
+  }).join("");
+  const paths = edges.map((e, i) => `<path data-e="${i}" d="${e.d}"/>`).join("");
+  const cards = people.map((p) => {
+    const r = pos.get(p.id);
+    if (!r) return "";
+    const lead = LEADERS.has(p.id);
+    return `<button type="button" class="c-card${lead ? " is-lead" : ""}${p.id === ME ? " is-me" : ""}" data-id="${p.id}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--bh:${branchHue(p.unit)}" aria-label="${esc(`${p.name}, ${p.title}`)}">
+      ${avatar(p, lead ? "" : "sm")}<span><b>${esc(p.name)}</b><small>${esc(p.title)}</small></span>${p.id === ME ? `<span class="c-pin">Tú</span>` : ""}</button>`;
+  }).join("");
+  world.innerHTML = `${regs}<svg class="c-edges" width="${WW}" height="${WH}" viewBox="0 0 ${WW} ${WH}" aria-hidden="true">${paths}</svg>${cards}`;
+  highlight();
+  buildMini();
+}
+
+// La línea de mando resaltada: la de la persona elegida o, si no hay, la tuya.
+let selected = null;
+function highlight() {
+  const who = selected ?? ME;
+  const line = new Set([who, ...chainOf(who).map((p) => p.id)]);
+  const els = world.querySelectorAll(".c-edges path");
+  edges.forEach((e, i) => {
+    const on = e.child ? line.has(e.child) : e.rail.slice(e.i).some((id) => line.has(id));
+    els[i]?.classList.toggle("on", on);
+  });
+  world.querySelectorAll(".c-card.is-sel").forEach((el) => el.classList.remove("is-sel"));
+  if (selected) world.querySelector(`[data-id="${selected}"]`)?.classList.add("is-sel");
+}
+
+// ---------------------------------------------------------------- cámara
+let s = 1, tx = 0, ty = 0, minS = 0.1;
+const vw = () => view.clientWidth || 1100;
+const vh = () => view.clientHeight || 640;
+function apply(fly = false) {
+  world.classList.toggle("is-flying", fly && !reduced());
+  world.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+  world.style.setProperty("--s", s.toFixed(4));
+  view.dataset.z = s < 0.42 ? "far" : s < 0.85 ? "mid" : "near";
+  const g = 24 * s;
+  view.style.backgroundSize = `${g}px ${g}px`;
+  view.style.backgroundPosition = `${tx}px ${ty}px`;
+  paintViewport();
+}
+function fit(fly = false) {
+  s = Math.min(vw() / WW, vh() / WH) * 0.96;
+  minS = s * 0.7;
+  tx = (vw() - WW * s) / 2;
+  ty = (vh() - WH * s) / 2;
+  apply(fly);
+}
+function zoomAt(f, cx = vw() / 2, cy = vh() / 2, fly = false) {
+  const ns = Math.min(2.4, Math.max(minS, s * f));
+  tx = cx - ((cx - tx) * ns) / s;
+  ty = cy - ((cy - ty) * ns) / s;
+  s = ns;
+  apply(fly);
+}
+function flyTo(x, y, ns = Math.max(s, 1)) {
+  s = Math.min(2.4, Math.max(minS, ns));
+  tx = vw() / 2 - x * s;
+  ty = vh() / 2 - y * s;
+  apply(true);
+}
+const flyToPerson = (id, ns = 1.1) => { const r = pos.get(id); flyTo(r.x + r.w / 2, r.y + r.h / 2, ns); };
+function flyToRegion(id) {
+  const r = regions.find((x) => x.u.id === id);
+  const ns = Math.min(vw() / r.w, vh() / r.h) * 0.9;
+  flyTo(r.x + r.w / 2, r.y + r.h / 2, ns);
+}
+world.addEventListener("transitionend", () => world.classList.remove("is-flying"));
+
+// Arrastrar, rueda y pellizco.
+const pointers = new Map();
+let drag = null, moved = 0, pinch = null;
+view.addEventListener("pointerdown", (e) => {
+  if (e.target.closest(".c-overlay")) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  view.setPointerCapture?.(e.pointerId);
+  world.classList.remove("is-flying");
+  if (pointers.size === 1) { drag = { x: e.clientX, y: e.clientY, tx, ty }; moved = 0; }
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s };
+    drag = null;
+  }
+});
+view.addEventListener("pointermove", (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const rect = view.getBoundingClientRect();
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    zoomAt((pinch.s * d) / pinch.d / s, (a.x + b.x) / 2 - rect.left, (a.y + b.y) / 2 - rect.top);
+    moved = 99;
+    return;
+  }
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  moved = Math.max(moved, Math.hypot(dx, dy));
+  if (moved > 4) view.classList.add("is-dragging");
+  tx = drag.tx + dx;
+  ty = drag.ty + dy;
+  apply();
+});
+const endPointer = (e) => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = null;
+  if (!pointers.size) { drag = null; view.classList.remove("is-dragging"); }
+};
+view.addEventListener("pointerup", endPointer);
+view.addEventListener("pointercancel", endPointer);
+view.addEventListener("wheel", (e) => {
+  if (e.target.closest(".c-results, .c-detail")) return;
+  e.preventDefault();
+  const rect = view.getBoundingClientRect();
+  zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0018)), e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
+view.addEventListener("dblclick", (e) => {
+  if (e.target.closest(".c-overlay, .c-card")) return;
+  const rect = view.getBoundingClientRect();
+  zoomAt(1.8, e.clientX - rect.left, e.clientY - rect.top, true);
+});
+view.addEventListener("keydown", (e) => {
+  if (e.target !== view) return;
+  const step = 80;
+  const k = e.key;
+  if (k === "ArrowLeft") tx += step; else if (k === "ArrowRight") tx -= step;
+  else if (k === "ArrowUp") ty += step; else if (k === "ArrowDown") ty -= step;
+  else if (k === "+" || k === "=") return e.preventDefault(), zoomAt(1.3, undefined, undefined, true);
+  else if (k === "-") return e.preventDefault(), zoomAt(1 / 1.3, undefined, undefined, true);
+  else if (k === "0") return e.preventDefault(), fit(true);
+  else return;
+  e.preventDefault();
+  apply();
+});
+
+// Clic en una tarjeta (si no fue un arrastre): la ficha y su línea de mando.
+view.addEventListener("click", (e) => {
+  const tool = e.target.closest("[data-z]");
+  if (tool && tool.tagName === "BUTTON") {
+    const z = tool.dataset.z;
+    if (z === "in") zoomAt(1.4, undefined, undefined, true);
+    else if (z === "out") zoomAt(1 / 1.4, undefined, undefined, true);
+    else if (z === "fit") fit(true);
+    else if (z === "me") { select(ME); flyToPerson(ME); }
+    return;
+  }
+  // Lo que se repintó en el clic (la ficha) ya no está en el documento: no cuenta como clic al lienzo.
+  if (!e.target.isConnected || e.target.closest(".c-overlay")) return;
+  if (moved > 4) { moved = 0; return; }
+  const card = e.target.closest(".c-card");
+  if (card) { select(card.dataset.id); if (s < 0.85) flyToPerson(card.dataset.id, 1); return; }
+  if (selected) select(null);
+});
+
+const detail = document.getElementById("c-detail");
+function select(id) {
+  selected = id;
+  highlight();
+  if (!id) { detail.hidden = true; return; }
+  const p = byId.get(id);
+  const boss = p.boss ? byId.get(p.boss) : null;
+  const team = reports.get(id)?.length ?? 0;
+  const path = unitPath(p.unit).slice(1).map((u) => u.name).join(" · ") || unitById.get(p.unit).name;
+  detail.innerHTML = `<button type="button" class="c-close" data-close aria-label="Cerrar">×</button>
+    <header>${avatar(p, "lg")}<span><b>${esc(p.name)}${id === ME ? ` <span class="you">Tú</span>` : ""}</b><small>${esc(p.title)}</small></span></header>
+    <dl><dt>Unidad</dt><dd>${esc(path)}</dd>
+      <dt>Jefe</dt><dd>${boss ? `<button type="button" class="link" data-go="${boss.id}">${esc(boss.name)}</button>` : "—"}</dd>
+      ${team ? `<dt>Equipo</dt><dd>${team} a cargo</dd>` : ""}
+      <dt>Niveles</dt><dd>${chainOf(id).length} hasta la presidencia</dd></dl>
+    <button type="button" class="primary" data-open="${id}">Abrir en «Yo»</button>`;
+  detail.hidden = false;
+}
+detail.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t.closest("[data-close]")) return select(null);
+  const go = t.closest("[data-go]");
+  if (go) { select(go.dataset.go); flyToPerson(go.dataset.go, Math.max(s, 0.9)); return; }
+  const open = t.closest("[data-open]");
+  if (open) openInMe(open.dataset.open);
+});
+
+// ---------------------------------------------------------------- minimapa
+const mini = document.getElementById("c-mini");
+function buildMini() {
+  mini.innerHTML = `<svg viewBox="0 0 ${WW} ${WH}" preserveAspectRatio="xMidYMid meet">${regions.map((r) =>
+    `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="20" fill="oklch(0.64 0.14 ${branchHue(r.u.id)} / ${r.u.kind === "Empresa" ? 0.12 : 0.35})"/>`).join("")}
+    <rect class="vp" id="c-vp"/></svg>`;
+  paintViewport();
+}
+function paintViewport() {
+  const vp = document.getElementById("c-vp");
+  if (!vp) return;
+  vp.setAttribute("x", String(-tx / s));
+  vp.setAttribute("y", String(-ty / s));
+  vp.setAttribute("width", String(vw() / s));
+  vp.setAttribute("height", String(vh() / s));
+}
+function miniTo(e, fly) {
+  const rect = mini.getBoundingClientRect();
+  const k = Math.min(rect.width / WW, rect.height / WH) || 1;
+  const ox = (rect.width - WW * k) / 2, oy = (rect.height - WH * k) / 2;
+  const x = (e.clientX - rect.left - ox) / k, y = (e.clientY - rect.top - oy) / k;
+  tx = vw() / 2 - x * s;
+  ty = vh() / 2 - y * s;
+  apply(fly);
+}
+let miniDrag = false;
+mini.addEventListener("pointerdown", (e) => { miniDrag = true; mini.setPointerCapture?.(e.pointerId); miniTo(e, true); e.stopPropagation(); });
+mini.addEventListener("pointermove", (e) => miniDrag && miniTo(e, false));
+mini.addEventListener("pointerup", () => (miniDrag = false));
+
+// ---------------------------------------------------------------- búsqueda
+const q = document.getElementById("c-q");
+const results = document.getElementById("c-results");
+let found = [], active = -1;
+function paintResults() {
+  results.innerHTML = found.length ? found.map((r, i) => `<li role="option" data-r="${i}" aria-selected="${i === active}"><span>${esc(r.label)}</span><small>${esc(r.meta)}</small></li>`).join("") : `<li role="presentation"><small>Nada coincide.</small></li>`;
+  results.hidden = false;
+}
+q.addEventListener("input", () => {
+  const t = norm(q.value.trim());
+  if (!t) { results.hidden = true; found = []; return; }
+  found = [
+    ...people.filter((p) => norm(p.name).includes(t)).slice(0, 6).map((p) => ({ label: p.name, meta: `${p.title} · ${unitById.get(p.unit).name}`, go: () => { select(p.id); flyToPerson(p.id); } })),
+    ...units.filter((u) => u.id !== "grupo" && norm(u.name).includes(t)).slice(0, 3).map((u) => ({ label: u.name, meta: `${u.kind} · ${fmt.format(countOf(u.id))} personas`, go: () => flyToRegion(u.id) })),
+  ];
+  active = found.length ? 0 : -1;
+  paintResults();
+});
+const choose = (i) => { const r = found[i]; if (!r) return; q.value = ""; results.hidden = true; found = []; r.go(); };
+q.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { if (!found.length) return; e.preventDefault(); active = (active + (e.key === "ArrowDown" ? 1 : -1) + found.length) % found.length; paintResults(); }
+  else if (e.key === "Enter") { e.preventDefault(); choose(active); }
+  else if (e.key === "Escape") { results.hidden = true; }
+});
+results.addEventListener("click", (e) => { const li = e.target.closest("[data-r]"); if (li) choose(Number(li.dataset.r)); });
+q.addEventListener("blur", () => setTimeout(() => (results.hidden = true), 150));
+
+// ================================================================ barra
+let mode = "a";
+let cReady = false;
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  document.getElementById("view-a").hidden = m !== "a";
+  document.getElementById("view-c").hidden = m !== "c";
+  if (m === "c") {
+    if (!cReady) { buildWorld(); cReady = true; }
+    fit();
+  }
+  history.replaceState(null, "", `#${m}`);
+}
+document.querySelector(".bar").addEventListener("click", (e) => {
+  const mb = e.target.closest("[data-mode]");
+  if (mb) return setMode(mb.dataset.mode);
+  const tb = e.target.closest("[data-theme-set]");
+  if (tb) {
+    const v = tb.dataset.themeSet;
+    if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme;
+    document.querySelectorAll("[data-theme-set]").forEach((b) => b.setAttribute("aria-pressed", String(b === tb)));
+  }
+});
+document.getElementById("metric").addEventListener("change", (e) => {
+  metric = e.target.value;
+  renderA();
+  if (cReady) { const keep = [s, tx, ty]; buildWorld(); [s, tx, ty] = keep; apply(); }
+});
+let lastW = 0;
+new ResizeObserver(() => {
+  const w = aRoot.clientWidth;
+  if (mode === "a" && Math.abs(w - lastW) > 40) { lastW = w; renderA(); }
+}).observe(document.body);
+
+renderA();
+setMode(location.hash === "#c" ? "c" : "a");
+</script>
+</body>
+</html>

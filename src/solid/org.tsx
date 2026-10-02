@@ -18,7 +18,7 @@ export interface OrgProps extends JSX.HTMLAttributes<NxOrg> {
   view?: OrgView;
   /** «Para… / Acudes a…» de quien mira. */
   contacts?: OrgContact[];
-  /** Las cifras que pueden colorear el mapa. */
+  /** Las cifras que pueden verse en cada unidad. */
   metrics?: OrgMetric[];
   /** La cifra elegida (su `key`). */
   metric?: string;

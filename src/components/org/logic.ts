@@ -1,8 +1,6 @@
-/** Lógica pura de `<nx-org>`: índices del árbol, cadenas, caminos y el reparto del mapa. Sin DOM. */
+/** Lógica pura de `<nx-org>`: índices del árbol, cadenas, caminos y cifras. Sin DOM. */
 import { foldText } from "../../core/text";
 import type { OrgMetric, OrgPerson, OrgUnit } from "./types";
-
-export { squarify, type Rect } from "./squarify";
 
 /** Un árbol con ciclo (A jefe de B y B jefe de A) no puede colgar el componente: tope de niveles. */
 const MAX_DEPTH = 64;
@@ -155,23 +153,6 @@ export function directMembers(ix: OrgIndex, u: OrgUnit): number {
   return ix.members.get(u.id)?.length ?? 0;
 }
 
-export interface Placed<T> {
-  item: T;
-  value: number;
-}
-
-/**
- * Qué bloques entran al mapa: los `max - 1` más grandes y, si sobran, un bloque «Otras» con el
- * resto (su valor es la suma, con un mínimo para que se pueda leer). Ordenados de mayor a menor.
- */
-export function topWithRest<T>(items: readonly T[], valueOf: (t: T) => number, max: number): { shown: Placed<T>[]; rest: T[]; restValue: number } {
-  const all = items.map((item) => ({ item, value: Math.max(0, valueOf(item)) })).sort((a, b) => b.value - a.value);
-  if (all.length <= max) return { shown: all, rest: [], restValue: 0 };
-  const shown = all.slice(0, max - 1);
-  const restItems = all.slice(max - 1);
-  return { shown, rest: restItems.map((r) => r.item), restValue: restItems.reduce((s, r) => s + r.value, 0) };
-}
-
 /**
  * El camino entre `from` y `to` por la línea de mando: el jefe común más cercano y cuántos niveles
  * sube cada uno hasta él. `null` si no se conocen sus cadenas o no comparten jefe.
@@ -188,16 +169,6 @@ export function commonBoss(ix: OrgIndex, from: string, to: string): { boss: OrgP
   return null;
 }
 
-/** La unidad del foco que contiene a `unitId` (para el «Tú» del mapa): el hijo de `focus` en su
- *  camino, o `null` si no pasa por ahí. */
-export function childOnPath(ix: OrgIndex, focus: string | null, unitId: string | null | undefined): string | null {
-  const path = unitPath(ix, unitId);
-  if (!path.length) return null;
-  if (!focus) return path[0].id;
-  const i = path.findIndex((u) => u.id === focus);
-  return i >= 0 && i + 1 < path.length ? path[i + 1].id : null;
-}
-
 /** Si la persona coincide con lo buscado: nombre, cargo y correo, sin tildes; todas las palabras. */
 export function matchPerson(p: OrgPerson, q: string): boolean {
   const words = foldText(q).split(/\s+/).filter(Boolean);
@@ -206,7 +177,7 @@ export function matchPerson(p: OrgPerson, q: string): boolean {
   return words.every((w) => hay.includes(w));
 }
 
-/** La intensidad (0–1) de una cifra entre las unidades que se ven; con `per: "count"`, por persona. */
+/** La intensidad (0–1) de una cifra entre unidades hermanas; con `per: "count"`, por persona. */
 export function metricLevels(ix: OrgIndex, units: readonly OrgUnit[], metric: OrgMetric | undefined): Map<string, number> {
   const out = new Map<string, number>();
   if (!metric) return out;
@@ -222,25 +193,6 @@ export function metricLevels(ix: OrgIndex, units: readonly OrgUnit[], metric: Or
   const max = Math.max(0, ...raw.map((v) => v ?? 0));
   units.forEach((u, i) => out.set(u.id, max > 0 && raw[i] !== null ? Math.max(0, raw[i]!) / max : 0));
   return out;
-}
-
-export interface TitleGroup {
-  title: string;
-  people: OrgPerson[];
-}
-
-/** Las personas por cargo, el cargo más numeroso primero; dentro, por nombre. */
-export function groupByTitle(people: readonly OrgPerson[], noTitle: string): TitleGroup[] {
-  const by = new Map<string, OrgPerson[]>();
-  for (const p of people) {
-    const t = p.title?.trim() || noTitle;
-    const list = by.get(t);
-    if (list) list.push(p);
-    else by.set(t, [p]);
-  }
-  return [...by.entries()]
-    .map(([title, list]) => ({ title, people: list.sort(byName) }))
-    .sort((a, b) => b.people.length - a.people.length || a.title.localeCompare(b.title, "es"));
 }
 
 /** Hasta dos niveles de la unidad, del más amplio al más fino: «Agrovid · Finca La Esperanza». */

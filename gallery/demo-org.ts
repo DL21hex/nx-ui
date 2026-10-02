@@ -63,22 +63,27 @@ const add = (p: Omit<OrgPerson, "id" | "name">): OrgPerson => {
 };
 
 const ceo = add({ title: "Presidente", unit: "grupo" });
+units[0].leader = ceo.id;
 add({ title: "Asistente de presidencia", unit: "grupo", boss: ceo.id });
 let me: OrgPerson | undefined;
 for (const co of PLAN) {
-  units.push({ id: co.id, name: co.name, parent: "grupo", kind: "Empresa" });
+  const company: OrgUnit = { id: co.id, name: co.name, parent: "grupo", kind: "Empresa" };
+  units.push(company);
   const gm = add({ title: "Gerente general", unit: co.id, boss: ceo.id });
+  company.leader = gm.id;
   add({ title: "Analista de talento humano", unit: co.id, boss: gm.id });
   for (const sub of co.subs) {
     const headcount = sub.roles.reduce((s, [, k]) => s + k, 0);
-    units.push({
+    const unit: OrgUnit = {
       id: sub.id,
       name: sub.name,
       parent: co.id,
       kind: "Subdivisión",
       metrics: { vacantes: int(0, Math.ceil(headcount / 12)), ingresos: int(0, Math.ceil(headcount / 8)), retiros: int(0, Math.ceil(headcount / 10)) },
-    });
+    };
+    units.push(unit);
     const lead = add({ title: sub.lead, unit: sub.id, boss: gm.id });
+    unit.leader = lead.id;
     const sups = Array.from({ length: Math.max(1, Math.round(headcount / 18)) }, () => add({ title: sub.sup, unit: sub.id, boss: lead.id }));
     for (const [role, k] of sub.roles)
       for (let i = 0; i < k; i++) {

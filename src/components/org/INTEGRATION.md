@@ -1,11 +1,12 @@
 # `<nx-org>`: integración
 
 El organigrama con dos lentes: «Yo» (una persona en el centro, su cadena, su jefe, sus pares, su
-equipo y «Para… / Acudes a…») y «Organización» (bloques proporcionales a la gente con zoom: unidades
-→ cargos → personas). Datos en JSON (`units`, `people`, `me`) o por partes con `source`.
+equipo y «Para… / Acudes a…») y «Organización» (el árbol de unidades con su líder; al abrir una, su
+gente con las mismas ramas). Datos en JSON (`units` con `leader`, `people`, `me`) o por partes con
+`source`.
 
-Archivos: `org.ts`, `logic.ts` (índices, cadenas, jefe común, intensidad), `squarify.ts` (el
-reparto del mapa), `types.ts`, `org.css`, `index.ts`. Pruebas: `test/org.logic.test.ts` y
+Archivos: `org.ts`, `logic.ts` (índices, cadenas, jefe común, intensidad), `types.ts`, `org.css`,
+`index.ts`. Pruebas: `test/org.logic.test.ts` y
 `test/org.dom.test.ts`. Galería: página «Organigrama» (`gallery/demo-org.ts`).
 
 ## El protocolo de `source`

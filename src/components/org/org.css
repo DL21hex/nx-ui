@@ -2,11 +2,13 @@
  * <nx-org>. Variables propias:
  *   --nx-org-top (0px): dónde se pega la barra al desplazarse (bajo un encabezado fijo de la app)
  *
- * `[data-view]` en la raíz dice qué lente se ve. Los bloques del mapa llevan `--i` (0–1): la
- * intensidad del color, por la gente o por la cifra elegida.
+ * `[data-view]` en la raíz dice qué lente se ve. Las unidades llevan `--h`: el tono de su rama; la
+ * cifra elegida, `--i` (0–1): su intensidad entre las hermanas. Las iniciales llevan `--h` por
+ * persona: el mismo color en cada vista.
  */
 
 nx-org {
+  --line: var(--nx-border-strong);
   display: block;
   color: var(--nx-foreground);
   font: 14px/1.45 var(--nx-font-sans);
@@ -184,9 +186,64 @@ nx-org :focus-visible {
     font-weight: 600;
   }
 }
-.nx-org__crumb-title {
-  font-size: 12px;
-  color: var(--nx-text-tertiary);
+
+/* La cadena de mando en «Yo»: caras solapadas que se abren al pasar por encima o con el foco. */
+.nx-org__chainbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-block-end: 12px;
+}
+.nx-org__chain {
+  margin: 0;
+  > li + li {
+    margin-inline-start: -10px;
+    transition: margin var(--nx-motion-base);
+    &::before {
+      content: none;
+    }
+  }
+}
+.nx-org__face {
+  align-items: center;
+  gap: 0;
+  padding: 2px;
+  border-radius: 999px;
+  > .nx-org__mini {
+    inline-size: 28px;
+    block-size: 28px;
+    box-shadow: 0 0 0 2px var(--nx-canvas, var(--nx-background));
+  }
+}
+.nx-org__crumb-name {
+  .nx-org__face > & {
+    max-inline-size: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    transition:
+      max-inline-size var(--nx-motion-base),
+      opacity var(--nx-motion-base);
+  }
+  .nx-org__chain:is(:hover, :focus-within) & {
+    max-inline-size: 200px;
+    margin-inline: 6px 4px;
+    opacity: 1;
+  }
+}
+.nx-org__chain:is(:hover, :focus-within) > li + li {
+  margin-inline-start: 2px;
+}
+@media (hover: none) {
+  .nx-org__chain > li + li {
+    margin-inline-start: 2px;
+  }
+  .nx-org__face > .nx-org__crumb-name {
+    max-inline-size: 200px;
+    margin-inline: 6px 4px;
+    opacity: 1;
+  }
 }
 
 /* ---------------------------------------------------------------- comunes */
@@ -263,6 +320,11 @@ nx-org :focus-visible {
   place-items: center;
   font-weight: 600;
 }
+.nx-org__avatar--initials,
+.nx-org__mini--initials {
+  background: light-dark(oklch(0.93 0.045 var(--h, 250)), oklch(0.36 0.07 var(--h, 250)));
+  color: light-dark(oklch(0.42 0.11 var(--h, 250)), oklch(0.9 0.06 var(--h, 250)));
+}
 .nx-org__avatar {
   inline-size: 40px;
   block-size: 40px;
@@ -319,7 +381,22 @@ nx-org :focus-visible {
   font-size: 12px;
 }
 .nx-org__span {
+  display: flex;
+  align-items: center;
   font-variant-numeric: tabular-nums;
+}
+.nx-org__faces {
+  display: inline-flex;
+  margin-inline-end: 6px;
+  > * {
+    inline-size: 20px;
+    block-size: 20px;
+    font-size: 8.5px;
+    box-shadow: 0 0 0 2px var(--nx-card);
+  }
+  > * + * {
+    margin-inline-start: -6px;
+  }
 }
 .nx-org__cards {
   display: grid;
@@ -364,20 +441,64 @@ nx-org :focus-visible {
   gap: 0;
   max-inline-size: 920px;
   margin-inline: auto;
+  container: nx-org-me / inline-size;
 }
 .nx-org__path {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px 14px;
-  margin-block-end: 16px;
-  padding: 8px 14px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-block-end: 18px;
+  padding: 12px 16px;
   border-radius: var(--nx-radius-lg);
   background: var(--nx-primary-soft);
   color: var(--nx-foreground);
   font-size: 13.5px;
   text-align: center;
+  > p {
+    margin: 0;
+  }
+}
+/* El camino en caras: Tú —↑2— jefe común —↓1— la otra persona. */
+.nx-org__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.nx-org__node {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 3px;
+  border: 1px solid var(--nx-primary-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  font-size: 13px;
+  font-weight: 500;
+  &:is(button) {
+    cursor: pointer;
+  }
+  &:is(button):hover {
+    background: var(--nx-hover);
+  }
+}
+.nx-org__edge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--nx-primary-ink);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  &::before,
+  &::after {
+    content: "";
+    inline-size: 12px;
+    block-size: 2px;
+    border-radius: 1px;
+    background: var(--nx-primary-border);
+  }
 }
 .nx-org__level {
   position: relative;
@@ -388,14 +509,41 @@ nx-org :focus-visible {
   & + &::before {
     content: "";
     display: block;
-    inline-size: 1px;
+    inline-size: 2px;
     block-size: 22px;
-    background: var(--nx-border-strong);
+    background: var(--line);
   }
 }
-.nx-org__level--boss .nx-org__person,
-.nx-org__level--center > .nx-org__person {
+.nx-org__level--boss .nx-org__person {
   inline-size: min(100%, 380px);
+}
+
+/* El centro, con quienes comparten jefe a los lados. El eje baja hasta el equipo. */
+.nx-org__level--center {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px) minmax(0, 1fr);
+  align-items: start;
+  column-gap: 20px;
+  &::before {
+    grid-area: 1 / 1 / 2 / -1;
+    justify-self: center;
+  }
+}
+.nx-org__axis {
+  grid-area: 2 / 2;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  inline-size: 100%;
+  > .nx-org__person {
+    inline-size: 100%;
+  }
+  &.has-team::after {
+    content: "";
+    flex: 1 0 0;
+    inline-size: 2px;
+    background: var(--line);
+  }
 }
 .nx-org__noboss {
   padding: 8px 14px;
@@ -429,19 +577,152 @@ nx-org :focus-visible {
 .nx-org__open + .nx-org__tomap {
   margin-inline-start: 14px;
 }
-.nx-org__peerbox {
-  display: grid;
-  justify-items: center;
-  margin-block-start: 14px;
-}
 .nx-org__peers {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
   gap: 6px;
+  inline-size: min(100%, 210px);
   margin: 0;
   padding: 0;
   list-style: none;
+  > .nx-org__h {
+    margin: 0;
+  }
+  &.is-l {
+    grid-area: 2 / 1;
+    justify-self: end;
+  }
+  &.is-r {
+    grid-area: 2 / 3;
+    justify-self: start;
+    padding-block-start: 24px;
+  }
+}
+.nx-org__peer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 100%;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--nx-border-subtle);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-card);
+  color: var(--nx-muted-foreground);
+  text-align: start;
+  > .nx-org__mini {
+    inline-size: 28px;
+    block-size: 28px;
+    font-size: 11px;
+  }
+  &:is(button) {
+    cursor: pointer;
+  }
+  &:is(button):hover {
+    border-color: var(--nx-border-strong);
+    color: var(--nx-foreground);
+  }
+}
+.nx-org__peer-name,
+.nx-org__peer-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nx-org__peer-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.nx-org__peer-title {
+  font-size: 11.5px;
+  color: var(--nx-text-tertiary);
+}
+/* Angosto: el centro arriba y los compañeros debajo, en fila. */
+@container nx-org-me (max-width: 700px) {
+  .nx-org__level--center {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+  }
+  .nx-org__axis {
+    grid-area: 2 / 1;
+    &::after {
+      display: none;
+    }
+  }
+  .nx-org__peers {
+    &.is-l,
+    &.is-r {
+      grid-area: auto / 1;
+      justify-self: center;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      inline-size: 100%;
+      padding: 0;
+    }
+    &.is-l {
+      margin-block-start: 8px;
+    }
+    > .nx-org__h {
+      flex-basis: 100%;
+      text-align: center;
+    }
+    .nx-org__peer {
+      inline-size: auto;
+      max-inline-size: 220px;
+    }
+  }
+}
+
+/* El equipo directo: una píldora sobre el eje y ramas a la primera fila de tarjetas. */
+.nx-org__pill {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 2px 12px;
+  border: 1px solid var(--nx-border);
+  border-radius: 999px;
+  background: var(--nx-card);
+  &::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: calc(50% - 1px);
+    inline-size: 2px;
+    block-size: 17px;
+    background: var(--line);
+  }
+}
+.nx-org__tree {
+  --g: 16px;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--g);
+  justify-self: center;
+  inline-size: min(100%, calc(var(--cols) * 280px));
+  > .is-top {
+    position: relative;
+    padding-block-start: 18px;
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      inset-block-start: 0;
+      background: var(--line);
+    }
+    /* La barra horizontal: de la mitad de la primera a la mitad de la última. */
+    &::before {
+      inset-inline: calc(var(--g) / -2);
+      block-size: 2px;
+    }
+    &:first-child::before {
+      inset-inline-start: 50%;
+    }
+    &.is-end::before {
+      inset-inline-end: 50%;
+    }
+    &::after {
+      inset-inline-start: calc(50% - 1px);
+      inline-size: 2px;
+      block-size: 18px;
+    }
+  }
 }
 .nx-org__level--team,
 .nx-org__level--contacts {
@@ -492,67 +773,72 @@ nx-org :focus-visible {
 
 .nx-org__map {
   display: grid;
-  gap: 18px;
+  justify-items: center;
+  .nx-org__tree {
+    --g: 20px;
+    row-gap: 24px;
+    inline-size: min(100%, calc(var(--cols) * 300px));
+  }
+  > .nx-org__members {
+    justify-self: stretch;
+    margin-block-start: 26px;
+  }
 }
-.nx-org__tiles {
-  --tone: var(--nx-primary);
+.nx-org__trunk {
+  inline-size: 2px;
+  block-size: 22px;
+  background: var(--line);
+}
+.nx-org__trunk.is-on,
+.nx-org__tree > .is-top.is-on::after {
+  background: var(--nx-primary);
+}
+
+/* La tarjeta de una unidad: la franja de su rama, el líder, la gente y, abajo, plegar o desplegar. */
+.nx-org__ucard,
+.nx-org__uhead {
+  --tone: oklch(0.64 0.14 var(--h, 262));
   position: relative;
+  inline-size: 100%;
+  border: 1px solid var(--nx-border);
   border-radius: var(--nx-radius-lg);
-  overflow: hidden;
-  background: var(--nx-canvas, var(--nx-background));
-  &[data-tone="warning"] {
-    --tone: var(--nx-warning, oklch(0.74 0.15 70));
-  }
-  &[data-tone="danger"] {
-    --tone: var(--nx-danger);
-  }
+  background: var(--nx-card) linear-gradient(var(--tone), var(--tone)) top / 100% 3px no-repeat;
 }
-.nx-org__tile {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 10px 12px;
-  overflow: hidden;
-  border: 2px solid var(--nx-canvas, var(--nx-background));
-  border-radius: calc(var(--nx-radius-lg) + 2px);
-  background-clip: padding-box;
-  background-color: color-mix(in oklch, var(--tone) calc(5% + var(--i, 0) * 30%), var(--nx-card));
-  text-align: start;
-  cursor: pointer;
+.nx-org__ucard {
   transition:
-    background-color var(--nx-motion-base),
+    border-color var(--nx-motion-fast),
     box-shadow var(--nx-motion-fast);
   &:hover {
-    background-color: color-mix(in oklch, var(--tone) calc(9% + var(--i, 0) * 30%), var(--nx-card));
-    box-shadow: inset 0 0 0 1px var(--nx-border-strong);
+    border-color: var(--nx-border-strong);
+    box-shadow: var(--nx-shadow-popover);
   }
-  &:focus-visible {
-    outline-offset: -3px;
+  &.is-on {
+    border-color: var(--nx-primary-border);
+    box-shadow: 0 0 0 3px var(--nx-primary-soft);
   }
-  &.is-xs {
-    padding: 4px;
-  }
-  &.is-rest {
-    background-color: var(--nx-card);
-    background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--nx-border-subtle) 6px 7px);
-  }
-  &.is-you {
-    box-shadow: inset 0 0 0 2px var(--nx-primary);
+  &.is-root {
+    --tone: var(--nx-primary);
+    inline-size: min(100%, 360px);
   }
   > .nx-org__you {
     position: absolute;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
+    inset-block-start: 10px;
+    inset-inline-end: 10px;
+    pointer-events: none;
   }
-  &.is-xs > .nx-org__you {
-    inset-block-start: 3px;
-    inset-inline-end: 3px;
-    inline-size: 10px;
-    block-size: 10px;
-    padding: 0;
-    font-size: 0;
+}
+.nx-org__uopen {
+  display: grid;
+  gap: 6px;
+  inline-size: 100%;
+  padding: 14px 14px 12px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+  &:focus-visible {
+    outline-offset: -2px;
   }
 }
 .nx-org__kind {
@@ -562,53 +848,231 @@ nx-org :focus-visible {
   text-transform: uppercase;
   color: var(--nx-muted-foreground);
 }
-.nx-org__tile-name {
-  max-inline-size: calc(100% - 28px);
-  font-weight: 600;
+.nx-org__uname {
+  margin: 0;
+  padding-inline-end: 34px;
+  font-size: 15px;
+  font-weight: 650;
   line-height: 1.25;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  .is-sm > & {
-    -webkit-line-clamp: 1;
-    font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.nx-org__ulead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+  > .nx-org__avatar {
+    inline-size: 32px;
+    block-size: 32px;
+    font-size: 12px;
+  }
+  > .nx-org__who {
+    min-inline-size: 0;
+  }
+  .nx-org__peer-name {
+    color: var(--nx-foreground);
   }
 }
-.nx-org__count,
-.nx-org__tile-metric,
-.nx-org__tile-leader {
+.nx-org__ufoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  > .nx-org__faces {
+    margin: 0;
+  }
+}
+.nx-org__count {
   font-size: 12.5px;
   color: var(--nx-muted-foreground);
   font-variant-numeric: tabular-nums;
 }
-.is-sm > .nx-org__count {
-  font-size: 12px;
-}
-.is-lg > .nx-org__count {
-  font-size: 13.5px;
+.nx-org__big {
+  margin-inline-end: 1px;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
   color: var(--nx-foreground);
 }
-.nx-org__preview {
-  position: absolute;
-  inset-inline: 12px;
-  inset-block-end: 12px;
-  block-size: min(46%, 140px);
-  opacity: 0.7;
+.nx-org__metric-chip {
+  --mt: var(--nx-primary);
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--mt) calc(10% + var(--i, 0) * 32%), var(--nx-card));
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  &[data-tone="warning"] {
+    --mt: var(--nx-warning, oklch(0.74 0.15 70));
+  }
+  &[data-tone="danger"] {
+    --mt: var(--nx-danger);
+  }
 }
-.nx-org__cell {
-  position: absolute;
-  border: 1.5px solid color-mix(in oklch, var(--nx-foreground) 14%, transparent);
-  border-radius: 4px;
-  background-clip: padding-box;
+.nx-org__utoggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 100%;
+  padding: 7px 14px;
+  border: 0;
+  border-block-start: 1px solid var(--nx-border-subtle);
+  border-radius: 0 0 var(--nx-radius-lg) var(--nx-radius-lg);
+  background: none;
+  color: var(--nx-primary-ink);
+  font-size: 12.5px;
+  cursor: pointer;
+  &::before {
+    content: "";
+    inline-size: 6px;
+    block-size: 6px;
+    border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0;
+    rotate: -45deg;
+    transition: rotate var(--nx-motion-fast);
+  }
+  &[aria-expanded="true"]::before {
+    rotate: 45deg;
+  }
+  &:hover {
+    background: var(--nx-hover);
+  }
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+/* Debajo de una tarjeta, sus hijas en columna, colgando de un riel (también las pilas de gente). */
+.nx-org__stack {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  > li {
+    --pt: 8px;
+    --tick: 26px;
+    position: relative;
+    padding: var(--pt) 0 0 26px;
+    &:first-child {
+      --pt: 12px;
+    }
+    &:has(> .nx-org__peer) {
+      --pt: 5px;
+      --tick: 19px;
+    }
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline-start: 11px;
+      background: var(--line);
+    }
+    &::before {
+      inset-block: 0;
+      inline-size: 2px;
+    }
+    &:last-child::before {
+      inset-block-end: auto;
+      block-size: calc(var(--pt) + var(--tick));
+    }
+    &::after {
+      inset-block-start: calc(var(--pt) + var(--tick) - 1px);
+      inline-size: 15px;
+      block-size: 2px;
+    }
+    /* El camino hasta quien mira: el riel hasta su fila, y su marca. */
+    &.is-rail::before,
+    &.is-on::after {
+      background: var(--nx-primary);
+    }
+    &.is-on::before {
+      background: linear-gradient(var(--nx-primary) 0 calc(var(--pt) + var(--tick)), var(--line) 0);
+    }
+  }
+}
+.nx-org__more--stack {
+  margin: 6px 0 0 26px;
+  padding: 3px 10px;
+  font-size: 12.5px;
+}
+.nx-org__peer.is-me {
+  border-color: var(--nx-primary-border);
+  background: var(--nx-primary-soft);
+  color: var(--nx-foreground);
+}
+
+/* Una unidad abierta: su cabecera y su gente con las ramas de «Yo». */
+.nx-org__unitview {
+  row-gap: 22px;
+}
+.nx-org__uhead {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  inline-size: min(100%, 560px);
+  padding: 16px 20px 14px;
+  text-align: center;
+  .nx-org__uname {
+    padding: 0;
+    font-size: 20px;
+  }
+  .nx-org__ufoot {
+    justify-content: center;
+  }
+  .nx-org__big {
+    font-size: 28px;
+  }
+}
+.nx-org__lead {
+  display: grid;
+  justify-items: center;
+  > .nx-org__person {
+    inline-size: min(100%, 380px);
+  }
+  &::after {
+    content: "";
+    inline-size: 2px;
+    block-size: 22px;
+    background: var(--line);
+  }
+}
+.nx-org__colhead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 44px;
+  padding: 8px 12px;
+  border: 1px dashed var(--nx-border-strong);
+  border-radius: var(--nx-radius-lg);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nx-muted-foreground);
+  text-align: center;
 }
 .nx-org__members > .nx-org__h {
   margin-block-end: 10px;
 }
 
+/* Al cambiar de persona o de unidad, cada tarjeta viaja a su nuevo lugar (View Transitions). */
+.nx-org__person,
+.nx-org__peer,
+.nx-org__ucard,
+.nx-org__uhead {
+  view-transition-class: nx-org;
+}
+::view-transition-group(*.nx-org) {
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .nx-org__tile,
-  .nx-org__person {
-    transition: none;
+  .nx-org__ucard,
+  .nx-org__utoggle::before,
+  .nx-org__person,
+  .nx-org__chain > li,
+  .nx-org__crumb-name {
+    transition: none !important;
   }
 }
