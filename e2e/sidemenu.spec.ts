@@ -33,6 +33,7 @@ test("móvil: la hamburguesa abre el drawer y un enlace lo cierra", async ({ pag
   await expect(nav).toBeHidden();
   await page.getByRole("button", { name: "Abrir menú" }).first().click();
   await expect(nav).toBeVisible();
+  await nav.getByRole("button", { name: "Datos y tablas" }).click();
   await nav.getByRole("link", { name: "Tabla" }).click();
   await expect(nav).toBeHidden();
   await expect(page).toHaveURL(/#\/grid$/);
