@@ -18,7 +18,7 @@ import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
-import { FOCUSABLE, focusFrom, stepTab, tabOrder } from "../../core/order";
+import { FOCUSABLE, focusFrom, hasStops, stepTab, tabOrder, tabThrough } from "../../core/order";
 import type { BadgeTone } from "../badge/types";
 import type { DialogHead } from "./dialog-head";
 import type { CloseReason, DialogAction, DialogLabels, DialogMode, DialogSize } from "./types";
@@ -111,8 +111,9 @@ function wire(): void {
     // El foco se fue a otro lado (con el teclado, o lo movió la app): el botón pulsado ya no es el origen.
     if (lastInvoker && !lastInvoker.contains(t)) lastInvoker = null;
     const top = stack[stack.length - 1];
-    // El foco no se escapa del diálogo de arriba (las capas de `LAYER` sí pueden recibirlo).
-    if (top && !top.contains(t) && !top.layer(t)) top.focusFirst();
+    // El foco no se escapa del diálogo de arriba (las capas de `LAYER` sí pueden recibirlo). Si otro
+    // `focusin` ya lo movió (el Tab desde una fecha, que lo lleva a su lugar), no se le quita.
+    if (top && document.activeElement === t && !top.contains(t) && !top.layer(t)) top.focusFirst();
   });
   addEventListener("popstate", () => {
     if (ownBacks > 0) return void ownBacks--;
@@ -458,9 +459,12 @@ export class NxDialog extends Base {
       const back = e.shiftKey;
       const { els, to, native } = stepTab(this, a, back);
       if (native) return;
-      e.preventDefault();
       // Si el de destino no acepta el foco, el siguiente: el foco nunca se queda atascado.
-      if (!focusFrom(els, to ? els.indexOf(to) : back ? els.length - 1 : 0, back, true)) this.focus();
+      const go = () => void (focusFrom(els, to ? els.indexOf(to) : back ? els.length - 1 : 0, back, true) || this.focus());
+      // Desde una fecha, el navegador primero recorre sus segmentos; al salir de ella, se corrige.
+      if (hasStops(a)) return tabThrough(this, a, go);
+      e.preventDefault();
+      go();
     }
   }
 

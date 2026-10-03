@@ -10,6 +10,9 @@ recorre igual primero. Lo hace `reading-flow: flex-visual` (tabs.css) donde exis
 componente corrige Tab donde el documento no va en el orden en que se ve (al entrar, de la lista al
 panel y al salir, con `src/core/order.ts`) y deja al navegador lo demás (dentro de un panel, o lo que
 sigue afuera). Dentro de un `<nx-dialog>` no hace nada: el diálogo ordena Tab en todo su contenido.
+Un panel con `tabindex="-1"` apaga `reading-flow` (Chrome se saltaría todo lo de adentro) y el orden
+lo pone el componente. Desde una fecha (`<input type=date>` y afines), Tab primero recorre sus
+segmentos y el componente solo corrige adónde va al salir de ella. Pruebas en navegador: `e2e/tabs.spec.ts`.
 El lector de pantalla también lee la lista primero: `aria-owns` en `<nx-tabs>` (la lista y luego los
 paneles, si todos sus hijos tienen id) ordena el árbol de accesibilidad sin mover nodos.
 

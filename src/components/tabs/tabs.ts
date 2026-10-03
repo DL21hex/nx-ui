@@ -21,7 +21,7 @@ import { Base, boolAttr, upgrade } from "../../core/define";
 import { h } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
-import { focusFrom, readingFlow, stepTab, tabOrder } from "../../core/order";
+import { focusFrom, hasStops, readingFlow, stepTab, tabOrder, tabThrough } from "../../core/order";
 import type { TabItem, TabsChangeDetail, TabsLabels } from "./types";
 
 export const TABS_LABELS: TabsLabels = { errors: "{n} por corregir" };
@@ -268,7 +268,7 @@ export class NxTabs extends Base {
    *  `reading-flow`, con la lista después de los paneles y fuera de un `<nx-dialog>` (que ordena
    *  Tab en todo su contenido). */
   #reorder(): boolean {
-    return !!this.#list?.previousElementSibling && !readingFlow() && !this.closest("nx-dialog");
+    return !!this.#list?.previousElementSibling && !readingFlow(this) && !this.closest("nx-dialog");
   }
 
   /** Tab dentro de las pestañas: al siguiente en el orden en que se ve, o afuera por el lado que toca. */
@@ -278,6 +278,9 @@ export class NxTabs extends Base {
     const { els, to, native } = stepTab(this, document.activeElement, back);
     // Adonde el navegador ya va solo (dentro de un panel), lo hace él.
     if (native) return;
+    // Desde una fecha, el navegador primero recorre sus segmentos; al salir de ella, se corrige.
+    // (Ese foco lo mueve el componente: `#enter` no lo toma por uno que entra con Tab.)
+    if (to && hasStops(document.activeElement)) return tabThrough(this, document.activeElement, () => void ((tabbing = 0), focusFrom(els, els.indexOf(to), back, false)));
     // Si el de destino no acepta el foco, el siguiente en la misma dirección.
     if (to && focusFrom(els, els.indexOf(to), back, false)) return void e.preventDefault();
     // Sale de las pestañas: si están dentro de otras, esas eligen (el evento les llega después).
@@ -299,7 +302,9 @@ export class NxTabs extends Base {
   /** El foco entra con Tab desde afuera: por la lista (hacia adelante) o por el final del panel (hacia atrás). */
   #enter(e: FocusEvent): void {
     const from = e.relatedTarget as Node | null;
-    if (!tabbing || (from && this.contains(from)) || !this.#reorder()) return;
+    // Ni el foco que pasa por el elemento mismo (el Tab desde una fecha, ver `tabThrough`) ni el que
+    // otro `focusin` ya movió.
+    if (!tabbing || e.target === this || document.activeElement !== e.target || (from && this.contains(from)) || !this.#reorder()) return;
     const els = tabOrder(this);
     const want = tabbing > 0 ? els[0] : els[els.length - 1];
     if (want && want !== e.target) want.focus();

@@ -520,6 +520,8 @@ Cuatro formas de hacer lo que hoy se hace con un modal, cada una para su caso:
 El diálogo es el propio elemento en la capa superior (Popover API): el contenido del autor no se
 mueve, así que la hidratación de Solid no se rompe. Se comporta como modal: `aria-modal`, foco
 atrapado y devuelto a quien lo abrió, Escape, fondo que bloquea y scroll de la página bloqueado.
+Tab sigue el orden en que se ve (cabecera, cuerpo, pie) y da la vuelta en los extremos; una fecha
+se recorre por sus segmentos, y lo de adentro de un hijo con `tabindex="-1"` sigue en el recorrido.
 
 ```html
 <button popovertarget="nuevo">Nuevo pedido</button>  <!-- o: const valor = await nuevo.show() -->
