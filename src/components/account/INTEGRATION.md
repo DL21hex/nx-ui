@@ -53,6 +53,11 @@ cuesta ≈ 0,8 KB en la entrada.
   clic con la vista previa puesta, se vuelve primero a la elegida y el círculo crece desde el clic con
   la nueva. Con el tacto no hay vista previa. Solo el tema y la paleta usan `html[data-nx-reveal]`,
   así que las demás View Transitions de la app (el «morph» de `<nx-dialog>`) conservan su fundido.
+- **`appearance="false"`** (2026-10-03) es para la app que ya tiene su apariencia: sin Tema ni Color
+  en el panel ni en `commands`, y sin escribir `data-theme`/`data-nx-palette` en `<html>`. Lo guardado
+  se sigue **leyendo** (los recientes de empresa) pero no se aplica: alguien que eligió «Oscuro» antes
+  de que la app lo apagara no queda a medias. Se decide antes de conectar; por eso el envoltorio de
+  Solid lo pasa como atributo (el SSR lo pinta y el elemento lo ve al conectar) y no como propiedad.
 - **`storage` guarda `{theme, palette, recent}`**, no el idioma: el locale suele vivir en el perfil del
   servidor; `nx-account-locale` avisa para que la app lo guarde.
 - **Temporizadores:** cerrado, solo un `setTimeout` de la sesión (con `clampDelay`; en el tramo del

@@ -167,14 +167,19 @@ function applyLook(theme: AccountTheme | undefined, palette: string | undefined)
  * (o importar la librería allí) evita el destello del tema por defecto antes del primer pintado.
  */
 export function applyAccountPrefs(storage = "nx-account"): AccountPrefs {
-  let p: AccountPrefs = {};
+  const p = readAccountPrefs(storage);
+  if (typeof document !== "undefined") applyLook(p.theme, p.palette);
+  return p;
+}
+
+/** Lo guardado por `<nx-account>` (clave `storage`), sin aplicarlo. */
+function readAccountPrefs(storage: string): AccountPrefs {
   try {
-    if (storage !== "none") p = parsePrefs(localStorage.getItem(storage));
+    if (storage !== "none") return parsePrefs(localStorage.getItem(storage));
   } catch {
     /* sin almacenamiento */
   }
-  if (typeof document !== "undefined") applyLook(p.theme, p.palette);
-  return p;
+  return {};
 }
 
 /**
@@ -221,6 +226,7 @@ export class NxAccount extends Base {
     "current",
     "status",
     "storage",
+    "appearance",
     "expires-at",
     "warn-before",
     "view-as-source",
@@ -362,6 +368,17 @@ export class NxAccount extends Base {
   set storage(v: string) {
     this.#attr("storage", v);
   }
+  /**
+   * `false` (`appearance="false"`) quita Tema y Color del panel y de `commands`, y la cuenta deja de
+   * tocar `<html>`: no aplica el tema ni la paleta guardados ni los cambia. Es para una app que maneja
+   * su propia apariencia. Se decide antes de conectar: lo que ya se aplicó no se deshace.
+   */
+  get appearance(): boolean {
+    return this.getAttribute("appearance") !== "false";
+  }
+  set appearance(v: boolean | string | null | undefined) {
+    this.#attr("appearance", v === false || v === "false" ? "false" : null);
+  }
   get disabled(): boolean {
     return boolAttr(this, "disabled");
   }
@@ -375,10 +392,10 @@ export class NxAccount extends Base {
    *  el mismo arreglo mientras no cambien los textos, las paletas, las empresas, los idiomas ni
    *  `view-as-source`: la paleta lo compara para saber si debe leerlo de nuevo. */
   get commands(): AccountCommand[] {
-    const deps = [this.#labels, this.#d.palettes, this.#d.tenants, this.#d.locales, !!this.getAttribute("view-as-source")];
+    const deps = [this.#labels, this.#d.palettes, this.#d.tenants, this.#d.locales, !!this.getAttribute("view-as-source"), this.appearance];
     const c = this.#cmds;
     if (!c || deps.some((d, i) => d !== c.deps[i]))
-      this.#cmds = { deps, list: accountCommands({ account: this.#uid, labels: this.#labels, palettes: this.#d.palettes, tenants: this.#d.tenants, locales: this.#d.locales, viewAs: !!deps[4] }) };
+      this.#cmds = { deps, list: accountCommands({ account: this.#uid, labels: this.#labels, palettes: this.#d.palettes, tenants: this.#d.tenants, locales: this.#d.locales, viewAs: !!deps[4], appearance: !!deps[5] }) };
     return this.#cmds!.list;
   }
 
@@ -423,7 +440,8 @@ export class NxAccount extends Base {
     this.#ac?.abort();
     const signal = (this.#ac = new AbortController()).signal;
     // Lo guardado se aplica al conectar (si no se aplicó ya en el <head> con `applyAccountPrefs`).
-    this.#prefs = applyAccountPrefs(this.storage);
+    // Sin apariencia solo se lee: los recientes de empresa siguen sirviendo, `<html>` no se toca.
+    this.#prefs = this.appearance ? applyAccountPrefs(this.storage) : readAccountPrefs(this.storage);
     this.#pageNet();
     document.addEventListener("nx-sync-change", (e) => this.sync || this.#onNet((e as CustomEvent).detail), { signal });
     document.addEventListener("nx-command-select", this.#onCommand, { signal });
@@ -478,6 +496,7 @@ export class NxAccount extends Base {
       this.#subscribe();
       return this.#paintNet();
     } else if (name === "disabled" && value !== null) this.hide();
+    else if (name === "appearance" && value === "false") this.#preview(null);
     this.#schedule();
   }
 
@@ -687,6 +706,7 @@ export class NxAccount extends Base {
         hasTenants: !!this.#d.tenants.length,
         status: this.status,
         until: this.#untilChoice,
+        appearance: this.appearance,
         theme: pickTheme(d.getAttribute("data-theme")),
         palette: (this.#previewing ? this.#was : d.getAttribute("data-nx-palette")) || "indigo",
         palettes: this.#d.palettes,
@@ -874,6 +894,7 @@ export class NxAccount extends Base {
 
   /** Tema o paleta: se aplica con la transición circular desde el clic, se guarda y se avisa. */
   #setLook(kind: "theme" | "palette", value: string, e: MouseEvent | null, from: Element | null): void {
+    if (!this.appearance) return;
     const d = document.documentElement;
     // Con la vista previa puesta, la transición sale desde lo que estaba elegido (no desde la muestra):
     // el círculo que crece desde el clic confirma la elección.
@@ -900,6 +921,7 @@ export class NxAccount extends Base {
       toggleAttr(d, "data-nx-palette", this.#was);
       return;
     }
+    if (!this.appearance) return;
     // Lo que había (aunque no lo haya puesto esta cuenta), para volver exactamente ahí.
     if (!this.#previewing) this.#was = d.getAttribute("data-nx-palette");
     this.#previewing = true;

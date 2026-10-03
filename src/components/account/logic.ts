@@ -213,6 +213,8 @@ export interface CommandSource {
   tenants: readonly AccountTenant[];
   locales: readonly AccountLocale[];
   viewAs: boolean;
+  /** `false`: sin tema ni paletas (`appearance="false"`). */
+  appearance?: boolean;
 }
 
 /**
@@ -230,8 +232,12 @@ export function accountCommands(s: CommandSource): AccountCommand[] {
     data: { account: s.account, action, value },
   });
   return [
-    ...(["light", "dark", "system"] as const).map((t) => cmd("theme", `${L.theme}: ${L[t]}`, L.theme, {}, t)),
-    ...s.palettes.map((p) => cmd("palette", `${L.color}: ${p.label}`, L.theme, {}, p.id)),
+    ...(s.appearance === false
+      ? []
+      : [
+          ...(["light", "dark", "system"] as const).map((t) => cmd("theme", `${L.theme}: ${L[t]}`, L.theme, {}, t)),
+          ...s.palettes.map((p) => cmd("palette", `${L.color}: ${p.label}`, L.theme, {}, p.id)),
+        ]),
     ...s.tenants.map((t) => cmd("tenant", t.detail ? `${t.name} · ${t.detail}` : t.name, L.tenant, { hint: t.role, keywords: t.group ? [t.group] : undefined }, t.id)),
     ...s.locales.map((l) => cmd("locale", l.label, L.language, { hint: l.value }, l.value)),
     ...(s.viewAs ? [cmd("view-as", L.viewAs, L.account)] : []),

@@ -418,6 +418,53 @@ describe("<nx-account> tema y color", () => {
   });
 });
 
+describe('<nx-account appearance="false">', () => {
+  it("sin tema ni color en el panel ni en los comandos", async () => {
+    const el = mount('appearance="false"');
+    expect(el.appearance).toBe(false);
+    await open(el);
+    const keys = [...pop(el).querySelectorAll<HTMLElement>("[data-k]")].map((b) => b.dataset.k!.split(":")[0]);
+    expect(keys).not.toContain("theme");
+    expect(keys).not.toContain("palette");
+    expect(pop(el).querySelector(".nx-account__swatches")).toBeNull();
+    expect(el.commands.some((c) => c.data.action === "theme" || c.data.action === "palette")).toBe(false);
+  });
+
+  it("no aplica lo guardado a <html>, pero los recientes de empresa siguen", async () => {
+    localStorage.setItem("nx-account", JSON.stringify({ theme: "dark", palette: "grafito", recent: ["nx-cali"] }));
+    const el = mount('appearance="false"');
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+    expect(document.documentElement.hasAttribute("data-nx-palette")).toBe(false);
+    await open(el);
+    await sub(el, "tenant");
+    key(pop(el).querySelector("input")!, "2");
+    expect(el.current).toBe("cc-bog");
+    // Se leyó lo guardado: el reciente anterior sigue detrás del nuevo.
+    expect(JSON.parse(localStorage.getItem("nx-account")!).recent).toEqual(["cc-bog", "nx-cali"]);
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
+  it("un comando de tema que llegue igual no toca <html>", async () => {
+    document.body.innerHTML = `<nx-account id="yo" appearance="false"></nx-account>`;
+    const acc = document.querySelector<NxAccount>("#yo")!;
+    acc.user = USER;
+    document.dispatchEvent(
+      new CustomEvent("nx-command-select", { detail: { item: { data: { account: acc.commands.at(-1)!.data.account, action: "theme", value: "dark" } } } }),
+    );
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
+  it("la propiedad escribe el atributo, y quitarlo devuelve tema y color", async () => {
+    const el = mount();
+    el.appearance = false;
+    expect(el.getAttribute("appearance")).toBe("false");
+    el.appearance = true;
+    expect(el.hasAttribute("appearance")).toBe(false);
+    await open(el);
+    expect(byK(el, "theme:dark")).toBeDefined();
+  });
+});
+
 describe("<nx-account> idioma y formatos", () => {
   it("cada locale con su vista previa; elegir pone <html lang> y avisa", async () => {
     document.documentElement.lang = "es-CO";

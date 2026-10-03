@@ -272,6 +272,7 @@ declare module "solid-js" {
       current: string | undefined;
       status: AccountStatus | undefined;
       "apply-locale": string | undefined;
+      appearance: string | undefined;
       "expires-at": string | undefined;
       "warn-before": string | undefined;
       "view-as-source": string | undefined;

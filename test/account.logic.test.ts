@@ -200,4 +200,11 @@ describe("paleta de comandos", () => {
   it("«Ver como» solo si está activo", () => {
     expect(accountCommands({ ...base, viewAs: true }).map((x) => x.id)).toContain("account:view-as");
   });
+
+  it("sin apariencia no hay tema ni paletas", () => {
+    const ids = accountCommands({ ...base, viewAs: false, appearance: false }).map((x) => x.id);
+    expect(ids.some((id) => id.startsWith("account:theme") || id.startsWith("account:palette"))).toBe(false);
+    expect(ids).toContain("account:tenant:cc-med");
+    expect(ids).toContain("account:logout");
+  });
 });

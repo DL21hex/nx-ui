@@ -1594,6 +1594,8 @@ compacto; en el celular, una hoja desde abajo):
 - **Tema y color**: Claro/Sistema/Oscuro y las paletas de `palettes.css`. Pasar el mouse por un color
   repinta toda la app; al elegir, el cambio crece como un círculo desde el clic (View Transitions).
   Se guarda en `localStorage` y se aplica al cargar (`applyAccountPrefs()` en el `<head>` evita el destello).
+  Una app que maneja su propia apariencia pone `appearance="false"`: no aparecen (tampoco en la paleta
+  de comandos) y la cuenta no toca `<html>`, ni siquiera con lo que alguien guardó antes.
 - **Idioma y formatos**: cada locale con su muestra («1.234.567,50 · 26 sept 2026»); elegir pone
   `<html lang>` y toda la librería lo sigue.
 - **Ver como…**: busca a la persona en `view-as-source` y pone la franja «Estás viendo como…»
@@ -1622,7 +1624,7 @@ compacto; en el celular, una hoja desde abajo):
 
 | | |
 |---|---|
-| Propiedades / atributos | `user`, `tenants`, `current`, `status` (`online`, `away`, `dnd`), `items`, `palettes`, `locales`, `storage` (`nx-account`; `none`), `apply-locale`, `session` / `expires-at`, `warn-before` (min, 5), `view-as`, `view-as-source`, `logout-url` (mismo origen), `logout-method` (`post`; `get`), `logout-csrf`, `logout-csrf-field` (`_csrf`), `sync` (el nombre de la cola de `createSync({name})`; sin él, la de `<nx-sync>`), `labels`, `locale`, `disabled` · propiedades `commands` (solo lectura; el mismo arreglo mientras no cambie), `open` |
+| Propiedades / atributos | `user`, `tenants`, `current`, `status` (`online`, `away`, `dnd`), `items`, `palettes`, `locales`, `storage` (`nx-account`; `none`), `appearance` (`false`: sin tema ni color), `apply-locale`, `session` / `expires-at`, `warn-before` (min, 5), `view-as`, `view-as-source`, `logout-url` (mismo origen), `logout-method` (`post`; `get`), `logout-csrf`, `logout-csrf-field` (`_csrf`), `sync` (el nombre de la cola de `createSync({name})`; sin él, la de `<nx-sync>`), `labels`, `locale`, `disabled` · propiedades `commands` (solo lectura; el mismo arreglo mientras no cambie), `open` |
 | Métodos | `show()`, `hide()`, `logout()` |
 | Eventos | `nx-account-switch` `{tenant}` (cancelable), `nx-account-status` `{status, until}`, `nx-account-theme` `{theme, palette}`, `nx-account-locale` `{locale}`, `nx-account-select` `{id}`, `nx-account-view-as` `{user}` (cancelable, al entrar y al salir), `nx-account-extend` (cancelable), `nx-account-expired`, `nx-account-logout` `{pending}` (cancelable), `nx-open-change` `{open}` |
 | Funciones | `applyAccountPrefs(storage?)`, `accountCommands()`, `accountInitials()`, `sessionRemaining()`, `sessionPhase()`, `formatSessionRemaining()` («4:59»), `normalizePalettes()`, `pickTheme()`, `revealRadius()`, `accountStatusUntil()`, `BUILTIN_PALETTES` |

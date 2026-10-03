@@ -40,6 +40,8 @@ export interface PanelState {
   hasTenants: boolean;
   status: AccountStatus;
   until: string;
+  /** Sin apariencia (`appearance="false"`) no hay tema ni color. */
+  appearance: boolean;
   theme: AccountTheme;
   palette: string;
   palettes: readonly AccountPalette[];
@@ -109,31 +111,32 @@ export function mainView(s: PanelState): Node[] {
       ),
     seg(s.uid, "status", L.status, [["online", L.online], ["away", L.away], ["dnd", L.dnd]], s.status),
     s.status !== "online" && seg(s.uid, "until", L.until, [["hour", L.hour], ["today", L.today], ["", L.forever]], s.until),
-    seg(s.uid, "theme", L.theme, [["light", L.light, SUN], ["system", L.system, MONITOR], ["dark", L.dark, MOON]], s.theme),
-    h(
-      "div",
-      { class: "nx-account__field" },
-      h("span", { class: "nx-account__caption", id: `${s.uid}-color` }, L.color),
+    s.appearance && seg(s.uid, "theme", L.theme, [["light", L.light, SUN], ["system", L.system, MONITOR], ["dark", L.dark, MOON]], s.theme),
+    s.appearance &&
       h(
         "div",
-        { class: "nx-account__swatches", role: "group", "aria-labelledby": `${s.uid}-color` },
-        // Sin `color`, la muestra lleva su propio `data-nx-palette`: los tokens la pintan con esa paleta.
-        ...s.palettes.map((p) =>
-          h("button", {
-            type: "button",
-            class: "nx-account__sw",
-            "data-k": `palette:${p.id}`,
-            "data-palette": p.id,
-            "data-nx-palette": p.color ? null : p.id,
-            // `color` ya viene validado (`normalizePalettes`): nunca otra declaración ni `url()`.
-            style: p.color ? `--_sw:${p.color}` : null,
-            "aria-label": p.label,
-            title: p.label,
-            "aria-pressed": String(p.id === s.palette),
-          }),
+        { class: "nx-account__field" },
+        h("span", { class: "nx-account__caption", id: `${s.uid}-color` }, L.color),
+        h(
+          "div",
+          { class: "nx-account__swatches", role: "group", "aria-labelledby": `${s.uid}-color` },
+          // Sin `color`, la muestra lleva su propio `data-nx-palette`: los tokens la pintan con esa paleta.
+          ...s.palettes.map((p) =>
+            h("button", {
+              type: "button",
+              class: "nx-account__sw",
+              "data-k": `palette:${p.id}`,
+              "data-palette": p.id,
+              "data-nx-palette": p.color ? null : p.id,
+              // `color` ya viene validado (`normalizePalettes`): nunca otra declaración ni `url()`.
+              style: p.color ? `--_sw:${p.color}` : null,
+              "aria-label": p.label,
+              title: p.label,
+              "aria-pressed": String(p.id === s.palette),
+            }),
+          ),
         ),
       ),
-    ),
     h("hr"),
     ...s.items.map((it) => {
       const href = safeHref(it.href);
