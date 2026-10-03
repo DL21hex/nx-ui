@@ -436,11 +436,11 @@ describe("modo servidor", () => {
     await sleep(20);
     const s = scroll(el);
     const tall = el.querySelector<HTMLElement>(".nx-grid__body")!;
-    expect(tall.style.blockSize).toBe("15000000px");
+    expect(tall.style.blockSize).toBe("8000000px");
     // happy-dom no maqueta: el alto del scroller y su recorrido se fijan aquí.
     Object.defineProperty(s, "clientHeight", { value: 420, configurable: true });
-    Object.defineProperty(s, "scrollHeight", { value: 15_000_000 + 40, configurable: true });
-    s.scrollTop = 15_000_040 - 420;
+    Object.defineProperty(s, "scrollHeight", { value: 8_000_000 + 40, configurable: true });
+    s.scrollTop = 8_000_040 - 420;
     s.dispatchEvent(new Event("scroll"));
     await sleep(40);
     const rows = [...el.querySelectorAll<HTMLElement>(".nx-grid__row")].map((x) => Number(x.dataset.r));

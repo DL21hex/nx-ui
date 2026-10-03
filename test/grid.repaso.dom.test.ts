@@ -205,6 +205,20 @@ describe("filtros y búsqueda", () => {
   });
 });
 
+describe("el aviso sin filas", () => {
+  it("va dentro de la tabla como una fila con una celda (un botón suelto en un role=grid no es válido)", () => {
+    const el = mount();
+    el.filters = [{ key: "prov", op: "in", values: ["Nadie"] }];
+    const empty = el.querySelector<HTMLElement>(".nx-grid__empty")!;
+    expect(empty.hidden).toBe(false);
+    expect(empty.getAttribute("role")).toBe("row");
+    expect(empty.parentElement!.getAttribute("role")).toBe("grid");
+    const cell = empty.querySelector<HTMLElement>(':scope > [role="gridcell"]')!;
+    expect(cell.querySelector("button")).not.toBeNull();
+    expect([...empty.children]).toEqual([cell]);
+  });
+});
+
 describe("la hoja de Excel", () => {
   it("zip acepta el CRC ya calculado por partes y da el mismo archivo", async () => {
     const enc = new TextEncoder();

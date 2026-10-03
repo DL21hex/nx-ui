@@ -163,3 +163,38 @@ describe("<nx-grid>: «Solo» y las barras", () => {
     expect(after.some((b) => b.classList.contains("is-off"))).toBe(true);
   });
 });
+
+describe("<nx-grid>: lo escrito al cerrar, como pasa en Firefox", () => {
+  it("«Desde» y un clic afuera con el campo ya sin foco: se aplica igual", async () => {
+    const el = mount();
+    await el.openFilter("monto");
+    const pop = await panel(el, "Monto");
+    const from = pop.querySelector<HTMLInputElement>(".nx-grid__f-pair input")!;
+    from.focus();
+    from.value = "1 M";
+    from.dispatchEvent(new Event("input"));
+    // Firefox saca el foco del campo (al cuerpo) antes de cerrar el panel por el clic afuera.
+    from.blur();
+    pop.dispatchEvent(Object.assign(new Event("beforetoggle"), { newState: "closed", oldState: "open" }));
+    expect(el.filters).toEqual([{ key: "monto", op: "range", min: 1_000_000 }]);
+  });
+
+  it("Escape en «contiene» no deja que el navegador vacíe el campo, y un `input` tardío no quita el filtro", async () => {
+    const el = mount();
+    await el.openFilter("oc");
+    const pop = await panel(el, "Pedido");
+    const input = pop.querySelector<HTMLInputElement>('input[type="search"]')!;
+    input.focus();
+    input.value = "oc-3";
+    input.dispatchEvent(new Event("input"));
+    const e = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    input.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(true);
+    expect(el.filters).toEqual([{ key: "oc", op: "contains", value: "oc-3" }]);
+    // Lo que hacía Firefox: vaciar el campo de búsqueda con Escape, ya cerrado el panel.
+    input.value = "";
+    input.dispatchEvent(new Event("input"));
+    await wait(200);
+    expect(el.filters).toEqual([{ key: "oc", op: "contains", value: "oc-3" }]);
+  });
+});

@@ -765,6 +765,10 @@ nx-grid .nx-grid__sort-icon {
 .nx-grid__body {
   position: relative;
   inline-size: max(100%, var(--_w));
+  /* Con el desplazamiento escalado (cientos de miles de filas), las filas de margen bajo la vista
+     pueden pasar del alto del cuerpo: sin recortarlas, alargaban el recorrido del scroll, la escala
+     cambiaba en cada paso y las filas se corrían. Lo que pasa del cuerpo nunca está a la vista. */
+  overflow-y: clip;
 }
 .nx-grid__rows {
   position: absolute;

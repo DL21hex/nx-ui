@@ -165,9 +165,11 @@ const BLOCK = 100;
 const KEEP = 50;
 /** Intentos automáticos de un bloque que falla (el primero y sus reintentos). */
 const TRIES = 5;
-/** Tope del alto del cuerpo (px): los navegadores no pintan elementos más altos (Firefox, ~17,9 M).
- *  Más allá, el cuerpo se queda en este alto y el desplazamiento se escala. */
-const MAX_H = 15_000_000;
+/** Tope del alto del cuerpo (px): los navegadores no pintan elementos más altos (Firefox, ~17,9 M), y
+ *  Firefox deja de fijar la cabecera (`sticky`) pasados ~8,9 M de desplazamiento: con 15 M, al fondo
+ *  de un millón de filas la cabecera se iba con el scroll. Más allá, el cuerpo se queda en este alto
+ *  y el desplazamiento se escala. */
+const MAX_H = 8_000_000;
 const FACET_SHOWN = 6;
 /** Exportar pide las filas al servidor de a este tanto, hasta el tope de filas de una hoja de Excel. */
 const EXPORT_BLOCK = 5000;
@@ -420,7 +422,10 @@ export class NxGrid extends Base {
   #head?: HTMLDivElement;
   #body?: HTMLDivElement;
   #rowsEl?: HTMLDivElement;
-  #empty?: HTMLParagraphElement;
+  /** El aviso sin filas («Cargando…», «Ninguna fila coincide…», «Reintentar»): dentro de la tabla
+   *  va como una fila con una celda (un botón suelto dentro de un `role="grid"` no es válido). */
+  #empty?: HTMLDivElement;
+  #emptyCell?: HTMLSpanElement;
   #foot?: HTMLDivElement;
   #live?: HTMLSpanElement;
   #ths: HTMLElement[] = [];
@@ -1553,7 +1558,8 @@ export class NxGrid extends Base {
     for (const ev of ["pointerenter", "focusin"]) this.#head.addEventListener(ev, () => void this.#loadPanel().catch(() => {}), { once: true });
     this.#rowsEl = h("div", { class: "nx-grid__rows", role: "rowgroup" });
     this.#body = h("div", { class: "nx-grid__body", role: "presentation" }, this.#rowsEl);
-    this.#empty = h("p", { class: "nx-grid__empty", hidden: true });
+    this.#emptyCell = h("span", { role: "gridcell" });
+    this.#empty = h("div", { class: "nx-grid__empty", role: "row", "aria-rowindex": 2, hidden: true }, this.#emptyCell);
     this.#empty.addEventListener("click", (e) => {
       if ((e.target as Element).closest("[data-retry]")) {
         this.refresh();
@@ -1738,8 +1744,8 @@ export class NxGrid extends Base {
     // Sin filas, las líneas cruzarían el aviso: solo con filas.
     this.#fill!.hidden = !this.#count();
     this.#empty!.classList.toggle("is-loading", loading);
-    if (failed) this.#empty!.replaceChildren(L.loadError, h("span", { class: "nx-grid__relax" }, h("button", { type: "button", class: "nx-grid__btn", "data-retry": "" }, L.retry)));
-    else this.#empty!.replaceChildren(loading ? L.loading : L.empty, ...(this.#empty!.hidden || loading ? [] : this.#relax()));
+    if (failed) this.#emptyCell!.replaceChildren(L.loadError, h("span", { class: "nx-grid__relax" }, h("button", { type: "button", class: "nx-grid__btn", "data-retry": "" }, L.retry)));
+    else this.#emptyCell!.replaceChildren(loading ? L.loading : L.empty, ...(this.#empty!.hidden || loading ? [] : this.#relax()));
     this.#paintFacets();
     this.#paintPresets();
     this.#paintHistory();
@@ -1963,6 +1969,7 @@ export class NxGrid extends Base {
     const old = this.#win;
     const ed = this.#editing;
     const all = force || old.start < 0;
+    const was = ed?.r;
     if (ed && all) {
       if (!this.#track(ed)) return;
       // La fila se movió fuera de la vista (otro orden, filas nuevas): la tabla la sigue.
@@ -1991,7 +1998,7 @@ export class NxGrid extends Base {
       } finally {
         this.#moving = false;
       }
-      if (ed) this.#mountEdit(ed, focused);
+      if (ed) this.#mountEdit(ed, focused, ed.r !== was);
     } else {
       // Al desplazarse se reutilizan las filas que siguen a la vista; solo se crean las que entran
       // (y se rehacen las que esperaban datos que ya llegaron).
@@ -2699,8 +2706,9 @@ export class NxGrid extends Base {
   }
 
   /** Pone el campo de la edición en su celda, recién repintada, sin perder lo escrito, el cursor ni
-   *  el foco. */
-  #mountEdit(ed: Editing, focused: boolean): void {
+   *  el foco. `moved`: la fila cambió de lugar; si la persona está escribiendo, el campo queda a la
+   *  vista también en la página (la tabla puede ser más alta que la ventana). */
+  #mountEdit(ed: Editing, focused: boolean, moved = false): void {
     const cell = this.#cell({ r: ed.r, c: ed.c });
     if (!cell || cell.contains(ed.input)) return;
     const { input } = ed;
@@ -2709,6 +2717,7 @@ export class NxGrid extends Base {
     cell.replaceChildren(input, ...(ed.list ? [ed.list] : []));
     if (!focused) return;
     input.focus({ preventScroll: true });
+    if (moved) input.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     try {
       if (sel[0] !== null && sel[1] !== null) input.setSelectionRange(sel[0], sel[1], sel[2] ?? undefined);
     } catch {

@@ -449,8 +449,9 @@ Una tabla de datos que se explora sola:
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
   En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo (se ordenan una vez:
   filtrar o buscar no vuelve a ordenar); más allá, `source`. Con cientos de miles de filas del
-  servidor, el alto de la tabla tiene un tope (el navegador no pinta más) y el desplazamiento se
-  escala para que la última fila se alcance.
+  servidor, el alto de la tabla tiene un tope (el navegador no pinta más; 8 millones de píxeles,
+  porque Firefox suelta la cabecera fija pasados ~8,9) y el desplazamiento se escala para que la
+  última fila se alcance.
   Con pocas filas, las líneas de las columnas siguen hasta el fondo de la tabla (solo las
   verticales: no se dibujan filas vacías), sin agregar scroll; sin filas, el aviso queda limpio.
 - **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,

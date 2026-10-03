@@ -342,3 +342,28 @@ test("ruta navegable, en reposo y con el menú de un separador abierto", async (
   await expect(page.locator("#bc-demo").getByRole("menuitemradio").first()).toBeVisible();
   await audit(page, ["#bc-demo"]);
 });
+
+test("tabla en modo servidor cuyo primer bloque falla: aviso con «Reintentar», y con colores forzados", async ({ page }) => {
+  await page.route("**/e2e-grid-500", (route) => route.fulfill({ status: 500, body: "caído" }));
+  await open(page, "#/grid");
+  await page.evaluate(() => {
+    const g = document.createElement("nx-grid") as HTMLElement & { columns: unknown };
+    g.id = "e2e-fail";
+    g.setAttribute("height", "300");
+    g.columns = [
+      { key: "t", label: "Fila" },
+      { key: "n", label: "Número", type: "number" },
+    ];
+    g.setAttribute("source", "/e2e-grid-500");
+    document.querySelector("#grid-demo")!.before(g);
+  });
+  const empty = page.locator("#e2e-fail .nx-grid__empty");
+  await expect(empty).toContainText("No se pudieron cargar las filas");
+  const retry = empty.getByRole("button", { name: "Reintentar" });
+  await expect(retry).toBeVisible();
+  // El mismo estilo que «Quitar el filtro» cuando no queda ninguna fila (`.nx-grid__relax`).
+  expect(await retry.evaluate((b) => [b.parentElement!.className, getComputedStyle(b).blockSize])).toEqual(["nx-grid__relax", "30px"]);
+  await audit(page, ["#e2e-fail"]);
+  await page.emulateMedia({ forcedColors: "active" });
+  await audit(page, ["#e2e-fail", "#grid-demo"]);
+});
