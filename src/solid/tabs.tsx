@@ -24,6 +24,7 @@ export interface TabsProps extends Omit<JSX.HTMLAttributes<NxTabs>, "onChange"> 
 
 export function Tabs(props: TabsProps): JSX.Element {
   const [local, rest] = splitProps(props, ["value", "tabs", "sticky", "label", "labels", "onChange", "children"]);
+  // `onChange` solo con las suyas: el cambio de unas pestañas anidadas también burbujea.
   return (
     <nx-tabs
       {...rest}
@@ -32,7 +33,7 @@ export function Tabs(props: TabsProps): JSX.Element {
       prop:labels={local.labels}
       attr:label={local.label}
       bool:sticky={!!local.sticky}
-      on:nx-tab-change={(e) => local.onChange?.(e)}
+      on:nx-tabs-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}

@@ -394,7 +394,7 @@ export function mountDrawerDemo(root: HTMLElement): void {
       contrato.focusField("hasta");
     } else tabs.value = "hist";
   });
-  tabs.addEventListener("nx-tab-change", (e) => add(`nx-tab-change · ${e.detail.previous} → ${e.detail.value}`));
+  tabs.addEventListener("nx-tabs-change", (e) => add(`nx-tabs-change · ${e.detail.previous} → ${e.detail.value}`));
   for (const f of sections)
     f.addEventListener("nx-fields-action", () => {
       add(`nx-fields-action · ${SECTION_NAMES[f.dataset.sec!]}`);

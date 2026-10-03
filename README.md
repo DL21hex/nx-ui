@@ -1762,7 +1762,7 @@ seis zonas siempre en el mismo orden: arriba orienta, en medio informa o edita, 
   el formato y enfoca el primer error, y `errors` muestra los del servidor.
 - **`<nx-tabs>`**: los paneles son tus hijos con `data-tab` (no se mueven: la hidratación de Solid
   sigue intacta), con `data-count` o `data-errors` (en rojo, para un formulario largo). Teclado de la
-  APG; `nx-tab-change` es cancelable. Con `tabs` (BDUI), la lista sale de ahí.
+  APG; `nx-tabs-change` es cancelable. Con `tabs` (BDUI), la lista sale de ahí.
 - **`<nx-notice>`**: `info`, `success`, `warning` o `danger` (este se anuncia), con `action` (botón,
   `nx-notice-action`) o `action-href` (enlace).
 - **`<nx-badge>`**: el estado en una píldora; el texto lo dice, el color lo refuerza.
@@ -1796,7 +1796,7 @@ guardar.onclick = async () => {
 |---|---|
 | `<nx-dialog>` (ficha) | `avatar`, `badge`, `badge-tone`, `nav` (`"prev next"`, `"next"`, `"prev"`, `""`), `actions` (`[{id, label, danger?, disabled?, icon?}]`) · `nx-dialog-nav` `{dir}`, `nx-dialog-action` `{id}` · pone `--nx-sticky-top` (alto de su cabecera) |
 | `<nx-fields>` | `items` (`[{key?, label, value, wide?, format?, currency?, href?, copy?, mono?, readonly?, input?}]`; `format`: `text`, `number`, `money`, `date`; `input`: `{type?, options?, required?, placeholder?, hint?, rows?}`), `variant` (`grid` / `summary`), `columns` (1–4), `heading`, `action`, `editing`, `errors`, `locale`, `currency`, `labels` · `values`, `validate()`, `focusField(key)` · `nx-fields-action` `{action}` |
-| `<nx-tabs>` | hijos con `data-tab`, `data-value`, `data-count`, `data-errors`, `data-disabled`, o `tabs` (`[{value, label, count?, errors?, disabled?}]`) · `value`, `sticky`, `label`, `labels` · `nx-tab-change` `{value, previous}` (cancelable) |
+| `<nx-tabs>` | hijos con `data-tab`, `data-value`, `data-count`, `data-errors`, `data-disabled`, o `tabs` (`[{value, label, count?, errors?, disabled?}]`) · `value`, `sticky`, `label`, `labels` · `nx-tabs-change` `{value, previous}` (cancelable) |
 | `<nx-notice>` | `tone` (`info`, `success`, `warning`, `danger`), `text`, `action`, `action-href` · `nx-notice-action` `{action}` |
 | `<nx-badge>` | `tone` (`neutral`, `success`, `info`, `warning`, `danger`), `label` (si no va como contenido) |
 | Tokens nuevos | `--nx-warning`, `--nx-warning-ink` (texto e íconos), `--nx-warning-soft` |

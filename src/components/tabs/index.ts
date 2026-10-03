@@ -11,6 +11,6 @@ declare global {
     "nx-tabs": NxTabs;
   }
   interface HTMLElementEventMap {
-    "nx-tab-change": CustomEvent<import("./types").TabChangeDetail>;
+    "nx-tabs-change": CustomEvent<import("./types").TabChangeDetail>;
   }
 }

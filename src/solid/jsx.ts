@@ -429,7 +429,7 @@ declare module "solid-js" {
       "nx-dialog-action": CustomEvent<DialogActionDetail>;
       "nx-notice-action": CustomEvent<NoticeActionDetail>;
       "nx-fields-action": CustomEvent<FieldsActionDetail>;
-      "nx-tab-change": CustomEvent<TabChangeDetail>;
+      "nx-tabs-change": CustomEvent<TabChangeDetail>;
       "nx-breadcrumb-navigate": CustomEvent<BreadcrumbNavigateDetail>;
       "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
       "nx-agent-tool": CustomEvent<AgentToolDetail>;
