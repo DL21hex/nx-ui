@@ -168,19 +168,23 @@ function build(locale: string): NxFormat {
   };
 }
 
-/** Agrupa de verdad: grupos de tres, o de dos antes del último en la India («12,34,567»). */
-const grouped = (int: string, sep: string) => new RegExp(`^\\d{1,3}(?:\\${sep}\\d{2,3})*\\${sep}\\d{3}$`).test(int);
+/** Agrupa de verdad: grupos de tres, o de dos antes del último en la India («12,34,567»). El
+ *  primero no empieza por 0: «0.123» o «0,500» no tienen miles, así que no se leen como 123 o 500. */
+const grouped = (int: string, sep: string) => new RegExp(`^[1-9]\\d{0,2}(?:\\${sep}\\d{2,3})*\\${sep}\\d{3}$`).test(int);
 
 /**
  * Un número escrito por una persona (o pegado de Excel, de un PDF, de otro idioma) con el separador
  * decimal del locale (`decimal`). Mejor `null` que un número equivocado. Las reglas:
  *
- * - Se ignora lo que no es cifra, separador o signo: moneda, unidades, espacios (también los finos
- *   U+2009/U+202F y el no separable, que agrupan miles en fr, sv o pt), el apóstrofo de de-CH.
- *   Entre cifras, un espacio o apóstrofo solo agrupa de a tres: «12 34» no se entiende.
+ * - Antes de la primera cifra y después de la última se ignora lo que no es signo: moneda,
+ *   unidades, «%». Entre la primera y la última solo caben cifras, «.», «,», espacios (también los
+ *   finos U+2009/U+202F y el no separable, que agrupan miles en fr, sv o pt) y el apóstrofo de
+ *   de-CH; cualquier otra cosa no se entiende: «03/10/2026», «10:30», «1.23E+05», «12 m2».
+ *   Un espacio o apóstrofo entre cifras solo agrupa de a tres: «12 34» no se entiende.
  * - Signo: un «-» (o el menos tipográfico «−» U+2212, el que escribe Intl en sv, fi o nb) al
- *   comienzo o al final («1.234-»), o el texto entre paréntesis como en contabilidad («(1.234)»,
- *   «($ 1.234,50)»). Dos signos, o uno en medio, no se entienden.
+ *   comienzo o al final («1.234-»), o el número entre paréntesis como en contabilidad, con la
+ *   moneda dentro o fuera («(1.234)», «($ 1.234,50)», «$ (1,234.00)» como lo copia Excel,
+ *   «(1.234) €»). Dos signos, uno en medio o un paréntesis suelto no se entienden.
  * - Con «.» y «,» a la vez, el último que aparece es el decimal y debe aparecer una sola vez; el
  *   otro tiene que agrupar de verdad. «1,234.56» es 1234,56 también en es-CO, y «1.234,56» lo es en
  *   en-US; «12.34,5» o «1,5.3» no se entienden.
@@ -189,16 +193,28 @@ const grouped = (int: string, sep: string) => new RegExp(`^\\d{1,3}(?:\\${sep}\\
  *   («1.234» en es es 1234) y, si no puede serlo, se lee como decimal («1.5» en es, «0,5» en en).
  */
 export function parseNumber(text: string, decimal = ","): number | null {
-  let t = String(text ?? "").trim();
+  let t = String(text ?? "")
+    .trim()
+    .replace(/[\u2212\u2012\u2013\uFE63\uFF0D]/g, "-");
   let neg = false;
-  const paren = /^\((.*)\)$/.exec(t);
+  // Los paréntesis contables envuelven el número; la moneda o la unidad pueden quedar fuera.
+  const paren = /^([^\d()-]*)\(([^()]*)\)([^\d()-]*)$/.exec(t);
   if (paren) {
     neg = true;
-    t = paren[1];
+    t = paren[1] + paren[2] + paren[3];
   }
+  if (/[()]/.test(t)) return null;
+  const first = t.search(/\d/);
+  if (first < 0) return null;
+  const last = t.search(/\d\D*$/);
+  const mid = t.slice(first, last + 1);
+  if (/[^\d.,\s'\u2019]/.test(mid)) return null;
   // Un espacio (o apóstrofo) entre cifras solo agrupa miles: «1 234 567» sí, «12 34» no.
-  if (/\d[\s'\u2019]+(?!\d{3}(?!\d))\d/.test(t)) return null;
-  t = t.replace(/[\u2212\u2012\u2013\uFE63\uFF0D]/g, "-").replace(/[^\d.,-]/g, "");
+  if (/\d[\s'\u2019]+(?!\d{3}(?!\d))\d/.test(mid)) return null;
+  // Del comienzo quedan los signos y un separador pegado a la cifra («,5», «-.5»); del final, los signos.
+  const head = t.slice(0, first);
+  const tail = t.slice(last + 1);
+  t = head.replace(/[^-]/g, "") + (/[.,]$/.test(head) ? head.slice(-1) : "") + mid.replace(/[^\d.,]/g, "") + tail.replace(/[^-]/g, "");
   const signs = t.split("-").length - 1;
   if (signs > 1 || (signs === 1 && !t.startsWith("-") && !t.endsWith("-"))) return null;
   if (signs) {

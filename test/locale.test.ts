@@ -78,6 +78,13 @@ describe("locale de la librería", () => {
     expect(es.parse("(1.234)")).toBe(-1234);
     expect(es.parse("($ 1.234,50)")).toBe(-1234.5);
     expect(nxFormat("en-US").parse("(1,234.00)")).toBe(-1234);
+    // Con la moneda o la unidad fuera de los paréntesis (el formato Contabilidad de Excel).
+    expect(es.parse("$ (1,234.00)")).toBe(-1234);
+    expect(nxFormat("en-US").parse("$ (1,234.00)")).toBe(-1234);
+    expect(es.parse("COP (1.234)")).toBe(-1234);
+    expect(es.parse("(1.234) €")).toBe(-1234);
+    expect(es.parse("1.234 (IVA")).toBeNull();
+    expect(es.parse("1.234)")).toBeNull();
     expect(es.parse("1-2")).toBeNull();
     expect(es.parse("--5")).toBeNull();
     expect(es.parse("(-5)")).toBeNull();
@@ -100,12 +107,29 @@ describe("locale de la librería", () => {
     expect(es.parse("1 2345")).toBeNull();
   });
 
+  it("parse: entre la primera y la última cifra solo caben separadores; si no, null", () => {
+    for (const f of [nxFormat("es-CO"), nxFormat("en-US")]) {
+      for (const t of ["03/10/2026", "2026-10-03", "10:30", "1.23E+05", "12 m2", "1.234 € 50"]) expect(f.parse(t), `${f.locale} ${t}`).toBeNull();
+      expect(f.parse("12 m²")).toBe(12);
+      expect(f.parse("50 %")).toBe(50);
+    }
+    expect(nxFormat("es-CO").parse("1.234,5 Bs.")).toBe(1234.5);
+  });
+
+  it("parse: un primer grupo que empieza por 0 no es de miles", () => {
+    expect(nxFormat("es-CO").parse("0.123")).toBe(0.123);
+    expect(nxFormat("en-US").parse("0,500")).toBe(0.5);
+    expect(nxFormat("es-CO").parse("0,123.5")).toBeNull();
+  });
+
   it("el pegado y la edición del grid usan esas reglas (no guardan un número equivocado)", () => {
     const es = nxFormat("es-CO");
     const money = { key: "m", label: "Monto", type: "money" } as const;
     expect(parseInput("1,234.56", money, es)).toBe(1234.56);
     expect(parseInput("(1.234)", money, es)).toBe(-1234);
     expect(parseInput("12.34,5", money, es)).toBeNull();
+    expect(parseInput("$ (1,234.00)", money, es)).toBe(-1234);
+    expect(parseInput("03/10/2026", money, es)).toBeNull();
   });
 
   it("date: una fecha que no existe se devuelve tal cual, no desbordada", () => {
