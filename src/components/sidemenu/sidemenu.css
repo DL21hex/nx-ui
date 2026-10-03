@@ -200,8 +200,17 @@ nx-sidemenu:dir(rtl) :is(.nx-sidemenu__chev, .nx-sidemenu__back) svg {
 nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
   --_w: var(--nx-sidemenu-width-collapsed, 56px);
 
-  & :is(.nx-sidemenu__label, .nx-sidemenu__chev, .nx-sidemenu__section > span) {
+  & :is(.nx-sidemenu__label, .nx-sidemenu__chev) {
     display: none;
+  }
+  /* El título de la sección se oculta solo a la vista: sigue nombrando su lista (`aria-labelledby`). */
+  & .nx-sidemenu__section > span {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   & .nx-sidemenu__item {
     justify-content: center;
@@ -228,6 +237,26 @@ nx-sidemenu[collapsed]:not([collapsed="false"], [popover]) {
     padding: 0;
     background: var(--nx-border-subtle);
   }
+}
+
+/* El nombre de un ítem en compacto, junto al riel (capa superior: el riel no la recorta). */
+.nx-sidemenu__tip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 4px 8px;
+  overflow: visible;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-md);
+  background: var(--nx-popover);
+  color: var(--nx-foreground);
+  box-shadow: var(--nx-shadow-popover);
+  font-family: var(--nx-font-sans);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  translate: 0 -50%;
+  pointer-events: none;
 }
 
 /* Antes del upgrade, `auto-collapse` en tablet ya reserva el ancho compacto: sin salto al cargar. */
@@ -571,5 +600,9 @@ html:has(nx-sidemenu:popover-open) {
   :is(.nx-panel__option, .nx-panel__chip)[aria-selected="true"] {
     outline: 2px solid Highlight;
     outline-offset: -2px;
+  }
+  /* El anillo del buscador es una sombra, que este modo quita. */
+  .nx-panel__input:focus {
+    outline: 2px solid Highlight;
   }
 }

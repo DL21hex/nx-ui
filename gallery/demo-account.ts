@@ -68,7 +68,7 @@ export function mountAccountDemo(root: HTMLElement): void {
     { id: "informes", label: "Informes", href: "/informes", icon: "chart-column" },
   ];
   // En la demo ninguna hoja navega: solo se anota.
-  menu.addEventListener("nx-select", (e) => {
+  menu.addEventListener("nx-sidemenu-select", (e) => {
     e.preventDefault();
     menu.active = e.detail.item.href ?? null;
     add(`Menú → ${e.detail.item.label}`);

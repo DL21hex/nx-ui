@@ -11,8 +11,8 @@ declare global {
     "nx-sidemenu": NxSidemenu;
   }
   interface HTMLElementEventMap {
-    "nx-select": CustomEvent<import("./types").SelectDetail>;
-    "nx-toggle": CustomEvent<import("./types").ToggleDetail>;
+    "nx-sidemenu-select": CustomEvent<import("./types").SelectDetail>;
+    "nx-sidemenu-toggle": CustomEvent<import("./types").ToggleDetail>;
     "nx-open-change": CustomEvent<import("./types").OpenChangeDetail>;
   }
 }

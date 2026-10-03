@@ -317,3 +317,11 @@ test("sin conexión: la píldora en cada estado, el panel, el comparador y el ed
   await settle();
   await audit(page, ["#sync-demo"]);
 });
+
+test("ruta navegable, en reposo y con el menú de un separador abierto", async ({ page }) => {
+  await open(page, "#/breadcrumb");
+  await audit(page, ["#bc-demo"]);
+  await page.locator("#bc-demo").getByRole("button", { name: "Otros en Empleados" }).click();
+  await expect(page.locator("#bc-demo").getByRole("menuitemradio").first()).toBeVisible();
+  await audit(page, ["#bc-demo"]);
+});

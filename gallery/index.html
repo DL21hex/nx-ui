@@ -4225,7 +4225,7 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
               <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
               <tbody>
                 <tr><td>Nombres</td><td>Suben a ese nivel. El último es la página actual (<code>aria-current="page"</code>) y no es un enlace. Los largos se cortan y muestran el nombre completo al pasar el ratón.</td></tr>
-                <tr><td>Separadores</td><td>Abren los hijos del nivel (los hermanos del siguiente), con el actual marcado. Llegan en <code>children</code> o se piden con <code>loadChildren</code> al abrir, una vez por nivel. Sin alternativas, el <strong>›</strong> no se abre. Más de 7 traen buscador.</td></tr>
+                <tr><td>Separadores</td><td>Abren los hijos del nivel (los hermanos del siguiente), con el actual marcado. Llegan en <code>children</code> o se piden al abrir, una vez por camino: la app responde a <code>nx-breadcrumb-children</code> con <code>e.detail.respond(hijos)</code>, o se piden a <code>children-endpoint</code> (<code>{id}</code>, <code>{level}</code>). Sin alternativas, el <strong>›</strong> no se abre. Más de 7 traen buscador.</td></tr>
                 <tr><td>Colapso</td><td>Si no cabe, los niveles del medio pasan a un «…» que se abre como menú. Siempre quedan el primero y los dos últimos; si aun así no cabe, se corta el último.</td></tr>
                 <tr><td>Angosto</td><td>Por debajo de 480 px de ancho del componente queda «‹ Padre»: el título de la página ya dice dónde estás.</td></tr>
                 <tr><td>Navegar</td><td><code>nx-breadcrumb-navigate</code> <code>{item, level, via}</code> es cancelable: un router SPA lo cancela y navega él. Si nadie lo cancela, se sigue el <code>href</code>. Para conservar la sección al cambiar de persona, el <code>href</code> de cada hermano ya apunta a ella.</td></tr>
@@ -4240,18 +4240,17 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
               <button role="tab" aria-selected="true">HTML</button>
               <button role="tab" aria-selected="false">SolidJS</button>
             </div>
-            <pre role="tabpanel"><code>&lt;nx-breadcrumb id="ruta" label="Ruta"&gt;
+            <pre role="tabpanel"><code>&lt;!-- Los hermanos se piden al abrir un separador (una vez por camino): GET /api/hermanos?de=%2Fhcm%2Fempleados --&gt;
+    &lt;nx-breadcrumb label="Ruta" children-endpoint="/api/hermanos?de={id}"&gt;
       &lt;a href="/hcm" data-icon="users"&gt;Personas&lt;/a&gt;
       &lt;a href="/hcm/empleados"&gt;Empleados&lt;/a&gt;
       &lt;a href="/hcm/empleados/482"&gt;Laura Gómez&lt;/a&gt;
       &lt;span&gt;Contratos&lt;/span&gt;
-    &lt;/nx-breadcrumb&gt;
-
-    // Los hermanos se piden al abrir un separador (una vez por nivel).
-    ruta.loadChildren = (item, level) =&gt; fetch(`/api/hermanos?de=${item.href}`).then((r) =&gt; r.json());</code></pre>
+    &lt;/nx-breadcrumb&gt;</code></pre>
             <pre role="tabpanel" hidden><code>import { Breadcrumb } from "nx32-elements/solid/breadcrumb";
 
-    &lt;Breadcrumb items={ruta()} loadChildren={hermanos}
+    &lt;Breadcrumb items={ruta()}
+      onChildren={(e) =&gt; e.detail.respond(hermanos(e.detail.item))}
       onNavigate={(e) =&gt; { e.preventDefault(); navigate(e.detail.item.href!); }} /&gt;</code></pre>
           </div>
         </template>
@@ -4816,7 +4815,7 @@ render(node, document.querySelector("#menu-slot"));</code></pre>
             <tr><td><code>icon</code></td><td>Nombre registrado con <code>registerIcons</code>. Sin ícono: iniciales.</td></tr>
             <tr><td><code>section</code></td><td>Título del grupo (en el riel y en el panel de hijos).</td></tr>
             <tr><td><code>description</code></td><td>Segunda línea en el panel de hijos; también se busca en ella.</td></tr>
-            <tr><td><code>children</code></td><td>Lo convierte en padre: abre su panel flotante (o un drill-down en el drawer) y nunca navega. El buscador solo aparece con más de 3 hijos.</td></tr>
+            <tr><td><code>children</code></td><td>Lo convierte en padre: abre su panel flotante (o un drill-down en el drawer) y nunca navega. El buscador solo aparece con más de 3 hijos. Un tercer nivel no abre otro panel: sus hojas van en el mismo, como una sección con el nombre de su padre.</td></tr>
             <tr><td><code>utility</code></td><td>En el panel del padre va como chip al pie (configuración, reportes).</td></tr>
             <tr><td><code>badge</code></td><td>Contador o marca (<code>12</code>, <code>"Nuevo"</code>). <code>0</code> no se pinta y más de 99 es «99+». En compacto se reduce a un punto y entra en el nombre accesible.</td></tr>
           </tbody>
@@ -4827,9 +4826,9 @@ render(node, document.querySelector("#menu-slot"));</code></pre>
         <table>
           <thead><tr><th>Evento</th><th><code>detail</code></th><th>Descripción</th></tr></thead>
           <tbody>
-            <tr><td><code>nx-select</code></td><td><code>{ item, href }</code></td><td>Al elegir una hoja. Cancelable: <code>preventDefault()</code> cancela la navegación del enlace.</td></tr>
-            <tr><td><code>nx-toggle</code></td><td><code>{ collapsed, auto }</code></td><td>Botón de contraer (<code>auto: false</code>) o <code>auto-collapse</code> (<code>auto: true</code>). Cancelable: la app controla el estado.</td></tr>
-            <tr><td><code>nx-open-change</code></td><td><code>{ open }</code></td><td>El drawer móvil se abrió o cerró.</td></tr>
+            <tr><td><code>nx-sidemenu-select</code></td><td><code>{ item, href }</code></td><td>Al elegir una hoja. Cancelable: <code>preventDefault()</code> cancela la navegación del enlace.</td></tr>
+            <tr><td><code>nx-sidemenu-toggle</code></td><td><code>{ collapsed, auto }</code></td><td>Botón de contraer (<code>auto: false</code>) o <code>auto-collapse</code> (<code>auto: true</code>). Cancelable: la app controla el estado.</td></tr>
+            <tr><td><code>nx-open-change</code></td><td><code>{ open }</code></td><td>El drawer móvil se abrió o cerró (también si sale del DOM abierto).</td></tr>
           </tbody>
         </table>
       </div>

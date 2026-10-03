@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/components/breadcrumb/index";
-import type { BreadcrumbItem, NxBreadcrumb } from "../src/components/breadcrumb/index";
+import type { BreadcrumbChildrenDetail, BreadcrumbItem, NxBreadcrumb } from "../src/components/breadcrumb/index";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -68,13 +68,18 @@ describe("<nx-breadcrumb>", () => {
     expect(texts(b)).toEqual(["Personas", "Vacantes"]);
   });
 
-  it("un separador sin alternativas no se abre; con hijos o loadChildren, sí", async () => {
+  it("un separador sin alternativas no se abre; con hijos, expandable: true o children-endpoint, sí", async () => {
     const b = await withItems(PATH);
     const seps = [...b.querySelectorAll(".nx-breadcrumb__sep")];
     expect(seps.map((s) => s.tagName)).toEqual(["BUTTON", "BUTTON", "SPAN"]);
     expect(seps[1].getAttribute("aria-label")).toBe("Otros en Empleados");
-    b.loadChildren = () => [];
+    b.items = [...PATH.slice(0, 2), { ...PATH[2], expandable: true }, PATH[3]];
     await tick();
+    expect(b.querySelectorAll("button.nx-breadcrumb__sep")).toHaveLength(3);
+    b.items = PATH;
+    b.childrenEndpoint = "/api/hijos/{id}";
+    await tick();
+    expect(b.getAttribute("children-endpoint")).toBe("/api/hijos/{id}");
     expect(b.querySelectorAll("button.nx-breadcrumb__sep")).toHaveLength(3);
   });
 
@@ -92,7 +97,7 @@ describe("<nx-breadcrumb>", () => {
     expect(menuItems(b).map((m) => m.textContent)).toEqual(["Óscar Bedoya"]);
     input.value = "zzz";
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(menu(b).querySelector<HTMLElement>(".nx-breadcrumb__status")!.hidden).toBe(false);
+    expect(menu(b).querySelector<HTMLElement>(".nx-breadcrumb__status")!.textContent).toBe("Sin resultados");
   });
 
   it("con pocos hermanos no hay buscador; el foco va al actual y las flechas recorren", async () => {
@@ -158,28 +163,47 @@ describe("<nx-breadcrumb>", () => {
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ level: 1, via: "link" }));
   });
 
-  it("loadChildren se pide al abrir, una vez por nivel; si falla, lo dice", async () => {
-    const b = await mount(`<nx-breadcrumb><a href="/a">A</a><a href="/b" data-expandable="false">B</a><span>C</span></nx-breadcrumb>`);
-    let resolve!: (v: BreadcrumbItem[]) => void;
-    const load = vi.fn((it: BreadcrumbItem) => (it.label === "A" ? new Promise<BreadcrumbItem[]>((r) => (resolve = r)) : Promise.reject(new Error("x"))));
-    b.loadChildren = load;
-    await tick();
+  it("nx-breadcrumb-children se emite al abrir, una vez por camino; la app responde después de cancelarlo; si falla, lo dice", async () => {
+    const b = await mount(`<nx-breadcrumb><a href="/a" data-expandable="true">A</a><a href="/b" data-expandable="false">B</a><span>C</span></nx-breadcrumb>`);
+    let respond!: (v: BreadcrumbItem[] | Promise<BreadcrumbItem[]>) => void;
+    const asked = vi.fn((e: CustomEvent<BreadcrumbChildrenDetail>) => {
+      e.preventDefault();
+      respond = e.detail.respond;
+    });
+    b.addEventListener("nx-breadcrumb-children", asked);
     expect(b.querySelectorAll("button.nx-breadcrumb__sep")).toHaveLength(1);
     const sep = await open(b, '[data-sep="0"]');
     expect(menu(b).textContent).toBe("Cargando…");
-    resolve([{ label: "B", href: "/b" }, { label: "Z", href: "/z" }]);
+    expect(asked.mock.calls[0][0].detail).toMatchObject({ item: { label: "A", href: "/a" }, level: 0 });
+    respond([{ label: "B", href: "/b" }, { label: "Z", href: "/z" }]);
     await vi.waitFor(() => expect(menuItems(b).map((m) => m.textContent)).toEqual(["B", "Z"]));
     expect(menuItems(b)[0].getAttribute("aria-checked")).toBe("true");
     sep.click();
     await vi.waitFor(() => expect(menu(b).hidden).toBe(true));
     await open(b, '[data-sep="0"]');
     expect(menuItems(b)).toHaveLength(2);
-    expect(load).toHaveBeenCalledTimes(1);
+    expect(asked).toHaveBeenCalledTimes(1);
 
-    b.items = [{ label: "X" }, { label: "Y" }, { label: "Z" }];
+    b.items = [{ label: "X", expandable: true }, { label: "Y" }, { label: "Z" }];
     await tick();
     await open(b, '[data-sep="0"]');
+    // La región viva es la misma: cambia su texto, y así se anuncia.
+    const live = menu(b).querySelector(".nx-breadcrumb__status")!;
+    expect(live.textContent).toBe("Cargando…");
+    respond(Promise.reject(new Error("x")));
     await vi.waitFor(() => expect(menu(b).textContent).toBe("No se pudo cargar"));
+    expect(menu(b).querySelector(".nx-breadcrumb__status")).toBe(live);
+  });
+
+  it("si la app responde en el momento, no hace falta cancelar; si nadie responde, «Sin resultados»", async () => {
+    const b = await withItems([{ label: "A", expandable: true }, { label: "B", expandable: true }, { label: "C" }]);
+    b.addEventListener("nx-breadcrumb-children", (e) => {
+      if (e.detail.level === 0) e.detail.respond([{ label: "B" }, { label: "Otra" }]);
+    });
+    await open(b, '[data-sep="0"]');
+    expect(menuItems(b).map((m) => m.textContent)).toEqual(["B", "Otra"]);
+    await open(b, '[data-sep="1"]');
+    await vi.waitFor(() => expect(menu(b).textContent).toBe("Sin resultados"));
   });
 
   it("«‹ Padre» apunta al nivel de arriba y avisa con via «back»", async () => {
@@ -287,5 +311,145 @@ describe("<nx-breadcrumb>", () => {
     await tick();
     await open(b, '[data-sep="0"]');
     expect(menu(b).hidden).toBe(false);
+  });
+});
+
+describe("<nx-breadcrumb> hijos pedidos, foco y lugar del menú", () => {
+  const json = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } }));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("children-endpoint: GET con {id} y {level}, del mismo origen; sin {id}, va como ?id=", async () => {
+    const fetch = vi.fn((_url: string, _init?: RequestInit) => json([{ label: "Vacantes", href: "/hcm/vacantes" }, { label: "Empleados", href: "/hcm/empleados" }]));
+    vi.stubGlobal("fetch", fetch);
+    const b = await mount(`<nx-breadcrumb children-endpoint="/api/hijos/{id}?nivel={level}"><a href="/hcm">Personas</a><a href="/hcm/empleados">Empleados</a><span>Laura</span></nx-breadcrumb>`);
+    await open(b, '[data-sep="0"]');
+    await vi.waitFor(() => expect(menuItems(b).map((m) => m.textContent)).toEqual(["Vacantes", "Empleados"]));
+    expect(fetch.mock.calls[0][0]).toBe("/api/hijos/%2Fhcm?nivel=0");
+    expect(menuItems(b)[1].getAttribute("aria-checked")).toBe("true");
+    b.childrenEndpoint = "/api/hijos";
+    await tick();
+    await open(b, '[data-sep="1"]');
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(fetch.mock.calls[1][0]).toBe("/api/hijos?id=%2Fhcm%2Fempleados");
+  });
+
+  it("children-endpoint de otro origen no se pide: «No se pudo cargar»", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetch = vi.fn(() => json([]));
+    vi.stubGlobal("fetch", fetch);
+    const b = await mount(`<nx-breadcrumb children-endpoint="https://otro.example/{id}"><a href="/a">A</a><span>B</span></nx-breadcrumb>`);
+    await open(b, '[data-sep="0"]');
+    await vi.waitFor(() => expect(menu(b).textContent).toBe("No se pudo cargar"));
+    expect(fetch).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("lo guardado es por camino: dos «General» sin id ni href, en ramas distintas, no comparten hijos", async () => {
+    const asked: string[] = [];
+    const b = await withItems([{ label: "Raíz" }, { label: "General", expandable: true }, { label: "X" }]);
+    b.addEventListener("nx-breadcrumb-children", (e) => {
+      const root = b.path[0].label;
+      asked.push(root);
+      e.detail.respond([{ label: `hijo de ${root}` }, { label: "X" }]);
+    });
+    await open(b, '[data-sep="1"]');
+    expect(menuItems(b)[0].textContent).toBe("hijo de Raíz");
+    b.items = [{ label: "Otra raíz" }, { label: "General", expandable: true }, { label: "Y" }];
+    await tick();
+    await open(b, '[data-sep="1"]');
+    expect(menuItems(b)[0].textContent).toBe("hijo de Otra raíz");
+    expect(asked).toEqual(["Raíz", "Otra raíz"]);
+  });
+
+  it("una respuesta del children-endpoint anterior que llega tarde no se guarda", async () => {
+    let answer!: (r: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((r) => (answer = r))));
+    const b = await mount(`<nx-breadcrumb children-endpoint="/viejo/{id}"><a href="/a">A</a><a href="/b">B</a><span>C</span></nx-breadcrumb>`);
+    await open(b, '[data-sep="0"]');
+    b.childrenEndpoint = "/nuevo/{id}";
+    answer(new Response(JSON.stringify([{ label: "del viejo" }, { label: "B", href: "/b" }])));
+    await tick();
+    const fetch = vi.fn((_url: string, _init?: RequestInit) => json([{ label: "del nuevo" }, { label: "B", href: "/b" }]));
+    vi.stubGlobal("fetch", fetch);
+    await open(b, '[data-sep="0"]');
+    await vi.waitFor(() => expect(menuItems(b)[0]?.textContent).toBe("del nuevo"));
+    expect(fetch.mock.calls[0][0]).toBe("/nuevo/%2Fa");
+  });
+
+  it("mientras carga, Esc en el separador cierra; si el foco se va a otra parte, cierra y no se lo roba", async () => {
+    const b = await withItems([{ label: "A", expandable: true }, { label: "B" }, { label: "C" }]);
+    const other = document.body.appendChild(document.createElement("input"));
+    let respond!: (v: BreadcrumbItem[]) => void;
+    b.addEventListener("nx-breadcrumb-children", (e) => {
+      e.preventDefault();
+      respond = e.detail.respond;
+    });
+    const sep = await open(b, '[data-sep="0"]');
+    sep.focus();
+    const esc = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    sep.dispatchEvent(esc);
+    expect(esc.defaultPrevented).toBe(true);
+    expect(sep.getAttribute("aria-expanded")).toBe("false");
+    expect(menu(b).hidden).toBe(true);
+    expect(document.activeElement).toBe(sep);
+
+    await open(b, '[data-sep="0"]');
+    other.focus();
+    expect(menu(b).hidden).toBe(true);
+    respond([{ label: "B" }, { label: "Z" }]);
+    await tick();
+    expect(document.activeElement).toBe(other);
+    expect(menu(b).hidden).toBe(true);
+  });
+
+  it("Tab dentro del menú lo cierra con el foco de vuelta en el separador (sigue desde ahí)", async () => {
+    const b = await withItems(PATH);
+    const sep = await open(b, '[data-sep="0"]');
+    key(menuItems(b)[0], "Tab");
+    expect(menu(b).hidden).toBe(true);
+    expect(document.activeElement).toBe(sep);
+  });
+
+  it("cerca del borde de abajo se abre hacia arriba; en RTL se alinea por la derecha del botón", async () => {
+    const b = await withItems(PATH);
+    const sep = b.querySelector<HTMLElement>('[data-sep="0"]')!;
+    const at = (top: number) => (sep.getBoundingClientRect = () => ({ top, bottom: top + 24, left: 100, right: 124, width: 24, height: 24, x: 100, y: top, toJSON() {} }) as DOMRect);
+    at(innerHeight - 60);
+    await open(b, '[data-sep="0"]');
+    expect(menu(b).hasAttribute("data-up")).toBe(true);
+    expect(menu(b).style.top).toBe("auto");
+    expect(menu(b).style.bottom).toBe(`${60 + 6}px`);
+    sep.click();
+    await vi.waitFor(() => expect(menu(b).hidden).toBe(true));
+    at(40);
+    // happy-dom no hereda `dir` en getComputedStyle: la dirección va en el propio botón.
+    sep.style.direction = "rtl";
+    Object.defineProperty(menu(b), "offsetWidth", { configurable: true, value: 256 });
+    await open(b, '[data-sep="0"]');
+    expect(menu(b).hasAttribute("data-up")).toBe(false);
+    expect(menu(b).style.top).toBe("70px");
+    // Borde derecho del botón (124) + 8 − ancho del menú (256), sin salirse de la ventana.
+    expect(menu(b).style.left).toBe("8px");
+  });
+
+  it("con pantalla táctil, el menú con buscador enfoca el actual, no el buscador (no abre el teclado)", async () => {
+    const mm = vi.spyOn(window, "matchMedia").mockImplementation((q: string) => ({ matches: !q.includes("pointer: fine"), media: q, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList);
+    try {
+      const b = await withItems(PATH);
+      await open(b, '[data-sep="1"]');
+      expect(menu(b).querySelector("input")).not.toBeNull();
+      expect(document.activeElement).toBe(menuItems(b)[0]);
+    } finally {
+      mm.mockRestore();
+    }
+  });
+
+  it("quitar el atributo labels vuelve a los textos de fábrica", async () => {
+    const b = await mount(`<nx-breadcrumb labels='{"label":"Camino"}'><a href="/a">A</a><span>B</span></nx-breadcrumb>`);
+    expect(b.labels.label).toBe("Camino");
+    b.removeAttribute("labels");
+    await tick();
+    expect(b.labels.label).toBe("Ruta");
+    expect(b.querySelector("nav")!.getAttribute("aria-label")).toBe("Ruta");
   });
 });

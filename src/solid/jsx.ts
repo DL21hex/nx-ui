@@ -23,7 +23,7 @@ import type { FieldItem, FieldsActionDetail, FieldsLabels, FieldsVariant } from 
 import type { NxTabs } from "../components/tabs/tabs";
 import type { TabChangeDetail, TabItem, TabsLabels } from "../components/tabs/types";
 import type { NxBreadcrumb } from "../components/breadcrumb/breadcrumb";
-import type { BreadcrumbItem, BreadcrumbLabels, BreadcrumbLoader, BreadcrumbNavigateDetail } from "../components/breadcrumb/types";
+import type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail } from "../components/breadcrumb/types";
 import type { NxOrg } from "../components/org/org";
 import type { OrgContact, OrgFocusDetail, OrgLabels, OrgMetric, OrgPerson, OrgUnit, OrgView } from "../components/org/types";
 import type { NxAgent } from "../components/agent/agent";
@@ -132,7 +132,6 @@ declare module "solid-js" {
       me: PresenceUser | ChecklistPerson | null | undefined;
       items: MenuItem[] | CommandItem[] | InboxItem[] | ScanItem[] | AwardItem[] | AccountItem[] | LauncherItem[] | ChecklistSummaryItem[] | FieldItem[] | BreadcrumbItem[] | null | undefined;
       tabs: TabItem[] | null | undefined;
-      loadChildren: BreadcrumbLoader | null | undefined;
       units: OrgUnit[] | null | undefined;
       people: OrgPerson[] | null | undefined;
       contacts: OrgContact[] | null | undefined;
@@ -233,6 +232,7 @@ declare module "solid-js" {
       ping: string | undefined;
       wedge: ScanWedge | undefined;
       "explain-endpoint": string | undefined;
+      "children-endpoint": string | undefined;
       detect: string | undefined;
       kind: TrendKind | HandoffKind | undefined;
       debounce: string | undefined;
@@ -412,8 +412,8 @@ declare module "solid-js" {
       "nx-what-if-compute": CustomEvent<WhatIfComputeDetail>;
       "nx-presence-local": CustomEvent<PresenceEvent>;
       "nx-presence-change": CustomEvent<{ users: PresenceState[] }>;
-      "nx-select": CustomEvent<SelectDetail>;
-      "nx-toggle": CustomEvent<ToggleDetail>;
+      "nx-sidemenu-select": CustomEvent<SelectDetail>;
+      "nx-sidemenu-toggle": CustomEvent<ToggleDetail>;
       "nx-open-change": CustomEvent<OpenChangeDetail>;
       "nx-button-done": CustomEvent<DoneDetail>;
       "nx-select-change": CustomEvent<SelectChangeDetail>;
@@ -433,6 +433,7 @@ declare module "solid-js" {
       "nx-fields-action": CustomEvent<FieldsActionDetail>;
       "nx-tab-change": CustomEvent<TabChangeDetail>;
       "nx-breadcrumb-navigate": CustomEvent<BreadcrumbNavigateDetail>;
+      "nx-breadcrumb-children": CustomEvent<BreadcrumbChildrenDetail>;
       "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
       "nx-agent-tool": CustomEvent<AgentToolDetail>;
       "nx-agent-state": CustomEvent<{ state: unknown }>;

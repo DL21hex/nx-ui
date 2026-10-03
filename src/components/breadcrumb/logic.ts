@@ -9,20 +9,23 @@ export const SEARCH_AT = 7;
 export const itemKey = (it: BreadcrumbItem): string => it.id ?? it.href ?? it.label;
 
 /**
- * Niveles válidos de un payload: con `label` de texto; `href` solo si es seguro (`safeHref`).
- * Los `children` se limpian un nivel: el menú no usa los de más abajo.
+ * Niveles válidos de un payload: con `label` de texto (un número, como un año, pasa a texto);
+ * `href` solo si es seguro (`safeHref`). Los `children` se limpian un nivel: el menú no usa los de
+ * más abajo.
  */
 export function cleanItems(v: unknown, deep = true): BreadcrumbItem[] {
   if (!Array.isArray(v)) return [];
   const out: BreadcrumbItem[] = [];
   for (const raw of v) {
-    if (!raw || typeof raw !== "object" || typeof raw.label !== "string") continue;
-    const it: BreadcrumbItem = { label: raw.label };
+    if (!raw || typeof raw !== "object") continue;
+    const label = typeof raw.label === "number" && Number.isFinite(raw.label) ? String(raw.label) : raw.label;
+    if (typeof label !== "string") continue;
+    const it: BreadcrumbItem = { label };
     if (raw.id != null) it.id = String(raw.id);
     const href = safeHref(raw.href);
     if (href) it.href = href;
     if (typeof raw.icon === "string") it.icon = raw.icon;
-    if (raw.expandable === false) it.expandable = false;
+    if (typeof raw.expandable === "boolean") it.expandable = raw.expandable;
     if (deep && Array.isArray(raw.children)) it.children = cleanItems(raw.children, false);
     out.push(it);
   }

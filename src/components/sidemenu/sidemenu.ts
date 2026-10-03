@@ -10,7 +10,10 @@
  * - **El navegador hace el trabajo pesado.** Cada flotante y el drawer son `popover="auto"`:
  *   capa superior, clic fuera, Escape, devolución del foco y "uno abierto a la vez" son nativos.
  * - **Las hojas son `<a href>` reales.** El router de Solid las intercepta solo; en HTML plano
- *   navegan. `nx-select` (cancelable) es la puerta para quien quiera decidir otra cosa.
+ *   navegan. `nx-sidemenu-select` (cancelable) es la puerta para quien quiera decidir otra cosa.
+ * - **Lo abierto no se repinta.** Con un flotante o el drill-down abiertos, un cambio de `items`,
+ *   `active` o `labels` espera a que se cierren: repintar los sacaría del DOM (el popover se cierra
+ *   sin aviso) y se perderían la consulta y el foco.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
@@ -53,6 +56,16 @@ export class NxSidemenu extends Base {
   #mobile = false;
   #drill: MenuItem | null = null;
   #match: ActiveMatch = { item: null, trail: [] };
+  /** El flotante abierto y si el drawer lo está, según `beforetoggle`/`toggle` (un popover que sale
+   *  del DOM se cierra sin avisar: se reinician al desconectar). */
+  #fly: HTMLElement | null = null;
+  #isOpen = false;
+  /** Hubo cambios mientras algo estaba abierto: se pintan al cerrarlo. */
+  #stale = false;
+  /** En qué lado del límite de tablet se aplicó `auto-collapse` por última vez. */
+  #inTablet?: boolean;
+  #tip?: HTMLElement;
+  #touch = false;
   #queued = false;
   #abort?: AbortController;
   #tracking?: { fly: HTMLElement; stop: () => void };
@@ -111,7 +124,7 @@ export class NxSidemenu extends Base {
 
   /** Si el drawer móvil está abierto. En escritorio siempre es `false`. */
   get open(): boolean {
-    return this.hasAttribute("popover") && this.matches(":popover-open");
+    return this.#isOpen && this.hasAttribute("popover");
   }
   set open(value: boolean) {
     if (value) this.show();
@@ -145,9 +158,10 @@ export class NxSidemenu extends Base {
     // Con el <script> en el <head>, el parser conecta el elemento ANTES de leer sus hijos: los
     // slots llegan después de nuestros contenedores. Al terminar el documento se reordena.
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => this.#render(), { once: true, signal });
+      document.addEventListener("DOMContentLoaded", () => this.#render(true), { once: true, signal });
     }
     this.addEventListener("click", this.#onClick, { signal });
+    for (const type of ["pointerdown", "keydown", "pointerover", "pointerleave", "focusin", "focusout"]) this.addEventListener(type, this.#onTip, { signal });
     // `toggle`/`beforetoggle` no burbujean: en captura el host oye también los de sus flotantes.
     this.addEventListener("beforetoggle", this.#onBeforeToggle, { signal, capture: true });
     this.addEventListener("toggle", this.#onToggle, { signal, capture: true });
@@ -164,11 +178,23 @@ export class NxSidemenu extends Base {
   disconnectedCallback(): void {
     this.#abort?.abort();
     this.#tracking?.stop();
+    // Un popover que sale del DOM se cierra sin `toggle`. Si era el drawer se avisa igual: un `open`
+    // controlado por la app no se queda en `true`.
+    this.#fly = null;
+    if (this.#isOpen) {
+      this.#isOpen = false;
+      this.#emit("nx-open-change", { open: false });
+    }
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
     if (name === "items" || name === "labels") {
-      if (value === null) return;
+      // Quitar el atributo vuelve al valor por defecto (sin ítems, los textos de fábrica).
+      if (value === null) {
+        if (name === "items") this.items = [];
+        else this.labels = null;
+        return;
+      }
       let parsed: unknown;
       try {
         parsed = JSON.parse(value);
@@ -224,22 +250,35 @@ export class NxSidemenu extends Base {
     else if (this.hasAttribute("popover")) {
       this.hide();
       this.removeAttribute("popover");
+      this.#isOpen = false;
     }
-    this.#render();
+    this.#render(true);
   }
 
-  /** Contrae o expande pasando por `nx-toggle` (cancelable): una app que controla el estado lo
-   *  cancela y lo aplica ella, también cuando el cambio lo pide `auto-collapse`. */
+  /** Contrae o expande pasando por `nx-sidemenu-toggle` (cancelable): una app que controla el
+   *  estado lo cancela y lo aplica ella, también cuando el cambio lo pide `auto-collapse`. */
   #setCollapsed(next: boolean, auto: boolean): void {
     if (next === this.collapsed) return;
-    if (this.#emit("nx-toggle", { collapsed: next, auto }, true)) this.collapsed = next;
+    if (this.#emit("nx-sidemenu-toggle", { collapsed: next, auto }, true)) this.collapsed = next;
   }
 
   #applyAutoCollapse(): void {
-    if (!this.autoCollapse || !this.#tablet) return;
-    if (this.#tablet.matches) {
-      this.#autoCollapsed = !this.collapsed;
-      this.#setCollapsed(true, true);
+    if (!this.#tablet) return;
+    if (!this.autoCollapse) {
+      this.#inTablet = undefined;
+      return;
+    }
+    // Solo al cruzar el límite. Reconectar el nodo (un layout que lo mueve) o reasignar
+    // `auto-collapse` no recalcula: olvidaría que lo contrajo él, o volvería a contraer lo que el
+    // usuario expandió.
+    const tablet = this.#tablet.matches;
+    if (tablet === this.#inTablet) return;
+    this.#inTablet = tablet;
+    if (tablet) {
+      if (!this.collapsed) {
+        this.#autoCollapsed = true;
+        this.#setCollapsed(true, true);
+      }
     } else if (this.#autoCollapsed) {
       this.#autoCollapsed = false;
       this.#setCollapsed(false, true);
@@ -252,7 +291,17 @@ export class NxSidemenu extends Base {
 
   // ---------------------------------------------------------------- render
 
-  #render(): void {
+  /** Pinta el riel (o el drill-down). Sin `force`, con un flotante o el drill-down abiertos solo
+   *  anota el cambio: se pinta al cerrarlos. */
+  #render(force = false): void {
+    if (!force && (this.#fly || this.#drill)) {
+      this.#stale = true;
+      return;
+    }
+    this.#stale = false;
+    // Un flotante abierto sale del DOM con el riel viejo (y se cierra sin `toggle`).
+    this.#fly = null;
+    this.#hideTip();
     const body = this.#body!;
     const tools = this.#tools!;
     // Nuestros contenedores van siempre al final (orden de tabulación: cabecera → menú → pie).
@@ -273,7 +322,7 @@ export class NxSidemenu extends Base {
       tools.append(
         h(
           "button",
-          { type: "button", class: "nx-sidemenu__item nx-sidemenu__collapse", "data-nx-collapse": "", "aria-expanded": String(!compact), "aria-label": label, title: label },
+          { type: "button", class: "nx-sidemenu__item nx-sidemenu__collapse", "data-nx-collapse": "", "aria-expanded": String(!compact), "aria-label": label },
           glyph("panel"),
           h("span", { class: "nx-sidemenu__label" }, label),
         ),
@@ -298,9 +347,10 @@ export class NxSidemenu extends Base {
     const key = this.#keyOf.get(it)!;
     const label = String(it.label ?? "");
     const badge = formatBadge(it.badge);
-    // En compacto el texto no se ve: el nombre accesible lo lleva todo, badge incluido.
+    // En compacto el texto no se ve: el nombre accesible lo lleva todo, badge incluido (y la
+    // etiqueta flotante lo muestra con el ratón o el teclado).
     const name = compact ? (badge ? `${label} (${badge})` : label) : null;
-    const attrs = { class: "nx-sidemenu__item", "data-nx-key": key, title: name, "aria-label": name };
+    const attrs = { class: "nx-sidemenu__item", "data-nx-key": key, "aria-label": name };
     const content = () => [icon(it.icon, label), h("span", { class: "nx-sidemenu__label" }, label), badgeEl(badge)];
 
     if (Array.isArray(it.children) && it.children.length > 0) {
@@ -344,14 +394,24 @@ export class NxSidemenu extends Base {
 
   // ---------------------------------------------------------------- panel flotante
 
-
   #onBeforeToggle = (e: Event): void => {
     const fly = e.target as HTMLElement;
+    const open = (e as ToggleEvent).newState === "open";
+    if (fly === this) {
+      this.#isOpen = open;
+      return;
+    }
     const key = fly.dataset?.nxFlyout;
-    if (!key || (e as ToggleEvent).newState !== "open") return;
+    if (!key) return;
+    if (!open) {
+      if (this.#fly === fly) this.#fly = null;
+      return;
+    }
     const item = this.#byKey.get(key);
     const trigger = this.querySelector<HTMLElement>(`[popovertarget="${fly.id}"]`);
     if (!item || !trigger) return;
+    this.#fly = fly;
+    this.#hideTip();
     const panel = renderChildPanel({
       item,
       active: this.#match.item,
@@ -377,7 +437,8 @@ export class NxSidemenu extends Base {
     const t = e.target as HTMLElement;
     const open = (e as ToggleEvent).newState === "open";
     if (t === this) {
-      if (!open && this.#drill) {
+      this.#isOpen = open;
+      if (!open && (this.#drill || this.#stale)) {
         this.#drill = null;
         this.#render();
       }
@@ -393,9 +454,11 @@ export class NxSidemenu extends Base {
     if (!t.dataset?.nxFlyout) return;
     this.querySelector(`[popovertarget="${t.id}"]`)?.setAttribute("aria-expanded", String(open));
     // `toggle` llega asíncrono: si ya se volvió a abrir, no se vacía.
-    if (!open && !t.matches(":popover-open")) {
+    if (!open && this.#fly !== t) {
       if (this.#tracking?.fly === t) this.#tracking.stop();
       t.replaceChildren();
+      // Lo que cambió mientras estaba abierto (el foco, si volvió al disparador, se recupera).
+      if (this.#stale) this.#render();
     }
   };
 
@@ -475,7 +538,7 @@ export class NxSidemenu extends Base {
 
     if (el.hasAttribute("data-nx-drill")) {
       this.#drill = item;
-      this.#render();
+      this.#render(true);
       // Con puntero fino, el buscador (o la lista, si hay pocos hijos); en táctil, «Volver».
       const target = matchMedia(FINE_POINTER).matches ? ".nx-panel__input, .nx-panel__list" : "[data-nx-back]";
       this.#body!.querySelector<HTMLElement>(target)?.focus();
@@ -487,9 +550,9 @@ export class NxSidemenu extends Base {
     // Una hoja (del riel, de un flotante o del drill-down). Un clic con modificador (abrir en
     // otra pestaña) es del navegador: no se anuncia ni se cierra nada.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    if (!this.#emit("nx-select", { item, href: safeHref(item.href) }, true)) e.preventDefault();
+    if (!this.#emit("nx-sidemenu-select", { item, href: safeHref(item.href) }, true)) e.preventDefault();
     const fly = el.closest<HTMLElement>("[data-nx-flyout]");
-    if (fly?.matches(":popover-open")) fly.hidePopover();
+    if (fly && fly === this.#fly) fly.hidePopover();
     this.hide();
   };
 
@@ -500,7 +563,11 @@ export class NxSidemenu extends Base {
    */
   #onEscape = (e: KeyboardEvent): void => {
     if (e.key !== "Escape" || e.defaultPrevented) return;
-    const fly = this.querySelector<HTMLElement>(".nx-flyout:popover-open");
+    // Dentro de otro popover abierto (un selector de terceros en el slot), Escape es suyo: cerrar
+    // el drawer se lo llevaría también a él.
+    const pop = (e.target as Element | null)?.closest?.(":popover-open");
+    if (pop && pop !== this && pop !== this.#fly) return;
+    const fly = this.#fly;
     if (fly) fly.hidePopover();
     else if (this.open) this.hide();
     else return;
@@ -512,4 +579,44 @@ export class NxSidemenu extends Base {
     const to = e.relatedTarget as Node | null;
     if (this.open && to && !this.contains(to)) this.hide();
   };
+
+  // ---------------------------------------------------------------- etiqueta en compacto
+
+  /** En compacto el nombre no se ve, y un `title` no sale con el foco del teclado: una etiqueta
+   *  flotante lo muestra junto al ítem al pasar el ratón o al llegar con Tab. Es solo visual: el
+   *  nombre accesible ya está en `aria-label`. */
+  #onTip = (e: Event): void => {
+    // Un toque también enfoca: ahí la etiqueta se quedaría pegada junto al riel. Una tecla lo olvida.
+    if (e.type === "pointerdown" || e.type === "keydown") {
+      this.#touch = e.type === "pointerdown" && (e as PointerEvent).pointerType !== "mouse";
+      return;
+    }
+    const touch = e.type === "pointerover" ? (e as PointerEvent).pointerType !== "mouse" : this.#touch;
+    const enter = e.type === "pointerover" || e.type === "focusin";
+    const row = enter && !touch && this.collapsed && !this.#mobile ? (e.target as Element).closest?.<HTMLElement>(".nx-sidemenu__item[aria-label]") : null;
+    if (row && row.getAttribute("aria-expanded") !== "true") this.#showTip(row);
+    else this.#hideTip();
+  };
+
+  #showTip(row: HTMLElement): void {
+    const tip = (this.#tip ??= h("div", { class: "nx-sidemenu__tip", popover: "manual", "aria-hidden": "true" }));
+    // Vive en el cuerpo, que se repinta: si un repintado se lo llevó, vuelve.
+    if (!tip.isConnected) this.#body!.append(tip);
+    tip.textContent = row.getAttribute("aria-label");
+    if (!tip.matches(":popover-open")) tip.showPopover?.();
+    const r = row.getBoundingClientRect();
+    const rail = this.getBoundingClientRect();
+    tip.style.top = `${r.top + r.height / 2}px`;
+    if (getComputedStyle(this).direction === "rtl") {
+      tip.style.left = "auto";
+      tip.style.right = `${document.documentElement.clientWidth - rail.left + 6}px`;
+    } else {
+      tip.style.right = "auto";
+      tip.style.left = `${rail.right + 6}px`;
+    }
+  }
+
+  #hideTip(): void {
+    if (this.#tip?.matches(":popover-open")) this.#tip.hidePopover();
+  }
 }

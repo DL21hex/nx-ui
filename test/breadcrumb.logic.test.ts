@@ -44,6 +44,14 @@ describe("cleanItems", () => {
     expect(cleanItems("x")).toEqual([]);
   });
 
+  it("un nombre numérico (un año) pasa a texto en vez de perder el nivel; expandable: true se conserva", () => {
+    expect(cleanItems([{ label: "Contabilidad" }, { label: 2024, expandable: true }, { label: Number.NaN }, { label: "Enero", expandable: "sí" }])).toEqual([
+      { label: "Contabilidad" },
+      { label: "2024", expandable: true },
+      { label: "Enero" },
+    ]);
+  });
+
   it("la clave es id, después href, después el nombre", () => {
     expect(itemKey({ id: "a", href: "/b", label: "c" })).toBe("a");
     expect(itemKey({ href: "/b", label: "c" })).toBe("/b");

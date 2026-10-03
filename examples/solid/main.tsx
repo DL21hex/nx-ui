@@ -26,7 +26,7 @@ const MENU: MenuItem[] = [
 
 function Layout(props: RouteSectionProps) {
   const loc = useLocation();
-  // Estado compacto controlado por la app: se cancela nx-toggle y se guarda en una señal.
+  // Estado compacto controlado por la app: se cancela nx-sidemenu-toggle y se guarda en una señal.
   const [compact, setCompact] = createSignal(false);
   return (
     <div class="shell">
