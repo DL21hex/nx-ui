@@ -169,3 +169,97 @@ describe("<nx-fields> al editar", () => {
     expect(data.get("doc")).toBeNull();
   });
 });
+
+describe("<nx-fields> al editar: lo escrito no se pierde", () => {
+  it("si la ficha se vuelve a pintar (heading, o los mismos items otra vez), lo escrito y el foco siguen", () => {
+    const f = mount("editing");
+    const correo = input(f, "correo");
+    correo.focus();
+    type(correo, "ana.maria@acme.co");
+    f.heading = "Datos";
+    expect(f.values.correo).toBe("ana.maria@acme.co");
+    expect(document.activeElement).toBe(input(f, "correo"));
+    f.items = ITEMS.map((it) => ({ ...it }));
+    expect(input(f, "correo").value).toBe("ana.maria@acme.co");
+    expect(document.activeElement).toBe(input(f, "correo"));
+  });
+
+  it("si la app cambia ese dato, gana el dato nuevo; reset() descarta lo escrito", () => {
+    const f = mount("editing");
+    type(input(f, "correo"), "ana.maria@acme.co");
+    type(input(f, "fijo"), "604 444 5555");
+    f.items = ITEMS.map((it) => (it.key === "correo" ? { ...it, value: "otro@acme.co" } : it));
+    expect(f.values.correo).toBe("otro@acme.co");
+    expect(f.values.fijo).toBe("604 444 5555");
+    f.reset();
+    expect(f.values.fijo).toBeNull();
+  });
+
+  it("un número con más de dos decimales no se redondea si nadie lo toca", () => {
+    document.body.innerHTML = `<nx-fields locale="es-CO" editing></nx-fields>`;
+    const f = document.querySelector("nx-fields")!;
+    f.items = [
+      { key: "tasa", label: "Tasa", value: 0.1275, format: "number" },
+      { key: "trm", label: "TRM", value: 4123.4567, format: "money", currency: "COP" },
+      { key: "texto", label: "Como texto", value: "1234,56789", format: "number" },
+    ];
+    expect(input(f, "tasa").value).toBe("0,1275");
+    expect(input(f, "trm").value).toBe("4.123,4567");
+    expect(f.values).toEqual({ tasa: 0.1275, trm: 4123.4567, texto: 1234.56789 });
+    type(input(f, "tasa"), "0,5");
+    expect(f.values.tasa).toBe(0.5);
+  });
+});
+
+describe("<nx-fields> con datos mal formados (BDUI)", () => {
+  it("options que no es un arreglo, input que no es un objeto y rows que no es un número no rompen nada", () => {
+    document.body.innerHTML = `<nx-fields editing></nx-fields>`;
+    const f = document.querySelector("nx-fields")!;
+    f.items = [
+      { key: "tipo", label: "Tipo", value: "fijo", input: { type: "select", options: "fijo,temporal" as unknown as string[] } },
+      { key: "n", label: "N", value: "x", input: "select" as unknown as FieldItem["input"] },
+      { key: "obs", label: "Obs", input: { type: "textarea", rows: "muchas" as unknown as number } },
+    ];
+    expect(rows(f)).toHaveLength(3);
+    expect(f.querySelector<HTMLSelectElement>('[name="tipo"]')!.value).toBe("fijo");
+    expect(input(f, "n").type).toBe("text");
+    expect(f.querySelector("textarea")!.getAttribute("rows")).toBe("3");
+  });
+
+  it("un input.type que no es de la lista cae al del formato (no crea un submit ni un hidden)", () => {
+    document.body.innerHTML = `<form><nx-fields editing></nx-fields></form>`;
+    const f = document.querySelector("nx-fields")!;
+    f.items = [
+      { key: "a", label: "A", value: "x", input: { type: "submit" as unknown as "text" } },
+      { key: "b", label: "B", value: 3, format: "number", input: { type: "hidden" as unknown as "text" } },
+    ];
+    expect(input(f, "a").type).toBe("text");
+    expect(input(f, "b").type).toBe("text");
+    expect(input(f, "b").inputMode).toBe("decimal");
+  });
+
+  it("una clave con espacios no rompe aria-describedby del error y de la ayuda", () => {
+    document.body.innerHTML = `<nx-fields editing></nx-fields>`;
+    const f = document.querySelector("nx-fields")!;
+    f.items = [{ key: "fecha ingreso", label: "Fecha de ingreso", input: { required: true, hint: "La del contrato" } }];
+    const c = input(f, "fecha ingreso");
+    expect(document.getElementById(c.getAttribute("aria-describedby")!)!.textContent).toBe("La del contrato");
+    f.validate();
+    const ids = c.getAttribute("aria-describedby")!.split(" ");
+    expect(ids).toHaveLength(1);
+    expect(document.getElementById(ids[0])!.textContent).toBe("Este dato es obligatorio.");
+  });
+
+  it("quitar los atributos items, errors y labels los vacía", () => {
+    document.body.innerHTML = `<nx-fields editing items='[{"key":"a","label":"A"}]' errors='{"a":"mal"}' labels='{"required":"Falta"}'></nx-fields>`;
+    const f = document.querySelector("nx-fields")!;
+    expect(f.querySelectorAll(".nx-fields__err")).toHaveLength(1);
+    f.removeAttribute("errors");
+    expect(f.errors).toEqual({});
+    expect(f.querySelectorAll(".nx-fields__err")).toHaveLength(0);
+    f.removeAttribute("labels");
+    expect(f.labels.required).toBe("Este dato es obligatorio.");
+    f.removeAttribute("items");
+    expect(rows(f)).toHaveLength(0);
+  });
+});

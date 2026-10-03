@@ -1759,7 +1759,9 @@ seis zonas siempre en el mismo orden: arriba orienta, en medio informa o edita, 
   sitio (texto, correo, teléfono, número, monto, fecha, lista o área de texto) con `name`, así que
   sirve dentro de un `<form>` y marca los cambios sin guardar de `<nx-dialog>`; `readonly` sigue como
   texto con candado. `values` devuelve lo escrito ya convertido, `validate()` revisa lo obligatorio y
-  el formato y enfoca el primer error, y `errors` muestra los del servidor.
+  el formato y enfoca el primer error, y `errors` muestra los del servidor. Un número se edita sin
+  redondear; lo escrito no se pierde si la ficha se vuelve a pintar (los mismos `items` otra vez), y
+  `reset()` lo descarta (un formulario que se reabre).
 - **`<nx-tabs>`**: los paneles son tus hijos con `data-tab` (no se mueven: la hidratación de Solid
   sigue intacta), con `data-count` o `data-errors` (en rojo, para un formulario largo). Teclado de la
   APG; `nx-tabs-change` es cancelable. Con `tabs` (BDUI), la lista sale de ahí.
@@ -1795,7 +1797,7 @@ guardar.onclick = async () => {
 | | |
 |---|---|
 | `<nx-dialog>` (ficha) | `avatar`, `badge`, `badge-tone`, `nav` (`"prev next"`, `"next"`, `"prev"`, `""`), `actions` (`[{id, label, danger?, disabled?, icon?}]`) · `nx-dialog-nav` `{dir}`, `nx-dialog-action` `{id}` · pone `--nx-sticky-top` (alto de su cabecera) |
-| `<nx-fields>` | `items` (`[{key?, label, value, wide?, format?, currency?, href?, copy?, mono?, readonly?, input?}]`; `format`: `text`, `number`, `money`, `date`; `input`: `{type?, options?, required?, placeholder?, hint?, rows?}`), `variant` (`grid` / `summary`), `columns` (1–4), `heading`, `action`, `editing`, `errors`, `locale`, `currency`, `labels` · `values`, `validate()`, `focusField(key)` · `nx-fields-action` `{action}` |
+| `<nx-fields>` | `items` (`[{key?, label, value, wide?, format?, currency?, href?, copy?, mono?, readonly?, input?}]`; `format`: `text`, `number`, `money`, `date`; `input`: `{type?, options?, required?, placeholder?, hint?, rows?}`), `variant` (`grid` / `summary`), `columns` (1–4), `heading`, `action`, `editing`, `errors`, `locale`, `currency`, `labels` · `values`, `validate()`, `focusField(key)`, `reset()` · `nx-fields-action` `{action}` |
 | `<nx-tabs>` | hijos con `data-tab`, `data-value`, `data-count`, `data-errors`, `data-disabled`, o `tabs` (`[{value, label, count?, errors?, disabled?}]`) · `value`, `sticky`, `label`, `labels` · `nx-tabs-change` `{value, previous}` (cancelable) |
 | `<nx-notice>` | `tone` (`info`, `success`, `warning`, `danger`), `text`, `action`, `action-href` · `nx-notice-action` `{action}` |
 | `<nx-badge>` | `tone` (`neutral`, `success`, `info`, `warning`, `danger`), `label` (si no va como contenido) |

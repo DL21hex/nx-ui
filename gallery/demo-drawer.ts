@@ -425,6 +425,9 @@ export function mountDrawerDemo(root: HTMLElement): void {
       { key: "valor", label: "Valor", format: "money", input: { hint: "Opcional" } },
     ];
     more.items = [{ key: "obs", label: "Observaciones", wide: true, input: { type: "textarea", hint: `${person().short} la verá en su desprendible.` } }];
+    // Volver a asignar `items` conserva lo escrito: un formulario que se reabre empieza en blanco.
+    what.reset();
+    more.reset();
   };
   $("#dw-nov-open").addEventListener("click", () => {
     resetNov();

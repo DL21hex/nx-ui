@@ -10,7 +10,8 @@
  *   se edita aquí (`readonly`) sigue como texto, con candado. Los campos llevan `name` (la clave):
  *   dentro de un `<form>` sirven tal cual, y dentro de un `<nx-dialog>` marcan los cambios sin
  *   guardar. `values` los lee ya convertidos, `validate()` revisa lo obligatorio y el formato, y
- *   `errors` muestra los del servidor.
+ *   `errors` muestra los del servidor. Lo escrito no se pierde si la ficha se vuelve a pintar
+ *   (cambia `heading`, o la app vuelve a asignar los mismos `items`); `reset()` lo descarta.
  *
  * Con `heading`, la sección lleva su título; con `action`, un botón al lado («Editar»), que avisa
  * con `nx-fields-action` y se oculta mientras se edita. Light DOM, sin hijos del autor: todo lo
@@ -21,7 +22,7 @@ import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale, type NxFormat } from "../../core/locale";
-import type { FieldInputType, FieldItem, FieldOption, FieldsActionDetail, FieldsLabels, FieldsVariant, FieldValue } from "./types";
+import type { FieldInput, FieldInputType, FieldItem, FieldOption, FieldsActionDetail, FieldsLabels, FieldsVariant, FieldValue } from "./types";
 
 export const FIELDS_LABELS: FieldsLabels = {
   empty: "Sin dato",
@@ -43,10 +44,35 @@ let uid = 0;
 
 type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
+const TYPES: FieldInputType[] = ["text", "email", "tel", "url", "number", "money", "date", "select", "textarea"];
+
 const empty = (v: unknown) => v === null || v === undefined || v === "";
 const keyOf = (it: FieldItem, i: number) => (it.key ? String(it.key) : `f${i + 1}`);
-const typeOf = (it: FieldItem): FieldInputType => it.input?.type ?? (it.format === "money" ? "money" : it.format === "number" ? "number" : it.format === "date" ? "date" : "text");
-const optionOf = (o: string | FieldOption): FieldOption => (typeof o === "string" ? { value: o } : { value: String(o?.value ?? ""), label: o?.label });
+/** `input` tal como llega del backend: si no es un objeto, no hay nada que leer. */
+const inputOf = (it: FieldItem): FieldInput => (it.input && typeof it.input === "object" ? it.input : {});
+/** El control: `input.type` si es uno conocido (un `submit` o un `hidden` del backend no), o el del formato. */
+const typeOf = (it: FieldItem): FieldInputType => {
+  const t = inputOf(it).type;
+  return t && TYPES.includes(t) ? t : it.format === "money" ? "money" : it.format === "number" ? "number" : it.format === "date" ? "date" : "text";
+};
+const optionOf = (o: string | FieldOption): FieldOption => (typeof o === "string" || typeof o === "number" ? { value: String(o) } : { value: String(o?.value ?? ""), label: o?.label });
+
+const exact = new Map<string, Intl.NumberFormat>();
+/** Un número para editarlo: con el formato del locale pero sin redondear (una tasa de 0,1275 no
+ *  pasa a 0,13 sin que nadie la toque). */
+function exactNumber(locale: string, n: number): string {
+  let f = exact.get(locale);
+  if (!f) exact.set(locale, (f = new Intl.NumberFormat(locale, { maximumFractionDigits: 20 })));
+  return f.format(n).replace(/[\u00a0\u202f]/g, " ");
+}
+
+/** Cómo nació cada campo: el valor del dato y el texto que se puso en el control. */
+interface Initial {
+  value: FieldItem["value"];
+  text: string;
+  /** El número original de un monto o un número: lo que devuelve `values` si nadie lo tocó. */
+  n?: number | null;
+}
 
 export class NxFields extends Base {
   static observedAttributes = ["items", "variant", "columns", "heading", "action", "editing", "errors", "locale", "currency", "labels"];
@@ -63,6 +89,7 @@ export class NxFields extends Base {
   #live?: HTMLSpanElement;
   /** Los campos del modo edición, por clave (para leer valores y pintar errores sin rehacer nada). */
   #controls = new Map<string, Control>();
+  #initial = new Map<string, Initial>();
   #copyTimer = 0;
 
   // ---------------------------------------------------------------- propiedades
@@ -157,7 +184,7 @@ export class NxFields extends Base {
     this.#items.forEach((it, i) => {
       const k = keyOf(it, i);
       const c = this.#controls.get(k);
-      out[k] = c ? this.#read(it, c) : empty(it.value) ? null : (it.value as FieldValue);
+      out[k] = c ? this.#read(it, c, k) : empty(it.value) ? null : (it.value as FieldValue);
     });
     return out;
   }
@@ -176,7 +203,7 @@ export class NxFields extends Base {
       const raw = c.value.trim();
       const t = typeOf(it);
       if (!raw) {
-        if (it.input?.required) errors[k] = L.required;
+        if (inputOf(it).required) errors[k] = L.required;
       } else if (t === "email" && !EMAIL.test(raw)) errors[k] = L.email;
       else if ((t === "number" || t === "money") && this.#fmt.parse(raw) === null) errors[k] = L.number;
     });
@@ -184,6 +211,11 @@ export class NxFields extends Base {
     const first = Object.keys(errors)[0];
     if (first) this.#controls.get(first)?.focus();
     return !first;
+  }
+
+  /** Descarta lo escrito: los campos vuelven a los valores de `items` (un formulario que se reabre). */
+  reset(): void {
+    this.#render(false, true);
   }
 
   /** Enfoca el campo de `key` (al editar) y lo trae a la vista. */
@@ -203,7 +235,8 @@ export class NxFields extends Base {
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
     if (name === "items" || name === "labels" || name === "errors") {
-      if (value === null) return;
+      // Quitar el atributo lo vacía (sin datos, sin errores, los textos por defecto).
+      if (value === null) return void (name === "items" ? (this.items = null) : name === "labels" ? (this.labels = null) : (this.errors = null));
       let parsed: unknown;
       try {
         parsed = JSON.parse(value);
@@ -249,11 +282,13 @@ export class NxFields extends Base {
     });
   }
 
-  /** Rehace la rejilla. `modeChanged`: se entró o salió del modo edición (el foco no se pierde). */
-  #render(modeChanged = false): void {
+  /** Rehace la rejilla. `modeChanged`: se entró o salió del modo edición (el foco no se pierde).
+   *  `fresh`: los campos salen de `items` aunque haya algo escrito (`reset()`). */
+  #render(modeChanged = false, fresh = false): void {
     if (!this.isConnected) return;
     if (!this.#head) this.#build();
-    const hadFocus = this.contains(document.activeElement);
+    const active = document.activeElement;
+    const hadFocus = this.contains(active);
     const L = this.#labels;
     this.#fmt = nxFormat(resolveLocale(this));
     const summary = this.variant === "summary";
@@ -267,13 +302,45 @@ export class NxFields extends Base {
 
     this.style.setProperty("--_cols", String(this.columns));
     this.style.setProperty("--_n", String(Math.min(4, Math.max(1, this.#items.length))));
+    // Lo que la persona escribió (y dónde estaba): se pasa a los campos nuevos de la misma clave,
+    // salvo que la app haya cambiado ese dato.
+    const typed = new Map<string, { text: string; value: FieldItem["value"] }>();
+    let focusKey: string | undefined;
+    let sel: [number | null, number | null] | undefined;
+    if (editing && !modeChanged && !fresh)
+      for (const [k, c] of this.#controls) {
+        const init = this.#initial.get(k);
+        if (init && c.value !== init.text) typed.set(k, { text: c.value, value: init.value });
+        if (c === active) {
+          focusKey = k;
+          if (!(c instanceof HTMLSelectElement)) sel = [c.selectionStart, c.selectionEnd];
+        }
+      }
     this.#controls.clear();
+    this.#initial.clear();
     const list = editing ? h("div", { class: "nx-fields__list" }) : h("dl", { class: "nx-fields__list" });
     this.#items.forEach((it, i) => list.append(editing ? this.#editRow(it, i) : this.#readRow(it, summary, L)));
+    for (const [k, t] of typed) {
+      const c = this.#controls.get(k);
+      if (!c || this.#initial.get(k)?.value !== t.value) continue;
+      if (c instanceof HTMLSelectElement && ![...c.options].some((o) => o.value === t.text)) continue;
+      c.value = t.text;
+    }
     this.#list?.remove();
     this.#list = list;
     for (const el of [this.#head!, list, this.#live!]) this.append(el);
     this.#paintErrors();
+    // El campo que tenía el foco lo recupera, con el cursor donde estaba.
+    const again = focusKey && this.#controls.get(focusKey);
+    if (again) {
+      again.focus({ preventScroll: true });
+      if (sel && !(again instanceof HTMLSelectElement))
+        try {
+          again.setSelectionRange(sel[0], sel[1]);
+        } catch {
+          /* tipos sin selección (correo, fecha) */
+        }
+    }
 
     if (modeChanged && hadFocus) {
       // Entrar a editar desde el botón «Editar» (que se oculta): el foco va al primer campo.
@@ -330,13 +397,15 @@ export class NxFields extends Base {
       row.append(h("span", { class: "nx-fields__l" }, it.label), v);
       return row;
     }
-    const id = `${this.#uid}-${k}`;
+    // El id sale de la posición, no de la clave: una clave con espacios rompería `aria-describedby`.
+    const id = `${this.#uid}-f${i}`;
     const t = typeOf(it);
-    const inp = it.input ?? {};
+    const inp = inputOf(it);
     const raw = it.value;
+    let n: number | null | undefined;
     let c: Control;
     if (t === "select") {
-      const opts = (inp.options ?? []).map(optionOf);
+      const opts = Array.isArray(inp.options) ? inp.options.map(optionOf) : [];
       const cur = empty(raw) ? "" : String(raw);
       c = h("select", { class: "nx-fields__input" });
       if (!inp.required || !cur) c.append(h("option", { value: "" }, inp.placeholder ?? L.choose));
@@ -345,12 +414,13 @@ export class NxFields extends Base {
       if (cur && !opts.some((o) => o.value === cur)) c.append(h("option", { value: cur }, cur));
       c.value = cur;
     } else if (t === "textarea") {
-      c = h("textarea", { class: "nx-fields__input", rows: inp.rows ?? 3, placeholder: inp.placeholder });
+      const rows = Math.round(Number(inp.rows));
+      c = h("textarea", { class: "nx-fields__input", rows: rows >= 1 ? rows : 3, placeholder: inp.placeholder });
       c.value = empty(raw) ? "" : String(raw);
     } else {
       const numeric = t === "number" || t === "money";
-      const n = numeric && !empty(raw) ? (typeof raw === "number" ? raw : this.#fmt.parse(String(raw))) : null;
-      const value = empty(raw) ? "" : numeric && n !== null ? this.#fmt.number(n) : t === "date" ? String(raw).slice(0, 10) : String(raw);
+      n = numeric && !empty(raw) ? (typeof raw === "number" && Number.isFinite(raw) ? raw : this.#fmt.parse(String(raw))) : null;
+      const value = empty(raw) ? "" : numeric && n !== null ? exactNumber(this.#fmt.locale, n) : t === "date" ? String(raw).slice(0, 10) : String(raw);
       c = h("input", {
         class: "nx-fields__input",
         type: numeric ? "text" : t,
@@ -368,6 +438,7 @@ export class NxFields extends Base {
       c.setAttribute("aria-required", "true");
     }
     this.#controls.set(k, c);
+    this.#initial.set(k, { value: raw, text: c.value, n });
     const label = h("label", { class: "nx-fields__l", for: id }, it.label, inp.required ? h("span", { class: "nx-fields__req", "aria-hidden": "true" }, "*") : null);
     let control: HTMLElement = c;
     if (t === "money") {
@@ -383,11 +454,16 @@ export class NxFields extends Base {
     return row;
   }
 
-  #read(it: FieldItem, c: Control): FieldValue {
+  #read(it: FieldItem, c: Control, k: string): FieldValue {
     const raw = c.value.trim();
     if (!raw) return null;
     const t = typeOf(it);
-    if (t === "number" || t === "money") return this.#fmt.parse(raw);
+    if (t === "number" || t === "money") {
+      // Sin tocar, el número de siempre (sin pasar por el texto).
+      const init = this.#initial.get(k);
+      if (init && init.n != null && c.value === init.text) return init.n;
+      return this.#fmt.parse(raw);
+    }
     return raw;
   }
 

@@ -4,7 +4,9 @@ Los datos de un registro, para leer y para editar en la misma rejilla: etiqueta 
 «—» para lo vacío (se lee «Sin dato»), formato del locale, `href`, `copy`, `mono`; `variant="summary"`
 para la franja de datos clave de una ficha; con `editing`, cada valor se vuelve un campo en su sitio
 (con `name`, así que sirve en un `<form>` y marca los cambios sin guardar de `<nx-dialog>`), y
-`values`, `validate()`, `errors` y `focusField()` para guardar.
+`values`, `validate()`, `errors`, `focusField()` y `reset()` para guardar o descartar. Lo escrito
+sobrevive a un repintado (otro `heading`, los mismos `items` otra vez); los números se editan sin
+redondear.
 
 Archivos: `fields.ts`, `types.ts`, `fields.css`, `index.ts`. Pruebas: `test/fields.dom.test.ts`.
 Galería: página «Ficha lateral» (`gallery/demo-drawer.ts`).
