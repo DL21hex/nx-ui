@@ -48,6 +48,7 @@ export function Dialog(props: DialogProps): JSX.Element {
       else el.close(undefined, "api");
     }
   });
+  // Los eventos solo si son del diálogo: los de adentro (un <nx-date-range>, otro diálogo) también burbujean.
   return (
     <nx-dialog
       {...rest}
@@ -65,10 +66,10 @@ export function Dialog(props: DialogProps): JSX.Element {
       attr:avatar={local.avatar}
       attr:nav={local.nav}
       prop:actions={local.actions}
-      on:nx-dialog-nav={(e) => local.onNav?.(e)}
-      on:nx-dialog-action={(e) => local.onAction?.(e)}
-      on:nx-open-change={(e) => local.onOpenChange?.(e)}
-      on:nx-dialog-close={(e) => local.onClose?.(e)}
+      on:nx-dialog-nav={(e) => e.target === e.currentTarget && local.onNav?.(e)}
+      on:nx-dialog-action={(e) => e.target === e.currentTarget && local.onAction?.(e)}
+      on:nx-open-change={(e) => e.target === e.currentTarget && local.onOpenChange?.(e)}
+      on:nx-dialog-close={(e) => e.target === e.currentTarget && local.onClose?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
