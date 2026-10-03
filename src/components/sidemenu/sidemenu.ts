@@ -467,10 +467,12 @@ export class NxSidemenu extends Base {
     });
   };
 
-  /** `beforetoggle` «open» es cancelable: si alguien lo canceló, no llega `toggle`. Se comprueba al
-   *  terminar la tarea y, si no se abrió, se deshace lo anotado (y se pinta lo pendiente). */
+  /** `beforetoggle` «open» es cancelable: si alguien lo canceló, no llega `toggle`. Se comprueba en
+   *  la tarea siguiente (no en una microtarea: tras un clic en `popovertarget`, esa corre al salir de
+   *  este oyente, antes de que el navegador abra el popover) y, si no se abrió, se deshace lo
+   *  anotado (y se pinta lo pendiente). */
   #confirm(pop: HTMLElement): void {
-    queueMicrotask(() => {
+    setTimeout(() => {
       if (pop.matches(":popover-open")) return;
       if (pop === this) {
         if (this.#isOpen) this.#isOpen = false;
