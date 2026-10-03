@@ -11,7 +11,8 @@
  *
  * Todo lo pinta el componente desde sus props (`label`, `icon`…): no hay hijos del autor que
  * mover, así que no rompe la hidratación. Por dentro hay un `<button>` nativo: foco, teclado y
- * envío de formularios funcionan solos.
+ * envío de formularios funcionan solos. Solo su clic llega a la app: el de «Registro», el del panel
+ * o el del hueco entre ellos se queda adentro.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeEndpoint } from "../../core/dom";
@@ -39,7 +40,7 @@ const RESULT_MS = { ok: 2200, error: 4000 };
 const MAX_LINES = 200;
 
 export class NxButton extends Base {
-  static observedAttributes = ["label", "icon", "variant", "type", "disabled", "busy", "log-mode", "progress", "stream", "method", "labels", "hold"];
+  static observedAttributes = ["label", "icon", "icon-only", "variant", "type", "name", "value", "disabled", "busy", "log-mode", "progress", "stream", "method", "labels", "hold"];
 
   #labels: ButtonLabels = BUTTON_LABELS;
   #lines: LogLine[] = [];
@@ -62,6 +63,22 @@ export class NxButton extends Base {
   #held = false;
   /** La petición de `stream` en curso: se cancela si el botón sale del documento. */
   #streamAbort?: AbortController;
+  /** La línea que pinta cada fila del registro (las filas se agregan, no se rehacen). */
+  #rows = new WeakMap<Element, LogLine>();
+
+  constructor() {
+    super();
+    // El clic en el propio envoltorio (el hueco entre el botón y «Registro», un `el.click()`) no es
+    // un clic del botón: no llega a la app. En captura y desde el constructor, para ir antes que
+    // cualquier oyente de la app en el host.
+    this.addEventListener?.(
+      "click",
+      (e) => {
+        if (e.target === this) e.stopImmediatePropagation();
+      },
+      true,
+    );
+  }
 
   // ---------------------------------------------------------------- propiedades
 
@@ -77,17 +94,39 @@ export class NxButton extends Base {
   set icon(v: string | null) {
     this.#attr("icon", v);
   }
+  /** Solo el ícono a la vista: la etiqueta queda como nombre accesible (y como `title`). */
+  get iconOnly(): boolean {
+    return boolAttr(this, "icon-only");
+  }
+  set iconOnly(v: boolean) {
+    this.#bool("icon-only", v);
+  }
   get variant(): string {
     return this.getAttribute("variant") ?? "secondary";
   }
   set variant(v: string) {
     this.#attr("variant", v);
   }
+  /** `button` (por defecto), `submit` o `reset`, como en un botón nativo. */
   get type(): string {
-    return this.getAttribute("type") === "submit" ? "submit" : "button";
+    const t = this.getAttribute("type");
+    return t === "submit" || t === "reset" ? t : "button";
   }
   set type(v: string) {
     this.#attr("type", v);
+  }
+  /** `name` y `value` del botón de adentro: con `type="submit"` viajan en el envío (el *submitter*). */
+  get name(): string {
+    return this.getAttribute("name") ?? "";
+  }
+  set name(v: string) {
+    this.#attr("name", v);
+  }
+  get value(): string {
+    return this.getAttribute("value") ?? "";
+  }
+  set value(v: string) {
+    this.#attr("value", v);
   }
   get disabled(): boolean {
     return boolAttr(this, "disabled");
@@ -162,11 +201,12 @@ export class NxButton extends Base {
     if (!this.busy) this.busy = true;
     this.#lines.push({ t: performance.now() - this.#start, msg, level });
     if (this.#lines.length > MAX_LINES) this.#lines.splice(0, this.#lines.length - MAX_LINES);
-    if (this.#status) this.#status.textContent = msg;
     this.#paint(true);
+    // Con el registro a la vista, su `role="log"` ya anuncia la línea nueva: no se repite.
+    if (this.#status && !this.#isLogOpen()) this.#status.textContent = msg;
   }
 
-  /** Termina la tarea: muestra el resultado un momento y emite `nx-done`. */
+  /** Termina la tarea: muestra el resultado un momento y emite `nx-button-done`. */
   done(ok = true, msg?: string): void {
     if (!this.busy) return;
     const ms = performance.now() - this.#start;
@@ -183,7 +223,7 @@ export class NxButton extends Base {
       this.#btn?.style.removeProperty("min-inline-size");
       this.#paint();
     }, ok ? RESULT_MS.ok : RESULT_MS.error);
-    this.dispatchEvent(new CustomEvent("nx-done", { detail: { ok, ms, lines: this.lines }, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nx-button-done", { detail: { ok, ms, lines: this.lines }, bubbles: true, composed: true }));
   }
 
   /**
@@ -198,7 +238,10 @@ export class NxButton extends Base {
       this.done(true);
       return out;
     } catch (err) {
-      this.done(false, err instanceof Error ? err.message : String(err));
+      // Una petición cancelada (el botón salió de la página) no trae un mensaje para la persona:
+      // el del navegador viene en inglés.
+      const aborted = (err as { name?: unknown } | null)?.name === "AbortError";
+      this.done(false, aborted ? undefined : err instanceof Error ? err.message : String(err));
       return undefined;
     }
   }
@@ -223,7 +266,11 @@ export class NxButton extends Base {
     // acción destructiva se dispararía sobre un botón que ya nadie ve), y el stream se corta.
     clearTimeout(this.#holdTimer);
     if (this.#btn) delete this.#btn.dataset.holding;
-    this.#streamAbort?.abort();
+    // Moverlo en el DOM (una lista con clave que se reordena) lo desconecta y lo vuelve a conectar
+    // en el mismo turno: el stream solo se corta si de verdad salió de la página.
+    queueMicrotask(() => {
+      if (!this.isConnected) this.#streamAbort?.abort();
+    });
   }
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -236,7 +283,11 @@ export class NxButton extends Base {
       }
       return;
     }
-    if (name === "busy" && (old === null) !== (value === null) && boolAttr(this, "busy")) this.#begin();
+    if (name === "busy" && (old === null) !== (value === null)) {
+      if (boolAttr(this, "busy")) this.#begin();
+      // `busy` controlado desde afuera (sin `done()`): el ancho fijo de mientras corría se suelta ya.
+      else if (!this.#result) this.#btn?.style.removeProperty("min-inline-size");
+    }
     this.#paint();
   }
 
@@ -274,6 +325,8 @@ export class NxButton extends Base {
     this.#btn = h("button", { class: "nx-button__btn" }, this.#fill, this.#lead, this.#text, this.#time, this.#bar);
     this.#toggle = h("button", { type: "button", class: "nx-button__toggle", hidden: true });
     this.#panel = h("div", { class: "nx-button__log", role: "log", hidden: true });
+    // Leer o desplazar el registro no es un clic del botón.
+    this.#panel.addEventListener("click", (e) => e.stopPropagation());
     this.#status = h("span", { class: "nx-sr-only", role: "status" });
     this.append(this.#btn, this.#toggle, this.#panel, this.#status);
 
@@ -315,7 +368,14 @@ export class NxButton extends Base {
       }
     });
     this.#btn.addEventListener("keyup", (e) => (e.key === "Enter" || e.key === " ") && cancel());
-    this.#toggle.addEventListener("click", () => {
+    // En un toque largo el sistema abre su menú (o la selección de texto) hacia los 500 ms y la
+    // pulsación se cancelaría: mientras se mantiene, no hay menú.
+    this.#btn.addEventListener("contextmenu", (e) => {
+      if (this.#btn!.dataset.holding !== undefined) e.preventDefault();
+    });
+    this.#toggle.addEventListener("click", (e) => {
+      // Abrir el registro no es un clic del botón: no llega a la app (ni se salta `hold`).
+      e.stopPropagation();
       this.#logOpen = !this.#isLogOpen();
       this.#paint();
     });
@@ -374,8 +434,18 @@ export class NxButton extends Base {
     const result = this.#result;
     const last = this.#lines[this.#lines.length - 1];
 
-    btn.type = this.type as "button" | "submit";
+    btn.type = this.type as "button" | "submit" | "reset";
+    for (const a of ["name", "value"]) {
+      const v = this.getAttribute(a);
+      if (v === null) btn.removeAttribute(a);
+      else btn.setAttribute(a, v);
+    }
     btn.className = `nx-button__btn nx-button--${this.variant}`;
+    btn.toggleAttribute("data-hold", this.hold > 0);
+    // Solo ícono: el texto sigue ahí (es el nombre accesible), oculto a la vista.
+    btn.toggleAttribute("data-icon-only", this.iconOnly);
+    if (this.iconOnly && this.label) btn.title = this.label;
+    else btn.removeAttribute("title");
     btn.toggleAttribute("data-busy", busy);
     btn.dataset.result = result ? (result.ok ? "ok" : "error") : "";
     btn.setAttribute("aria-busy", String(busy));
@@ -420,29 +490,46 @@ export class NxButton extends Base {
     const open = lines.length > 0 && this.#isLogOpen();
     this.#toggle!.hidden = lines.length === 0;
     this.#toggle!.setAttribute("aria-expanded", String(open));
-    this.#toggle!.replaceChildren(glyph(TERMINAL), `${this.#labels.log} (${lines.length})`);
+    const count = `${this.#labels.log} (${lines.length})`;
+    if (this.#toggle!.textContent !== count) this.#toggle!.replaceChildren(glyph(TERMINAL), count);
     this.#panel!.hidden = !open;
     if (open) this.#paintLog(lines, busy);
   }
 
+  /**
+   * Las filas se agregan y se actualizan en su lugar, nunca se rehacen: la región `role="log"` solo
+   * anuncia lo nuevo, un cambio de `progress` no la toca y la línea en curso no vuelve a animarse.
+   */
   #paintLog(lines: LogLine[], busy: boolean): void {
     const panel = this.#panel!;
     const stick = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 8;
-    panel.replaceChildren(
-      ...lines.map((l, i) => {
-        const running = busy && i === lines.length - 1;
-        const level = running ? "run" : l.level === "info" ? "ok" : l.level;
-        const mark = { run: "›", ok: "✓", warn: "!", error: "✗" }[level];
-        return h(
+    // Fuera las filas de líneas que ya no están (una tarea nueva, o las primeras pasado el tope):
+    // las que quedan son, en orden, las primeras de `lines`.
+    const keep = new Set(lines);
+    for (const row of [...panel.children]) if (!keep.has(this.#rows.get(row)!)) row.remove();
+    lines.forEach((l, i) => {
+      let row = panel.children[i] as HTMLElement | undefined;
+      if (!row) {
+        row = h(
           "div",
-          { class: `nx-button__line nx-button__line--${level}` },
+          null,
           h("span", { class: "nx-button__t" }, `+${formatElapsed(l.t, resolveLocale(this))}`),
-          h("span", { class: "nx-button__mark", "aria-hidden": "true" }, mark),
+          h("span", { class: "nx-button__mark", "aria-hidden": "true" }),
           h("span", { class: "nx-button__m" }, l.msg),
-          running ? h("span", { class: "nx-button__cursor", "aria-hidden": "true" }) : null,
         );
-      }),
-    );
+        this.#rows.set(row, l);
+        panel.append(row);
+      }
+      const running = busy && i === lines.length - 1;
+      const level = running ? "run" : l.level === "info" ? "ok" : l.level;
+      if (row.dataset.level === level) return;
+      row.dataset.level = level;
+      row.className = `nx-button__line nx-button__line--${level}`;
+      row.children[1].textContent = { run: "›", ok: "✓", warn: "!", error: "✗" }[level];
+      const cursor = row.querySelector(".nx-button__cursor");
+      if (running && !cursor) row.append(h("span", { class: "nx-button__cursor", "aria-hidden": "true" }));
+      else if (!running) cursor?.remove();
+    });
     if (stick) panel.scrollTop = panel.scrollHeight;
   }
 }

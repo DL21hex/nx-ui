@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDigits, initialsOf, looksLikeDigits, matchRanges, searchOptions, searchScope } from "../src/components/select/logic";
+import { formatDigits, initialsOf, looksLikeDigits, matchRanges, searchOptions, searchScope, uniqueOptions } from "../src/components/select/logic";
 import type { SelectField, SelectOption } from "../src/components/select/types";
 
 const FIELDS: SelectField[] = [
@@ -44,6 +44,23 @@ describe("searchOptions", () => {
 
   it("una columna idéntica a la consulta gana", () => {
     expect(ids("soldador")[0]).toBe("3");
+  });
+
+  it("limit: los mejores hasta el tope, en el mismo orden que sin tope", () => {
+    expect(searchOptions(E, FIELDS, "mar", 2).map((m) => m.option.value)).toEqual(["2", "4"]);
+    expect(searchOptions(E, FIELDS, "", 3).map((m) => m.option.value)).toEqual(["1", "2", "3"]);
+  });
+});
+
+describe("uniqueOptions", () => {
+  it("value como texto, sin repetir (se queda el primero) y sin registros sin value", () => {
+    const { options, duplicated } = uniqueOptions([{ value: 1, n: "A" }, { value: "1", n: "B" }, { n: "C" }, null, { value: "2", n: "D" }]);
+    expect(options).toEqual([
+      { value: "1", n: "A" },
+      { value: "2", n: "D" },
+    ]);
+    expect(duplicated).toBe(true);
+    expect(uniqueOptions("x").options).toEqual([]);
   });
 });
 

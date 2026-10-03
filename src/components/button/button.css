@@ -183,6 +183,13 @@ nx-button[disabled] .nx-button__btn {
   inline-size: 100%;
   transition: inline-size var(--_hold, 1s) linear;
 }
+/* En el celular, el toque largo no abre el menú del sistema ni selecciona el texto (cortaría la
+   pulsación a medio camino). */
+.nx-button__btn[data-hold] {
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  user-select: none;
+}
 .nx-button__btn > :is(.nx-button__lead, .nx-button__text, .nx-button__time) {
   position: relative;
 }
@@ -190,10 +197,24 @@ nx-button[disabled] .nx-button__btn {
   inline-size: 35%;
   animation: nx-sweep 1.2s var(--nx-ease-out) infinite;
 }
+/* `icon-only`: un botón cuadrado; la etiqueta sigue en el árbol como nombre accesible. */
+.nx-button__btn[data-icon-only] {
+  min-inline-size: var(--nx-button-height, 36px);
+  padding: 0 9px;
+}
+.nx-button__btn[data-icon-only] .nx-button__text {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* ---------------------------------------------------------------- registro tipo terminal */
 
 .nx-button__toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -204,6 +225,12 @@ nx-button[disabled] .nx-button__btn {
   font: inherit;
   font-size: 11.5px;
   cursor: pointer;
+}
+/* El área que se toca crece a 24 px de alto sin mover nada (WCAG 2.5.8). */
+.nx-button__toggle::before {
+  position: absolute;
+  inset: -5px -2px;
+  content: "";
 }
 .nx-button__toggle:hover,
 .nx-button__toggle[aria-expanded="true"] {
@@ -327,5 +354,17 @@ nx-button[disabled] .nx-button__btn {
   .nx-button__cursor {
     forced-color-adjust: none;
     background: Highlight;
+  }
+  /* Los cuatro bordes del spinner quedarían del mismo color (un círculo quieto), y el relleno de
+     «mantén pulsado» se perdería sobre el fondo. */
+  .nx-spinner {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    border-block-start-color: Highlight;
+  }
+  .nx-button__hold {
+    forced-color-adjust: none;
+    background: Highlight;
+    opacity: 0.45;
   }
 }

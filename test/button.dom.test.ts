@@ -102,10 +102,10 @@ describe("<nx-button> ocupado", () => {
 describe("<nx-button> resultado", () => {
   beforeEach(() => vi.useFakeTimers());
 
-  it("done(true): check, resumen con la duración, nx-done y vuelta a la etiqueta", () => {
+  it("done(true): check, resumen con la duración, nx-button-done y vuelta a la etiqueta", () => {
     const el = mount('<nx-button label="Publicar"></nx-button>');
     const seen: boolean[] = [];
-    el.addEventListener("nx-done", (e) => seen.push(e.detail.ok));
+    el.addEventListener("nx-button-done", (e) => seen.push(e.detail.ok));
     el.log("Paso 1");
     el.done(true);
     expect(el.busy).toBe(false);
@@ -160,7 +160,7 @@ describe("<nx-button> stream (BDUI)", () => {
     const fetchMock = vi.fn(async () => new Response(chunks(['{"msg":"Valid', 'ando"}\n{"msg":"Subiendo","progress":50}\n', '{"ok":true,"msg":"Publicado"}'])));
     vi.stubGlobal("fetch", fetchMock);
     const el = mount('<nx-button label="Publicar" stream="/docs/publicar" log-mode="inline"></nx-button>');
-    const done = new Promise<CustomEvent>((r) => el.addEventListener("nx-done", (e) => r(e), { once: true }));
+    const done = new Promise<CustomEvent>((r) => el.addEventListener("nx-button-done", (e) => r(e), { once: true }));
     inner(el).click();
     const ev = await done;
     expect(fetchMock).toHaveBeenCalledWith("/docs/publicar", expect.objectContaining({ method: "POST", credentials: "same-origin" }));
@@ -172,14 +172,14 @@ describe("<nx-button> stream (BDUI)", () => {
   it('{"ok":false} o un HTTP de error terminan en fallo', async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(chunks(['{"msg":"Notificando"}\n{"ok":false,"msg":"SMTP 421"}\n']))));
     const el = mount('<nx-button label="Publicar" stream="/x"></nx-button>');
-    let done = new Promise<CustomEvent>((r) => el.addEventListener("nx-done", (e) => r(e), { once: true }));
+    let done = new Promise<CustomEvent>((r) => el.addEventListener("nx-button-done", (e) => r(e), { once: true }));
     inner(el).click();
     expect((await done).detail.ok).toBe(false);
     expect(el.lines.at(-1)!.msg).toBe("SMTP 421");
 
     vi.stubGlobal("fetch", vi.fn(async () => new Response("no", { status: 500 })));
     const el2 = mount('<nx-button label="Publicar" stream="/x"></nx-button>');
-    done = new Promise<CustomEvent>((r) => el2.addEventListener("nx-done", (e) => r(e), { once: true }));
+    done = new Promise<CustomEvent>((r) => el2.addEventListener("nx-button-done", (e) => r(e), { once: true }));
     inner(el2).click();
     expect((await done).detail.ok).toBe(false);
     expect(el2.lines.at(-1)!.msg).toBe("HTTP 500");

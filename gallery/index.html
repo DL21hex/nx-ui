@@ -4538,6 +4538,7 @@ socket.onclose = () =&gt; ai.end();</code></pre>
           <p class="btn-demo__title">En un &lt;form&gt; <span>name required</span></p>
           <nx-select id="sel-form-field" name="responsable" required avatar label="Responsable" placeholder="Responsable"></nx-select>
           <nx-button type="submit" label="Enviar" variant="primary" log-mode="none"></nx-button>
+          <nx-button type="reset" label="Restablecer" variant="ghost" log-mode="none"></nx-button>
           <code class="sel-form-out" id="sel-form-out">FormData: —</code>
         </form>
       </div>
@@ -4558,7 +4559,8 @@ emp.fields = [
   { key: "cargo",  label: "Cargo" },
 ];
 emp.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", cargo: "Soldadora" }, …];
-emp.addEventListener("nx-change", (e) =&gt; console.log(e.detail.value, e.detail.options));</code></pre>
+emp.addEventListener("nx-select-change", (e) =&gt; console.log(e.detail.value, e.detail.options));
+// También sale un `change` nativo, para el código que no conoce el evento propio.</code></pre>
         <pre role="tabpanel" hidden><code>import { Select } from "nx32-elements/solid/select";
 
 &lt;Select fields={FIELDS} source="/hcm/empleados/buscar" avatar clearable
@@ -4581,8 +4583,8 @@ emp.addEventListener("nx-change", (e) =&gt; console.log(e.detail.value, e.detail
             <tr><td><code>value</code>, <code>selection</code></td><td>Valor (<code>string</code>, o <code>string[]</code> con <code>multiple</code>) o los registros elegidos (con <code>source</code>, para pintar la selección inicial).</td></tr>
             <tr><td><code>multiple</code></td><td>Chips en el campo; elegir no cierra; <kbd>Backspace</kbd> con el buscador vacío quita el último.</td></tr>
             <tr><td><code>avatar</code>, <code>clearable</code>, <code>placeholder</code>, <code>label</code></td><td>Iniciales delante de cada registro, botón de limpiar, texto vacío y nombre accesible.</td></tr>
-            <tr><td><code>name</code>, <code>required</code>, <code>disabled</code></td><td>Participa en un <code>&lt;form&gt;</code> nativo (también con <code>reset</code>).</td></tr>
-            <tr><td><code>nx-change</code></td><td><code>{ value, options }</code> al elegir, quitar o limpiar.</td></tr>
+            <tr><td><code>name</code>, <code>required</code>, <code>disabled</code></td><td>Control de <code>&lt;form&gt;</code> nativo: <code>required</code> con el aviso del navegador sobre el campo, <code>reset</code> vuelve al valor inicial, <code>&lt;fieldset disabled&gt;</code> lo apaga y un <code>&lt;label for&gt;</code> lo nombra. <code>checkValidity()</code>, <code>reportValidity()</code>, <code>setCustomValidity()</code>, <code>validity</code>, <code>form</code>.</td></tr>
+            <tr><td><code>nx-select-change</code></td><td><code>{ value, options }</code> al elegir, quitar o limpiar; también sale un <code>change</code> nativo.</td></tr>
           </tbody>
         </table>
       </div>
@@ -4677,15 +4679,18 @@ let ref!: NxButton;
           <tbody>
             <tr><td><code>label</code>, <code>icon</code></td><td>Texto e ícono (nombre registrado). En HTML plano también vale <code>&lt;nx-button&gt;Guardar&lt;/nx-button&gt;</code>.</td></tr>
             <tr><td><code>variant</code></td><td><code>secondary</code> (por defecto), <code>primary</code>, <code>ghost</code>, <code>danger</code>.</td></tr>
-            <tr><td><code>type</code>, <code>disabled</code></td><td>Como en un botón nativo; <code>type="submit"</code> envía su formulario.</td></tr>
+            <tr><td><code>icon-only</code></td><td>Solo el ícono a la vista; <code>label</code> queda como nombre accesible y <code>title</code>.</td></tr>
+            <tr><td><code>type</code>, <code>name</code>, <code>value</code>, <code>disabled</code></td><td>Como en un botón nativo: <code>type="submit"</code> envía su formulario (con <code>name</code>/<code>value</code>), <code>type="reset"</code> lo restablece.</td></tr>
             <tr><td><code>busy</code></td><td>Ocupado: spinner, reloj y bloqueo (<code>aria-busy</code>, <code>aria-disabled</code>; no suelta el foco). El clic no llega a la app.</td></tr>
+            <tr><td><code>hold</code></td><td>Mantener pulsado (ms; sin valor, 1000) para activarlo: para lo destructivo.</td></tr>
+            <tr><td><code>click</code></td><td>Solo el del botón: el de «Registro», el del panel o el del hueco entre ellos no llega a la app.</td></tr>
             <tr><td><code>progress</code></td><td>0–1 (o 0–100). Sin él, la barra es indeterminada.</td></tr>
             <tr><td><code>log-mode</code></td><td><code>ticker</code> (por defecto), <code>inline</code> o <code>none</code>.</td></tr>
             <tr><td><code>stream</code>, <code>method</code></td><td>URL que transmite el avance (NDJSON o SSE; <code>POST</code> por defecto). El clic corre la tarea solo.</td></tr>
             <tr><td><code>labels</code></td><td><code>busy</code>, <code>done</code>, <code>failed</code>, <code>log</code>. En español por defecto.</td></tr>
             <tr><td><code>run(task)</code></td><td>Corre <code>task({ log, progress })</code> con el botón ocupado; lo que lance es un fallo.</td></tr>
             <tr><td><code>log(msg, level?)</code>, <code>done(ok, msg?)</code></td><td>Control manual. <code>level</code>: <code>info</code>, <code>ok</code>, <code>warn</code>, <code>error</code>.</td></tr>
-            <tr><td><code>nx-done</code></td><td>Evento al terminar: <code>{ ok, ms, lines }</code>.</td></tr>
+            <tr><td><code>nx-button-done</code></td><td>Evento al terminar: <code>{ ok, ms, lines }</code>.</td></tr>
           </tbody>
         </table>
       </div>

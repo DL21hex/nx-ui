@@ -25,6 +25,8 @@ export interface SelectLabels {
   onlyField: string;
   /** «coincide en {fields}» (para lectores de pantalla) */
   matchedIn: string;
+  /** El aviso del navegador cuando `required` está vacío al enviar. */
+  required: string;
 }
 
 export interface SelectChangeDetail {

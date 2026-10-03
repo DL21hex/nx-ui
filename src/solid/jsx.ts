@@ -243,13 +243,14 @@ declare module "solid-js" {
       label: string | undefined;
       icon: string | undefined;
       variant: ButtonVariant | FieldsVariant | undefined;
-      type: "button" | "submit" | undefined;
+      type: "button" | "submit" | "reset" | undefined;
       "log-mode": LogMode | undefined;
       stream: string | undefined;
       method: string | undefined;
       placeholder: string | undefined;
       source: string | undefined;
       name: string | undefined;
+      value: string | undefined;
       endpoint: string | undefined;
       question: string | undefined;
       action: string | undefined;
@@ -320,6 +321,7 @@ declare module "solid-js" {
       collapsible: boolean;
       "auto-collapse": boolean;
       busy: boolean;
+      "icon-only": boolean;
       disabled: boolean;
       multiple: boolean;
       required: boolean;
@@ -414,7 +416,8 @@ declare module "solid-js" {
       "nx-select": CustomEvent<SelectDetail>;
       "nx-toggle": CustomEvent<ToggleDetail>;
       "nx-open-change": CustomEvent<OpenChangeDetail>;
-      "nx-done": CustomEvent<DoneDetail>;
+      "nx-button-done": CustomEvent<DoneDetail>;
+      "nx-select-change": CustomEvent<SelectChangeDetail>;
       "nx-change": CustomEvent<SelectChangeDetail | DateRangeChangeDetail | RecurrenceChangeDetail>;
       "nx-ai-done": CustomEvent<AiDoneDetail>;
       "nx-ai-action": CustomEvent<AiActionDetail>;

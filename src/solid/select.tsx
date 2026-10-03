@@ -7,7 +7,8 @@ import type { SelectChangeDetail, SelectField, SelectLabels, SelectOption } from
 
 export type { NxSelect, SelectChangeDetail, SelectField, SelectLabels, SelectOption };
 
-export interface SelectProps extends Omit<JSX.HTMLAttributes<NxSelect>, "onChange"> {
+/** Sin hijos: el campo y el panel los pinta el componente. */
+export interface SelectProps extends Omit<JSX.HTMLAttributes<NxSelect>, "onChange" | "children"> {
   /** Columnas buscables; la primera es la principal. */
   fields: SelectField[];
   /** Registros locales. Para catálogos grandes, `source`. */
@@ -19,7 +20,7 @@ export interface SelectProps extends Omit<JSX.HTMLAttributes<NxSelect>, "onChang
   selection?: SelectOption[];
   multiple?: boolean;
   placeholder?: string;
-  /** Nombre accesible del campo. */
+  /** Nombre accesible del campo (si no hay un `<label for>` que lo nombre). */
   label?: string;
   name?: string;
   required?: boolean;
@@ -29,9 +30,13 @@ export interface SelectProps extends Omit<JSX.HTMLAttributes<NxSelect>, "onChang
   /** Máximo de resultados a la vista (50). */
   limit?: number;
   labels?: Partial<SelectLabels>;
+  /** `nx-select-change`: al elegir, quitar o limpiar. */
   onChange?: (e: CustomEvent<SelectChangeDetail>) => void;
+  children?: never;
 }
 
+/** `multiple` va antes que `value` y `selection` (el componente ya no depende del orden, pero así
+ *  el primer valor se lee entero). `onChange` es solo el de este select, no uno que burbujea. */
 export function Select(props: SelectProps): JSX.Element {
   const [local, rest] = splitProps(props, [
     "fields",
@@ -50,10 +55,12 @@ export function Select(props: SelectProps): JSX.Element {
     "limit",
     "labels",
     "onChange",
+    "children",
   ]);
   return (
     <nx-select
       {...rest}
+      bool:multiple={!!local.multiple}
       prop:fields={local.fields}
       prop:options={local.options ?? []}
       prop:value={local.value}
@@ -64,12 +71,11 @@ export function Select(props: SelectProps): JSX.Element {
       attr:label={local.label}
       attr:name={local.name}
       attr:limit={local.limit === undefined ? undefined : String(local.limit)}
-      bool:multiple={!!local.multiple}
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
       bool:clearable={!!local.clearable}
       bool:avatar={!!local.avatar}
-      on:nx-change={(e) => local.onChange?.(e as CustomEvent<SelectChangeDetail>)}
+      on:nx-select-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
     />
   );
 }

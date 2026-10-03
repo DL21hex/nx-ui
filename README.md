@@ -197,13 +197,17 @@ arriba, antes de las secciones: ahí van los accesos fijos (Inicio, Pendientes�
 ## `<nx-button>`
 
 Un botón que sabe esperar. Mientras corre una tarea:
-- se bloquea sin soltar el foco (`aria-busy`, `aria-disabled`) y el clic no llega a la app;
+- se bloquea sin soltar el foco (`aria-busy`, `aria-disabled`) y el clic no llega a la app (a la
+  app solo le llega el clic del botón: nunca el de «Registro», el del panel del registro o el del
+  hueco entre ellos, ni un `el.click()` sobre el envoltorio);
 - muestra un spinner, el último mensaje deslizándose dentro del botón, el tiempo transcurrido y una
   barra de progreso (indeterminada si no hay porcentaje);
 - guarda un registro tipo terminal (`log-mode="inline"` lo despliega debajo; en `ticker`, por
   defecto, se abre con «Registro (n)»).
 
-Al terminar muestra ✓ o ⚠ con un resumen unos segundos y emite `nx-done` `{ok, ms, lines}`.
+Al terminar muestra ✓ o ⚠ con un resumen unos segundos y emite `nx-button-done` `{ok, ms, lines}`.
+`hold="800"` pide mantenerlo pulsado (para lo destructivo); `icon-only` deja solo el ícono a la
+vista, con `label` como nombre accesible y `title`.
 
 ```js
 btn.run(async ({ log, progress }) => {
@@ -222,9 +226,9 @@ cancela y una pulsación larga a medio camino no se completa.
 
 | | |
 |---|---|
-| Propiedades / atributos | `label`, `icon`, `variant` (`secondary`, `primary`, `ghost`, `danger`), `type`, `disabled`, `busy`, `progress`, `log-mode` (`ticker`, `inline`, `none`), `stream`, `method`, `labels` |
+| Propiedades / atributos | `label`, `icon`, `icon-only`, `variant` (`secondary`, `primary`, `ghost`, `danger`), `type` (`button`, `submit`, `reset`), `name`, `value`, `disabled`, `busy`, `progress`, `log-mode` (`ticker`, `inline`, `none`), `stream`, `method`, `hold`, `labels` |
 | Métodos | `run(task)`, `log(msg, level?)`, `done(ok, msg?)`, `lines` |
-| Eventos | `nx-done` `{ok, ms, lines}` |
+| Eventos | `click` (solo el del botón), `nx-button-done` `{ok, ms, lines}` |
 
 ## `<nx-select>`
 
@@ -245,15 +249,21 @@ sel.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", 
 - Una consulta de solo números busca únicamente en las columnas `digits` y lo avisa.
 - Resalta lo que coincidió y dice en qué columna («Cargo»).
 - `multiple` deja lo elegido como chips; elegir no cierra y Backspace quita el último.
-- Participa en un `<form>` nativo (`name`, `required`, `reset`).
+- Es un control de `<form>` nativo: `name` (con `multiple`, una entrada por valor), `required` con
+  el aviso del navegador sobre el campo (y `aria-invalid` tras un envío fallido), `reset` vuelve al
+  valor inicial (el atributo `value`, o lo que llegó antes de que la persona lo tocara),
+  `<fieldset disabled>` lo apaga, y un `<label for>` lo nombra y lo enfoca.
+- `value` de varios con `multiple`: da igual si `multiple` llega antes o después. En atributo, JSON
+  (`value='["1","2"]'`).
+- Un `value` repetido en `options` se avisa por consola y se queda el primero.
 - `source`: mismo origen (o `allowOrigins`); lo que se escribe no sale hacia un tercero. Una
   búsqueda nueva cancela la anterior.
 
 | | |
 |---|---|
 | Propiedades / atributos | `fields`, `options`, `source`, `value`, `selection`, `multiple`, `placeholder`, `label`, `name`, `required`, `disabled`, `clearable`, `avatar`, `limit`, `labels` |
-| Métodos | `show()`, `hide()`, `open` |
-| Eventos | `nx-change` `{value, options}` |
+| Métodos | `show()`, `hide()`, `open`, `focus()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(msg)`, `form`, `validity`, `validationMessage`, `willValidate` |
+| Eventos | `nx-select-change` `{value, options}` y un `change` nativo, al elegir, quitar o limpiar |
 
 ## `<nx-ai-answer>` y el protocolo de IA
 
@@ -469,7 +479,7 @@ Cuatro formas de hacer lo que hoy se hace con un modal, cada una para su caso:
   perderlos: lo que cierra la persona pasa por el aviso; lo que cierra la app con `close()`, no.
   Buscar o filtrar dentro de un `<nx-select>` o una `<nx-grid>` no cuenta como cambio (sus
   controles de consulta llevan `data-nx-ephemeral`, y el diálogo ignora lo que venga de ahí);
-  elegir un valor (`nx-change`) o editar una celda (`nx-grid-change`) sí.
+  elegir un valor (el `change` de `<nx-select>`) o editar una celda (`nx-grid-change`) sí.
 - **B · Paneles apilados.** `mode="panel"`: cada nivel se apila sobre el anterior (pedido →
   proveedor → factura), con migas para volver, y la página sigue a la vista. Con `url` (del mismo
   origen; si no, se ignora), «atrás» del navegador cierra el nivel de arriba. Al cerrarse quita su

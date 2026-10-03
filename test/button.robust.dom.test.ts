@@ -55,7 +55,7 @@ describe("<nx-button> robusto", () => {
     });
     vi.stubGlobal("fetch", vi.fn(async () => new Response(body)));
     const el = mount('<nx-button label="Publicar" stream="/publicar"></nx-button>');
-    const done = new Promise<CustomEvent>((r) => el.addEventListener("nx-done", (e) => r(e as CustomEvent), { once: true }));
+    const done = new Promise<CustomEvent>((r) => el.addEventListener("nx-button-done", (e) => r(e as CustomEvent), { once: true }));
     inner(el).click();
     const ev = await done;
     expect(ev.detail.ok).toBe(true);
@@ -77,6 +77,7 @@ describe("<nx-button> robusto", () => {
     await Promise.resolve();
     expect(signal!.aborted).toBe(false);
     el.remove();
+    await Promise.resolve();
     expect(signal!.aborted).toBe(true);
   });
 

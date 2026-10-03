@@ -40,11 +40,20 @@ nx-select [hidden] {
 .nx-select__field:hover {
   border-color: var(--nx-border-strong);
 }
+/* El contorno transparente no se ve, salvo en alto contraste: ahí se anula el box-shadow y ese
+   contorno pasa a ser el indicador de foco. */
 .nx-select__field:focus-visible,
 .nx-select__field[aria-expanded="true"] {
   border-color: var(--nx-primary-border);
-  outline: none;
+  outline: 2px solid transparent;
   box-shadow: 0 0 0 3px var(--nx-primary-soft);
+}
+/* Un envío que falló por este campo (`required` vacío, `setCustomValidity`). */
+.nx-select__field[aria-invalid="true"] {
+  border-color: var(--nx-danger);
+}
+.nx-select__field[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 3px var(--nx-danger-soft);
 }
 .nx-select__field[aria-disabled="true"] {
   cursor: not-allowed;
@@ -69,11 +78,22 @@ nx-select [hidden] {
   rotate: 180deg;
 }
 .nx-select__clear {
+  position: relative;
   display: inline-flex;
   inline-size: 20px;
   block-size: 20px;
   padding: 3px;
   border-radius: var(--nx-radius-sm);
+}
+/* La × de limpiar y la de los chips se ven chicas, pero se tocan en 24 px (WCAG 2.5.8). */
+.nx-select__clear::before,
+.nx-select__chip-x::before {
+  position: absolute;
+  inset: -2px;
+  content: "";
+}
+.nx-select__chip-x::before {
+  inset: -4px;
 }
 .nx-select__clear:hover {
   background: var(--nx-hover);
@@ -100,6 +120,7 @@ nx-select [hidden] {
   white-space: nowrap;
 }
 .nx-select__chip-x {
+  position: relative;
   display: inline-flex;
   inline-size: 16px;
   block-size: 16px;
@@ -217,6 +238,7 @@ nx-select mark {
   }
   &:focus {
     border-color: var(--nx-primary-border);
+    outline: 2px solid transparent; /* visible en alto contraste, como el del campo */
     box-shadow: 0 0 0 3px var(--nx-primary-soft);
   }
 }
