@@ -433,18 +433,17 @@ describe("modo servidor", () => {
     });
     vi.stubGlobal("fetch", fetch);
     const el = mount('source="/datos"');
-    await sleep(20);
     const s = scroll(el);
     const tall = el.querySelector<HTMLElement>(".nx-grid__body")!;
-    expect(tall.style.blockSize).toBe("8000000px");
+    // Lo que llega por `fetch` se espera por su efecto, no con una pausa fija (bajo carga no alcanza).
+    await vi.waitFor(() => expect(tall.style.blockSize).toBe("8000000px"));
     // happy-dom no maqueta: el alto del scroller y su recorrido se fijan aquí.
     Object.defineProperty(s, "clientHeight", { value: 420, configurable: true });
     Object.defineProperty(s, "scrollHeight", { value: 8_000_000 + 40, configurable: true });
     s.scrollTop = 8_000_040 - 420;
     s.dispatchEvent(new Event("scroll"));
-    await sleep(40);
-    const rows = [...el.querySelectorAll<HTMLElement>(".nx-grid__row")].map((x) => Number(x.dataset.r));
-    expect(rows.at(-1)).toBe(total - 1);
+    const last = () => [...el.querySelectorAll<HTMLElement>(".nx-grid__row")].map((x) => Number(x.dataset.r)).at(-1);
+    await vi.waitFor(() => expect(last()).toBe(total - 1));
     expect(el.querySelector(`.nx-grid__row[data-r="${total - 1}"] > [data-c="0"]`)!.textContent).toBe(`OC-${total - 1}`);
   });
 });
