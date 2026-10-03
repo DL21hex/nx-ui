@@ -255,7 +255,8 @@ sel.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", 
 - `multiple` deja lo elegido como chips; elegir no cierra y Backspace quita el último.
 - Es un control de `<form>` nativo: `name` (con `multiple`, una entrada por valor), `required` con
   el aviso del navegador sobre el campo (y `aria-invalid` tras un envío fallido o un
-  `reportValidity()`; el `checkValidity()` del elemento solo pregunta), `reset` vuelve al
+  `reportValidity()`; el `checkValidity()` del elemento solo pregunta, el del `<form>` sí marca
+  porque no se distingue de un envío), `reset` vuelve al
   valor inicial (el atributo `value`, o lo que llegó antes de que la persona lo tocara),
   `<fieldset disabled>` lo apaga, y un `<label for>` lo nombra y lo enfoca.
 - `value` de varios con `multiple`: da igual si `multiple` llega antes o después. En atributo, JSON
