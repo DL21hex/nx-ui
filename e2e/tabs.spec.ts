@@ -80,6 +80,19 @@ for (const rf of ["navegador", "sin reading-flow"] as const) {
   });
 }
 
+test("de derecha a izquierda: la flecha izquierda va a la pestaña siguiente y Tab sigue igual", async ({ page }) => {
+  await open(page, "#/dialog");
+  await mount(page, `<div dir="rtl">${FX}</div>`);
+  await page.waitForSelector("#tx [role=tab]");
+  await page.locator("#t-before").focus();
+  expect((await walk(page, 1)).stops).toEqual(["tab:Uno"]);
+  await page.keyboard.press("ArrowLeft");
+  expect(await focused(page)).toBe("tab:Dos");
+  await page.keyboard.press("ArrowRight");
+  expect(await focused(page)).toBe("tab:Uno");
+  expect((await walk(page, 2)).stops).toEqual(["p1", "p1a"]);
+});
+
 test("aria-owns: el árbol de accesibilidad lee la lista antes que los paneles, sin duplicados", async ({ page, browserName }) => {
   await open(page, "#/dialog");
   await mount(page, FX);

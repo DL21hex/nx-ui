@@ -88,6 +88,19 @@ describe("tabThrough: Tab desde una fecha", () => {
     expect(root.hasAttribute("tabindex")).toBe(false);
   });
 
+  it("dos Tab seguidos antes del temporizador (segmentos): la raíz vuelve a su tabindex de antes", async () => {
+    vi.stubGlobal("CSS", { supports: () => false });
+    const { root, date } = mount();
+    date.focus();
+    tabThrough(root, date, () => {});
+    // El siguiente Tab calcula el orden sin la raíz provisional.
+    expect(stepTab(document.body, date, false).els.map((el) => el.id)).toEqual(["d", "o"]);
+    expect(root.getAttribute("tabindex")).toBe("-1");
+    tabThrough(root, date, () => {});
+    await new Promise((r) => setTimeout(r));
+    expect(root.getAttribute("tabindex")).toBe("-1");
+  });
+
   it("con reading-flow, durante la pulsación el navegador sigue el orden del documento", async () => {
     vi.stubGlobal("CSS", { supports: () => true });
     const { root, date } = mount();

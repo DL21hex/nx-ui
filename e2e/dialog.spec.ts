@@ -173,6 +173,69 @@ test("un hijo con tabindex=-1 (un envoltorio enfocable por la app, un <nx-import
   expect((await walk(page, 4, true)).stops).toEqual(["x", "b1", "w2", "w1"]);
 });
 
+for (const rf of ["reading-flow", "sin reading-flow"] as const) {
+  test(`radios, select, contenteditable y el aviso de cambios (${rf}): Tab nunca se queda quieto ni sale`, async ({ page }) => {
+    const simulated = rf === "sin reading-flow";
+    if (simulated) await withoutReadingFlow(page);
+    await open(page, "#/dialog");
+    await mount(
+      page,
+      `<nx-dialog id="fx" heading="Varios"><form>
+        <fieldset><legend>Envío</legend><label><input type="radio" name="e" id="r1">A</label><label><input type="radio" name="e" id="r2" checked>B</label><label><input type="radio" name="e" id="r3">C</label></fieldset>
+        <select id="s" aria-label="Sede"><option>Uno</option><option>Dos</option></select>
+        <div contenteditable id="ce" aria-label="Nota">texto</div>
+      </form><div slot="footer"><button id="b1" type="button">Listo</button></div></nx-dialog>`,
+      simulated,
+    );
+    await page.evaluate(() => void document.querySelector<Dlg>("#fx")!.show());
+    // Del grupo de radios queda una parada: la marcada.
+    await expect(page.locator("#r2")).toBeFocused();
+    expect((await walk(page, 6)).stops).toEqual(["s", "ce", "b1", "x", "r2", "s"]);
+    expect((await walk(page, 6, true)).stops).toEqual(["r2", "x", "b1", "ce", "s", "r2"]);
+    // Con cambios, Escape muestra el aviso: sus botones entran al recorrido y el foco no sale del diálogo.
+    await page.locator("#ce").click();
+    await page.keyboard.type("x");
+    await page.keyboard.press("Escape");
+    const guard = page.locator("#fx .nx-dialog__guard");
+    await expect(guard).toBeVisible();
+    await expect(guard.getByRole("button", { name: "Seguir editando" })).toBeFocused();
+    const w = await walk(page, 8);
+    expect(new Set(w.stops).size).toBeGreaterThan(4);
+    expect(distinct(w.stops)).toEqual(w.stops);
+    expect(await page.evaluate(() => document.querySelector("#fx")!.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(guard).toBeHidden();
+    await expect(page.locator("#fx")).toBeVisible();
+  });
+}
+
+test("el menú «Más» de la ficha: Escape lo cierra a él, Tab lo cierra y sigue, y el diálogo sigue abierto", async ({ page }) => {
+  await open(page, "#/drawer");
+  await page.locator("#dw-open .nx-button__btn").click();
+  const panel = page.locator("#dw-panel");
+  const more = panel.locator("[data-tool=more]");
+  await expect(more).toBeVisible();
+  await more.focus();
+  await page.keyboard.press("Enter");
+  const menu = panel.getByRole("menu");
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(menu.getByRole("menuitem").nth(1)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(more).toBeFocused();
+  await expect(panel).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(menu).toBeHidden();
+  // Sigue después de «Más» (la ×), dentro del diálogo.
+  await expect(panel.locator(".nx-dialog__x")).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(more).toBeFocused();
+});
+
 test("solo la ×: del último botón del pie a la × y al primer campo, y al revés", async ({ page }) => {
   await open(page, "#/dialog");
   await mount(page, `<nx-dialog id="fx" heading="Solo cerrar"><label>Uno <input id="f1"></label><div slot="footer"><button id="b1" type="button">Listo</button></div></nx-dialog>`);

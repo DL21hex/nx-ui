@@ -33,6 +33,9 @@ export const shown = (el: Element): boolean =>
 export const readingFlow = (el?: Element): boolean =>
   typeof CSS !== "undefined" && !!CSS.supports?.("reading-flow", "flex-visual") && (!el || getComputedStyle(el).getPropertyValue("reading-flow") !== "normal");
 
+/** El `tabThrough` en curso (hasta su temporizador): el próximo Tab lo termina primero. */
+let pending: (() => void) | null = null;
+
 /** Compara dos nodos de `root` por el orden en que se ven: el del documento, salvo que un
  *  contenedor flex o grid reordene a sus hijos con `order` (esos contenedores se anotan en `moved`). */
 function comparer(root: Element, moved?: Set<Element>): (a: Element, b: Element) => number {
@@ -109,6 +112,8 @@ export function tabOrder(root: Element, moved?: Set<Element>): HTMLElement[] {
  *  que recorra también lo que hay dentro de un control (los segmentos de una fecha, un shadow DOM) y
  *  salte lo que no se enfoca. */
 export function stepTab(root: Element, from: Element | null, back: boolean): { els: HTMLElement[]; to: HTMLElement | null; native: boolean } {
+  // Lo provisional de un Tab anterior desde una fecha no cuenta (la raíz con `tabindex="0"`).
+  pending?.();
   const moved = new Set<Element>();
   const els = tabOrder(root, moved);
   const n = els.length;
@@ -153,6 +158,9 @@ export const hasStops = (el: Element | null): el is HTMLInputElement => el insta
  * del último lo sacaría de `root`.
  */
 export function tabThrough(root: HTMLElement, from: Element, go: () => void): void {
+  // Otro Tab llegó antes que el temporizador del anterior: ese termina primero (si no, el `tabindex`
+  // provisional de la raíz pasaría por el original).
+  pending?.();
   const tabindex = root.getAttribute("tabindex");
   const flow = root.style.getPropertyValue("reading-flow");
   root.tabIndex = 0;
@@ -161,6 +169,7 @@ export function tabThrough(root: HTMLElement, from: Element, go: () => void): vo
   const finish = (moved: boolean) => {
     if (done) return;
     done = true;
+    pending = null;
     document.removeEventListener("focusin", leave, true);
     clearTimeout(timer);
     if (tabindex === null) root.removeAttribute("tabindex");
@@ -173,7 +182,9 @@ export function tabThrough(root: HTMLElement, from: Element, go: () => void): vo
   const leave = (e: Event) => e.target !== from && finish(true);
   document.addEventListener("focusin", leave, true);
   // Si el foco se fue sin `focusin` (a la barra del navegador), también.
-  const timer = setTimeout(() => finish(document.activeElement !== from));
+  const settle = () => finish(document.activeElement !== from);
+  const timer = setTimeout(settle);
+  pending = settle;
 }
 
 /** Enfoca `els[i]` y, si no acepta el foco (algo que el navegador no enfoca aunque lo parezca), el
