@@ -37,6 +37,51 @@ export function resolveLocale(el: Element): string {
   return canonicalLocale(el.getAttribute("locale")) || canonicalLocale(el.closest("[lang]")?.getAttribute("lang")) || "es-CO";
 }
 
+interface LangWatch {
+  fn: (old: string, now: string) => void;
+  last: string;
+}
+const watching = new Map<Element, LangWatch>();
+let langObserver: MutationObserver | null = null;
+
+/**
+ * Avisa a `el` cuando cambia el locale que hereda: el selector de idioma de `<nx-account>` (o la
+ * app) cambia `<html lang>` o el `lang` de una zona. Un solo MutationObserver para toda la página,
+ * creado con el primer elemento y desconectado con el último; `fn` solo corre si el locale
+ * resuelto de `el` de verdad cambió (con su atributo `locale` propio, nunca). Se llama al
+ * conectar; al desconectar, `unwatchLang`. Los componentes que observan `locale` lo hacen solos
+ * (`define`): repintan como si hubiera cambiado su atributo.
+ */
+export function watchLang(el: Element, fn: (old: string, now: string) => void): void {
+  if (typeof MutationObserver === "undefined" || typeof document === "undefined") return;
+  watching.set(el, { fn, last: resolveLocale(el) });
+  if (langObserver) return;
+  langObserver = new MutationObserver(() => {
+    for (const [e, w] of [...watching]) {
+      const now = resolveLocale(e);
+      if (now === w.last || !watching.has(e)) continue;
+      const old = w.last;
+      w.last = now;
+      try {
+        w.fn(old, now);
+      } catch (err) {
+        // Un componente que falla no deja a los demás con el idioma viejo.
+        console.error(err);
+      }
+    }
+  });
+  langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"], subtree: true });
+}
+
+/** Deja de avisar a `el`; sin nadie más, el observador se desconecta. */
+export function unwatchLang(el: Element): void {
+  watching.delete(el);
+  if (!watching.size && langObserver) {
+    langObserver.disconnect();
+    langObserver = null;
+  }
+}
+
 export interface NxFormat {
   locale: string;
   /** 1234567.5 → «1.234.567,5» (es) · «1,234,567.5» (en). */
