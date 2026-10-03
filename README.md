@@ -1760,8 +1760,8 @@ seis zonas siempre en el mismo orden: arriba orienta, en medio informa o edita, 
   sirve dentro de un `<form>` y marca los cambios sin guardar de `<nx-dialog>`; `readonly` sigue como
   texto con candado. `values` devuelve lo escrito ya convertido, `validate()` revisa lo obligatorio y
   el formato y enfoca el primer error, y `errors` muestra los del servidor. Un número se edita sin
-  redondear; lo escrito no se pierde si la ficha se vuelve a pintar (los mismos `items` otra vez), y
-  `reset()` lo descarta (un formulario que se reabre).
+  redondear; lo escrito en los items con `key` no se pierde si la ficha se vuelve a pintar (los
+  mismos `items` otra vez, otro `locale`), y `reset()` lo descarta (un formulario que se reabre).
 - **`<nx-tabs>`**: los paneles son tus hijos con `data-tab` (no se mueven: la hidratación de Solid
   sigue intacta), con `data-count` o `data-errors` (en rojo, para un formulario largo). Teclado de la
   APG; `nx-tabs-change` es cancelable. Con `tabs` (BDUI), la lista sale de ahí.

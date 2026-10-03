@@ -209,6 +209,33 @@ describe("<nx-fields> al editar: lo escrito no se pierde", () => {
     type(input(f, "tasa"), "0,5");
     expect(f.values.tasa).toBe(0.5);
   });
+
+  it("si cambia el locale, un número escrito se pasa al formato nuevo (no se lee con el otro)", () => {
+    document.body.innerHTML = `<nx-fields locale="es-CO" editing></nx-fields>`;
+    const f = document.querySelector("nx-fields")!;
+    f.items = [
+      { key: "monto", label: "Monto", value: 10, format: "number" },
+      { key: "raro", label: "Raro", value: 5, format: "number" },
+    ];
+    type(input(f, "monto"), "1.234,5");
+    type(input(f, "raro"), "no es número");
+    f.setAttribute("locale", "en-US");
+    expect(input(f, "monto").value).toBe("1,234.5");
+    expect(f.values.monto).toBe(1234.5);
+    // Lo que no se entiende con el locale de antes no se pasa: gana el dato.
+    expect(f.values.raro).toBe(5);
+  });
+
+  it("lo escrito en items sin key (clave por posición) no pasa a otro campo si la app los reordena", () => {
+    document.body.innerHTML = `<nx-fields editing></nx-fields>`;
+    const f = document.querySelector("nx-fields")!;
+    const a = { label: "Nombre" };
+    const b = { label: "Apellido" };
+    f.items = [a, b];
+    type(input(f, "f1"), "Ana");
+    f.items = [b, a];
+    expect(f.values).toEqual({ f1: null, f2: null });
+  });
 });
 
 describe("<nx-fields> con datos mal formados (BDUI)", () => {

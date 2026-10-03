@@ -72,6 +72,9 @@ interface Initial {
   text: string;
   /** El número original de un monto o un número: lo que devuelve `values` si nadie lo tocó. */
   n?: number | null;
+  /** El item trae `key` propia: lo escrito puede pasar a la ficha repintada (una clave por posición
+   *  podría llevarlo a otro campo si la app reordena los items). */
+  keyed: boolean;
 }
 
 export class NxFields extends Base {
@@ -290,6 +293,7 @@ export class NxFields extends Base {
     const active = document.activeElement;
     const hadFocus = this.contains(active);
     const L = this.#labels;
+    const was = this.#fmt;
     this.#fmt = nxFormat(resolveLocale(this));
     const summary = this.variant === "summary";
     const editing = this.editing && !summary;
@@ -304,13 +308,13 @@ export class NxFields extends Base {
     this.style.setProperty("--_n", String(Math.min(4, Math.max(1, this.#items.length))));
     // Lo que la persona escribió (y dónde estaba): se pasa a los campos nuevos de la misma clave,
     // salvo que la app haya cambiado ese dato.
-    const typed = new Map<string, { text: string; value: FieldItem["value"] }>();
+    const typed = new Map<string, { text: string; value: FieldItem["value"]; numeric: boolean }>();
     let focusKey: string | undefined;
     let sel: [number | null, number | null] | undefined;
     if (editing && !modeChanged && !fresh)
       for (const [k, c] of this.#controls) {
         const init = this.#initial.get(k);
-        if (init && c.value !== init.text) typed.set(k, { text: c.value, value: init.value });
+        if (init?.keyed && c.value !== init.text) typed.set(k, { text: c.value, value: init.value, numeric: init.n !== undefined });
         if (c === active) {
           focusKey = k;
           if (!(c instanceof HTMLSelectElement)) sel = [c.selectionStart, c.selectionEnd];
@@ -324,7 +328,13 @@ export class NxFields extends Base {
       const c = this.#controls.get(k);
       if (!c || this.#initial.get(k)?.value !== t.value) continue;
       if (c instanceof HTMLSelectElement && ![...c.options].some((o) => o.value === t.text)) continue;
-      c.value = t.text;
+      // Un número escrito con otro locale («1.234,5» al pasar a en-US): se lee con el de antes y se
+      // escribe con el nuevo; si no se entiende, gana el dato.
+      if (t.numeric && was.locale !== this.#fmt.locale) {
+        const n = t.text.trim() ? was.parse(t.text) : null;
+        if (t.text.trim() && n === null) continue;
+        c.value = n === null ? "" : exactNumber(this.#fmt.locale, n);
+      } else c.value = t.text;
     }
     this.#list?.remove();
     this.#list = list;
@@ -419,8 +429,9 @@ export class NxFields extends Base {
       c.value = empty(raw) ? "" : String(raw);
     } else {
       const numeric = t === "number" || t === "money";
-      n = numeric && !empty(raw) ? (typeof raw === "number" && Number.isFinite(raw) ? raw : this.#fmt.parse(String(raw))) : null;
-      const value = empty(raw) ? "" : numeric && n !== null ? exactNumber(this.#fmt.locale, n) : t === "date" ? String(raw).slice(0, 10) : String(raw);
+      // `n` solo en los numéricos (`undefined` en el resto).
+      if (numeric) n = !empty(raw) ? (typeof raw === "number" && Number.isFinite(raw) ? raw : this.#fmt.parse(String(raw))) : null;
+      const value = empty(raw) ? "" : numeric && n != null ? exactNumber(this.#fmt.locale, n) : t === "date" ? String(raw).slice(0, 10) : String(raw);
       c = h("input", {
         class: "nx-fields__input",
         type: numeric ? "text" : t,
@@ -438,7 +449,7 @@ export class NxFields extends Base {
       c.setAttribute("aria-required", "true");
     }
     this.#controls.set(k, c);
-    this.#initial.set(k, { value: raw, text: c.value, n });
+    this.#initial.set(k, { value: raw, text: c.value, n, keyed: !!it.key });
     const label = h("label", { class: "nx-fields__l", for: id }, it.label, inp.required ? h("span", { class: "nx-fields__req", "aria-hidden": "true" }, "*") : null);
     let control: HTMLElement = c;
     if (t === "money") {
