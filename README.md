@@ -1814,9 +1814,14 @@ lista.
 - **Nombres:** suben a ese nivel. El último es la página actual (`aria-current="page"`) y no es un
   enlace. Los largos se cortan y muestran el nombre completo al pasar el ratón.
 - **Separadores:** abren los hijos del nivel, con el actual marcado. Llegan en `children` o se
-  piden con `loadChildren(item, level)` al abrir, una vez por nivel. Si no hay alternativas, el `›`
-  no se abre (`expandable: false` o `data-expandable="false"` lo apaga). Con más de 7 aparece un
-  buscador que no distingue tildes. El menú se carga aparte (`import()`) al abrir el primero.
+  piden al abrir, una vez por camino: primero se emite `nx-breadcrumb-children` `{item, level,
+  respond}`, donde la app puede dar los hijos con `respond(hijos)` (ya, o después de
+  `preventDefault()`); si nadie responde, se piden a `children-endpoint` (`GET`, del mismo origen;
+  `{id}` es la clave del nivel y `{level}` su número). Sin `children-endpoint`, un nivel sin
+  `children` se abre con `expandable: true` (`data-expandable="true"`). Si no hay alternativas, el
+  `›` no se abre (`expandable: false` lo apaga). Con más de 7 aparece un buscador que no distingue
+  tildes. El menú se carga aparte (`import()`) al abrir el primero; abre hacia arriba si abajo no
+  cabe.
 - **Colapso:** si no cabe, los niveles del medio pasan a un «…» que se abre como menú. Siempre
   quedan el primero y los dos últimos. Por debajo de 480 px de ancho del componente queda solo
   «‹ Padre», porque el título de la página ya dice dónde estás.
@@ -1827,28 +1832,27 @@ lista.
 - **Sin JavaScript:** los hijos son enlaces normales y se ven como una ruta con `›`.
 
 ```html
-<nx-breadcrumb id="ruta" label="Ruta">
+<!-- Al abrir un separador: GET /api/hermanos?de=%2Fhcm%2Fempleados (la clave del nivel, su href, codificada). -->
+<nx-breadcrumb label="Ruta" children-endpoint="/api/hermanos?de={id}">
   <a href="/hcm" data-icon="users">Personas</a>
   <a href="/hcm/empleados">Empleados</a>
   <a href="/hcm/empleados/482">Laura Gómez</a>
   <span>Contratos</span>
 </nx-breadcrumb>
-<script>
-  ruta.loadChildren = (item, level) => fetch(`/api/hermanos?de=${item.href}`).then((r) => r.json());
-</script>
 ```
 
 ```tsx
 import { Breadcrumb } from "nx32-elements/solid/breadcrumb";
 
-<Breadcrumb items={ruta()} loadChildren={hermanos}
+<Breadcrumb items={ruta()}
+  onChildren={(e) => e.detail.respond(hermanos(e.detail.item))}
   onNavigate={(e) => { e.preventDefault(); navigate(e.detail.item.href!); }} />
 ```
 
 | | |
 |---|---|
-| Propiedades / atributos | hijos (`<a href>` con `data-icon`, `data-id`, `data-expandable`; el último, un `<span>`) o `items` (`[{id?, label, href?, icon?, children?, expandable?}]`), `loadChildren`, `label`, `labels` · `path` (solo lectura) |
-| Eventos | `nx-breadcrumb-navigate` `{item, level, via}` (cancelable; `via`: `link`, `menu`, `back`, `key`) |
+| Propiedades / atributos | hijos (`<a href>` con `data-icon`, `data-id`, `data-expandable`; el último, un `<span>`) o `items` (`[{id?, label, href?, icon?, children?, expandable?}]`), `children-endpoint` / `childrenEndpoint`, `label`, `labels` · `path` (solo lectura) |
+| Eventos | `nx-breadcrumb-navigate` `{item, level, via}` (cancelable; `via`: `link`, `menu`, `back`, `key`), `nx-breadcrumb-children` `{item, level, respond}` (cancelable) |
 | Funciones | `cleanBreadcrumbItems()`, `collapseCount()` |
 
 ## `<nx-signature>`

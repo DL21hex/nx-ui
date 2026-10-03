@@ -8,9 +8,11 @@ export interface BreadcrumbItem {
   href?: string;
   /** Un ícono registrado (`registerIcons`). Lo normal es que solo lo lleve el primero: el módulo. */
   icon?: string;
-  /** Los hijos de este nivel (los hermanos del siguiente), si llegan con la ruta. Si no, `loadChildren`. */
+  /** Los hijos de este nivel (los hermanos del siguiente), si llegan con la ruta. Si no, se piden al
+   *  abrir su separador (`nx-breadcrumb-children` o `children-endpoint`). */
   children?: BreadcrumbItem[];
-  /** `false`: su separador no se abre aunque haya `loadChildren`. */
+  /** `true`: su separador se abre sin `children` (los hijos se piden al abrir). `false`: no se abre
+   *  aunque haya `children-endpoint`. */
   expandable?: boolean;
 }
 
@@ -24,8 +26,16 @@ export interface BreadcrumbNavigateDetail {
   via: BreadcrumbVia;
 }
 
-/** Los hijos de `item` (nivel `level`), al abrir su separador. */
-export type BreadcrumbLoader = (item: BreadcrumbItem, level: number) => BreadcrumbItem[] | Promise<BreadcrumbItem[]>;
+/**
+ * Detalle de `nx-breadcrumb-children` (cancelable): se abrió el separador de `item` (nivel `level`)
+ * y sus hijos no llegaron con la ruta. La app los da con `respond(hijos)`: ya, o después de
+ * `preventDefault()` si los pide a su manera. Si nadie responde, se piden a `children-endpoint`.
+ */
+export interface BreadcrumbChildrenDetail {
+  item: BreadcrumbItem;
+  level: number;
+  respond(children: BreadcrumbItem[] | Promise<BreadcrumbItem[]>): void;
+}
 
 export interface BreadcrumbLabels {
   /** Nombre de la ruta para el lector de pantalla, si no hay `label`. */

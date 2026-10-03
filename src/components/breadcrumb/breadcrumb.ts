@@ -6,20 +6,22 @@
  * hijos no se mueven, la hidratación de Solid sigue intacta: el componente agrega su `<nav>` al
  * final y el CSS esconde los originales. Sin JavaScript se ven como una ruta de enlaces.
  *
- * - **Separadores:** se abren si el nivel tiene `children` con alternativas, o si hay
- *   `loadChildren` (se piden al abrir y se guardan). Más de 7 traen buscador (sin tildes).
+ * - **Separadores:** se abren si el nivel tiene `children` con alternativas, o si se pueden pedir
+ *   (`expandable: true` o `children-endpoint`): al abrir se emite `nx-breadcrumb-children`, donde la
+ *   app puede responder; si no, se piden a `children-endpoint`. Se guardan por camino. Más de 7
+ *   traen buscador (sin tildes).
  * - **Colapso:** si no cabe, los niveles del medio pasan a un «…» que se abre como menú; el primero
  *   y los dos últimos se quedan. Por debajo de 480 px queda solo «‹ Padre».
  * - **Navegar:** `nx-breadcrumb-navigate` es cancelable (routers SPA); si nadie lo cancela, manda el
  *   `href`. `Alt+↑` sube un nivel (en la ruta visible de más abajo de la página).
  */
 import { Base, upgrade } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref } from "../../core/dom";
 import { glyph, hasIcon, icon } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import type { BreadcrumbMenu } from "./breadcrumb-menu";
 import { cleanItems, collapseCount, itemKey } from "./logic";
-import type { BreadcrumbItem, BreadcrumbLabels, BreadcrumbLoader, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
+import type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
 
 export const BREADCRUMB_LABELS: BreadcrumbLabels = {
   label: "Ruta",
@@ -41,12 +43,14 @@ const EDITABLE = "input, textarea, select, [contenteditable]:not([contenteditabl
 const visible = (el: Element) => (el.checkVisibility ? el.checkVisibility() : el.isConnected);
 
 export class NxBreadcrumb extends Base {
-  static observedAttributes = ["items", "label", "labels"];
+  static observedAttributes = ["items", "label", "labels", "children-endpoint"];
 
   #items: BreadcrumbItem[] | null = null;
   #labels: BreadcrumbLabels = BREADCRUMB_LABELS;
-  #load: BreadcrumbLoader | null = null;
+  /** Los hijos pedidos, por camino hasta el nivel (dos «General» en ramas distintas no se mezclan). */
   #cache = new Map<string, BreadcrumbItem[]>();
+  /** Sube al cambiar `children-endpoint`: una respuesta que llega de antes ya no se guarda. */
+  #gen = 0;
   #nav?: HTMLElement;
   #list?: HTMLOListElement;
   #back: HTMLElement | null = null;
@@ -71,14 +75,19 @@ export class NxBreadcrumb extends Base {
     this.#queue();
   }
 
-  /** Pide los hijos de un nivel al abrir su separador. La respuesta se guarda por nivel. */
-  get loadChildren(): BreadcrumbLoader | null {
-    return this.#load;
+  /**
+   * URL que da los hijos de un nivel al abrir su separador: `GET`, responde `[{label, href?, …}]`.
+   * `{id}` es la clave del nivel (`id`, o `href`, o `label`) y `{level}` su número; sin `{id}`, la
+   * clave va como `?id=`. Del mismo origen (o de `allowOrigins`). Con ella, todo separador sin
+   * `children` se abre (salvo `expandable: false`). Asignarla, aunque sea la misma, vacía lo guardado.
+   */
+  get childrenEndpoint(): string | null {
+    return this.getAttribute("children-endpoint");
   }
-  set loadChildren(v: BreadcrumbLoader | null | undefined) {
-    this.#load = typeof v === "function" ? v : null;
-    this.#cache.clear();
-    this.#queue();
+  set childrenEndpoint(v: string | null | undefined) {
+    if (v) this.setAttribute("children-endpoint", v);
+    else if (this.hasAttribute("children-endpoint")) this.removeAttribute("children-endpoint");
+    else this.#forget();
   }
 
   /** Nombre de la ruta para el lector de pantalla. */
@@ -124,8 +133,14 @@ export class NxBreadcrumb extends Base {
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
+    if (name === "children-endpoint") this.#forget();
     if (name === "items" || name === "labels") {
-      if (value === null) return void (name === "items" && (this.items = null));
+      // Quitar el atributo vuelve a los hijos del autor, o a los textos de fábrica.
+      if (value === null) {
+        if (name === "items") this.items = null;
+        else this.labels = null;
+        return;
+      }
       try {
         const parsed = JSON.parse(value);
         if (name === "items") this.items = parsed;
@@ -187,7 +202,8 @@ export class NxBreadcrumb extends Base {
     for (const el of this.children) {
       if (el === this.#nav || el === this.#menu || /^(TEMPLATE|SCRIPT|STYLE)$/.test(el.tagName)) continue;
       const d = (el as HTMLElement).dataset;
-      out.push({ label: el.textContent?.trim() ?? "", id: d.id, href: el.getAttribute("href") ?? undefined, icon: d.icon, expandable: d.expandable === "false" ? false : undefined });
+      const expandable = d.expandable === "false" ? false : d.expandable === "true" ? true : undefined;
+      out.push({ label: el.textContent?.trim() ?? "", id: d.id, href: el.getAttribute("href") ?? undefined, icon: d.icon, expandable });
     }
     return cleanItems(out);
   }
@@ -241,7 +257,7 @@ export class NxBreadcrumb extends Base {
   #sep(it: BreadcrumbItem, i: number): HTMLElement {
     const kids = it.children;
     const next = this.#path[i + 1];
-    const can = it.expandable !== false && (kids ? kids.length > 1 || (kids.length === 1 && (!next || itemKey(kids[0]) !== itemKey(next))) : !!this.#load);
+    const can = it.expandable !== false && (kids ? kids.length > 1 || (kids.length === 1 && (!next || itemKey(kids[0]) !== itemKey(next))) : it.expandable === true || !!this.childrenEndpoint);
     if (!can) return h("span", { class: "nx-breadcrumb__sep", "aria-hidden": "true" }, glyph("chevron"));
     const b = h("button", { type: "button", class: "nx-breadcrumb__sep", "data-sep": i, "data-k": `s${i}`, "aria-haspopup": "menu", "aria-expanded": "false" }, glyph("chevron"));
     b.setAttribute("aria-label", this.#labels.siblings.replace("{label}", it.label));
@@ -302,17 +318,27 @@ export class NxBreadcrumb extends Base {
 
   /** El menú de un separador (sus hijos) o del «…» (los niveles escondidos). Llega con `import()`. */
   async #openMenu(trigger: HTMLElement): Promise<void> {
-    const { BreadcrumbMenu } = await import("./breadcrumb-menu");
-    const m = (this.#m ??= new BreadcrumbMenu(this.#menu!, { labels: () => this.#labels, go: (it, level, via) => this.#go(it, level, via) }));
+    let Menu: typeof BreadcrumbMenu;
+    try {
+      ({ BreadcrumbMenu: Menu } = await import("./breadcrumb-menu"));
+    } catch (err) {
+      // Sin el menú (un despliegue nuevo borró el archivo, o se cayó la red) el separador no abre
+      // nada, pero tampoco deja una promesa rechazada sin atender. El próximo clic lo reintenta.
+      console.warn("[nx-breadcrumb] no se pudo cargar el menú", err);
+      return;
+    }
+    const m = (this.#m ??= new Menu(this.#menu!, { labels: () => this.#labels, go: (it, level, via) => this.#go(it, level, via) }));
     if (!trigger.isConnected) return;
     const sep = trigger.dataset.sep;
     if (sep === undefined) return m.toggle({ trigger, name: this.#labels.hidden, level: 1, indent: true, current: null, items: this.#path.slice(1, 1 + this.#hidden) });
     const level = +sep;
     const parent = this.#path[level];
     const next = this.#path[level + 1];
-    const key = itemKey(parent);
-    const load = this.#load;
+    // Por el camino hasta el nivel, no solo su clave: dos «General» sin id ni href, en ramas
+    // distintas, no comparten hijos.
+    const key = this.#keys.slice(0, level + 1).join("\u0000");
     const known = parent.children ?? this.#cache.get(key);
+    const gen = this.#gen;
     return m.toggle({
       trigger,
       name: parent.label,
@@ -322,12 +348,54 @@ export class NxBreadcrumb extends Base {
       items:
         known ??
         (async () => {
-          const kids = cleanItems(load ? await load(parent, level) : [], false);
-          if (this.#cache.size > 50) this.#cache.delete(this.#cache.keys().next().value!);
-          this.#cache.set(key, kids);
+          const got = await this.#children(parent, level);
+          const kids = cleanItems(got ?? [], false);
+          // Se guarda si alguien respondió y `children-endpoint` sigue siendo el que se usó.
+          if (got !== null && gen === this.#gen) {
+            if (this.#cache.size > 50) this.#cache.delete(this.#cache.keys().next().value!);
+            this.#cache.set(key, kids);
+          }
           return kids;
         }),
     });
+  }
+
+  /**
+   * Los hijos de un nivel: los da la app (`nx-breadcrumb-children`, ya o tras `preventDefault()`)
+   * o `children-endpoint`. `null` si no hay quién (se ve «Sin resultados» y no se guarda).
+   */
+  #children(item: BreadcrumbItem, level: number): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      let answered = false;
+      const respond = (v: BreadcrumbItem[] | Promise<BreadcrumbItem[]>) => {
+        if (answered) return;
+        answered = true;
+        Promise.resolve(v).then(resolve, reject);
+      };
+      const detail: BreadcrumbChildrenDetail = { item, level, respond };
+      const free = this.dispatchEvent(new CustomEvent("nx-breadcrumb-children", { detail, bubbles: true, composed: true, cancelable: true }));
+      if (answered || !free) return;
+      const tpl = this.childrenEndpoint;
+      if (!tpl) return resolve(null);
+      const id = encodeURIComponent(itemKey(item));
+      const base = tpl.replaceAll("{level}", String(level));
+      // Del mismo origen (o de `allowOrigins`): la ruta del usuario no viaja a un tercero.
+      const url = safeEndpoint(base.includes("{id}") ? base.replaceAll("{id}", id) : `${base}${base.includes("?") ? "&" : "?"}id=${id}`);
+      if (!url) return reject(new Error("children-endpoint bloqueado"));
+      fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(resolve, reject);
+    });
+  }
+
+  /** Olvida los hijos pedidos (cambió de dónde salen). */
+  #forget(): void {
+    this.#cache.clear();
+    this.#gen++;
+    this.#queue();
   }
 
   #close(refocus: boolean): void {

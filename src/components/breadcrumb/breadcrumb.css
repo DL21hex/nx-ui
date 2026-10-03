@@ -151,9 +151,10 @@ nx-breadcrumb[data-ready] > :not(.nx-breadcrumb__nav, .nx-breadcrumb__menu) {
     block-size: 14px;
   }
 }
+/* 24 × 24: el mínimo para un dedo (WCAG 2.5.8), pegado como está a los nombres vecinos. */
 .nx-breadcrumb__sep {
-  inline-size: 20px;
-  block-size: 22px;
+  inline-size: 24px;
+  block-size: 24px;
 
   & .nx-glyph {
     transition: rotate var(--nx-motion-fast) var(--nx-ease-out);
@@ -189,6 +190,11 @@ button.nx-breadcrumb__sep,
 button.nx-breadcrumb__sep[aria-expanded="true"] .nx-glyph {
   rotate: 90deg;
 }
+/* El anillo va por dentro: la lista recorta lo que sale de ella (`overflow: hidden`). */
+:is(.nx-breadcrumb__link, button.nx-breadcrumb__sep, .nx-breadcrumb__more, .nx-breadcrumb__back):focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: -2px;
+}
 
 @keyframes nx-breadcrumb-in {
   from {
@@ -222,6 +228,9 @@ button.nx-breadcrumb__sep[aria-expanded="true"] .nx-glyph {
 
   &[hidden] {
     display: none;
+  }
+  &[data-up] {
+    transform-origin: bottom left;
   }
   & ul {
     max-block-size: var(--_max, 320px);
@@ -286,8 +295,12 @@ button.nx-breadcrumb__sep[aria-expanded="true"] .nx-glyph {
 
   &:hover,
   &:focus-visible {
-    outline: none;
     background: var(--nx-hover);
+  }
+  /* Transparente a la vista; en alto contraste el sistema le pone color (el fondo ahí no se ve). */
+  &:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: -2px;
   }
   &[aria-checked="true"] {
     font-weight: 550;
@@ -315,6 +328,11 @@ button.nx-breadcrumb__sep[aria-expanded="true"] .nx-glyph {
   margin: 0;
   padding: 6px 8px 8px;
   color: var(--nx-text-tertiary);
+
+  /* La región viva está siempre; vacía no ocupa lugar. */
+  &:empty {
+    padding: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -324,5 +342,14 @@ button.nx-breadcrumb__sep[aria-expanded="true"] .nx-glyph {
   }
   .nx-breadcrumb__sep .nx-glyph {
     transition: none;
+  }
+}
+/* Alto contraste: los fondos se pintan del color del sistema, así que el foco del menú y el botón
+   abierto se marcan con un borde. */
+@media (forced-colors: active) {
+  .nx-breadcrumb__mitem:focus-visible,
+  :is(button.nx-breadcrumb__sep, .nx-breadcrumb__more)[aria-expanded="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }

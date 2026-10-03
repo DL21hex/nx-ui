@@ -4,8 +4,9 @@
  * ruta que nadie abre no lo paga.
  *
  * Es un popover `manual` (capa superior: no lo recorta un contenedor con `overflow`), puesto con
- * `position: fixed` debajo del botón que lo abrió. Se cierra con `Esc` (el foco vuelve al botón),
- * `Tab`, un clic afuera, al desplazar la página o al cambiar el tamaño de la ventana.
+ * `position: fixed` junto al botón que lo abrió (debajo, o encima si abajo no cabe). Se cierra con
+ * `Esc` (el foco vuelve al botón, también mientras carga), `Tab` (sigue desde el botón), un clic
+ * afuera, al irse el foco a otra parte, al desplazar la página o al cambiar el tamaño de la ventana.
  */
 import { h, safeHref } from "../../core/dom";
 import { glyph, hasIcon, icon } from "../../core/icons";
@@ -39,17 +40,39 @@ export class BreadcrumbMenu {
   #host: MenuHost;
   #open: MenuSpec | null = null;
   #list: BreadcrumbItem[] = [];
+  /** El nombre de cada entrada sin tildes, calculado al llenar: el buscador solo compara. */
+  #folded: string[] = [];
   #token = 0;
+  /** Lo que cambia (buscador y lista). El aviso de abajo es una región viva fija: se anuncia al
+   *  cambiar su texto («Cargando…» → «No se pudo cargar»), no al insertarla ya llena. */
+  #body = h("div");
+  #live = h("p", { class: "nx-breadcrumb__status", role: "status" });
   #outside = (e: Event): void => {
     // Dentro del menú (también su lista al desplazarse) o en el botón que lo abrió, nada.
     const t = e.target;
     if (t instanceof Node && (this.#el.contains(t) || (e.type === "pointerdown" && this.#open?.trigger.contains(t)))) return;
+    // Escribiendo en el buscador, el teclado virtual (o el navegador al mostrarlo) mueve la ventana:
+    // se recoloca en vez de cerrar.
+    if (e.type !== "pointerdown" && document.activeElement?.localName === "input" && this.#el.contains(document.activeElement)) return this.#place();
     this.close(false);
+  };
+  /** El foco se fue a otra parte (Tab desde el botón mientras carga): se cierra sin robárselo. */
+  #focusin = (e: FocusEvent): void => {
+    const t = e.target as Node;
+    if (!this.#el.contains(t) && !this.#open?.trigger.contains(t)) this.close(false);
+  };
+  /** Mientras carga el foco sigue en el botón: Esc cierra desde ahí, antes que un diálogo que lo contenga. */
+  #triggerKey = (e: KeyboardEvent): void => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.close(true);
   };
 
   constructor(el: HTMLDivElement, host: MenuHost) {
     this.#el = el;
     this.#host = host;
+    el.replaceChildren(this.#body, this.#live);
     el.addEventListener("click", (e) => {
       const item = (e.target as Element).closest<HTMLElement>("[data-j]");
       const o = this.#open;
@@ -63,11 +86,11 @@ export class BreadcrumbMenu {
     el.addEventListener("input", (e) => {
       const q = foldText((e.target as HTMLInputElement).value.trim());
       let n = 0;
-      for (const li of el.querySelectorAll<HTMLElement>("li")) {
-        li.hidden = !foldText(li.textContent ?? "").includes(q);
+      this.#body.querySelectorAll<HTMLElement>("li").forEach((li, j) => {
+        li.hidden = !this.#folded[j].includes(q);
         if (!li.hidden) n++;
-      }
-      el.querySelector<HTMLElement>(".nx-breadcrumb__status")!.hidden = n > 0;
+      });
+      this.#live.textContent = n > 0 ? "" : this.#host.labels().empty;
     });
     el.addEventListener("keydown", (e) => this.#key(e));
   }
@@ -80,7 +103,8 @@ export class BreadcrumbMenu {
     const el = this.#el;
     this.#open = spec;
     spec.trigger.setAttribute("aria-expanded", "true");
-    el.replaceChildren();
+    this.#body.replaceChildren();
+    this.#live.textContent = "";
     el.hidden = false;
     try {
       el.showPopover?.();
@@ -88,6 +112,8 @@ export class BreadcrumbMenu {
       /* sin soporte: el menú es `position: fixed` igual */
     }
     document.addEventListener("pointerdown", this.#outside, true);
+    document.addEventListener("focusin", this.#focusin);
+    spec.trigger.addEventListener("keydown", this.#triggerKey);
     addEventListener("scroll", this.#outside, { capture: true, passive: true });
     addEventListener("resize", this.#outside);
     let items = spec.items;
@@ -107,10 +133,12 @@ export class BreadcrumbMenu {
   close(refocus: boolean): void {
     this.#token++;
     document.removeEventListener("pointerdown", this.#outside, true);
+    document.removeEventListener("focusin", this.#focusin);
     removeEventListener("scroll", this.#outside, true);
     removeEventListener("resize", this.#outside);
     const o = this.#open;
     if (!o) return;
+    o.trigger.removeEventListener("keydown", this.#triggerKey);
     this.#open = null;
     try {
       this.#el.hidePopover?.();
@@ -118,19 +146,22 @@ export class BreadcrumbMenu {
       /* ya estaba cerrado */
     }
     this.#el.hidden = true;
-    this.#el.replaceChildren();
+    this.#body.replaceChildren();
+    this.#live.textContent = "";
     o.trigger.setAttribute("aria-expanded", "false");
     if (refocus && o.trigger.isConnected) o.trigger.focus();
   }
 
   #status(text: string): void {
-    this.#el.replaceChildren(h("p", { class: "nx-breadcrumb__status", role: "status" }, text));
+    this.#body.replaceChildren();
+    this.#live.textContent = text;
     this.#place();
   }
 
   #fill(items: BreadcrumbItem[], L: BreadcrumbLabels): void {
     const o = this.#open!;
     this.#list = items;
+    this.#folded = items.map((it) => foldText(it.label));
     const ul = h("ul", { role: "menu", "aria-label": o.name });
     items.forEach((it, j) => {
       const on = itemKey(it) === o.current;
@@ -143,26 +174,37 @@ export class BreadcrumbMenu {
     });
     const ph = L.search.replace("{label}", o.name);
     const input = !o.indent && items.length > SEARCH_AT ? h("input", { type: "text", "aria-label": ph, placeholder: ph, autocomplete: "off", spellcheck: "false" }) : null;
-    this.#el.replaceChildren(
-      ...(input ? [h("div", { class: "nx-breadcrumb__search" }, glyph("search"), input)] : []),
-      ul,
-      h("p", { class: "nx-breadcrumb__status", role: "status", hidden: items.length > 0 }, L.empty),
-    );
+    // Si la carga tardó y el usuario ya está en otra parte, el foco no se le quita.
+    const a = document.activeElement;
+    const mine = !a || a === document.body || a === o.trigger || this.#el.contains(a);
+    this.#body.replaceChildren(...(input ? [h("div", { class: "nx-breadcrumb__search" }, glyph("search"), input)] : []), ul);
+    this.#live.textContent = items.length > 0 ? "" : L.empty;
     this.#place();
-    const target = input ?? ul.querySelector<HTMLElement>('[aria-checked="true"]') ?? ul.querySelector<HTMLElement>("[data-j]");
-    target?.focus();
+    // Con puntero fino, el buscador. En una pantalla táctil, el actual: el buscador abriría el
+    // teclado, que tapa la lista (escribir en él sigue a un toque).
+    const fine = typeof matchMedia === "function" && matchMedia("(pointer: fine)").matches;
+    const target = (fine && input) || ul.querySelector<HTMLElement>('[aria-checked="true"]') || ul.querySelector<HTMLElement>("[data-j]");
+    if (mine) target?.focus();
     target?.scrollIntoView?.({ block: "nearest" });
   }
 
-  /** Debajo del botón que lo abrió, sin salirse de la ventana. */
+  /** Debajo del botón que lo abrió (encima, si abajo no cabe), alineado con él y dentro de la ventana. */
   #place(): void {
     const el = this.#el;
-    const r = this.#open!.trigger.getBoundingClientRect();
+    const trigger = this.#open!.trigger;
+    const r = trigger.getBoundingClientRect();
     const vw = document.documentElement.clientWidth || innerWidth;
-    const top = r.bottom + 6;
-    el.style.top = `${top}px`;
-    el.style.left = `${Math.max(8, Math.min(r.left - 8, vw - el.offsetWidth - 8))}px`;
-    el.style.setProperty("--_max", `${Math.max(120, Math.min(320, innerHeight - top - 60))}px`);
+    const below = innerHeight - r.bottom - 6;
+    // Una ruta en un pie o en una ficha baja: hacia arriba, si ahí hay más lugar.
+    const up = below < 180 && r.top - 6 > below;
+    el.toggleAttribute("data-up", up);
+    el.style.top = up ? "auto" : `${r.bottom + 6}px`;
+    el.style.bottom = up ? `${innerHeight - r.top + 6}px` : "auto";
+    // Por el borde de inicio del botón: el izquierdo, o el derecho en RTL.
+    const rtl = getComputedStyle(trigger).direction === "rtl";
+    const left = rtl ? r.right + 8 - el.offsetWidth : r.left - 8;
+    el.style.left = `${Math.max(8, Math.min(left, vw - el.offsetWidth - 8))}px`;
+    el.style.setProperty("--_max", `${Math.max(120, Math.min(320, (up ? r.top - 6 : below) - 60))}px`);
   }
 
   #key(e: KeyboardEvent): void {
@@ -200,7 +242,9 @@ export class BreadcrumbMenu {
         this.close(true);
         break;
       case "Tab":
-        this.close(false);
+        // El menú vive al final de la ruta: sin volver al botón, Tab saltaría los niveles que siguen.
+        // Con el foco de vuelta en el botón, la tecla sigue su camino desde ahí.
+        this.close(true);
         break;
       default:
         if (e.target === input || e.key.length !== 1 || e.key === " ") break;

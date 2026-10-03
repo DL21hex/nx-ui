@@ -3,11 +3,12 @@
  * Medellín: Personas › Empleados › una persona › sus secciones › contratos › otrosíes.
  *
  * Funciona como una SPA: cancela `nx-breadcrumb-navigate` y repinta la ruta y la página. Los hijos
- * de cada nivel llegan con `loadChildren` (con una espera corta, para ver «Cargando…»). Al elegir
- * otra persona desde el separador se conserva la sección: de Laura › Contratos a Andrés › Contratos.
+ * de cada nivel los da la app al abrir el separador, respondiendo a `nx-breadcrumb-children` (con
+ * una espera corta, para ver «Cargando…»). Al elegir otra persona desde el separador se conserva la
+ * sección: de Laura › Contratos a Andrés › Contratos.
  */
 import "../src/components/breadcrumb/index";
-import type { BreadcrumbItem, BreadcrumbNavigateDetail, NxBreadcrumb } from "../src/components/breadcrumb/index";
+import type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbNavigateDetail, NxBreadcrumb } from "../src/components/breadcrumb/index";
 
 interface Node {
   id: string;
@@ -66,8 +67,9 @@ const byId = new Map<string, Node>();
   n.children?.forEach(index);
 })(ROOT);
 
-/** Lo que la ruta necesita de un nodo. El `href` es el de la galería: la demo cancela la navegación. */
-const toItem = (n: Node): BreadcrumbItem => ({ id: n.id, label: n.label, href: "#/breadcrumb", icon: n.icon, expandable: n.children && n.children.length > 1 ? undefined : false });
+/** Lo que la ruta necesita de un nodo. El `href` es el de la galería: la demo cancela la navegación.
+ *  Con alternativas, `expandable: true`: su separador se abre y los hijos se piden al abrirlo. */
+const toItem = (n: Node): BreadcrumbItem => ({ id: n.id, label: n.label, href: "#/breadcrumb", icon: n.icon, expandable: !!n.children && n.children.length > 1 });
 
 const initials = (s: string) => s.split(/\s+/).slice(0, 2).map((w) => w[0]).join("");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -145,10 +147,10 @@ export function mountBreadcrumbDemo(root: HTMLElement): void {
     return out;
   };
 
-  bc.loadChildren = async (item) => {
-    await sleep(250);
-    return (byId.get(item.id!)?.children ?? []).map(toItem);
-  };
+  bc.addEventListener("nx-breadcrumb-children", (e) => {
+    const { item, respond } = (e as CustomEvent<BreadcrumbChildrenDetail>).detail;
+    respond(sleep(250).then(() => (byId.get(item.id!)?.children ?? []).map(toItem)));
+  });
 
   bc.addEventListener("nx-breadcrumb-navigate", (e) => {
     const d = (e as CustomEvent<BreadcrumbNavigateDetail>).detail;
