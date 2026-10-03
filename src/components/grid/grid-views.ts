@@ -84,6 +84,9 @@ export class ViewsUI {
   #cpop: HTMLDivElement;
   #mode: Mode = "list";
   #open = new Set<HTMLDivElement>();
+  /** El menú que estaba abierto al apretar su botón: el navegador lo cierra (clic afuera) antes del
+   *  `click`, y sin esto el clic lo volvería a abrir. */
+  #downOpen: HTMLDivElement | null = null;
   /** Lo que muestra la lista pintada (para repintarla solo si cambió). */
   #sig = "";
   #place = () => {
@@ -111,6 +114,9 @@ export class ViewsUI {
           items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
         }
       });
+      btn.addEventListener("pointerdown", () => (this.#downOpen = this.#open.has(pop) ? pop : null));
+      // Después del `click` de la tabla (que llama a toggle…), registrado antes que este.
+      btn.addEventListener("click", () => (this.#downOpen = null));
       // Un clic afuera lo cierra el navegador: el estado se entera antes.
       pop.addEventListener("beforetoggle", (e) => {
         if ((e as ToggleEvent).newState !== "closed") return;
@@ -128,14 +134,14 @@ export class ViewsUI {
 
   /** Abre o cierra el menú de vistas; `save`: directo al formulario de guardar. */
   toggleViews(save = false): void {
-    if (this.#open.has(this.#pop) && !save) return this.#hide(this.#pop, this.#host.viewsBtn);
+    if ((this.#open.has(this.#pop) || this.#downOpen === this.#pop) && !save) return this.#hide(this.#pop, this.#host.viewsBtn);
     this.#mode = save ? "save" : "list";
     this.#paintViews();
     this.#show(this.#pop, this.#host.viewsBtn);
   }
 
   toggleColumns(): void {
-    if (this.#open.has(this.#cpop)) return this.#hide(this.#cpop, this.#host.colsBtn);
+    if (this.#open.has(this.#cpop) || this.#downOpen === this.#cpop) return this.#hide(this.#cpop, this.#host.colsBtn);
     this.#paintColumns();
     this.#show(this.#cpop, this.#host.colsBtn);
   }

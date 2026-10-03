@@ -95,9 +95,9 @@ describe("Buscar en la tabla", () => {
     el.filters = [{ key: "estado", op: "in", values: ["apr"] }];
     type(el, "aceros");
     expect(shown(el)).toEqual(["OC-3"]);
-    const opt = el.querySelector<HTMLInputElement>('.nx-grid__facets input[data-value="Empaques"]')!;
-    // Empaques no pasa la búsqueda: queda en 0.
-    expect(opt.disabled).toBe(true);
+    // Empaques no pasa la búsqueda: queda en 0 y no se muestra.
+    expect(el.querySelector('.nx-grid__facets input[data-value="Empaques"]')).toBeNull();
+    expect(el.querySelector('.nx-grid__facets input[data-value="Aceros"]')).not.toBeNull();
   });
 
   it("la ✕ y Escape la borran; asignar `search` actualiza la caja", () => {

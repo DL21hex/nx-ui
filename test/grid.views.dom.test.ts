@@ -74,6 +74,28 @@ describe("<nx-grid>: columnas", () => {
     expect(box("monto").disabled).toBe(false);
   });
 
+  it("el botón «Columnas» cierra el menú abierto, aunque el clic afuera ya lo haya cerrado", async () => {
+    const el = mount();
+    colsBtn(el).click();
+    const cpop = await until(() => pops(el)[1]?.querySelector("input[data-col]") && pops(el)[1]);
+    expect(colsBtn(el).getAttribute("aria-expanded")).toBe("true");
+    // Teclado (sin puntero): cierra.
+    colsBtn(el).click();
+    expect(colsBtn(el).getAttribute("aria-expanded")).toBe("false");
+    colsBtn(el).click();
+    expect(colsBtn(el).getAttribute("aria-expanded")).toBe("true");
+    // Puntero: el navegador lo cierra entre `pointerdown` y `click` (clic afuera del popover).
+    colsBtn(el).dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    cpop.hidePopover?.();
+    cpop.dispatchEvent(Object.assign(new Event("beforetoggle"), { newState: "closed" }));
+    colsBtn(el).click();
+    expect(colsBtn(el).getAttribute("aria-expanded")).toBe("false");
+    // El siguiente clic lo abre otra vez.
+    colsBtn(el).dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    colsBtn(el).click();
+    expect(colsBtn(el).getAttribute("aria-expanded")).toBe("true");
+  });
+
   it("ancho: flechas en el borde de la cabecera, Supr y doble clic lo devuelven", () => {
     const el = mount();
     const scroll = el.querySelector<HTMLElement>(".nx-grid__scroll")!;

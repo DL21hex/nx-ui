@@ -410,7 +410,7 @@ Una tabla de datos que se explora sola:
 - **Panel de filtros.** Facetas con casillas y conteos, con la misma regla del tablón de nx32:
   - las opciones de una faceta se suman (O) y las facetas se restringen entre sí (Y);
   - cada opción se cuenta con los demás filtros, nunca con el suyo;
-  - una opción en 0 queda deshabilitada.
+  - una opción en 0 no se muestra (si está marcada, sí: para poder desmarcarla).
 
   `facets-open` lo abre de arranque **si cabe al lado de la tabla** (la tabla mide 640 px o más).
   Más angosta, el panel iría encima y empujaría la tabla hacia abajo: queda cerrado y lo abre el

@@ -325,7 +325,7 @@ describe("<nx-grid>", () => {
     });
   });
 
-  it("panel de facetas: conteos sin la propia faceta, opciones en 0 deshabilitadas", () => {
+  it("panel de facetas: conteos sin la propia faceta, opciones en 0 ocultas (salvo si están marcadas)", () => {
     const el = mount("facets-open");
     const aside = el.querySelector<HTMLElement>(".nx-grid__facets")!;
     expect(aside.hidden).toBe(false);
@@ -339,6 +339,14 @@ describe("<nx-grid>", () => {
     expect(opt("Empaques").disabled).toBe(false);
     // Estado sí se restringe por proveedor.
     expect(opt("pend").closest("label")!.textContent).toContain("1");
+    // Con Estado en «Aprobado», Químicos queda en 0 y no se muestra.
+    opt("apr").click();
+    expect(opt("Químicos")).toBeNull();
+    expect(opt("Empaques")).not.toBeNull();
+    // En 0 pero marcada: se muestra, para poder desmarcarla.
+    el.filters = [{ key: "prov", op: "in", values: ["Químicos"] }, { key: "estado", op: "in", values: ["apr"] }];
+    expect(opt("Químicos").checked).toBe(true);
+    el.filters = [{ key: "prov", op: "in", values: ["Aceros"] }];
     expect(el.querySelector(".nx-grid__badge")!.textContent).toBe("1");
     // Botón «Filtros» muestra u oculta el panel.
     el.querySelector<HTMLButtonElement>(".nx-grid__bar .nx-grid__btn[aria-controls]")!.click();
