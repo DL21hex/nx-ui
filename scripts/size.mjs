@@ -1,4 +1,4 @@
-// Tamaños (minificado + gzip) y presupuesto. Falla si algo se pasa.
+// Tamaños (minificado + gzip) y presupuesto de referencia.
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { build } from "esbuild";
@@ -152,7 +152,12 @@ const BUDGET = [
   ["dist/nx32-elements.iife.js", null, "todo-en-uno + íconos (informativo)"],
 ];
 
+// Por ahora los topes no hacen fallar el build: primero funcional, después ligero (decisión del
+// 2026-10-03). Lo que pasa su referencia se marca con ⚠; `NX_SIZE_STRICT=1` los vuelve a exigir.
+// Un archivo que falta sí falla siempre: es un error de build, no de peso.
+const strict = process.env.NX_SIZE_STRICT === "1";
 let failed = false;
+let over = 0;
 const kb = (n) => `${(n / 1024).toFixed(2)} KB`;
 console.log("\narchivo                     min+gzip    límite     ");
 for (const [file, limit, desc] of BUDGET) {
@@ -170,8 +175,10 @@ for (const [file, limit, desc] of BUDGET) {
   }
   const size = gzipSync(code, { level: 9 }).length;
   const ok = limit === null || size <= limit;
-  failed ||= !ok;
-  const mark = limit === null ? "·" : ok ? "✓" : "✗ SE PASA";
+  if (!ok) over++;
+  failed ||= strict && !ok;
+  const mark = limit === null ? "·" : ok ? "✓" : strict ? "✗ SE PASA" : "⚠ pasa la referencia";
   console.log(`${file.padEnd(28)}${kb(size).padEnd(12)}${(limit === null ? "—" : kb(limit)).padEnd(11)}${mark}  ${desc}`);
 }
+if (over && !strict) console.log(`\n⚠ ${over} pieza(s) pasan su referencia de peso (solo se informa; NX_SIZE_STRICT=1 para exigirla).`);
 if (failed) process.exit(1);

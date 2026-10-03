@@ -43,8 +43,9 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 
 Cada componente es una subruta (`nx32-elements/sidemenu`, `nx32-elements/button`): una app solo carga lo que importa.
 
-`npm run size` imprime los números actuales y falla si una pieza (el JS o el CSS de un componente,
-o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
+`npm run size` imprime los números actuales y marca con ⚠ la pieza (el JS o el CSS de un
+componente, o los tokens) que pasa su peso de referencia. Por ahora no hace fallar el build: primero
+que todo funcione, después se optimiza (`NX_SIZE_STRICT=1 npm run size` vuelve a exigir los topes).
 
 ## Principios
 
@@ -68,7 +69,7 @@ o los tokens) se pasa de su límite. Los paquetes agregados solo se informan.
      calcula una vez por dato, no una vez por tecla o por comparación;
    - no se recalcula lo que no cambió: ordenar no vuelve a filtrar;
    - lo que se usa poco se carga al usarlo (el generador de Excel);
-   - se mide: `npm run size` hace cumplir un límite de peso por pieza, y `npm run bench` mide la
+   - se mide: `npm run size` informa el peso de cada pieza frente a su referencia, y `npm run bench` mide la
      lógica con datos grandes (100.000 filas, 10.000 opciones).
 7. **Probada donde se usa.** Además de las pruebas de lógica y de DOM, las interacciones (Popover
    API, foco, portapapeles, teclado, View Transitions, «atrás» del navegador) se prueban en
@@ -2211,7 +2212,7 @@ npm run typecheck
 npm run bench          # rendimiento de la lógica con datos grandes (mediana de varias corridas)
 npm run e2e            # Playwright sobre la galería en Chromium, con axe
 npm run contrast       # contraste AA de los tokens de texto, en claro y oscuro y en las 9 paletas
-npm run check          # todo lo anterior + build y límites de peso; Chromium, Firefox y WebKit
+npm run check          # todo lo anterior + build y peso; Chromium, Firefox y WebKit
 ```
 
 Las verificaciones corren en local. En GitHub solo corre el despliegue de la galería a Pages
