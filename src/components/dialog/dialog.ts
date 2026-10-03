@@ -18,6 +18,7 @@ import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
+import { FOCUSABLE, stepTab, tabOrder } from "../../core/order";
 import type { BadgeTone } from "../badge/types";
 import type { DialogHead } from "./dialog-head";
 import type { CloseReason, DialogAction, DialogLabels, DialogMode, DialogSize } from "./types";
@@ -34,7 +35,12 @@ export const DIALOG_LABELS: DialogLabels = {
 };
 
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable="true"]';
+/** Las capas que viven fuera del diálogo y pueden tener el foco encima de él: los avisos, la paleta
+ *  de comandos y cualquier popover abierto que no sea otro diálogo (la tarjeta de <nx-explain> o de
+ *  <nx-trend>, un recorrido), que cuelgan de <body>. */
+const LAYER = "nx-toaster, nx-command, :popover-open:not(nx-dialog)";
+/** Cuánto vale «lo último que se pulsó» como origen de un `show()` sin foco (ms). */
+const INVOKER_TTL = 10_000;
 /** Cerrar arrastrando: esta distancia (px), o un gesto rápido. */
 const DRAG_CLOSE = 120;
 
@@ -44,6 +50,7 @@ const SESSION = Math.random().toString(36).slice(2, 8);
 /** Los diálogos abiertos, en el orden en que se abrieron (el último está arriba). */
 const stack: NxDialog[] = [];
 let lastInvoker: Element | null = null;
+let invokedAt = 0;
 let wired = false;
 /** Los saltos de historial que hizo la librería: sus `popstate` no son la persona pulsando «atrás». */
 let ownBacks = 0;
@@ -91,14 +98,20 @@ function wire(): void {
   if (wired || typeof document === "undefined") return;
   wired = true;
   // El botón que abrió el diálogo (para nacer de él y devolverle el foco).
-  document.addEventListener("click", (e) => (lastInvoker = (e.target as Element).closest?.("[popovertarget], [data-nx-origin]") ?? lastInvoker), true);
-  document.addEventListener("pointerdown", (e) => (lastInvoker = (e.target as Element).closest?.("button, a, [role='button'], [data-nx-origin]") ?? null), true);
+  const invoker = (el: Element | null | undefined) => {
+    lastInvoker = el ?? null;
+    invokedAt = performance.now();
+  };
+  document.addEventListener("click", (e) => invoker((e.target as Element).closest?.("[popovertarget], [data-nx-origin]") ?? lastInvoker), true);
+  document.addEventListener("pointerdown", (e) => invoker((e.target as Element).closest?.("button, a, [role='button'], [data-nx-origin]")), true);
   document.addEventListener("keydown", (e) => stack[stack.length - 1]?.handleKey(e));
   document.addEventListener("focusin", (e) => {
-    const top = stack[stack.length - 1];
     const t = e.target as Element;
-    // El foco no se escapa del diálogo de arriba (los avisos y la paleta de comandos sí pueden recibirlo).
-    if (top && !top.contains(t) && !t.closest?.("nx-toaster, nx-command")) top.focusFirst();
+    // El foco se fue a otro lado (con el teclado, o lo movió la app): el botón pulsado ya no es el origen.
+    if (lastInvoker && !lastInvoker.contains(t)) lastInvoker = null;
+    const top = stack[stack.length - 1];
+    // El foco no se escapa del diálogo de arriba (las capas de `LAYER` sí pueden recibirlo).
+    if (top && !top.contains(t) && !t.closest?.(LAYER)) top.focusFirst();
   });
   addEventListener("popstate", () => {
     if (ownBacks > 0) return void ownBacks--;
@@ -116,8 +129,18 @@ function paintStack(): void {
   });
 }
 
+/** Lo último que se pulsó, si fue hace poco: un `show()` por temporizador no nace de un botón de hace minutos. */
+const recentInvoker = () => (performance.now() - invokedAt < INVOKER_TTL ? lastInvoker : null);
 const reduced = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const visible = (el: Element | null | undefined): el is HTMLElement => !!el?.isConnected && (el as HTMLElement).getClientRects?.().length > 0;
+/** El popover está en la capa superior (sin la API, o si el selector no existe, se supone que no). */
+const popoverOpen = (el: Element): boolean => {
+  try {
+    return el.matches(":popover-open");
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Un cambio de estado con View Transitions: el elemento `from` se convierte en `to` (el botón en el
@@ -154,6 +177,13 @@ export class NxDialog extends Base {
   #built = false;
   #open = false;
   #opening = false;
+  /** Cada apertura y cada cierre la suben: lo diferido de una sesión anterior (el cambio de View
+   *  Transitions de un cierre seguido de una apertura, o al revés) ve que ya no es suyo y no hace nada. */
+  #gen = 0;
+  /** El componente está poniendo o quitando `open`: no es la app pidiendo abrir o cerrar. */
+  #reflecting = false;
+  /** El `aria-labelledby` es el del título (no uno del autor). */
+  #ownLabel = false;
   #origin: Element | null = null;
   #resolve?: (v: string | undefined) => void;
   #promise?: Promise<string | undefined>;
@@ -283,6 +313,8 @@ export class NxDialog extends Base {
    *  La promesa se resuelve al cerrarse, con el valor de cierre. */
   show(origin?: Element | null): Promise<string | undefined> {
     if (this.#open && this.#promise) return this.#promise;
+    // Fuera del documento no hay capa superior: quedaría en la pila, atrapando Tab en toda la página.
+    if (!this.isConnected) return Promise.resolve(undefined);
     wire();
     if (!this.#built) this.#build();
     this.#open = true;
@@ -291,17 +323,27 @@ export class NxDialog extends Base {
     // De dónde nace: lo que se pasa, o el control con foco (quien lo abrió con teclado o clic), o
     // lo último que se pulsó (Safari no enfoca los botones al hacer clic).
     const active = document.activeElement;
-    this.#origin = origin ?? (active && active !== document.body && !this.contains(active) ? active : lastInvoker);
+    this.#origin = origin ?? (active && active !== document.body && !this.contains(active) ? active : recentInvoker());
     this.#promise = new Promise((r) => (this.#resolve = r));
     stack.push(this);
+    const gen = ++this.#gen;
     const update = () => {
+      // Se cerró (o se volvió a abrir) antes de que llegara este cuadro.
+      if (gen !== this.#gen) return;
       this.#opening = true;
       try {
-        this.showPopover?.();
+        // Ya a la vista: un cierre que se deshizo antes de ocultarlo (`close(); show()`).
+        if (!popoverOpen(this)) this.showPopover?.();
+      } catch (err) {
+        // Se quitó del documento entre `show()` y este cuadro: no queda abierto a medias.
+        console.warn("[nx-dialog] no se pudo abrir", err);
+        this.#opening = false;
+        if (this.#open) this.#finish(undefined, "api", true);
+        return;
       } finally {
         this.#opening = false;
       }
-      this.toggleAttribute("open", true);
+      this.#reflect(true);
       paintStack();
       this.focusFirst();
       // Ya en la capa superior: quien escucha (los avisos de `nxToast`, que vuelven a subir) lo
@@ -360,7 +402,7 @@ export class NxDialog extends Base {
     wire();
     if (!this.#built) this.#build();
     this.#paint();
-    if (this.hasAttribute("open") && !this.#open) queueMicrotask(() => void this.show());
+    if (this.hasAttribute("open") && !this.#open) queueMicrotask(() => void (this.isConnected && !this.#open && this.show()));
   }
 
   disconnectedCallback(): void {
@@ -368,7 +410,9 @@ export class NxDialog extends Base {
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
-    if ((name === "labels" || name === "actions") && value !== null) {
+    if (name === "labels" || name === "actions") {
+      // Quitar el atributo vuelve a lo de fábrica (sin acciones, los textos por defecto).
+      if (value === null) return void (name === "labels" ? (this.labels = null) : (this.actions = null));
       try {
         const parsed = JSON.parse(value);
         if (name === "labels") this.labels = parsed;
@@ -379,6 +423,7 @@ export class NxDialog extends Base {
       return;
     }
     if (name === "open") {
+      if (this.#reflecting) return;
       if (value !== null && !this.#open && this.isConnected && this.#built) void this.show();
       else if (value === null && this.#open) this.close(undefined, "api");
       return;
@@ -390,28 +435,24 @@ export class NxDialog extends Base {
 
   /** Escape y Tab mientras es el diálogo de arriba. */
   handleKey(e: KeyboardEvent): void {
-    if (e.key === "Escape" && !e.defaultPrevented) {
+    if (e.defaultPrevented || (e.key !== "Escape" && e.key !== "Tab")) return;
+    // El foco está en una capa de encima (la tarjeta de <nx-explain>): Escape y Tab son de ella.
+    const a = document.activeElement;
+    if (a && !this.contains(a) && a.closest(LAYER)) return;
+    if (e.key === "Escape") {
+      // Un popover del autor abierto adentro (un menú propio): Escape lo cierra a él, no al diálogo.
+      if (this.#popoverInside()) return;
       e.preventDefault();
       if (this.#guard && !this.#guard.hidden) return this.#showGuard(false);
       if (this.persistent) return this.#nudge();
       this.close(undefined, "escape");
-    } else if (e.key === "Tab") {
-      const els = this.#focusables();
-      if (!els.length) {
-        e.preventDefault();
-        this.focus();
-        return;
-      }
-      const first = els[0];
-      const last = els[els.length - 1];
-      const a = document.activeElement;
-      if (e.shiftKey && (a === first || !this.contains(a))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && (a === last || !this.contains(a))) {
-        e.preventDefault();
-        first.focus();
-      }
+    } else {
+      // Tab recorre el diálogo en el orden en que se ve (la cabecera, que el componente agrega al
+      // final, va primero; el pie, al final) y da la vuelta en los extremos.
+      const { els, to } = stepTab(this, a, e.shiftKey);
+      e.preventDefault();
+      if (!els.length) return this.focus();
+      (to ?? (e.shiftKey ? els[els.length - 1] : els[0])).focus();
     }
   }
 
@@ -420,7 +461,8 @@ export class NxDialog extends Base {
     // `[autofocus]` puede ser un envoltorio (un <nx-button>): se enfoca lo enfocable de adentro.
     const auto = this.querySelector<HTMLElement>("[autofocus]");
     const inner = auto && (auto.matches(FOCUSABLE) ? auto : auto.querySelector<HTMLElement>(FOCUSABLE));
-    const body = this.#focusables().filter((el) => !this.#head?.contains(el));
+    // El primero en el orden en que se ve (no el pie, aunque el autor lo haya puesto antes en el DOM).
+    const body = tabOrder(this).filter((el) => !this.#head?.contains(el));
     (inner ?? body[0] ?? this).focus({ preventScroll: true });
   }
 
@@ -437,8 +479,23 @@ export class NxDialog extends Base {
     else this.setAttribute(name, v);
   }
 
-  #focusables(): HTMLElement[] {
-    return [...this.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.getClientRects().length > 0 && !el.closest("[hidden]") && !el.closest("[inert]"));
+  /** Un popover del autor abierto dentro del diálogo, que Escape cierra (no uno `manual`). */
+  #popoverInside(): boolean {
+    try {
+      return !!this.querySelector(":popover-open:not(nx-dialog, [popover='manual'])");
+    } catch {
+      return false;
+    }
+  }
+
+  /** Pone o quita `open` sin que `attributeChangedCallback` lo tome por un pedido de la app. */
+  #reflect(on: boolean): void {
+    this.#reflecting = true;
+    try {
+      this.toggleAttribute("open", on);
+    } finally {
+      this.#reflecting = false;
+    }
   }
 
   #build(): void {
@@ -446,7 +503,8 @@ export class NxDialog extends Base {
     if (!this.hasAttribute("popover")) this.setAttribute("popover", "manual");
     this.setAttribute("role", this.getAttribute("role") ?? "dialog");
     this.setAttribute("aria-modal", "true");
-    this.setAttribute("aria-labelledby", `${this.#uid}-h`);
+    // El nombre sale del título; si el autor puso su `aria-labelledby`, ese manda (y sin título, su `aria-label`).
+    this.#ownLabel = !this.hasAttribute("aria-labelledby");
     if (!this.hasAttribute("tabindex")) this.tabIndex = -1;
 
     this.#crumbs = h("nav", { class: "nx-dialog__crumbs", hidden: true });
@@ -561,8 +619,9 @@ export class NxDialog extends Base {
       }
     });
     // Si alguien lo cierra por fuera (`hidePopover()`), se termina igual.
+    // El `toggle` llega en otra tarea: si mientras tanto se volvió a mostrar, ese cierre ya no aplica.
     this.addEventListener("toggle", (e) => {
-      if ((e as ToggleEvent).newState === "closed" && this.#open) this.#finish(undefined, "api", true);
+      if ((e as ToggleEvent).newState === "closed" && this.#open && !popoverOpen(this)) this.#finish(undefined, "api", true);
     });
   }
 
@@ -593,6 +652,7 @@ export class NxDialog extends Base {
 
   #finish(value: string | undefined, reason: CloseReason, silent = false): void {
     this.#open = false;
+    const gen = ++this.#gen;
     this.returnValue = value;
     this.#showGuard(false);
     const i = stack.indexOf(this);
@@ -601,8 +661,16 @@ export class NxDialog extends Base {
     this.removeAttribute("data-stacked");
     const origin = this.#origin;
     const hide = () => {
-      if (!silent) this.hidePopover?.();
-      this.removeAttribute("open");
+      // Se volvió a abrir antes de que llegara este cuadro: el diálogo sigue a la vista.
+      if (gen !== this.#gen) return;
+      if (!silent) {
+        try {
+          this.hidePopover?.();
+        } catch {
+          /* ya estaba oculto */
+        }
+      }
+      this.#reflect(false);
       paintStack();
     };
     if (this.mode === "modal" && !silent) morph(this, origin, hide);
@@ -611,14 +679,14 @@ export class NxDialog extends Base {
     // `queueBack`, que también resuelve varios niveles cerrados seguidos).
     if (this.pushedState && reason !== "history") queueBack(this.pushedState);
     this.pushedState = null;
-    // El foco vuelve a quien abrió (o al diálogo que queda arriba).
+    // El foco vuelve a quien abrió: en la página, o dentro del diálogo que queda arriba (el botón
+    // «Ver proveedor» del panel del pedido). Si no está, al primer campo del diálogo de arriba.
     const top = stack[stack.length - 1];
-    if (top) top.focusFirst();
-    else if (origin instanceof HTMLElement && origin.isConnected) {
+    if (origin instanceof HTMLElement && origin.isConnected && (!top || top.contains(origin))) {
       // El origen puede ser un envoltorio (<nx-button>): el foco va a lo enfocable de adentro.
       const target = origin.matches(FOCUSABLE) ? origin : origin.querySelector<HTMLElement>(FOCUSABLE);
       (target ?? origin).focus({ preventScroll: true });
-    }
+    } else top?.focusFirst();
     this.#resolve?.(value);
     this.#resolve = undefined;
     this.#promise = undefined;
@@ -630,6 +698,11 @@ export class NxDialog extends Base {
     const L = this.#labels;
     this.#title!.textContent = this.heading;
     this.#title!.hidden = !this.heading;
+    // Sin título, un `aria-labelledby` a un h2 vacío no nombra nada: queda el `aria-label` del autor.
+    if (this.#ownLabel) {
+      if (this.heading) this.setAttribute("aria-labelledby", this.#title!.id);
+      else this.removeAttribute("aria-labelledby");
+    }
     this.#desc!.textContent = this.description;
     this.#desc!.hidden = !this.description;
     if (this.description) this.setAttribute("aria-describedby", this.#desc!.id);
@@ -638,8 +711,16 @@ export class NxDialog extends Base {
 
     // Cabecera de ficha: se trae solo si el diálogo la usa (los modales no la pagan).
     if (this.#extras || this.avatar || this.badge || this.nav !== null || this.#actions.length) {
-      this.#extras ??= import("./dialog-head").then((m) => new m.DialogHead(this, this.#head!, this.#uid));
-      void this.#extras.then((x) => x.paint(this.#labels));
+      // Si el chunk no llega (la red), se avisa y el próximo pintado lo vuelve a pedir.
+      const extras = (this.#extras ??= import("./dialog-head").then((m) => new m.DialogHead(this, this.#head!, this.#uid)));
+      extras.then(
+        (x) => x.paint(this.#labels),
+        (err) => {
+          if (this.#extras !== extras) return;
+          this.#extras = undefined;
+          console.warn("[nx-dialog] no se pudo cargar la cabecera de ficha", err);
+        },
+      );
     }
     this.#crumbs!.setAttribute("aria-label", L.stack);
     const [msg, keep, discard] = this.#guard!.children;
