@@ -103,3 +103,37 @@ describe("BDUI derivado de la clase", () => {
     warn.mockRestore();
   });
 });
+
+describe("empaquetado: lo que se construye se puede importar", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown>; sideEffects: string[] };
+  /** Resuelve una subruta como Node: la clave exacta o un patrón con «*». */
+  const resolve = (sub: string): unknown => {
+    if (sub in pkg.exports) return pkg.exports[sub];
+    for (const [k, v] of Object.entries(pkg.exports)) {
+      const [pre, post] = k.split("*");
+      if (post !== undefined && sub.startsWith(pre) && sub.endsWith(post) && typeof v === "string") return v.replace("*", sub.slice(pre.length, sub.length - post.length));
+    }
+    return undefined;
+  };
+
+  it("cada hoja de scripts/build-css.mjs tiene su export (nx32-elements/<pieza>.css)", () => {
+    const css = [...readFileSync("scripts/build-css.mjs", "utf8").matchAll(/^ {2}"?([\w-]+)"?: "src\/[^"]+\.css",$/gm)].map((m) => m[1]);
+    expect(css.length).toBeGreaterThan(40);
+    expect(css.filter((k) => resolve(`./${k}.css`) !== `./dist/${k}.css`)).toEqual([]);
+  });
+
+  it("cada entrada de vite.config.ts tiene su subruta, con tipos", () => {
+    const js = [...readFileSync("vite.config.ts", "utf8").matchAll(/^ {10}"?([\w/-]+)"?: "src\/[^"]+\.ts",$/gm)].map((m) => m[1]);
+    expect(js.length).toBeGreaterThan(40);
+    const targets = Object.values(pkg.exports).map((v) => JSON.stringify(v));
+    expect(js.filter((k) => !targets.some((t) => t.includes(`"./dist/${k}.js"`)))).toEqual([]);
+    expect(resolve("./package.json")).toBe("./package.json");
+  });
+
+  it("nx32-elements/core queda fuera de sideEffects (no registra componentes)", () => {
+    // Los patrones de sideEffects con «*» no cruzan carpetas: dist/core/index.js no es «./dist/*.js».
+    const glob = (p: string) => new RegExp(`^${p.replace(/[.]/g, "\\.").replace(/\*/g, "[^/]*")}$`);
+    expect(pkg.sideEffects.some((p) => glob(p).test("./dist/core/index.js"))).toBe(false);
+    expect(readFileSync("src/core/index.ts", "utf8")).not.toMatch(/components\//);
+  });
+});

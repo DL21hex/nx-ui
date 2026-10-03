@@ -49,6 +49,8 @@ export * from "./components/award/index";
 export * from "./components/guard/index";
 export * from "./components/import/index";
 export * from "./components/keytips/index";
+// Lo mismo que `nx32-elements/core`, pero desde sus archivos: reexportar el módulo de la subruta
+// haría que dist/index.js lo importe «sin efectos» y esbuild avisaría en cada app.
 export { registerIcons, hasIcon } from "./core/icons";
-export { nxFormat, resolveLocale, canonicalLocale, type NxFormat } from "./core/locale";
-export { allowOrigins, safeEndpoint } from "./core/dom";
+export { nxFormat, resolveLocale, canonicalLocale, type NxFormat, type MoneyLike } from "./core/locale";
+export { allowOrigins, safeEndpoint, safeHref } from "./core/dom";

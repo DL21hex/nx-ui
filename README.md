@@ -124,10 +124,19 @@ Una paleta propia son cinco números; claro, oscuro y todos los tokens derivados
 
 ```js
 import "nx32-elements/nx32-elements.css";
-import { registerIcons } from "nx32-elements"; // registra <nx-sidemenu>
+import "nx32-elements/sidemenu"; // registra <nx-sidemenu>
+import { registerIcons } from "nx32-elements/core"; // sin efectos: no registra nada
 import { lucide } from "nx32-elements/icons"; // opcional: ~28 íconos Lucide
 registerIcons(lucide);
 ```
+
+`nx32-elements/core` trae las utilidades del núcleo sin ningún componente: `registerIcons`,
+`hasIcon`, `allowOrigins`, `safeEndpoint`, `safeHref`, `nxFormat`, `resolveLocale` y
+`canonicalLocale`. La raíz (`nx32-elements`) también las exporta, pero registra los 48 componentes:
+úsala solo si de verdad quieres la librería entera.
+
+El CSS también va por pieza: `nx32-elements/<componente>.css` (`grid.css`, `tabs.css`…) más
+`nx32-elements/tokens.css`, o todo junto en `nx32-elements/nx32-elements.css`.
 
 **SolidJS:** cada componente tiene su envoltorio con los tipos JSX en `nx32-elements/solid/<componente>`
 (`nx32-elements/solid/grid`, `nx32-elements/solid/sidemenu`…). Así la app carga solo lo que usa. `nx32-elements/solid` los
@@ -166,7 +175,7 @@ solo si es del mismo origen que la página. Así un payload no puede mandar fila
 el contexto de la app a un tercero. Si la API vive en otro dominio, se declara una vez:
 
 ```js
-import { allowOrigins } from "nx32-elements";
+import { allowOrigins } from "nx32-elements/core";
 allowOrigins("https://api.miapp.co");
 ```
 

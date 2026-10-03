@@ -70,7 +70,8 @@
         <pre role="tabpanel"><code>&lt;link rel="stylesheet" href="nx32-elements.css"&gt;
 &lt;script src="nx32-elements.iife.js"&gt;&lt;/script&gt;   &lt;!-- trae los íconos Lucide ya registrados --&gt;</code></pre>
         <pre role="tabpanel" hidden><code>import "nx32-elements/nx32-elements.css";
-import { registerIcons } from "nx32-elements";   // registra &lt;nx-sidemenu&gt;
+import "nx32-elements/sidemenu";                 // registra &lt;nx-sidemenu&gt;
+import { registerIcons } from "nx32-elements/core"; // sin efectos
 import { lucide } from "nx32-elements/icons";     // opcional
 registerIcons(lucide);</code></pre>
         <pre role="tabpanel" hidden><code>import "nx32-elements/nx32-elements.css";

@@ -27,6 +27,18 @@ describe.skipIf(!hasDist)("dist/", () => {
     expect(out.outputFiles[0].text).toContain("customElements.define");
   });
 
+  it("nx32-elements/core no registra ningún componente: registerIcons y nxFormat sin la librería", async () => {
+    const out = await build({
+      stdin: { contents: 'import { registerIcons, nxFormat, allowOrigins } from "nx32-elements/core"; registerIcons({}); allowOrigins("https://a.co"); console.log(nxFormat("es").number(1));', resolveDir: process.cwd() },
+      bundle: true,
+      minify: true,
+      format: "esm",
+      write: false,
+    });
+    expect(out.outputFiles[0].text).not.toContain("customElements.define");
+    expect(out.outputFiles[0].text.length).toBeLessThan(8000);
+  });
+
   const solid = () => readdirSync("dist/solid").filter((f) => f.endsWith(".jsx"));
 
   it("el adaptador Solid importa los componentes de dist/ y no trae su propia copia", () => {

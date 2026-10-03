@@ -79,6 +79,8 @@ export default defineConfig(({ command, mode }) => {
           "breadcrumb": "src/components/breadcrumb/index.ts",
           "org": "src/components/org/index.ts",
           icons: "src/icons/index.ts",
+          // En su carpeta: fuera del patrón "./dist/*.js" de `sideEffects`, así se puede descartar.
+          "core/index": "src/core/index.ts",
           bdui: "src/bdui.ts",
         },
         formats: ["es"],
