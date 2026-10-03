@@ -28,14 +28,15 @@ test.describe("táctil", () => {
     await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }] });
     await expect(btn).toHaveAttribute("data-holding", "");
     // El menú del sistema llega hacia los 500 ms de un toque largo: mientras se mantiene, se cancela.
-    await page.waitForTimeout(500);
     const menu = await btn.evaluate((el) => !el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true })));
     expect(menu).toBe(true);
-    await page.waitForTimeout(700);
+    const clicks = () => page.evaluate(() => (window as unknown as { clicks: number }).clicks);
+    // Sin soltar: el clic llega al completar la pulsación (1000 ms).
+    await expect.poll(clicks, { timeout: 3000 }).toBe(1);
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await page.waitForTimeout(200);
+    await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
     // El clic de la pulsación completa llega a la app; el del toque al soltar, no.
-    expect(await page.evaluate(() => (window as unknown as { clicks: number }).clicks)).toBe(1);
+    expect(await clicks()).toBe(1);
     expect(await page.evaluate(() => (window as unknown as { cancels: number }).cancels)).toBe(0);
   });
 });
@@ -46,10 +47,18 @@ test("log-mode=inline: un cambio de progress no toca el registro; cada línea en
   const r = await page.evaluate(async () => {
     const b = document.getElementById("lb") as unknown as HTMLElement & { log(m: string): void; progress: number | null; done(ok?: boolean): void };
     const frame = () => new Promise((res) => requestAnimationFrame(() => res(null)));
-    for (let i = 1; i <= 12; i++) b.log(`Paso ${i}`);
-    // Que terminen de entrar (y de avisar sus `animationstart`) antes de medir.
-    await new Promise((res) => setTimeout(res, 400));
     const panel = b.querySelector<HTMLElement>(".nx-button__log")!;
+    // Que la última fila termine de entrar: su `animationend` llega después de todos los `animationstart`
+    // (el tope es por si nunca anima; la prueba fallaría más abajo).
+    const rowEnd = () =>
+      new Promise((res) => {
+        panel.addEventListener("animationend", (e) => (e.target as Element).parentElement === panel && res(null));
+        setTimeout(res, 3000);
+      });
+    let ended = rowEnd();
+    for (let i = 1; i <= 12; i++) b.log(`Paso ${i}`);
+    await ended;
+    await frame();
     const last = panel.lastElementChild as HTMLElement;
     // Cada fila que (re)empieza su animación de entrada (no el cursor que parpadea adentro).
     let starts = 0;
@@ -66,8 +75,9 @@ test("log-mode=inline: un cambio de progress no toca el registro; cada línea en
     const sameNode = panel.lastElementChild === last;
     const animsDuringProgress = starts;
     muts.length = 0;
+    ended = rowEnd();
     b.log("Paso 13");
-    await frame();
+    await ended;
     await frame();
     const animsOnLog = starts;
     mo.disconnect();
@@ -92,7 +102,7 @@ test("log-mode=inline: un cambio de progress no toca el registro; cada línea en
 test("alto contraste: el spinner tiene un borde de otro color y el relleno de hold se ve", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
   await open(page, "#/button");
-  await add(page, '<nx-button id="fb" label="Generar" busy></nx-button><nx-button id="fh" hold label="Borrar"></nx-button>');
+  await add(page, '<nx-button id="fb" label="Generar" busy></nx-button><nx-button id="fh" hold="10000" label="Borrar"></nx-button>');
   const spin = await page.locator("#fb .nx-spinner").evaluate((el) => {
     const cs = getComputedStyle(el);
     return { top: cs.borderTopColor, right: cs.borderRightColor };
@@ -101,7 +111,8 @@ test("alto contraste: el spinner tiene un borde de otro color y el relleno de ho
   const btn = page.locator("#fh .nx-button__btn");
   await btn.dispatchEvent("pointerdown", { button: 0, pointerType: "mouse" });
   await expect(btn).toHaveAttribute("data-holding", "");
-  await page.waitForTimeout(400);
+  // El relleno crece durante la pulsación (aquí 10 s, para que la máquina cargada no la complete): que haya avanzado algo.
+  await expect.poll(() => page.locator("#fh .nx-button__hold").evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(4);
   const fill = await page.locator("#fh .nx-button__hold").evaluate((el) => {
     const cs = getComputedStyle(el);
     return { bg: cs.backgroundColor, w: el.getBoundingClientRect().width, opacity: cs.opacity };

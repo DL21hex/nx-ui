@@ -1,5 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { open } from "./helpers";
+
+/** Dos frames: lo que tarda en repintarse lo que cambió (para comprobar que algo no pasó). */
+const frames = (page: Page) => page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
 
 test("el flotante de un padre: buscador con foco, filtra sin tildes, Escape lo cierra y devuelve el foco", async ({ page }) => {
   await open(page, "#/sidemenu");
@@ -86,7 +89,7 @@ test.describe("táctil", () => {
     const menu = page.locator("#stage-menu nx-sidemenu");
     await expect(menu).toHaveAttribute("collapsed", "");
     await menu.getByRole("link", { name: "Tablero" }).tap();
-    await page.waitForTimeout(200);
+    await frames(page);
     await expect(menu.locator(".nx-sidemenu__tip")).toBeHidden();
   });
 });
@@ -101,7 +104,7 @@ test("con el flotante abierto y una consulta, un cambio de items no lo cierra; E
     const m = el as unknown as { items: { id: string; badge?: number }[] };
     m.items = m.items.map((it) => (it.id === "tablero" ? { ...it, badge: 7 } : it));
   });
-  await page.waitForTimeout(100);
+  await frames(page);
   await expect(search).toBeVisible();
   await expect(search).toHaveValue("ron");
   await expect(search).toBeFocused();
@@ -115,10 +118,13 @@ test("con el flotante abierto y una consulta, un cambio de items no lo cierra; E
 test("si otro oyente cancela la apertura, el menú no queda esperando; contraer con uno abierto nombra las filas", async ({ page }) => {
   await open(page, "#/sidemenu");
   const menu = page.locator("#stage-menu nx-sidemenu");
-  await menu.evaluate((el) => el.querySelector(".nx-flyout")!.addEventListener("beforetoggle", (e) => e.preventDefault(), { once: true }));
   const parent = menu.getByRole("button", { name: "Ventas" });
+  // El flotante de «Ventas» (el de su `popovertarget`), no el primero que haya en el menú.
+  const fly = await parent.getAttribute("popovertarget");
+  await menu.evaluate((el, id) => el.querySelector(`[id="${id}"]`)!.addEventListener("beforetoggle", (e) => e.preventDefault(), { once: true }), fly);
   await parent.click();
-  await page.waitForTimeout(100);
+  // El menú lo comprueba en la tarea siguiente al clic.
+  await frames(page);
   await expect(page.getByRole("dialog", { name: "Ventas" })).toBeHidden();
   // Un cambio de items se pinta en el acto (no queda pendiente de un flotante que nunca abrió).
   await menu.evaluate((el) => {
