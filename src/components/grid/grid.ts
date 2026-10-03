@@ -1929,18 +1929,21 @@ export class NxGrid extends Base {
     aside.setAttribute("aria-label", L.filters);
     aside.replaceChildren(
       h("div", { class: "nx-grid__facets-head" }, h("strong", null, L.filters), this.#filters.length ? h("button", { type: "button", class: "nx-grid__clear", "data-clear": "" }, L.clear) : null),
-      ...this.#facetList.map((f) => {
+      ...this.#facetList.flatMap((f) => {
         const selected = sel(f);
+        // Las opciones sin filas no se muestran; las marcadas sí, para poder desmarcarlas.
+        const avail = f.options.filter((o) => o.count || selected.includes(o.value));
+        if (!avail.length) return [];
         const raw = this.#facetQ.get(f.key) ?? "";
         const q = foldText(raw.trim());
-        const opts = q ? f.options.filter((o) => foldText(o.label).includes(q)) : f.options;
+        const opts = q ? avail.filter((o) => foldText(o.label).includes(q)) : avail;
         const expanded = this.#facetMore.has(f.key);
         const shown = q || expanded ? opts : opts.filter((o, i) => i < FACET_SHOWN || selected.includes(o.value));
         return h(
           "section",
           { class: "nx-grid__facet" },
           h("h3", { class: "nx-grid__facet-title" }, f.label, selected.length ? h("span", { class: "nx-grid__facet-n" }, String(selected.length)) : null),
-          f.options.length > 8
+          avail.length > 8 || raw
             ? h("input", { type: "search", class: "nx-grid__facet-q", placeholder: L.search, value: raw, "aria-label": `${L.search}: ${f.label}`, "data-q": f.key, "data-focus": `q\u0000${f.key}` })
             : null,
           h(
@@ -1953,8 +1956,8 @@ export class NxGrid extends Base {
                 null,
                 h(
                   "label",
-                  { class: `nx-grid__opt${!o.count && !on ? " is-zero" : ""}` },
-                  h("input", { type: "checkbox", checked: on, disabled: !o.count && !on, "data-key": f.key, "data-value": o.value, "data-focus": `${f.key}\u0000${o.value}` }),
+                  { class: "nx-grid__opt" },
+                  h("input", { type: "checkbox", checked: on, "data-key": f.key, "data-value": o.value, "data-focus": `${f.key}\u0000${o.value}` }),
                   h("span", { class: "nx-grid__opt-label" }, o.label),
                   h("span", { class: "nx-grid__opt-n" }, this.#loc.number(o.count)),
                 ),
@@ -1966,7 +1969,10 @@ export class NxGrid extends Base {
       }),
     );
     if (focusKey) {
-      const el = [...aside.querySelectorAll<HTMLElement>("[data-focus]")].find((x) => x.dataset.focus === focusKey);
+      const all = [...aside.querySelectorAll<HTMLElement>("[data-focus]")];
+      // Al desmarcar una opción sin filas, desaparece: el foco pasa a otra de la misma faceta.
+      const key = focused!.dataset.key;
+      const el = all.find((x) => x.dataset.focus === focusKey) ?? (key !== undefined ? all.find((x) => x.dataset.key === key) : undefined);
       el?.focus();
       if (el instanceof HTMLInputElement && el.type === "search") el.setSelectionRange(el.value.length, el.value.length);
     }
