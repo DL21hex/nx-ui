@@ -111,6 +111,28 @@ describe("el `lang` de la página", () => {
     expect(t.querySelector('[role="tab"]')!.textContent).toContain("12,345");
   });
 
+  it("nx-review repinta los montos del resumen abierto", async () => {
+    document.documentElement.lang = "es-CO";
+    // Como en un navegador: el árbol entra entero y el resumen toma la base con el formulario adentro.
+    const tpl = document.createElement("template");
+    tpl.innerHTML = `<nx-review><form><label for="p">Precio</label><input id="p" name="precio" type="number" value="10000" data-format="money" data-currency="COP"><button type="submit">Guardar</button></form></nx-review>`;
+    document.body.replaceChildren(tpl.content);
+    const form = document.querySelector("form")!;
+    form.addEventListener("submit", (e) => e.preventDefault());
+    const input = form.querySelector("input")!;
+    input.value = "12000";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    form.requestSubmit(form.querySelector("button")!);
+    await tick();
+    const text = () => (document.querySelector(".nx-review__body")?.textContent ?? "").replace(/[\u00A0\u202F]/g, " ");
+    expect(text()).toContain("10.000");
+    document.documentElement.lang = "en-US";
+    await tick();
+    await tick();
+    expect(text()).toContain("10,000");
+    expect(text()).not.toContain("10.000");
+  });
+
   it("desconectado, un componente deja de seguir el `lang`", async () => {
     document.documentElement.lang = "es-CO";
     document.body.innerHTML = `<nx-fields></nx-fields>`;

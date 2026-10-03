@@ -47,7 +47,7 @@ const numAttr = (el: Element, name: string, def: number): number => {
 };
 
 export class NxReview extends Base {
-  static observedAttributes = ["labels", "initial", "disabled"];
+  static observedAttributes = ["labels", "initial", "disabled", "locale"];
 
   #uid = `nx-review${++uid}-`;
   #labels: ReviewLabels = REVIEW_LABELS;
@@ -234,6 +234,11 @@ export class NxReview extends Base {
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
     if (name === "disabled") {
       if (this.disabled) this.#close();
+      return;
+    }
+    if (name === "locale") {
+      // Montos y porcentajes del resumen abierto, en el locale nuevo (también al cambiar `<html lang>`).
+      if (this.#pending && this.#panel?.isConnected) this.#check();
       return;
     }
     let v: unknown = null;
