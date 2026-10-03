@@ -42,6 +42,6 @@ página «Ruta navegable» (`gallery/demo-breadcrumb.ts`). Maqueta: `maquetas/nx
 
 | Pieza | Tamaño (min + gzip) | Presupuesto |
 |---|---|---|
-| `dist/breadcrumb.js` (con el núcleo) | 4,27 KB | 4,5 KB |
-| menú (`breadcrumb-menu-*.js`, medido con el componente que importa) | 5,54 KB (≈ 2,1 KB propios) | 5,75 KB |
-| `dist/breadcrumb.css` | 1,41 KB | 1,5 KB |
+| `dist/breadcrumb.js` (con el núcleo) | 4,83 KB | 4,5 KB |
+| menú (`breadcrumb-menu-*.js`, medido con el componente que importa) | 6,43 KB (≈ 2,5 KB propios) | 5,75 KB |
+| `dist/breadcrumb.css` | 1,51 KB | 1,5 KB |

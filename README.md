@@ -5,7 +5,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 
 | Paquete | min + gzip |
 |---|---|
-| `<nx-sidemenu>` + núcleo (ESM) | ≈ 5,9 KB |
+| `<nx-sidemenu>` + núcleo (ESM) | ≈ 6,6 KB |
 | `<nx-button>` + núcleo (ESM) | ≈ 5,4 KB |
 | `<nx-select>` + núcleo (ESM) | ≈ 6,2 KB |
 | `<nx-ai-answer>` + núcleo (ESM) | ≈ 7 KB |
@@ -28,7 +28,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
 | `<nx-org>` + núcleo (ESM) | ≈ 12,5 KB |
-| `<nx-breadcrumb>` + núcleo (ESM); el menú de hermanos, ≈ 2,1 KB, se carga al abrir el primero | ≈ 4,3 KB |
+| `<nx-breadcrumb>` + núcleo (ESM); el menú de hermanos, ≈ 2,5 KB, se carga al abrir el primero | ≈ 4,8 KB |
 | `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
 | `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
