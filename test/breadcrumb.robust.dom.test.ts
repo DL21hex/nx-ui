@@ -53,4 +53,30 @@ describe("<nx-breadcrumb> sin el módulo del menú", () => {
       warn.mockRestore();
     }
   });
+
+  it("sin cancelar, el separador va al href de su nivel; el «…» no navega", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const assign = vi.spyOn(location, "assign").mockImplementation(() => {});
+    try {
+      document.body.innerHTML = `<nx-breadcrumb></nx-breadcrumb>`;
+      await tick();
+      const b = document.querySelector<NxBreadcrumb>("nx-breadcrumb")!;
+      b.items = [{ label: "A", href: "/a", children: [{ label: "B" }, { label: "C" }] }, { label: "B", href: "/b" }, { label: "C", href: "/c" }, { label: "D" }];
+      await tick();
+      const go = vi.fn();
+      b.addEventListener("nx-breadcrumb-navigate", go);
+      b.querySelector<HTMLElement>(".nx-breadcrumb__more")!.click();
+      await vi.waitFor(() => expect(warn).toHaveBeenCalledOnce());
+      await tick();
+      expect(go).not.toHaveBeenCalled();
+      expect(assign).not.toHaveBeenCalled();
+      b.querySelector<HTMLElement>('[data-sep="0"]')!.click();
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith("/a"));
+      expect(go).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+    } finally {
+      assign.mockRestore();
+      warn.mockRestore();
+    }
+  });
 });

@@ -8,6 +8,16 @@ import { open } from "./helpers";
 /** Espera a que el menú termine de entrar (anima escala y desplazamiento) antes de medirlo. */
 const settled = (menu: Locator) => menu.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
 
+/** El origen de la animación del menú, en px desde su esquina de arriba a la izquierda. */
+const origin = (menu: Locator) => menu.evaluate((el) => getComputedStyle(el).transformOrigin.split(" ").map(parseFloat));
+const expectOrigin = ([x, y]: number[], [ex, ey]: number[]) => {
+  expect(Math.abs(x - ex)).toBeLessThanOrEqual(1);
+  expect(Math.abs(y - ey)).toBeLessThanOrEqual(1);
+};
+
+/** Dos frames: lo que tarda en repintarse lo que cambió (para comprobar que algo no pasó). */
+const frames = (page: Page) => page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+
 /** El ancho de la demo, con su control deslizante. */
 const setWidth = (page: Page, px: number) =>
   page.locator("#bc-width").evaluate((el, v) => {
@@ -102,17 +112,31 @@ test("cerca del borde de abajo abre hacia arriba; en RTL se alinea por la derech
   let s = (await sep.boundingBox())!;
   let m = (await menu.boundingBox())!;
   expect(Math.abs(m.y + m.height - (s.y - 6))).toBeLessThanOrEqual(2);
+  // Crece desde la esquina que toca el separador: abajo a la izquierda.
+  expectOrigin(await origin(menu), [0, m.height]);
   await page.keyboard.press("Escape");
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.locator("#bc-app").evaluate((el) => (el.dir = "rtl"));
+  await page.locator("#bc-app").evaluate((el) => el.setAttribute("dir", "rtl"));
   await sep.click();
   await expect(menu.getByRole("menuitemradio").first()).toBeVisible();
+  await expect(menu).not.toHaveAttribute("data-up");
   await settled(menu);
   s = (await sep.boundingBox())!;
   m = (await menu.boundingBox())!;
   expect(Math.abs(m.x + m.width - (s.x + s.width + 8))).toBeLessThanOrEqual(2);
-  expect(await menu.evaluate((el) => getComputedStyle(el).transformOrigin)).toMatch(/^256px|^\d+(\.\d+)?px 0px/);
+  // En RTL, arriba a la derecha (antes quedaba `top left`, «0px 0px»).
+  expectOrigin(await origin(menu), [m.width, 0]);
+  await page.keyboard.press("Escape");
+
+  // RTL y hacia arriba: abajo a la derecha.
+  await page.setViewportSize({ width: 1440, height: Math.round(s0.y + s0.height + 40) });
+  await sep.click();
+  await expect(menu.getByRole("menuitemradio").first()).toBeVisible();
+  await expect(menu).toHaveAttribute("data-up", "");
+  await settled(menu);
+  m = (await menu.boundingBox())!;
+  expectOrigin(await origin(menu), [m.width, m.height]);
 });
 
 test("alto contraste: el separador abierto y la entrada con foco se ven", async ({ page }) => {
@@ -156,7 +180,7 @@ test.describe("táctil", () => {
       window.dispatchEvent(new Event("resize"));
       window.dispatchEvent(new Event("scroll"));
     });
-    await page.waitForTimeout(100);
+    await frames(page);
     await expect(menu).toBeVisible();
     await expect(menu.getByRole("menuitemradio", { name: /Andrés/ })).toBeVisible();
   });
