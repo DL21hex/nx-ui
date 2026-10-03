@@ -11,9 +11,9 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-ai-answer>` + núcleo (ESM) | ≈ 7 KB |
 | `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 11,2 KB |
 | `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,6 KB, se carga al exportar | ≈ 20,1 KB |
-| `<nx-dialog>` + núcleo (ESM) | ≈ 4,8 KB |
+| `<nx-dialog>` + núcleo (ESM) | ≈ 6,5 KB |
 | `nxToast()` + núcleo (ESM) | ≈ 2,5 KB |
-| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 9,8 KB |
+| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 11,5 KB |
 | `<nx-agent>` + IA + botón + BDUI + recorrido + núcleo (ESM) | ≈ 18,6 KB |
 | `<nx-command>` + núcleo (ESM) | ≈ 7,1 KB |
 | `<nx-explain>` + núcleo (ESM) | ≈ 7,9 KB |
@@ -1785,10 +1785,12 @@ seis zonas siempre en el mismo orden: arriba orienta, en medio informa o edita, 
   sitio (texto, correo, teléfono, número, monto, fecha, lista o área de texto) con `name`, así que
   sirve dentro de un `<form>` y marca los cambios sin guardar de `<nx-dialog>`; `readonly` sigue como
   texto con candado. `values` devuelve lo escrito ya convertido, `validate()` revisa lo obligatorio y
-  el formato y enfoca el primer error, y `errors` muestra los del servidor.
+  el formato y enfoca el primer error, y `errors` muestra los del servidor. Un número se edita sin
+  redondear; lo escrito en los items con `key` no se pierde si la ficha se vuelve a pintar (los
+  mismos `items` otra vez, otro `locale`), y `reset()` lo descarta (un formulario que se reabre).
 - **`<nx-tabs>`**: los paneles son tus hijos con `data-tab` (no se mueven: la hidratación de Solid
   sigue intacta), con `data-count` o `data-errors` (en rojo, para un formulario largo). Teclado de la
-  APG; `nx-tab-change` es cancelable. Con `tabs` (BDUI), la lista sale de ahí.
+  APG; `nx-tabs-change` es cancelable. Con `tabs` (BDUI), la lista sale de ahí.
 - **`<nx-notice>`**: `info`, `success`, `warning` o `danger` (este se anuncia), con `action` (botón,
   `nx-notice-action`) o `action-href` (enlace).
 - **`<nx-badge>`**: el estado en una píldora; el texto lo dice, el color lo refuerza.
@@ -1821,8 +1823,8 @@ guardar.onclick = async () => {
 | | |
 |---|---|
 | `<nx-dialog>` (ficha) | `avatar`, `badge`, `badge-tone`, `nav` (`"prev next"`, `"next"`, `"prev"`, `""`), `actions` (`[{id, label, danger?, disabled?, icon?}]`) · `nx-dialog-nav` `{dir}`, `nx-dialog-action` `{id}` · pone `--nx-sticky-top` (alto de su cabecera) |
-| `<nx-fields>` | `items` (`[{key?, label, value, wide?, format?, currency?, href?, copy?, mono?, readonly?, input?}]`; `format`: `text`, `number`, `money`, `date`; `input`: `{type?, options?, required?, placeholder?, hint?, rows?}`), `variant` (`grid` / `summary`), `columns` (1–4), `heading`, `action`, `editing`, `errors`, `locale`, `currency`, `labels` · `values`, `validate()`, `focusField(key)` · `nx-fields-action` `{action}` |
-| `<nx-tabs>` | hijos con `data-tab`, `data-value`, `data-count`, `data-errors`, `data-disabled`, o `tabs` (`[{value, label, count?, errors?, disabled?}]`) · `value`, `sticky`, `label`, `labels` · `nx-tab-change` `{value, previous}` (cancelable) |
+| `<nx-fields>` | `items` (`[{key?, label, value, wide?, format?, currency?, href?, copy?, mono?, readonly?, input?}]`; `format`: `text`, `number`, `money`, `date`; `input`: `{type?, options?, required?, placeholder?, hint?, rows?}`), `variant` (`grid` / `summary`), `columns` (1–4), `heading`, `action`, `editing`, `errors`, `locale`, `currency`, `labels` · `values`, `validate()`, `focusField(key)`, `reset()` · `nx-fields-action` `{action}` |
+| `<nx-tabs>` | hijos con `data-tab`, `data-value`, `data-count`, `data-errors`, `data-disabled`, o `tabs` (`[{value, label, count?, errors?, disabled?}]`) · `value`, `sticky`, `label`, `labels` · `nx-tabs-change` `{value, previous}` (cancelable) |
 | `<nx-notice>` | `tone` (`info`, `success`, `warning`, `danger`), `text`, `action`, `action-href` · `nx-notice-action` `{action}` |
 | `<nx-badge>` | `tone` (`neutral`, `success`, `info`, `warning`, `danger`), `label` (si no va como contenido) |
 | Tokens nuevos | `--nx-warning`, `--nx-warning-ink` (texto e íconos), `--nx-warning-soft` |

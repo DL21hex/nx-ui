@@ -31,7 +31,7 @@ export class NxBadge extends Base {
     const label = this.getAttribute("label");
     if (label === null) return void this.#text?.remove();
     this.#text ??= Object.assign(document.createElement("span"), { className: "nx-badge__text" });
-    this.#text.textContent = label;
+    if (this.#text.textContent !== label) this.#text.textContent = label;
     // Al final: los nodos del autor (y los marcadores de Solid) no se tocan.
     if (this.#text.parentNode !== this) this.append(this.#text);
   }

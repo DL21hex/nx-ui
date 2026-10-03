@@ -394,7 +394,7 @@ export function mountDrawerDemo(root: HTMLElement): void {
       contrato.focusField("hasta");
     } else tabs.value = "hist";
   });
-  tabs.addEventListener("nx-tab-change", (e) => add(`nx-tab-change · ${e.detail.previous} → ${e.detail.value}`));
+  tabs.addEventListener("nx-tabs-change", (e) => add(`nx-tabs-change · ${e.detail.previous} → ${e.detail.value}`));
   for (const f of sections)
     f.addEventListener("nx-fields-action", () => {
       add(`nx-fields-action · ${SECTION_NAMES[f.dataset.sec!]}`);
@@ -425,6 +425,9 @@ export function mountDrawerDemo(root: HTMLElement): void {
       { key: "valor", label: "Valor", format: "money", input: { hint: "Opcional" } },
     ];
     more.items = [{ key: "obs", label: "Observaciones", wide: true, input: { type: "textarea", hint: `${person().short} la verá en su desprendible.` } }];
+    // Volver a asignar `items` conserva lo escrito: un formulario que se reabre empieza en blanco.
+    what.reset();
+    more.reset();
   };
   $("#dw-nov-open").addEventListener("click", () => {
     resetNov();

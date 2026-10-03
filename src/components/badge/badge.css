@@ -46,3 +46,14 @@ nx-badge[tone="danger"] {
   --_bg: var(--nx-danger-soft);
   --_fg: var(--nx-danger);
 }
+
+/* Alto contraste: sin fondo, la píldora conserva su forma con un borde, y el punto, su color. */
+@media (forced-colors: active) {
+  nx-badge {
+    border: 1px solid CanvasText;
+  }
+  nx-badge::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}

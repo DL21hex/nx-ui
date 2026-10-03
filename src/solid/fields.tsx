@@ -7,7 +7,8 @@ import type { FieldFormat, FieldInput, FieldInputType, FieldItem, FieldOption, F
 
 export type { NxFields, FieldFormat, FieldInput, FieldInputType, FieldItem, FieldOption, FieldsActionDetail, FieldsLabels, FieldsVariant, FieldValue };
 
-export interface FieldsProps extends JSX.HTMLAttributes<NxFields> {
+/** Sin hijos: todo lo pinta el componente. */
+export interface FieldsProps extends Omit<JSX.HTMLAttributes<NxFields>, "children"> {
   items?: FieldItem[];
   variant?: FieldsVariant;
   /** Columnas de la rejilla (1 a 4; 2 por defecto). */
@@ -23,10 +24,12 @@ export interface FieldsProps extends JSX.HTMLAttributes<NxFields> {
   currency?: string;
   labels?: Partial<FieldsLabels>;
   onAction?: (e: CustomEvent<FieldsActionDetail>) => void;
+  children?: never;
 }
 
 export function Fields(props: FieldsProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["items", "variant", "columns", "heading", "action", "editing", "errors", "locale", "currency", "labels", "onAction"]);
+  // `children` se separa y no se pasa: Solid no debe adueñarse del contenido que pinta el componente.
+  const [local, rest] = splitProps(props, ["items", "variant", "columns", "heading", "action", "editing", "errors", "locale", "currency", "labels", "onAction", "children"]);
   return (
     <nx-fields
       {...rest}
@@ -40,7 +43,7 @@ export function Fields(props: FieldsProps): JSX.Element {
       attr:locale={local.locale}
       attr:currency={local.currency}
       bool:editing={!!local.editing}
-      on:nx-fields-action={(e) => local.onAction?.(e)}
+      on:nx-fields-action={(e) => e.target === e.currentTarget && local.onAction?.(e)}
     />
   );
 }

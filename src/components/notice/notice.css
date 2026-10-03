@@ -75,6 +75,12 @@ nx-notice > .nx-notice__act {
     outline-offset: 2px;
   }
 }
+/* Alto contraste: sin fondo, el aviso se recorta con un borde. */
+@media (forced-colors: active) {
+  nx-notice {
+    border: 1px solid CanvasText;
+  }
+}
 /* En un teléfono, la acción baja debajo del texto. */
 @media (max-width: 480px) {
   nx-notice > .nx-notice__act {

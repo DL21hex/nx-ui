@@ -70,8 +70,9 @@ export class DialogHead {
     d.addEventListener("pointerdown", (e) => {
       if (!this.#menu.hidden && !(e.target as Element).closest?.(".nx-dialog__menu, [data-tool='more']")) this.#close(false);
     });
+    // Solo el cierre del diálogo (no el de un <nx-date-range> o un <nx-select> de adentro, que burbujea).
     d.addEventListener("nx-open-change", (e) => {
-      if (!(e as CustomEvent<{ open: boolean }>).detail.open) this.#close(false);
+      if (e.target === d && !(e as CustomEvent<{ open: boolean }>).detail.open) this.#close(false);
     });
   }
 

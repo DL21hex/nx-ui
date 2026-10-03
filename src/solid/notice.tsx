@@ -28,7 +28,7 @@ export function Notice(props: NoticeProps): JSX.Element {
       attr:text={local.text}
       attr:action={local.action}
       attr:action-href={local.actionHref}
-      on:nx-notice-action={(e) => local.onAction?.(e)}
+      on:nx-notice-action={(e) => e.target === e.currentTarget && local.onAction?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}

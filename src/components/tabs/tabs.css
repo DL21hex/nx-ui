@@ -11,6 +11,9 @@ nx-tabs {
   font-family: var(--nx-font-sans);
   font-size: 14px;
   color: var(--nx-foreground);
+  /* La lista va al final del DOM y `order` la sube: Tab y el lector la recorren primero. Donde no
+     existe, `tabs.ts` corrige el orden de Tab. */
+  reading-flow: flex-visual;
 }
 nx-tabs > [hidden] {
   display: none !important;
@@ -118,5 +121,16 @@ nx-dialog > nx-tabs:not(.nx-dialog__head) {
   }
   & > [role="tabpanel"] {
     padding: 20px 20px 4px;
+  }
+}
+
+/* Alto contraste: el subrayado es un fondo, que el sistema borra; la activa lo conserva en Highlight. */
+@media (forced-colors: active) {
+  .nx-tabs__tab[aria-selected="true"]::after {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+  .nx-tabs__count {
+    border: 1px solid CanvasText;
   }
 }

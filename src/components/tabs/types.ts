@@ -12,10 +12,13 @@ export interface TabItem {
   disabled?: boolean;
 }
 
-export interface TabChangeDetail {
+/** `nx-tabs-change`. */
+export interface TabsChangeDetail {
   value: string;
   previous: string | null;
 }
+/** @deprecated El nombre de antes (el evento era `nx-tab-change`): usa `TabsChangeDetail`. */
+export type TabChangeDetail = TabsChangeDetail;
 
 export interface TabsLabels {
   /** Para el lector de pantalla, en lugar del contador de errores: «{n} por corregir». */

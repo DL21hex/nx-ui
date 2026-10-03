@@ -17,5 +17,5 @@ Usa los tokens nuevos `--nx-warning`, `--nx-warning-ink` y `--nx-warning-soft` (
 
 | Pieza | Tamaño (min + gzip) | Presupuesto |
 |---|---|---|
-| `dist/notice.js` (con el núcleo) | 1,70 KB | 1,75 KB |
-| `dist/notice.css` | 0,58 KB | 1 KB |
+| `dist/notice.js` (con el núcleo) | 1,72 KB | 1,75 KB |
+| `dist/notice.css` | 0,61 KB | 1 KB |

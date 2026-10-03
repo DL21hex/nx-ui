@@ -14,5 +14,5 @@ Archivos: `badge.ts`, `types.ts`, `badge.css`, `index.ts`. Pruebas: en `test/not
 
 | Pieza | Tamaño (min + gzip) | Presupuesto |
 |---|---|---|
-| `dist/badge.js` (con el núcleo) | 0,61 KB | 1 KB |
-| `dist/badge.css` | 0,35 KB | 0,5 KB |
+| `dist/badge.js` (con el núcleo) | 0,62 KB | 1 KB |
+| `dist/badge.css` | 0,40 KB | 0,5 KB |

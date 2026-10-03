@@ -60,6 +60,9 @@ nx-dialog[popover] {
 }
 nx-dialog:popover-open {
   display: flex;
+  /* La cabecera y el aviso van al final del DOM (no se mueven los nodos del autor): Tab y el lector
+     siguen el orden en que se ven. Donde no existe, el diálogo ordena Tab él mismo. */
+  reading-flow: flex-visual;
 }
 nx-dialog[size="full"] {
   inline-size: calc(100vw - 32px);
