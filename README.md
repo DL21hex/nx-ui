@@ -389,8 +389,15 @@ Una tabla de datos que se explora sola:
   pegar con Excel (TSV) y edición en línea (`nx-grid-change`, cancelable). Deshacer y rehacer
   (Ctrl+Z, Ctrl+Y o Ctrl+Mayús+Z, y botones): cada edición, pegado o borrado es un paso; lo
   deshecho queda seleccionado, y la marca de «editada» se va si la celda vuelve a su valor original.
-  Una edición abierta va a la fila que se estaba editando aunque los datos, los filtros o el orden
-  cambien mientras tanto (se guarda antes), y abrir una celda y salir sin tocarla no cambia nada.
+  Una tabla que se refresca sola no le guarda a nadie lo que lleva escrito a medias: si la app
+  asigna `rows`, `filters`, `sort`, `search` o `columns` mientras alguien edita y la fila sigue (por
+  su id), el campo se queda abierto, con lo escrito y el cursor, en el lugar nuevo de la fila (la
+  tabla la sigue si se movió). Si la fila ya no se ve (quedó filtrada, en una columna escondida), lo
+  escrito se guarda en ella; si ya no está en los datos (o sin `row-key` llegaron filas nuevas, y la
+  posición no dice cuál era), se descarta y se anuncia (`labels.editLost`). Si la app trae otro
+  valor para la celda abierta y el campo sigue sin tocar, el campo muestra el nuevo. Con `source`,
+  otra consulta trae otras filas: la edición se guarda antes de pedirla (reasignar los mismos
+  filtros u orden no pide nada). Abrir una celda y salir sin tocarla no cambia nada.
 - **Teclado.** La tabla es una sola parada de Tab (el patrón grid de la APG): flechas entre celdas,
   ↑ desde la primera fila sube a las cabeceras y ←/→ (Inicio, Fin) las recorren; ahí Enter ordena,
   Alt+↓ abre el filtro, Ctrl+←/→ cambia el ancho (Mayús, de a más), Supr lo devuelve y ↓ vuelve a
@@ -419,8 +426,10 @@ Una tabla de datos que se explora sola:
 - **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques
   al desplazarse, y el backend devuelve los agregados. En el servidor, el filtro de una columna
   espera 250 ms tras el último cambio antes de pedir. Si un bloque no llega, sale `nx-grid-error` y
-  se vuelve a pedir más tarde (1 s, 2 s, 4 s… hasta 30 s); si es el primero, la tabla lo dice con
-  «Reintentar». Se guardan hasta 50 bloques: los más lejanos a la vista se sueltan. Cambiar la
+  se vuelve a pedir más tarde (1 s, 2 s, 4 s… hasta 30 s), hasta cinco intentos: con el servidor
+  caído, la tabla no sigue pidiendo para siempre. Esos bloques vuelven a pedirse (otra tanda) al
+  desplazarse o cuando llega bien otro bloque, y siempre con `refresh()`; si es el primero, la
+  tabla lo dice con «Reintentar». Se guardan hasta 50 bloques: los más lejanos a la vista se sueltan. Cambiar la
   consulta o sacar la tabla del DOM corta lo que estaba en camino.
 - **O que la tabla elija.** Con `source` y `client-max="20000"`, la primera página dice el total:
   si pasa del tope, sigue en el servidor sin pedir nada más; si cabe, trae la consulta completa una
@@ -444,8 +453,9 @@ Una tabla de datos que se explora sola:
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
   En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo (se ordenan una vez:
   filtrar o buscar no vuelve a ordenar); más allá, `source`. Con cientos de miles de filas del
-  servidor, el alto de la tabla tiene un tope (el navegador no pinta más) y el desplazamiento se
-  escala para que la última fila se alcance.
+  servidor, el alto de la tabla tiene un tope (el navegador no pinta más; 8 millones de píxeles,
+  porque Firefox suelta la cabecera fija pasados ~8,9) y el desplazamiento se escala para que la
+  última fila se alcance.
   Con pocas filas, las líneas de las columnas siguen hasta el fondo de la tabla (solo las
   verticales: no se dibujan filas vacías), sin agregar scroll; sin filas, el aviso queda limpio.
 - **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,
@@ -461,7 +471,9 @@ Una tabla de datos que se explora sola:
 - **Locale.** Números, montos, fechas, lo que se escribe en una celda y el orden alfabético salen
   de `Intl` con `locale` («es-CO», «en-US», «pt-BR»…; por defecto, el `lang` de la página). Un
   `currency` ISO («COP», «USD») usa el formato de moneda del locale. Los textos de la interfaz van
-  aparte, en `labels`.
+  aparte, en `labels`. Los números de las filas deben llegar como `number`: un texto con punto y
+  grupos de tres («1.250», un `Decimal` serializado con tres decimales) se lee como miles (1250);
+  como texto, sirve con coma decimal («1,25») o sin esa ambigüedad («0.125», «1250.5»).
 
 ```js
 grid.columns = [
@@ -486,7 +498,8 @@ al empezar (filtrar mientras exporta no mezcla dos consultas) y se dice al termi
 `source` solo se usa si es del mismo origen (o de uno permitido con `allowOrigins`): las filas no salen hacia un tercero. En modo servidor, «seleccionar las n» y las
 acciones en lote alcanzan solo las filas de la consulta actual; sin `row-key`, una marca por
 posición se pierde al cambiar de filtro u orden. `row-key` se puede cambiar en cualquier momento (los
-id se rehacen, y se pierden las marcas y el historial); si un id se repite, esa fila se identifica por
+id se rehacen, y se pierden las marcas y el historial; sin el atributo la clave es `id`, así que
+`row-key="id"` no cambia nada); si un id se repite, esa fila se identifica por
 su posición y se avisa en la consola. Las filas se guardan sin prototipo: una columna `constructor`
 lee lo que trae la fila, no `Object`.
 

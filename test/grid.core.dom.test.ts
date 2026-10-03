@@ -61,22 +61,86 @@ describe("una edición abierta no cae en otra fila", () => {
     expect(column(el, 0)).toEqual(["OC-1", "OC-3"]);
   });
 
-  it("con filas nuevas en otro orden, va al registro de su id; sin id (posicional), se descarta", () => {
+  it("con filas nuevas en otro orden, el campo sigue abierto en su fila y lo escrito va a su id", () => {
     const el = mount();
     const got = changes(el);
     key(el, "F2");
+    input(el)!.value = "EDITA";
+    // Una tabla que se refresca sola: las mismas filas (copias nuevas), en otro orden.
+    el.rows = [ROWS[2], ROWS[1], ROWS[0]].map((r) => ({ ...r }));
+    // Nada se guardó a medias: el campo sigue, con lo escrito, en el lugar nuevo de OC-1 (la última).
+    expect(got).toEqual([]);
+    expect(input(el)!.value).toBe("EDITA");
+    expect(input(el)!.closest<HTMLElement>(".nx-grid__row")!.dataset.r).toBe("2");
     input(el)!.value = "EDITADO";
-    el.rows = [ROWS[2], ROWS[1], ROWS[0]];
+    enter(el);
     expect(got).toEqual([{ id: "1", key: "oc", value: "EDITADO", old: "OC-1" }]);
+    expect(el.rows.map((r) => r.oc)).toEqual(["OC-3", "OC-2", "EDITADO"]);
+  });
 
+  it("sin id (posicional): ordenar sigue a la misma fila; con filas nuevas se descarta y se anuncia", async () => {
     const plain = ROWS.map(({ id: _, ...r }) => r);
-    const el2 = mount("", plain);
-    const got2 = changes(el2);
-    key(el2, "F2");
-    input(el2)!.value = "EDITADO";
-    el2.sort = { key: "monto", dir: 1 };
-    // Ordenar no cambia las filas: la edición se guarda en la que se editaba (OC-1, la de 300).
-    expect(got2).toEqual([{ id: "#0", key: "oc", value: "EDITADO", old: "OC-1" }]);
+    const el = mount("", plain);
+    const got = changes(el);
+    key(el, "F2");
+    input(el)!.value = "EDITADO";
+    el.sort = { key: "monto", dir: 1 };
+    // OC-1 (la de 300) pasa al final, con su campo.
+    expect(input(el)!.closest<HTMLElement>(".nx-grid__row")!.dataset.r).toBe("2");
+    enter(el);
+    expect(got).toEqual([{ id: "#0", key: "oc", value: "EDITADO", old: "OC-1" }]);
+
+    key(el, "F2");
+    input(el)!.value = "OTRO";
+    // Filas nuevas sin id: la posición ya no dice cuál era.
+    el.rows = plain.map((r) => ({ ...r }));
+    expect(input(el)).toBeNull();
+    expect(got).toHaveLength(1);
+    await Promise.resolve();
+    expect(el.querySelector('[role="status"]')!.textContent).toBe(el.labels.editLost);
+  });
+
+  it("si la fila deja de estar en los datos, lo escrito se descarta; si solo queda filtrada, se guarda", async () => {
+    const el = mount();
+    const got = changes(el);
+    key(el, "F2");
+    input(el)!.value = "NADA";
+    el.rows = [ROWS[1], ROWS[2]];
+    expect(input(el)).toBeNull();
+    expect(got).toEqual([]);
+    expect(el.rows.map((r) => r.oc)).toEqual(["OC-2", "OC-3"]);
+    await Promise.resolve();
+    expect(el.querySelector('[role="status"]')!.textContent).toBe(el.labels.editLost);
+    // Una columna escondida por una vista: el registro sigue, así que se guarda en él.
+    key(el, "F2");
+    input(el)!.value = "OCULTA";
+    el.view = { hidden: ["oc"] };
+    expect(got).toEqual([{ id: "2", key: "oc", value: "OCULTA", old: "OC-2" }]);
+  });
+
+  it("con datos en vivo el campo conserva el foco y el cursor, y la búsqueda o las columnas no lo cierran", () => {
+    const el = mount();
+    const got = changes(el);
+    key(el, "ArrowDown");
+    key(el, "F2");
+    const box = input(el)!;
+    box.value = "OC-2 nuevo";
+    box.setSelectionRange(3, 3);
+    expect(document.activeElement).toBe(box);
+    el.rows = ROWS.map((r) => ({ ...r, monto: (r.monto as number) + 1 }));
+    el.search = "oc";
+    el.columns = [...COLS];
+    el.filters = [{ key: "monto", op: "range", min: 0 }];
+    expect(input(el)).toBe(box);
+    expect(document.activeElement).toBe(box);
+    expect([box.selectionStart, box.selectionEnd]).toEqual([3, 3]);
+    expect(got).toEqual([]);
+    // Lo nuevo de la app se ve en las demás celdas.
+    expect(column(el, 2)[0]).toContain("301");
+    // Quitar la columna que se edita: ya no hay dónde guardarlo.
+    el.removeColumn("oc");
+    expect(input(el)).toBeNull();
+    expect(got).toEqual([]);
   });
 
   it("abrir el editor y salir sin tocarlo no guarda nada", () => {
@@ -372,11 +436,11 @@ describe("modo servidor", () => {
     await sleep(20);
     const s = scroll(el);
     const tall = el.querySelector<HTMLElement>(".nx-grid__body")!;
-    expect(tall.style.blockSize).toBe("15000000px");
+    expect(tall.style.blockSize).toBe("8000000px");
     // happy-dom no maqueta: el alto del scroller y su recorrido se fijan aquí.
     Object.defineProperty(s, "clientHeight", { value: 420, configurable: true });
-    Object.defineProperty(s, "scrollHeight", { value: 15_000_000 + 40, configurable: true });
-    s.scrollTop = 15_000_040 - 420;
+    Object.defineProperty(s, "scrollHeight", { value: 8_000_000 + 40, configurable: true });
+    s.scrollTop = 8_000_040 - 420;
     s.dispatchEvent(new Event("scroll"));
     await sleep(40);
     const rows = [...el.querySelectorAll<HTMLElement>(".nx-grid__row")].map((x) => Number(x.dataset.r));

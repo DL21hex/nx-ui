@@ -474,6 +474,9 @@ export class FilterPanel {
     const bars_: Memo<HistogramSpec | null> = {};
     let edges: number[] = [];
     let dead = false;
+    /** Lo último que «Desde» y «Hasta» mostraron o aplicaron: si el campo dice otra cosa, se escribió
+     *  y todavía no se aplicó (el `change` llega al salir del campo). */
+    let last = ["", ""];
     const set = (min: number | undefined, max: number | undefined) => this.#host.set(col.key, min === undefined && max === undefined ? [] : [range(col.key, min, max)]);
     const idx = (v: number | string | undefined, d: number) => (typeof v !== "number" ? d : edges.reduce((b, e, i) => (Math.abs(e - v) < Math.abs(edges[b] - v) ? i : b), 0));
     const slide = (e: Event) => {
@@ -498,6 +501,7 @@ export class FilterPanel {
       const a = parseAmount(from.value, loc);
       const b = parseAmount(to.value, loc);
       set(a ?? undefined, b === null ? undefined : inclusive(b));
+      last = [from.value, to.value];
     };
     // Tras cerrar, el campo pierde el foco y llega su `change`: ya se aplicó (o se descartó).
     const typed = () => {
@@ -534,8 +538,8 @@ export class FilterPanel {
       }
       from.placeholder = L.noMin;
       to.placeholder = L.noMax;
-      if (document.activeElement !== from) from.value = typeof f?.min === "number" ? show(f.min) : "";
-      if (document.activeElement !== to) to.value = typeof f?.max === "number" ? show(shownMax(f.max)) : "";
+      if (document.activeElement !== from) from.value = last[0] = typeof f?.min === "number" ? show(f.min) : "";
+      if (document.activeElement !== to) to.value = last[1] = typeof f?.max === "number" ? show(shownMax(f.max)) : "";
     };
     const el = h(
       "div",
@@ -546,10 +550,12 @@ export class FilterPanel {
       h("div", { class: "nx-grid__f-pair" }, h("label", null, h("span", null, L.from), from), h("label", null, h("span", null, L.to), to)),
       h("p", { class: "nx-grid__f-hint" }, L.amountHint),
     );
+    // Lo escrito se aplica aunque el campo ya no tenga el foco: en Firefox, un clic afuera lo saca
+    // del campo antes de cerrar el panel, y lo escrito se perdía.
     const flush = (go: boolean) => {
       if (dead) return;
       dead = true;
-      if (go && (document.activeElement === from || document.activeElement === to)) apply();
+      if (go && (from.value !== last[0] || to.value !== last[1])) apply();
     };
     return { el, update, focus: () => from.focus(), flush };
   }
@@ -642,11 +648,18 @@ export class FilterPanel {
     const res = h("p", { class: "nx-grid__f-hint" });
     const list = h("ul", { class: "nx-grid__f-sample" });
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let dead = false;
     const commit = () => {
       const v = input.value.trim();
       this.#host.set(key, v ? [{ key, op: "contains", value: v }] : []);
     };
+    // Escape cierra el panel aplicando lo escrito: sin esto, el campo de búsqueda se vaciaba solo
+    // (lo hace el navegador en Firefox) y ese vacío, ya cerrado el panel, quitaba el filtro.
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") e.preventDefault();
+    });
     input.addEventListener("input", () => {
+      if (dead) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
         timer = undefined;
@@ -668,6 +681,7 @@ export class FilterPanel {
       );
     };
     const flush = (apply: boolean) => {
+      dead = true;
       if (timer === undefined) return;
       clearTimeout(timer);
       timer = undefined;

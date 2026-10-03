@@ -103,6 +103,8 @@ export interface GridLabels {
   redo: string;
   undone: string;
   redone: string;
+  /** Se anuncia si la fila que se editaba deja de estar en los datos (o su columna) y lo escrito se descarta. */
+  editLost: string;
   views: string;
   columns: string;
   saveView: string;
