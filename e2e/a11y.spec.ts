@@ -342,3 +342,47 @@ test("ruta navegable, en reposo y con el menú de un separador abierto", async (
   await expect(page.locator("#bc-demo").getByRole("menuitemradio").first()).toBeVisible();
   await audit(page, ["#bc-demo"]);
 });
+
+test("ficha lateral: cabecera de ficha, aviso, pestañas, campos en edición y el menú «Más»", async ({ page }) => {
+  await open(page, "#/drawer");
+  await page.locator("#dw-open .nx-button__btn").click();
+  const panel = page.locator("#dw-panel");
+  await expect(panel.locator("nx-badge")).toBeVisible();
+  await audit(page, ["#dw-panel"]);
+  await panel.getByRole("tab", { name: "Datos" }).click();
+  await panel.locator("nx-fields[data-sec=contrato] .nx-fields__action").click();
+  await expect(panel.locator("nx-fields[data-sec=contrato] [name=hasta]")).toBeVisible();
+  await audit(page, ["#dw-panel"]);
+  await panel.locator("#dw-cancel .nx-button__btn").click();
+  await panel.locator("[data-tool=more]").click();
+  await expect(panel.getByRole("menu")).toBeVisible();
+  await audit(page, ["#dw-panel"]);
+});
+
+test("alto contraste: la pestaña activa conserva el subrayado en Highlight; la píldora y el aviso, su borde", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await open(page, "#/drawer");
+  await page.locator("#dw-open .nx-button__btn").click();
+  const panel = page.locator("#dw-panel");
+  await expect(panel.locator("nx-badge")).toBeVisible();
+  await expect(panel.locator("#dw-notice")).toBeVisible();
+  const s = await page.evaluate(() => {
+    // El color de sistema Highlight, tal como lo resuelve este navegador.
+    const probe = document.body.appendChild(document.createElement("div"));
+    probe.style.cssText = "forced-color-adjust: none; background: Highlight";
+    const highlight = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const tab = document.querySelector('#dw-tabs [role=tab][aria-selected="true"]')!;
+    const after = getComputedStyle(tab, "::after");
+    const border = (sel: string) => {
+      const c = getComputedStyle(document.querySelector(sel)!);
+      return `${c.borderTopStyle} ${c.borderTopWidth}`;
+    };
+    return { forced: matchMedia("(forced-colors: active)").matches, highlight, underline: after.backgroundColor, height: after.blockSize, badge: border("#dw-panel nx-badge"), notice: border("#dw-notice") };
+  });
+  expect(s.forced).toBe(true);
+  expect(s.underline).toBe(s.highlight);
+  expect(s.height).toBe("2px");
+  expect(s.badge).toBe("solid 1px");
+  expect(s.notice).toBe("solid 1px");
+});
