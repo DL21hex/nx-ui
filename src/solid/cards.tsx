@@ -7,7 +7,7 @@ import type { CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayo
 
 export type { NxCards, CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayout, CardsLevel, CardsOpenDetail, CardsRow };
 
-export interface CardsProps extends JSX.HTMLAttributes<NxCards> {
+export interface CardsProps extends Omit<JSX.HTMLAttributes<NxCards>, "children"> {
   /** Los campos `{key, label, type?, currency?, unit?, options?, sort?, group?, search?, good?, bad?}`. */
   fields: CardsField[];
   /** Dónde va cada campo: `{title, subtitle?, status?, note?, value?, delta?, trend?, weight?, brief?, facts?, related?, href?}`. */
@@ -29,10 +29,12 @@ export interface CardsProps extends JSX.HTMLAttributes<NxCards> {
   onOpen?: (e: CustomEvent<CardsOpenDetail>) => void;
   onAction?: (e: CustomEvent<CardsActionDetail>) => void;
   onLevel?: (e: CustomEvent<{ level: CardsLevel }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Cards(props: CardsProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["fields", "layout", "rows", "actions", "level", "group", "sort", "rowKey", "query", "headingLevel", "locale", "labels", "onOpen", "onAction", "onLevel"]);
+  const [local, rest] = splitProps(props, ["fields", "layout", "rows", "actions", "level", "group", "sort", "rowKey", "query", "headingLevel", "locale", "labels", "onOpen", "onAction", "onLevel", "children"]);
   return (
     <nx-cards
       {...rest}
@@ -48,9 +50,9 @@ export function Cards(props: CardsProps): JSX.Element {
       attr:row-key={local.rowKey}
       attr:heading-level={local.headingLevel === undefined ? undefined : String(local.headingLevel)}
       attr:locale={local.locale}
-      on:nx-cards-open={(e) => local.onOpen?.(e)}
-      on:nx-cards-action={(e) => local.onAction?.(e)}
-      on:nx-cards-level={(e) => local.onLevel?.(e)}
+      on:nx-cards-open={(e) => e.target === e.currentTarget && local.onOpen?.(e)}
+      on:nx-cards-action={(e) => e.target === e.currentTarget && local.onAction?.(e)}
+      on:nx-cards-level={(e) => e.target === e.currentTarget && local.onLevel?.(e)}
     />
   );
 }

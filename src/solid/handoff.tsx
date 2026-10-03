@@ -7,7 +7,7 @@ import type { HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, 
 
 export type { NxHandoff, HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, HandoffPhoneLabels, HandoffSide, HandoffState };
 
-export interface HandoffProps extends Omit<JSX.HTMLAttributes<NxHandoff>, "onError"> {
+export interface HandoffProps extends Omit<JSX.HTMLAttributes<NxHandoff>, "onError" | "children"> {
   /** `desktop` (por defecto): botón, QR y escucha. `phone`: la página que abre el QR. */
   side?: HandoffSide;
   /** Base de las rutas de la sesión (`/api/handoff`). Mismo origen o uno de `allowOrigins()`. */
@@ -31,10 +31,12 @@ export interface HandoffProps extends Omit<JSX.HTMLAttributes<NxHandoff>, "onErr
   onItem?: (e: CustomEvent<HandoffItemDetail>) => void;
   onDone?: (e: CustomEvent<HandoffDoneDetail>) => void;
   onError?: (e: CustomEvent<{ message: string }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Handoff(props: HandoffProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["side", "endpoint", "for", "kind", "accept", "multiple", "context", "session", "token", "disabled", "locale", "labels", "onState", "onItem", "onDone", "onError"]);
+  const [local, rest] = splitProps(props, ["side", "endpoint", "for", "kind", "accept", "multiple", "context", "session", "token", "disabled", "locale", "labels", "onState", "onItem", "onDone", "onError", "children"]);
   return (
     <nx-handoff
       {...rest}
@@ -50,10 +52,10 @@ export function Handoff(props: HandoffProps): JSX.Element {
       attr:locale={local.locale}
       bool:multiple={!!local.multiple}
       bool:disabled={!!local.disabled}
-      on:nx-handoff-state={(e) => local.onState?.(e)}
-      on:nx-handoff-item={(e) => local.onItem?.(e)}
-      on:nx-handoff-done={(e) => local.onDone?.(e)}
-      on:nx-handoff-error={(e) => local.onError?.(e)}
+      on:nx-handoff-state={(e) => e.target === e.currentTarget && local.onState?.(e)}
+      on:nx-handoff-item={(e) => e.target === e.currentTarget && local.onItem?.(e)}
+      on:nx-handoff-done={(e) => e.target === e.currentTarget && local.onDone?.(e)}
+      on:nx-handoff-error={(e) => e.target === e.currentTarget && local.onError?.(e)}
     />
   );
 }

@@ -41,9 +41,9 @@ export function Print(props: PrintProps): JSX.Element {
       attr:zoom={local.zoom === undefined ? undefined : String(local.zoom)}
       attr:locale={local.locale}
       attr:toolbar={local.toolbar === false ? "false" : undefined}
-      on:nx-print-paginate={(e) => local.onPaginate?.(e)}
-      on:nx-print-before={(e) => local.onBeforePrint?.(e)}
-      on:nx-print-after={(e) => local.onAfterPrint?.(e)}
+      on:nx-print-paginate={(e) => e.target === e.currentTarget && local.onPaginate?.(e)}
+      on:nx-print-before={(e) => e.target === e.currentTarget && local.onBeforePrint?.(e)}
+      on:nx-print-after={(e) => e.target === e.currentTarget && local.onAfterPrint?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}

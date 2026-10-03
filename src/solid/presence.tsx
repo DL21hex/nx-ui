@@ -7,7 +7,7 @@ import type { PresenceEvent, PresenceLabels, PresenceState, PresenceUser } from 
 
 export type { NxPresence, PresenceEvent, PresenceLabels, PresenceState, PresenceUser };
 
-export interface PresenceProps extends Omit<JSX.HTMLAttributes<NxPresence>, "onChange"> {
+export interface PresenceProps extends Omit<JSX.HTMLAttributes<NxPresence>, "onChange" | "children"> {
   /** La persona actual `{id, name, avatar?}`. Sin ella, solo escucha. */
   me?: PresenceUser | null;
   /** Canal entre pestañas del mismo navegador (`BroadcastChannel`). */
@@ -26,10 +26,12 @@ export interface PresenceProps extends Omit<JSX.HTMLAttributes<NxPresence>, "onC
   onChange?: (e: CustomEvent<{ users: PresenceState[] }>) => void;
   /** Lo que hace la persona actual: aquí se manda al servidor. */
   onLocal?: (e: CustomEvent<PresenceEvent>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Presence(props: PresenceProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["me", "channel", "source", "for", "idle", "max", "locale", "labels", "onChange", "onLocal"]);
+  const [local, rest] = splitProps(props, ["me", "channel", "source", "for", "idle", "max", "locale", "labels", "onChange", "onLocal", "children"]);
   return (
     <nx-presence
       {...rest}
@@ -41,8 +43,8 @@ export function Presence(props: PresenceProps): JSX.Element {
       attr:idle={local.idle === undefined ? undefined : String(local.idle)}
       attr:max={local.max === undefined ? undefined : String(local.max)}
       attr:locale={local.locale}
-      on:nx-presence-change={(e) => local.onChange?.(e)}
-      on:nx-presence-local={(e) => local.onLocal?.(e)}
+      on:nx-presence-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-presence-local={(e) => e.target === e.currentTarget && local.onLocal?.(e)}
     />
   );
 }

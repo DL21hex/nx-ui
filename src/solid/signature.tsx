@@ -7,7 +7,7 @@ import type { SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMe
 
 export type { NxSignature, SignatureDoneDetail, SignatureFormat, SignatureLabels, SignatureMeta, SignatureValue };
 
-export interface SignatureProps extends Omit<JSX.HTMLAttributes<NxSignature>, "onChange"> {
+export interface SignatureProps extends Omit<JSX.HTMLAttributes<NxSignature>, "onChange" | "children"> {
   /** Nombre en el <form>. Lo que se envía depende de `valueFormat`. */
   name?: string;
   /** Exige una firma de verdad (ni un punto ni una raya) y el nombre y la cédula que se pidan. */
@@ -33,10 +33,12 @@ export interface SignatureProps extends Omit<JSX.HTMLAttributes<NxSignature>, "o
   labels?: Partial<SignatureLabels>;
   onChange?: (e: CustomEvent<{ empty: boolean }>) => void;
   onDone?: (e: CustomEvent<SignatureDoneDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Signature(props: SignatureProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["name", "required", "readonly", "disabled", "askName", "askId", "document", "geo", "valueFormat", "auto", "handoff", "penColor", "height", "locale", "value", "labels", "onChange", "onDone"]);
+  const [local, rest] = splitProps(props, ["name", "required", "readonly", "disabled", "askName", "askId", "document", "geo", "valueFormat", "auto", "handoff", "penColor", "height", "locale", "value", "labels", "onChange", "onDone", "children"]);
   return (
     <nx-signature
       {...rest}
@@ -56,8 +58,8 @@ export function Signature(props: SignatureProps): JSX.Element {
       bool:ask-id={!!local.askId}
       bool:geo={!!local.geo}
       bool:auto={!!local.auto}
-      on:nx-signature-change={(e) => local.onChange?.(e)}
-      on:nx-signature-done={(e) => local.onDone?.(e)}
+      on:nx-signature-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-signature-done={(e) => e.target === e.currentTarget && local.onDone?.(e)}
     />
   );
 }

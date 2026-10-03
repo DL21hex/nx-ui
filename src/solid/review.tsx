@@ -45,10 +45,10 @@ export function Review(props: ReviewProps): JSX.Element {
       attr:rebase={local.rebase === false ? "false" : undefined}
       attr:locale={local.locale}
       bool:disabled={!!local.disabled}
-      on:nx-review-open={(e) => local.onOpen?.(e)}
-      on:nx-review-confirm={(e) => local.onConfirm?.(e)}
-      on:nx-review-cancel={(e) => local.onCancel?.(e)}
-      on:nx-review-dirty={(e) => local.onDirty?.(e)}
+      on:nx-review-open={(e) => e.target === e.currentTarget && local.onOpen?.(e)}
+      on:nx-review-confirm={(e) => e.target === e.currentTarget && local.onConfirm?.(e)}
+      on:nx-review-cancel={(e) => e.target === e.currentTarget && local.onCancel?.(e)}
+      on:nx-review-dirty={(e) => e.target === e.currentTarget && local.onDirty?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}

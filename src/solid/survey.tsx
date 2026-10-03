@@ -7,7 +7,7 @@ import type { SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, S
 
 export type { NxSurvey, SurveyAnswers, SurveyLabels, SurveyQuestionInput, SurveyResults, SurveySubmitDetail };
 
-export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmit" | "onChange"> {
+export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmit" | "onChange" | "children"> {
   questions: SurveyQuestionInput[];
   heading?: string;
   description?: string;
@@ -23,10 +23,12 @@ export interface SurveyProps extends Omit<JSX.HTMLAttributes<NxSurvey>, "onSubmi
   /** Cancelable: no se envía a `action`. */
   onSubmit?: (e: CustomEvent<SurveySubmitDetail>) => void;
   onChange?: (e: CustomEvent<{ id: string; value: unknown; answers: SurveyAnswers }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Survey(props: SurveyProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["questions", "heading", "description", "action", "storage", "results", "answers", "locale", "labels", "onSubmit", "onChange"]);
+  const [local, rest] = splitProps(props, ["questions", "heading", "description", "action", "storage", "results", "answers", "locale", "labels", "onSubmit", "onChange", "children"]);
   return (
     <nx-survey
       {...rest}
@@ -39,8 +41,8 @@ export function Survey(props: SurveyProps): JSX.Element {
       attr:action={local.action}
       attr:storage={local.storage}
       attr:locale={local.locale}
-      on:nx-survey-submit={(e) => local.onSubmit?.(e)}
-      on:nx-survey-change={(e) => local.onChange?.(e)}
+      on:nx-survey-submit={(e) => e.target === e.currentTarget && local.onSubmit?.(e)}
+      on:nx-survey-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
     />
   );
 }

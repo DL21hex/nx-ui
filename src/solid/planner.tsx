@@ -7,7 +7,7 @@ import type { PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerD
 
 export type { NxPlanner, PlannerBooking, PlannerChangeDetail, PlannerCreateDetail, PlannerDeleteDetail, PlannerLabels, PlannerRangeDetail, PlannerResource, PlannerView };
 
-export interface PlannerProps extends Omit<JSX.HTMLAttributes<NxPlanner>, "onChange" | "onSelect"> {
+export interface PlannerProps extends Omit<JSX.HTMLAttributes<NxPlanner>, "onChange" | "onSelect" | "children"> {
   resources: PlannerResource[];
   bookings?: PlannerBooking[];
   view?: PlannerView;
@@ -33,10 +33,12 @@ export interface PlannerProps extends Omit<JSX.HTMLAttributes<NxPlanner>, "onCha
   onDelete?: (e: CustomEvent<PlannerDeleteDetail>) => void;
   onSelect?: (e: CustomEvent<{ booking: PlannerBooking }>) => void;
   onRange?: (e: CustomEvent<PlannerRangeDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Planner(props: PlannerProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["resources", "bookings", "view", "date", "snap", "hours", "workdays", "holidays", "summary", "source", "endpoint", "readonly", "locale", "labels", "onChange", "onCreate", "onDelete", "onSelect", "onRange"]);
+  const [local, rest] = splitProps(props, ["resources", "bookings", "view", "date", "snap", "hours", "workdays", "holidays", "summary", "source", "endpoint", "readonly", "locale", "labels", "onChange", "onCreate", "onDelete", "onSelect", "onRange", "children"]);
   return (
     <nx-planner
       {...rest}
@@ -54,11 +56,11 @@ export function Planner(props: PlannerProps): JSX.Element {
       attr:endpoint={local.endpoint}
       attr:locale={local.locale}
       bool:readonly={!!local.readonly}
-      on:nx-planner-change={(e) => local.onChange?.(e)}
-      on:nx-planner-create={(e) => local.onCreate?.(e)}
-      on:nx-planner-delete={(e) => local.onDelete?.(e)}
-      on:nx-planner-select={(e) => local.onSelect?.(e)}
-      on:nx-planner-range={(e) => local.onRange?.(e)}
+      on:nx-planner-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-planner-create={(e) => e.target === e.currentTarget && local.onCreate?.(e)}
+      on:nx-planner-delete={(e) => e.target === e.currentTarget && local.onDelete?.(e)}
+      on:nx-planner-select={(e) => e.target === e.currentTarget && local.onSelect?.(e)}
+      on:nx-planner-range={(e) => e.target === e.currentTarget && local.onRange?.(e)}
     />
   );
 }

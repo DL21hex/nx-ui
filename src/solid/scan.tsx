@@ -7,7 +7,7 @@ import type { ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMode, ScanP
 
 export type { NxScan, ScanCountDetail, ScanDetail, ScanItem, ScanLabels, ScanMode, ScanProblem, ScanWedge };
 
-export interface ScanProps extends Omit<JSX.HTMLAttributes<NxScan>, "onError"> {
+export interface ScanProps extends Omit<JSX.HTMLAttributes<NxScan>, "onError" | "children"> {
   /** `single` (por defecto): una lectura y la cámara se apaga. `count`: cada lectura suma a la lista. */
   mode?: ScanMode;
   /** `["ean_13", "code_128", "qr_code"]`… Por defecto, los de inventario y QR. */
@@ -30,10 +30,12 @@ export interface ScanProps extends Omit<JSX.HTMLAttributes<NxScan>, "onError"> {
   onCount?: (e: CustomEvent<ScanCountDetail>) => void;
   /** Sin cámara: `{problem}`. */
   onError?: (e: CustomEvent<{ problem: ScanProblem }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Scan(props: ScanProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["mode", "formats", "source", "items", "muted", "autostart", "wedge", "locale", "labels", "onRead", "onCount", "onError"]);
+  const [local, rest] = splitProps(props, ["mode", "formats", "source", "items", "muted", "autostart", "wedge", "locale", "labels", "onRead", "onCount", "onError", "children"]);
   return (
     <nx-scan
       {...rest}
@@ -46,9 +48,9 @@ export function Scan(props: ScanProps): JSX.Element {
       attr:locale={local.locale}
       bool:muted={!!local.muted}
       bool:autostart={!!local.autostart}
-      on:nx-scan-read={(e) => local.onRead?.(e)}
-      on:nx-scan-count={(e) => local.onCount?.(e)}
-      on:nx-scan-error={(e) => local.onError?.(e)}
+      on:nx-scan-read={(e) => e.target === e.currentTarget && local.onRead?.(e)}
+      on:nx-scan-count={(e) => e.target === e.currentTarget && local.onCount?.(e)}
+      on:nx-scan-error={(e) => e.target === e.currentTarget && local.onError?.(e)}
     />
   );
 }

@@ -7,7 +7,7 @@ import type { Job, JobEvent, JobResult, JobSpec, JobStatus, JobsErrorDetail, Job
 
 export type { NxJobs, Job, JobEvent, JobResult, JobSpec, JobStatus, JobsErrorDetail, JobsLabels };
 
-export interface JobsProps extends Omit<JSX.HTMLAttributes<NxJobs>, "onChange" | "onError"> {
+export interface JobsProps extends Omit<JSX.HTMLAttributes<NxJobs>, "onChange" | "onError" | "children"> {
   /** Lista (`?active=1`), lanzar (`POST`), cada trabajo (`/{id}`), `/{id}/cancel`, `/{id}/retry`. */
   endpoint: string;
   /** SSE o NDJSON con los eventos de todos los trabajos. Sin él, sondeo. */
@@ -27,10 +27,12 @@ export interface JobsProps extends Omit<JSX.HTMLAttributes<NxJobs>, "onChange" |
   onDone?: (e: CustomEvent<{ job: Job }>) => void;
   onError?: (e: CustomEvent<JobsErrorDetail>) => void;
   onOpenChange?: (e: CustomEvent<{ open: boolean }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Jobs(props: JobsProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["endpoint", "stream", "poll", "notify", "always", "recent", "locale", "labels", "disabled", "onChange", "onDone", "onError", "onOpenChange"]);
+  const [local, rest] = splitProps(props, ["endpoint", "stream", "poll", "notify", "always", "recent", "locale", "labels", "disabled", "onChange", "onDone", "onError", "onOpenChange", "children"]);
   return (
     <nx-jobs
       {...rest}
@@ -43,10 +45,10 @@ export function Jobs(props: JobsProps): JSX.Element {
       bool:notify={!!local.notify}
       bool:always={!!local.always}
       bool:disabled={!!local.disabled}
-      on:nx-jobs-change={(e) => local.onChange?.(e)}
-      on:nx-jobs-done={(e) => local.onDone?.(e)}
-      on:nx-jobs-error={(e) => local.onError?.(e)}
-      on:nx-open-change={(e) => local.onOpenChange?.(e as CustomEvent<{ open: boolean }>)}
+      on:nx-jobs-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-jobs-done={(e) => e.target === e.currentTarget && local.onDone?.(e)}
+      on:nx-jobs-error={(e) => e.target === e.currentTarget && local.onError?.(e)}
+      on:nx-open-change={(e) => e.target === e.currentTarget && local.onOpenChange?.(e as CustomEvent<{ open: boolean }>)}
     />
   );
 }

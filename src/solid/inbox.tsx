@@ -7,7 +7,7 @@ import type { InboxDecisionDetail, InboxItem, InboxLabels } from "../components/
 
 export type { NxInbox, InboxDecisionDetail, InboxItem, InboxLabels };
 
-export interface InboxProps extends JSX.HTMLAttributes<NxInbox> {
+export interface InboxProps extends Omit<JSX.HTMLAttributes<NxInbox>, "children"> {
   items: InboxItem[];
   heading?: string;
   /** Milisegundos para deshacer (7000); 0 registra al instante. */
@@ -25,10 +25,12 @@ export interface InboxProps extends JSX.HTMLAttributes<NxInbox> {
   onCommit?: (e: CustomEvent<InboxDecisionDetail>) => void;
   onUndo?: (e: CustomEvent<InboxDecisionDetail>) => void;
   onActive?: (e: CustomEvent<{ id: string; item: InboxItem }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Inbox(props: InboxProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["items", "heading", "undo", "requireReason", "selected", "active", "locale", "labels", "onDecide", "onCommit", "onUndo", "onActive"]);
+  const [local, rest] = splitProps(props, ["items", "heading", "undo", "requireReason", "selected", "active", "locale", "labels", "onDecide", "onCommit", "onUndo", "onActive", "children"]);
   return (
     <nx-inbox
       {...rest}
@@ -40,10 +42,10 @@ export function Inbox(props: InboxProps): JSX.Element {
       attr:undo={local.undo === undefined ? undefined : String(local.undo)}
       attr:locale={local.locale}
       bool:require-reason={!!local.requireReason}
-      on:nx-inbox-decide={(e) => local.onDecide?.(e)}
-      on:nx-inbox-commit={(e) => local.onCommit?.(e)}
-      on:nx-inbox-undo={(e) => local.onUndo?.(e)}
-      on:nx-inbox-active={(e) => local.onActive?.(e)}
+      on:nx-inbox-decide={(e) => e.target === e.currentTarget && local.onDecide?.(e)}
+      on:nx-inbox-commit={(e) => e.target === e.currentTarget && local.onCommit?.(e)}
+      on:nx-inbox-undo={(e) => e.target === e.currentTarget && local.onUndo?.(e)}
+      on:nx-inbox-active={(e) => e.target === e.currentTarget && local.onActive?.(e)}
     />
   );
 }

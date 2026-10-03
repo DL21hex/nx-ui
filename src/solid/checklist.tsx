@@ -53,10 +53,10 @@ export function Checklist(props: ChecklistProps): JSX.Element {
       attr:locale={local.locale}
       bool:readonly={!!local.readonly}
       bool:disabled={!!local.disabled}
-      on:nx-checklist-change={(e) => local.onChange?.(e)}
-      on:nx-checklist-complete={(e) => local.onComplete?.(e)}
-      on:nx-checklist-open={(e) => local.onOpen?.(e)}
-      on:nx-checklist-error={(e) => local.onError?.(e)}
+      on:nx-checklist-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-checklist-complete={(e) => e.target === e.currentTarget && local.onComplete?.(e)}
+      on:nx-checklist-open={(e) => e.target === e.currentTarget && local.onOpen?.(e)}
+      on:nx-checklist-error={(e) => e.target === e.currentTarget && local.onError?.(e)}
     />
   );
 }

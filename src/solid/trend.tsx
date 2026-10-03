@@ -7,7 +7,7 @@ import type { TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, Tr
 
 export type { NxTrend, TrendAnomaly, TrendFormat, TrendKind, TrendLabels, TrendSeries, TrendWhyDetail };
 
-export interface TrendProps extends Omit<JSX.HTMLAttributes<NxTrend>, "onToggle"> {
+export interface TrendProps extends Omit<JSX.HTMLAttributes<NxTrend>, "onToggle" | "children"> {
   /** `{id, label, points: {x, y}[], format?, currency?, kind?, muted?, hidden?}`. */
   series: TrendSeries[];
   /** `{series, x, label?}`: anillo que late y etiqueta corta. */
@@ -31,10 +31,12 @@ export interface TrendProps extends Omit<JSX.HTMLAttributes<NxTrend>, "onToggle"
   onWhy?: (e: CustomEvent<TrendWhyDetail>) => void;
   /** La leyenda mostró u ocultó una serie. */
   onToggle?: (e: CustomEvent<{ id: string; visible: boolean }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Trend(props: TrendProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["series", "anomalies", "heading", "kind", "format", "currency", "height", "detect", "explainEndpoint", "busy", "locale", "labels", "onWhy", "onToggle"]);
+  const [local, rest] = splitProps(props, ["series", "anomalies", "heading", "kind", "format", "currency", "height", "detect", "explainEndpoint", "busy", "locale", "labels", "onWhy", "onToggle", "children"]);
   return (
     <nx-trend
       {...rest}
@@ -50,8 +52,8 @@ export function Trend(props: TrendProps): JSX.Element {
       attr:explain-endpoint={local.explainEndpoint}
       attr:locale={local.locale}
       bool:busy={!!local.busy}
-      on:nx-trend-why={(e) => local.onWhy?.(e)}
-      on:nx-trend-toggle={(e) => local.onToggle?.(e)}
+      on:nx-trend-why={(e) => e.target === e.currentTarget && local.onWhy?.(e)}
+      on:nx-trend-toggle={(e) => e.target === e.currentTarget && local.onToggle?.(e)}
     />
   );
 }

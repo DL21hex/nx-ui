@@ -8,7 +8,7 @@ import type { OpenChangeDetail } from "../components/sidemenu/types";
 
 export type { NxDateRange, DateRangeChangeDetail, DateRangeCompare, DateRangeLabels, DateRangePresetInput, DateRangeValue };
 
-export interface DateRangeProps extends Omit<JSX.HTMLAttributes<NxDateRange>, "onChange"> {
+export interface DateRangeProps extends Omit<JSX.HTMLAttributes<NxDateRange>, "onChange" | "children"> {
   /** `{start, end}` (ISO) o «2026-07-01/2026-09-30». Sin él, `start`/`end` o `phrase` dan el inicial. */
   value?: DateRangeValue | string | null;
   start?: string;
@@ -36,10 +36,12 @@ export interface DateRangeProps extends Omit<JSX.HTMLAttributes<NxDateRange>, "o
   labels?: Partial<DateRangeLabels>;
   onChange?: (e: CustomEvent<DateRangeChangeDetail>) => void;
   onOpenChange?: (e: CustomEvent<OpenChangeDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function DateRange(props: DateRangeProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["value", "start", "end", "phrase", "presets", "compare", "min", "max", "today", "fiscalStart", "weekStart", "name", "required", "disabled", "placeholder", "label", "locale", "labels", "onChange", "onOpenChange"]);
+  const [local, rest] = splitProps(props, ["value", "start", "end", "phrase", "presets", "compare", "min", "max", "today", "fiscalStart", "weekStart", "name", "required", "disabled", "placeholder", "label", "locale", "labels", "onChange", "onOpenChange", "children"]);
   return (
     <nx-date-range
       {...rest}
@@ -62,7 +64,7 @@ export function DateRange(props: DateRangeProps): JSX.Element {
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
       on:nx-date-range-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
-      on:nx-open-change={(e) => local.onOpenChange?.(e)}
+      on:nx-open-change={(e) => e.target === e.currentTarget && local.onOpenChange?.(e)}
     />
   );
 }

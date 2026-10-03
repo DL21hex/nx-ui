@@ -7,7 +7,7 @@ import type { NumberAlign, NumberChangeDetail, NumberFormat, NumberLabels } from
 
 export type { NxNumber, NumberAlign, NumberChangeDetail, NumberFormat, NumberLabels };
 
-export interface NumberInputProps extends Omit<JSX.HTMLAttributes<NxNumber>, "onChange" | "onInput"> {
+export interface NumberInputProps extends Omit<JSX.HTMLAttributes<NxNumber>, "onChange" | "onInput" | "children"> {
   /** `number | null`. En `percent`, la fracción (0,19 es 19 %). */
   value?: number | null;
   format?: NumberFormat;
@@ -34,6 +34,8 @@ export interface NumberInputProps extends Omit<JSX.HTMLAttributes<NxNumber>, "on
   onInput?: (e: Event & { currentTarget: NxNumber }) => void;
   /** Al confirmar (salir o Enter): `{value, text}`. */
   onChange?: (e: CustomEvent<NumberChangeDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function NumberInput(props: NumberInputProps): JSX.Element {
@@ -57,6 +59,7 @@ export function NumberInput(props: NumberInputProps): JSX.Element {
     "labels",
     "onInput",
     "onChange",
+    "children",
   ]);
   const str = (n: number | undefined) => (n === undefined ? undefined : String(n));
   return (
@@ -79,7 +82,7 @@ export function NumberInput(props: NumberInputProps): JSX.Element {
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
       bool:readonly={!!local.readonly}
-      on:input={(e) => local.onInput?.(e as unknown as Event & { currentTarget: NxNumber })}
+      on:input={(e) => e.target === e.currentTarget && local.onInput?.(e as unknown as Event & { currentTarget: NxNumber })}
       on:nx-number-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
     />
   );

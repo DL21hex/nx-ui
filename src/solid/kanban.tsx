@@ -7,7 +7,7 @@ import type { KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail } from ".
 
 export type { NxKanban, KanbanCard, KanbanColumn, KanbanLabels, KanbanMoveDetail };
 
-export interface KanbanProps extends JSX.HTMLAttributes<NxKanban> {
+export interface KanbanProps extends Omit<JSX.HTMLAttributes<NxKanban>, "children"> {
   columns: KanbanColumn[];
   cards: KanbanCard[];
   heading?: string;
@@ -25,10 +25,12 @@ export interface KanbanProps extends JSX.HTMLAttributes<NxKanban> {
   onAdd?: (e: CustomEvent<{ column: string }>) => void;
   /** Cancelable: no se sigue el `href` de la tarjeta. */
   onOpen?: (e: CustomEvent<{ card: KanbanCard }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Kanban(props: KanbanProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["columns", "cards", "heading", "undo", "busy", "locale", "labels", "onMove", "onCommit", "onUndo", "onAdd", "onOpen"]);
+  const [local, rest] = splitProps(props, ["columns", "cards", "heading", "undo", "busy", "locale", "labels", "onMove", "onCommit", "onUndo", "onAdd", "onOpen", "children"]);
   return (
     <nx-kanban
       {...rest}
@@ -39,11 +41,11 @@ export function Kanban(props: KanbanProps): JSX.Element {
       attr:undo={local.undo === undefined ? undefined : String(local.undo)}
       attr:locale={local.locale}
       bool:busy={!!local.busy}
-      on:nx-kanban-move={(e) => local.onMove?.(e)}
-      on:nx-kanban-commit={(e) => local.onCommit?.(e)}
-      on:nx-kanban-undo={(e) => local.onUndo?.(e)}
-      on:nx-kanban-add={(e) => local.onAdd?.(e)}
-      on:nx-kanban-open={(e) => local.onOpen?.(e)}
+      on:nx-kanban-move={(e) => e.target === e.currentTarget && local.onMove?.(e)}
+      on:nx-kanban-commit={(e) => e.target === e.currentTarget && local.onCommit?.(e)}
+      on:nx-kanban-undo={(e) => e.target === e.currentTarget && local.onUndo?.(e)}
+      on:nx-kanban-add={(e) => e.target === e.currentTarget && local.onAdd?.(e)}
+      on:nx-kanban-open={(e) => e.target === e.currentTarget && local.onOpen?.(e)}
     />
   );
 }

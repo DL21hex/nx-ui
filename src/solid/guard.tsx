@@ -36,10 +36,10 @@ export function Guard(props: GuardProps): JSX.Element {
       attr:endpoint={local.endpoint}
       attr:locale={local.locale}
       bool:disabled={!!local.disabled}
-      on:nx-guard-warn={(e) => local.onWarn?.(e)}
-      on:nx-guard-fix={(e) => local.onFix?.(e)}
-      on:nx-guard-ack={(e) => local.onAck?.(e)}
-      on:nx-guard-block={(e) => local.onBlock?.(e)}
+      on:nx-guard-warn={(e) => e.target === e.currentTarget && local.onWarn?.(e)}
+      on:nx-guard-fix={(e) => e.target === e.currentTarget && local.onFix?.(e)}
+      on:nx-guard-ack={(e) => e.target === e.currentTarget && local.onAck?.(e)}
+      on:nx-guard-block={(e) => e.target === e.currentTarget && local.onBlock?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}
