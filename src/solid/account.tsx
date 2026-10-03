@@ -3,9 +3,9 @@ import { splitProps, type JSX } from "solid-js";
 import "./jsx";
 import "../components/account/index";
 import type { NxAccount } from "../components/account/account";
-import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountSyncQueue, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
+import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
 
-export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountSyncQueue, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
+export type { NxAccount, AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail };
 
 /** Sin hijos: la tarjeta y el panel los pinta el elemento. */
 export interface AccountProps extends Omit<JSX.HTMLAttributes<NxAccount>, "onSelect" | "children"> {
@@ -32,8 +32,9 @@ export interface AccountProps extends Omit<JSX.HTMLAttributes<NxAccount>, "onSel
   /** Token CSRF del `POST` de salida, en el campo `logoutCsrfField` (`_csrf`). */
   logoutCsrf?: string;
   logoutCsrfField?: string;
-  /** Una cola de `nxSync` para contar lo pendiente y vaciarla antes de salir. */
-  sync?: AccountSyncQueue | null;
+  /** El nombre de la cola de `nx-sync` de esta persona (`createSync({name})`): cuenta lo pendiente y la
+   *  vacía antes de salir. */
+  sync?: string;
   labels?: Partial<AccountLabels>;
   locale?: string;
   disabled?: boolean;
@@ -61,7 +62,6 @@ export function Account(props: AccountProps): JSX.Element {
       prop:locales={local.locales}
       prop:session={local.session}
       prop:viewAs={local.viewAs}
-      prop:sync={local.sync}
       prop:labels={local.labels}
       attr:current={local.current}
       attr:status={local.status}
@@ -74,6 +74,7 @@ export function Account(props: AccountProps): JSX.Element {
       attr:logout-method={local.logoutMethod}
       attr:logout-csrf={local.logoutCsrf}
       attr:logout-csrf-field={local.logoutCsrfField}
+      attr:sync={local.sync}
       attr:locale={local.locale}
       bool:disabled={!!local.disabled}
       on:nx-account-switch={(e) => e.target === e.currentTarget && local.onSwitch?.(e)}

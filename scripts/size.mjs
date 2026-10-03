@@ -57,10 +57,9 @@ const BUDGET = [
   // El chunk del celular importa el de escritorio (ya cargado en esa página): se mide todo lo que baja el celular.
   [lazy("handoff-phone"), 13 * 1024, "página del celular de nx-handoff: handoff + su chunk (se carga con side=\"phone\")"],
   ["dist/award.js", 15.5 * 1024, "award + núcleo (ESM)"],
-  ["dist/account.js", 9.75 * 1024, "account + núcleo (ESM; panel, ver como y nxSync con import())"],
+  ["dist/account.js", 11 * 1024, "account + núcleo (ESM, con la franja «Ver como»; panel y nxSync con import())"],
   // Igual que el del celular de handoff: el chunk del panel importa el de la cuenta; se mide todo lo que baja la página.
-  [lazy("account-panel"), 13 * 1024, "nx-account con su panel: cuenta + panel (el panel se trae en reposo o al apuntar a la tarjeta)"],
-  [lazy("view-as"), 1.75 * 1024, "franja «Ver como» de nx-account (se trae en reposo si puede suplantar)"],
+  [lazy("account-panel"), 14 * 1024, "nx-account con su panel: cuenta + panel (el panel se trae en reposo o al apuntar a la tarjeta)"],
   ["dist/launcher.js", 8.25 * 1024, "launcher + núcleo (ESM)"],
   ["dist/cards.js", 10.75 * 1024, "cards + núcleo (ESM)"],
   ["dist/print.js", 8.25 * 1024, "print + núcleo (ESM)"],

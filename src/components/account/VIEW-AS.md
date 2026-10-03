@@ -1,8 +1,7 @@
 # «Ver como»: notas de integración
 
-`view-as.ts` (`showViewAsBanner`) es un módulo sin elemento propio que usa `<nx-account>`: lo trae
-con `import()` (en reposo si hay `view-as-source` o `viewAs`) y lo muestra mientras `viewAs` esté
-puesto. Sus estilos están en `view-as.css`, que importa `account.css`.
+`view-as.ts` (`showViewAsBanner`) es un módulo sin elemento propio que usa `<nx-account>`: va en su
+entrada (no con `import()`) y lo muestra mientras `viewAs` esté puesto. Sus estilos están en `view-as.css`, que importa `account.css`.
 
 ## `showViewAsBanner()`
 
@@ -27,16 +26,17 @@ puesto. Sus estilos están en `view-as.css`, que importa `account.css`.
   null}`, cancelable: si la app lo cancela (para terminar la suplantación en su servidor), la franja
   sigue hasta que asigne `viewAs = null`.
 
-## Si el módulo no carga
+## Por qué no va en un chunk
 
-Una pestaña abierta antes de un despliegue (el chunk viejo da 404) o sin red: la cuenta igual lleva
-`data-view-as` y `account.css` marca la tarjeta con un contorno ámbar mientras no haya franja
-(`html:not([data-nx-view-as]) nx-account[data-view-as]`). Se reintenta a 1 s, 2 s, 4 s… hasta 30 s.
+Iba con `import()` y reintentos (1 s, 2 s… hasta 30 s), pero en el navegador se comprobó que Chromium
+recuerda un `import()` fallido hasta recargar: con el chunk viejo en 404 (una pestaña abierta antes de
+un despliegue), la franja no volvía nunca. Firefox sí lo vuelve a pedir. Ahora va en la entrada de la
+cuenta. Si aun así no hay franja (`showViewAsBanner` lanzó), la cuenta lleva `data-view-as`,
+`account.css` marca la tarjeta con un contorno ámbar oscuro (3:1 o más en los dos temas;
+`html:not([data-nx-view-as]) nx-account[data-view-as]`) y su texto oculto dice «Viendo como {name}.».
 
-## Lo no verificado (sin navegador)
+## Lo no verificado
 
 - La franja sobre un `<nx-dialog>` abierto, el orden en la capa superior frente a `nx-toaster` y
   `nx-keytips`, y el texto cortado con «…» en pantallas angostas.
-- Los contrastes reales (`npm run contrast` no cubre la franja) y el modo oscuro.
-- Que un `import()` fallido se vuelva a pedir en cada navegador (algunos recuerdan el fallo hasta
-  recargar); la marca de la tarjeta no depende de eso.
+- WebKit y un lector de pantalla real (el anuncio único de la región `status`).

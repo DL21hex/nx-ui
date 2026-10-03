@@ -55,6 +55,8 @@ export interface CommandLabels {
   /** «Preguntarle al asistente» (con `agent`). */
   ask: string;
   back: string;
+  /** «En»: la descripción de la caja en un submenú («En: Cambiar paleta»). */
+  where: string;
   keyMove: string;
   keyOpen: string;
   keyTab: string;

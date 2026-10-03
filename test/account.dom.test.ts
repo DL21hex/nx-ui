@@ -12,12 +12,14 @@ const mocks = vi.hoisted(() => ({
   flush: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("../src/components/account/view-as", () => ({ showViewAsBanner: mocks.showViewAsBanner }));
-vi.mock("../src/components/sync/logic", () => ({ nxSync: { flush: mocks.flush } }));
+// La cola de la página, simulada; el registro de colas por nombre (`createSync({name})`) es el real.
+vi.mock("../src/components/sync/logic", async (orig) => ({ ...(await orig<typeof import("../src/components/sync/logic")>()), nxSync: { flush: mocks.flush } }));
 
 import "../src/components/account/index";
 import "../src/components/command/index";
 import { ACCOUNT_LABELS, type NxAccount } from "../src/components/account/index";
 import type { NxCommand } from "../src/components/command/index";
+import { createSync, memoryStore } from "../src/components/sync/logic";
 
 beforeAll(() => {
   const fire = (el: HTMLElement, newState: string) => {
@@ -452,10 +454,13 @@ describe("<nx-account> idioma y formatos", () => {
 });
 
 describe("<nx-account> cerrar sesión", () => {
+  const targets: string[] = [];
   /** Los formularios enviados (sin navegar): `[method, action, campos]`. */
   function spySubmit(): [string, string, Record<string, string>][] {
     const sent: [string, string, Record<string, string>][] = [];
+    targets.length = 0;
     vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(function (this: HTMLFormElement) {
+      targets.push(this.getAttribute("target")!);
       const fields = Object.fromEntries([...this.querySelectorAll("input")].map((i) => [i.name, i.value]));
       sent.push([this.getAttribute("method")!, this.getAttribute("action")!, fields]);
     });
@@ -474,6 +479,8 @@ describe("<nx-account> cerrar sesión", () => {
     expect(el.open).toBe(false);
     expect(sent).toEqual([["post", `${location.origin}/salir`, { _csrf: "t0k" }]]);
     expect(assign).not.toHaveBeenCalled();
+    // Un `<base target="_blank">` de la página no lo manda a otra pestaña.
+    expect(targets).toEqual(["_self"]);
     // El nombre del campo, para el framework del servidor; sin token, sin campo.
     el.setAttribute("logout-csrf-field", "authenticity_token");
     el.logout();
@@ -543,19 +550,60 @@ describe("<nx-account> cerrar sesión", () => {
     expect(got).toEqual([{ pending: 3 }]);
   });
 
-  it("usa la cola que se le pasa en `sync` (subscribe y flush)", async () => {
-    let listener: (s: { online: boolean; pending: number }) => void = () => {};
-    const queue = { subscribe: vi.fn((fn: typeof listener) => ((listener = fn), fn({ online: true, pending: 2 }), () => {})), flush: vi.fn(() => Promise.resolve()) };
-    const el = mount("", (a) => (a.sync = queue));
+  /** Una cola de verdad, en memoria y sin red hasta que la prueba la dé. */
+  function userQueue(name: string) {
+    const net = { online: false };
+    const q = createSync({ name, store: memoryStore(), locks: null, channel: null, network: () => net.online, fetch: async () => new Response("{}", { status: 200 }) });
+    return { q, net };
+  }
+  const extra = (el: NxAccount) => el.querySelector(".nx-account__card")!.textContent ?? "";
+
+  it("`sync` es el nombre de la cola (serializable): cuenta y vacía esa, no nxSync, aunque se cree después", async () => {
+    const el = mount('sync="nx-sync:ana"');
+    expect(el.sync).toBe("nx-sync:ana");
     const got: unknown[] = [];
     el.addEventListener("nx-account-logout", (e) => got.push(e.detail));
     await flushAll();
-    expect(el.dataset.sync).toBe("pending");
+    // La app crea la cola al iniciar sesión, después de la cuenta.
+    const { q, net } = userQueue("nx-sync:ana");
+    const flush = vi.spyOn(q, "flush");
+    await q.enqueue({ method: "POST", url: "/api/a", body: { a: 1 }, label: "A" });
+    await q.enqueue({ method: "POST", url: "/api/b", body: { b: 1 }, label: "B" });
+    await until(() => extra(el).includes("2 cambios sin sincronizar"));
+    expect(el.dataset.sync).toBe("offline");
+    // El <nx-sync> de la página cuenta otra cola (nxSync): no se mezcla.
+    document.dispatchEvent(new CustomEvent("nx-sync-change", { detail: { online: true, pending: 7 } }));
+    expect(extra(el)).not.toContain("7");
     el.logout();
-    expect(queue.flush).toHaveBeenCalledOnce();
+    expect(flush).toHaveBeenCalledOnce();
     expect(mocks.flush).not.toHaveBeenCalled();
-    listener({ online: true, pending: 0 });
+    expect(got).toEqual([]);
+    net.online = true;
+    await q.check();
+    await until(() => got.length);
     expect(got).toEqual([{ pending: 0 }]);
+  });
+
+  it("con `sync` y sin la cola creada, salir no vacía nxSync; cambiar o quitar `sync` suelta la anterior", async () => {
+    const { q: a } = userQueue("nx-sync:a");
+    await a.enqueue({ method: "POST", url: "/api/a", body: { a: 1 }, label: "A" });
+    const el = mount('sync="nx-sync:a"');
+    await until(() => extra(el).includes("1 cambio sin sincronizar"));
+    el.setAttribute("sync", "nx-sync:nadie");
+    await flushAll();
+    await a.enqueue({ method: "POST", url: "/api/a2", body: { a: 2 }, label: "A2" });
+    await flushAll();
+    expect(extra(el)).not.toContain("2 cambios");
+    el.logout();
+    await flushAll();
+    expect(mocks.flush).not.toHaveBeenCalled();
+    // Sin `sync`, la de la página.
+    el.removeAttribute("sync");
+    document.dispatchEvent(new CustomEvent("nx-sync-change", { detail: { online: true, pending: 3 } }));
+    expect(extra(el)).toContain("3 cambios sin sincronizar");
+    el.logout();
+    await until(() => mocks.flush.mock.calls.length);
+    expect(mocks.flush).toHaveBeenCalledOnce();
   });
 });
 
@@ -908,10 +956,57 @@ describe("<nx-account> salir de «Ver como»", () => {
     expect(el.hasAttribute("data-view-as")).toBe(false);
   });
 
-  it("la tarjeta marca la suplantación desde el primer momento (data-view-as), sin esperar la franja", () => {
+  it("la tarjeta marca la suplantación (data-view-as) y la franja sale enseguida, sin import()", () => {
     const el = mount();
     el.viewAs = { id: "u9", name: "Marta" };
     expect(el.getAttribute("data-view-as")).toBe("u9");
-    expect(mocks.showViewAsBanner).not.toHaveBeenCalled();
+    // En la entrada, no en un chunk: Chromium recuerda un import() fallido hasta recargar.
+    expect(mocks.showViewAsBanner).toHaveBeenCalledOnce();
+  });
+});
+
+describe("<nx-account> repaso: sin franja y formulario de salida", () => {
+  it("sin la franja, el texto oculto de la tarjeta dice a quién se suplanta; con la franja, no", async () => {
+    const el = mount();
+    el.viewAs = { id: "u9", name: "Marta" };
+    await flushAll();
+    expect(card(el).textContent).toContain("Viendo como Marta.");
+    mocks.showViewAsBanner.mockReturnValue(mocks.unbanner);
+    el.viewAs = { id: "u9", name: "Marta" };
+    await until(() => !card(el).textContent!.includes("Viendo como"));
+    el.viewAs = null;
+    await flushAll();
+    expect(card(el).textContent).not.toContain("Viendo como");
+  });
+
+  it("si showViewAsBanner lanza, no rompe la cuenta: la tarjeta lo dice y la próxima vez sale", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mocks.showViewAsBanner.mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
+    mocks.showViewAsBanner.mockReturnValue(mocks.unbanner);
+    const el = mount();
+    const laura = { id: "u7", name: "Laura" };
+    el.viewAs = laura;
+    await flushAll();
+    expect(warn).toHaveBeenCalled();
+    expect(el.getAttribute("data-view-as")).toBe("u7");
+    expect(card(el).textContent).toContain("Viendo como Laura.");
+    el.viewAs = laura;
+    await flushAll();
+    expect(card(el).textContent).not.toContain("Viendo como");
+    el.remove();
+    expect(mocks.unbanner).toHaveBeenCalledOnce();
+  });
+
+  it("el formulario de salida no se queda en el body", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
+    const el = mount('logout-url="/salir"');
+    el.logout();
+    el.logout();
+    expect(document.querySelectorAll("form")).toHaveLength(2);
+    vi.advanceTimersByTime(1000);
+    expect(document.querySelectorAll("form")).toHaveLength(0);
   });
 });

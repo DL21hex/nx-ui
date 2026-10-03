@@ -38,6 +38,7 @@ export const COMMAND_LABELS: CommandLabels = {
   records: "Registros",
   ask: "Preguntarle al asistente",
   back: "Volver",
+  where: "En",
   keyMove: "navegar",
   keyOpen: "abrir",
   keyTab: "nueva pestaña",
@@ -72,8 +73,10 @@ export class NxCommand extends Base {
   #usage: CommandUsage | null = null;
   /** `items` con sus submenús aplanados (para «Recientes»); se rehace al cambiar `items`. */
   #flat: CommandItem[] | null = null;
-  /** Las acciones de la cuenta, leídas al abrir (la cuenta las arma de nuevo en cada lectura). */
-  #acc: CommandItem[] | null = null;
+  /** Las acciones de la cuenta y el arreglo del que salieron: `commands` de `<nx-account>` es el mismo
+   *  mientras no cambie, así que se compara en cada tecla y solo se limpia de nuevo si cambió (la cuenta
+   *  recibió su usuario o sus empresas con la paleta abierta). */
+  #acc: { src: unknown; items: CommandItem[] } | null = null;
   /** Las pantallas del menú, aplanadas al abrir (o si cambia su arreglo) y no en cada tecla: así las
    *  entradas son las mismas y su texto sin tildes se reutiliza. */
   #nav: { src: readonly MenuItem[]; group: string; items: CommandItem[] } | null = null;
@@ -106,6 +109,8 @@ export class NxCommand extends Base {
   };
   // Nodos.
   #crumbs?: HTMLSpanElement;
+  /** «En: Cambiar paleta», oculto: la descripción de la caja dentro de un submenú. */
+  #where?: HTMLSpanElement;
   #input?: HTMLInputElement;
   #spin?: HTMLSpanElement;
   #list?: HTMLDivElement;
@@ -282,9 +287,10 @@ export class NxCommand extends Base {
     this.setAttribute("role", "dialog");
     this.setAttribute("aria-modal", "true");
     const listId = `${this.#uid}-list`;
-    // La miga del submenú: un clic vuelve (desde el teclado, Escape o Backspace). La caja la tiene
-    // como descripción, así el lector sabe en qué submenú está.
-    this.#crumbs = h("span", { id: `${this.#uid}-crumbs`, class: "nx-command__crumbs", role: "button" });
+    // La miga del submenú: un atajo del ratón para volver (desde el teclado, Escape o Backspace), así
+    // que no es un botón. La caja lleva como descripción dónde está («En: Cambiar paleta»).
+    this.#crumbs = h("span", { class: "nx-command__crumbs", "aria-hidden": "true" });
+    this.#where = h("span", { id: `${this.#uid}-where`, class: "nx-sr-only", hidden: true });
     this.#input = h("input", {
       type: "text",
       class: "nx-command__input",
@@ -304,7 +310,7 @@ export class NxCommand extends Base {
     this.#msg = h("p", { class: "nx-command__empty", hidden: true });
     this.#status = h("p", { class: "nx-sr-only", role: "status", "aria-live": "polite" });
     this.#foot = h("footer", { class: "nx-command__foot", "aria-hidden": "true" });
-    this.append(h("div", { class: "nx-command__bar" }, glyph("search", "nx-command__search"), this.#crumbs, this.#input, this.#spin), this.#msg, this.#list, this.#status, this.#foot);
+    this.append(h("div", { class: "nx-command__bar" }, glyph("search", "nx-command__search"), this.#crumbs, this.#where, this.#input, this.#spin), this.#msg, this.#list, this.#status, this.#foot);
 
     this.addEventListener("beforetoggle", (e) => {
       const open = (e as ToggleEvent).newState === "open";
@@ -499,11 +505,10 @@ export class NxCommand extends Base {
       if (!n || n.src !== menu.items || n.group !== group) this.#nav = { src: menu.items, group, items: flattenMenu(menu.items, group) };
       nav = this.#nav!.items;
     }
-    if (!this.#acc) {
-      const acc = this.account ? (document.getElementById(this.account) as (HTMLElement & { commands?: unknown }) | null) : null;
-      this.#acc = cleanItems(acc?.commands);
-    }
-    return [...this.#items, ...this.#acc, ...nav];
+    const acc = this.account ? (document.getElementById(this.account) as (HTMLElement & { commands?: unknown }) | null) : null;
+    const src = acc?.commands;
+    if (!this.#acc || this.#acc.src !== src) this.#acc = { src, items: cleanItems(src) };
+    return [...this.#items, ...this.#acc.items, ...nav];
   }
 
   /** Recalcula las filas; con `source`, pide al servidor (con espera entre teclas). */
@@ -695,8 +700,10 @@ export class NxCommand extends Base {
     c.hidden = !path.length;
     c.replaceChildren(...path.map((label) => h("span", { class: "nx-command__crumb" }, label)));
     c.title = this.#labels.back;
-    c.setAttribute("aria-label", `${this.#labels.back}: ${path.join(" › ")}`);
-    if (path.length) this.#input!.setAttribute("aria-describedby", c.id);
+    const w = this.#where!;
+    w.textContent = path.length ? `${this.#labels.where}: ${path.join(" › ")}` : "";
+    w.hidden = !path.length;
+    if (path.length) this.#input!.setAttribute("aria-describedby", w.id);
     else this.#input!.removeAttribute("aria-describedby");
   }
 

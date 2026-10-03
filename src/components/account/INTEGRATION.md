@@ -6,8 +6,8 @@ formatos, atajos, «Ver como…», cerrar sesión (esperando la cola de `nx-sync
 vencimiento de sesión con «Extender». La API pública está en la sección `<nx-account>` del README.
 
 Archivos: `account.ts` (entrada: tarjeta, sesión, acciones), `account-panel.ts` (contenido del
-panel y sub-vistas, con `import()`), `view-as.ts` y `view-as.css` (la franja de «Ver como», con
-`import()`; ver `VIEW-AS.md`), `logic.ts` (puro), `types.ts` y `account.css` (importa `view-as.css`).
+panel y sub-vistas, con `import()`), `view-as.ts` y `view-as.css` (la franja de «Ver como», en la
+entrada; ver `VIEW-AS.md`), `logic.ts` (puro), `types.ts` y `account.css` (importa `view-as.css`).
 
 La pantalla de bloqueo (`nxLock`, `lock`, `lock-after`, `lock-endpoint`, `lockVerify`, <kbd>Ctrl</kbd>
 <kbd>L</kbd>) se quitó el 2026-10-03: un bloqueo solo de la pestaña y del cliente prometía más de lo
@@ -20,8 +20,10 @@ El registro (`src/bdui.ts`) toma las props de los setters de la clase. `user`, `
 atributos (también como propiedad en camelCase: `logoutUrl`, `viewAsSource`…). Quitar un atributo JSON
 equivale a `null`: sin usuario, sin franja, los textos por defecto.
 
-`sync` (una cola de `nxSync`) es la única propiedad que no se serializa: sin ella, la cuenta escucha
-`nx-sync-change` de un `<nx-sync>` de la página y, al salir con pendientes, usa `nxSync.flush()`.
+`sync` es el **nombre** de la cola (`createSync({name: "nx-sync:" + id})`), no el objeto: todo se
+serializa (principio 2). La cuenta la busca en el registro de `nx-sync` (`onSyncQueue`, con
+`import()`) y, si la app aún no la creó, espera a que la cree. Sin `sync`, escucha `nx-sync-change` de
+un `<nx-sync>` de la página y, al salir con pendientes, usa `nxSync.flush()`.
 
 ## Peso
 
@@ -29,17 +31,20 @@ equivale a `null`: sin usuario, sin franja, los textos por defecto.
 
 | Pieza | Tamaño | Referencia |
 |---|---|---|
-| `dist/account.js`: tarjeta, sesión, acciones, comandos + núcleo | 9,45 KB | 9,75 KB |
-| Cuenta + chunk `account-panel-*.js` (lo que baja la página con el panel) | 12,70 KB | 13 KB |
-| `view-as-*.js` | 1,24 KB | 1,75 KB |
+| `dist/account.js`: tarjeta, sesión, acciones, comandos, franja de «Ver como» + núcleo | 10,26 KB | 11 KB |
+| Cuenta + chunk `account-panel-*.js` (lo que baja la página con el panel) | 13,42 KB | 14 KB |
 | `dist/account.css` (con `view-as.css`) | 3,33 KB | 4,25 KB |
 
 **Por qué el panel va aparte:** con todo en la entrada, la tarjeta sola bajaría ≈ 12,7 KB en vez de
 9,45. El chunk se pide cuando la página queda libre (`requestIdleCallback`, tope 4 s) y antes si
 alguien apunta, enfoca o toca la tarjeta; si aun así alguien abre en el primer instante, el panel se
 pinta al llegar (unos ms) y ahí toma el foco. La precarga en reposo existe para el caso «sin red»:
-cerrar sesión con cambios en cola ocurre justo cuando no hay conexión. Por lo mismo, con
-`view-as-source` o `viewAs` también se trae en reposo la franja de «Ver como».
+cerrar sesión con cambios en cola ocurre justo cuando no hay conexión.
+
+**Por qué la franja de «Ver como» no va aparte** (2026-10-03): iba en un chunk con reintentos, pero
+Chromium recuerda un `import()` fallido hasta recargar (Firefox sí lo vuelve a pedir): tras un 404
+(un despliegue nuevo) la franja no volvía nunca. Un aviso de suplantación no puede depender de la red;
+cuesta ≈ 0,8 KB en la entrada.
 
 ## Decisiones
 
@@ -63,20 +68,25 @@ cerrar sesión con cambios en cola ocurre justo cuando no hay conexión. Por lo 
 - **Paletas:** `["indigo", …]` o `{id, label, color}`. `color` pasa por `safePaletteColor` (hex, nombre,
   función de color o `var(--x)`): lo demás se descarta, porque va al atributo `style` y puede venir del
   servidor. Sin `color`, la muestra lleva su propio `data-nx-palette` y la pintan los tokens.
-- **Pendientes de sincronizar:** `nx-sync-change` en `document` (de un `<nx-sync>`) y, si la app la
-  pasa, la cola en `sync` (`subscribe`/`flush`). Al salir con pendientes: `sync.flush()` o, sin `sync`,
-  `import("../sync/logic")` → `nxSync.flush()`. Tope de 10 s: pasado, la franja dice que quedan
-  guardados en el equipo y espera a «Salir de todos modos» (no sale sola: podrían perderse). Lo que
-  queda es de esta persona en este equipo: la app usa una cola por usuario (`createSync({name})`) y, en
-  `nx-account-logout` con `pending > 0`, decide si la vacía.
+- **Pendientes de sincronizar:** con `sync="nx-sync:ana"`, la cola de ese nombre (`subscribe`/`flush`),
+  y se ignora el `nx-sync-change` de la página (es de `nxSync`, otra cola). Sin `sync`, el
+  `nx-sync-change` en `document` (de un `<nx-sync>`) y, al salir, `import("../sync/logic")` →
+  `nxSync.flush()`. Con `sync` y la cola sin crear, salir no vacía `nxSync`. Cambiar `sync` suelta la
+  anterior y vuelve a contar. Tope de 10 s: pasado, la franja dice que quedan guardados en el equipo y
+  espera a «Salir de todos modos» (no sale sola: podrían perderse). Lo que queda es de esta persona en
+  este equipo: la app usa una cola por usuario (`createSync({name})`), **pone su nombre en `sync`** y,
+  en `nx-account-logout` con `pending > 0`, decide si la vacía.
 - **Cerrar sesión cancelable** (`nx-account-logout`, `{pending}`). `logout-url` pasa por `safeHref` y
   debe ser del mismo origen. Por defecto sale con un `POST` (un `<form>` creado y enviado, con el token
   de `logout-csrf` en `logout-csrf-field`, `_csrf`): un `GET` que cierra sesión lo dispara una `<img>`
-  de otro sitio o un precargador. `logout-method="get"` navega con `location.assign`.
+  de otro sitio o un precargador. El formulario lleva `target="_self"` (un `<base target>` de la página
+  no lo manda a otra pestaña) y se quita del `body` al segundo. `logout-method="get"` navega con
+  `location.assign`.
 - **Ver como:** entrar y salir emiten `nx-account-view-as`, cancelable; si la app cancela la salida, la
   franja sigue hasta que asigne `viewAs = null`. La cuenta lleva `data-view-as="{id}"` mientras hay
-  suplantación; si el módulo de la franja no carga, el CSS marca la tarjeta (`html:not([data-nx-view-as])`)
-  y se reintenta (1 s, 2 s… hasta 30 s). La franja se quita al desconectar la cuenta y vuelve al
+  suplantación; si la franja no está (`showViewAsBanner` lanzó), el CSS marca la tarjeta
+  (`html:not([data-nx-view-as])`, con el ámbar oscuro: el claro no llega a 3:1) y su texto oculto dice
+  «Viendo como {name}.» (`labels.viewingAs`). La franja se quita al desconectar la cuenta y vuelve al
   conectar si `viewAs` sigue puesto: un layout sin `<nx-account>` no muestra la franja. Las personas del
   servidor se muestran en su orden (máx. 50), con `safeEndpoint`, 250 ms entre teclas y `AbortController`.
 - **Sub-vistas:** cerrar el panel (elegir, clic fuera) descarta la sub-vista; al reabrir, el foco va a la
@@ -84,7 +94,9 @@ cerrar sesión con cambios en cola ocurre justo cuando no hay conexión. Por lo 
 - **«Atajos de teclado · Alt»** cierra el panel y llama `show()` del primer `<nx-keytips>`; sin uno,
   `nx-account-select {id: "shortcuts"}`.
 - **Paleta de comandos:** `<nx-command account="id">` suma `commands` (entradas planas, para que
-  «oscuro», «océano» o «bogotá» las encuentren desde la raíz). Quien ejecuta es la cuenta, que oye
+  «oscuro», «océano» o «bogotá» las encuentren desde la raíz). `commands` devuelve el mismo arreglo
+  mientras no cambien los textos, las paletas, las empresas, los idiomas ni `view-as-source`: la
+  paleta abierta lo compara en cada tecla y, si la cuenta cambió, lo lee de nuevo. Quien ejecuta es la cuenta, que oye
   `nx-command-select` en `document` y solo actúa sobre entradas con su `data.account` (si la app no lo
   canceló).
 - **Clics dentro del menú:** los botones de la cuenta usan `data-k` y nunca `data-nx-key`/`data-nx-back`,
@@ -105,14 +117,23 @@ cerrar sesión con cambios en cola ocurre justo cuando no hay conexión. Por lo 
 La galería guarda tema y paleta en `nx32-elements-gallery-theme` y `nx32-elements-gallery-palette`. La
 demo va con `storage="none"` y, en `nx-account-theme`, escribe esas claves y marca sus botones: así no
 hay dos preferencias peleándose. La demo registra `/demo/account/extend` y `/demo/account/people?q=`
-con `addDemoRoute`, y le pone `account="acc"` al `#cmd` de la galería.
+con `addDemoRoute`, y le pone `account="acc"` al `#cmd` de la galería. Los cambios en cola van a una
+cola de verdad, `createSync({name: "nx-sync:demo-cuenta"})` en memoria, con un «servidor» que tarda 4 s
+por envío; la cuenta la toma con `sync="nx-sync:demo-cuenta"`.
 
-## No verificado (sin navegador)
+## Verificado en navegador (`e2e/account.spec.ts`, Chromium y Firefox)
 
-- El diseño (panel, hoja móvil, riel compacto, modo oscuro, las 9 paletas), axe y contraste.
-- La transición circular real (`startViewTransition` + `clip-path` en `::view-transition-new(root)`).
-- La posición del panel con medidas reales, y que no quede detrás de la franja de «Ver como».
-- El envío real del formulario `POST` de salida (cookies `SameSite`, el token) contra un servidor.
-- La marca de la tarjeta cuando la franja no carga, y si un `import()` fallido se reintenta de verdad
-  (algunos navegadores recuerdan el fallo del módulo hasta recargar).
-- `requestIdleCallback` real para traer el panel y el primer clic «en frío».
+- Sin rastro del bloqueo; «Ver como» entra y sale; cancelar la salida deja la franja.
+- Con «Ver como» y una ventana de 700 px, el panel queda debajo de la franja y dentro de la pantalla.
+- El contorno de reserva de la tarjeta, con 3:1 o más en claro y oscuro.
+- El `POST` de salida lleva la cookie `SameSite=Lax` y `_csrf`, sin abrir otra pestaña con
+  `<base target="_blank">`; `logout-method="get"` navega.
+- Con el panel abierto y la cola vaciándose, el panel no se rehace y el puntero sigue encima.
+- Avatar con URL rota: iniciales en la tarjeta, el panel y la lista de «Ver como».
+- axe en la tarjeta, el panel y la franja (`e2e/a11y.spec.ts`).
+
+## No verificado
+
+- Con un lector de pantalla real: que no pierda la posición en el panel mientras la cola se vacía.
+- El diseño en WebKit, la hoja móvil en un celular, la transición circular real y
+  `requestIdleCallback` real para el primer clic «en frío».

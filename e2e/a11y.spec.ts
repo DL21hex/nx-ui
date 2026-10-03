@@ -97,6 +97,29 @@ test("launcher, en reposo y filtrado", async ({ page }) => {
   await audit(page, ['[data-la-demo="compras"] nx-launcher']);
 });
 
+test("cuenta: tarjeta, panel abierto y la franja de «Ver como»", async ({ page }) => {
+  await open(page, "#/account");
+  const card = page.locator("#acc .nx-account__card");
+  await expect(card).toBeVisible();
+  await audit(page, ["#acc"]);
+  await card.click();
+  await expect(page.locator("#acc .nx-account__head")).toBeVisible();
+  await audit(page, ["#acc"]);
+  await page.locator('#acc [data-k="viewas"]').click();
+  await page.locator("#acc .nx-account__opt").first().click();
+  await expect(page.locator(".nx-viewas")).toBeVisible();
+  await audit(page, ["#acc", ".nx-viewas"]);
+});
+
+test("paleta de comandos dentro de un submenú (la caja se describe con «En: …»)", async ({ page }) => {
+  await open(page, "#/command");
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("cambiar pa");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#cmd .nx-command__crumb")).toHaveText("Cambiar paleta");
+  await audit(page, ["#cmd"]);
+});
+
 test("desglose de una cifra", async ({ page }) => {
   await open(page, "#/explain");
   await page.locator("nx-explain[endpoint*=factura]").click();

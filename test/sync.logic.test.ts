@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ago, backoff, classify, cleanConflict, cleanFields, cleanInput, countdown, createSync, diffFields, errorText, fieldLabel, flatten, memoryStore, midDiff, plural, resolveBody, retryAfter } from "../src/components/sync/logic";
+import { ago, backoff, classify, cleanConflict, cleanFields, cleanInput, countdown, createSync, diffFields, nxSync, onSyncQueue, syncQueue, errorText, fieldLabel, flatten, memoryStore, midDiff, plural, resolveBody, retryAfter } from "../src/components/sync/logic";
 import type { SyncEvent, SyncOp, SyncOptions } from "../src/components/sync/types";
 
 describe("SSR", () => {
@@ -422,5 +422,35 @@ describe("createSync: la cola", () => {
     await q.enqueue(pedido(1));
     await tick();
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe("colas por nombre", () => {
+  const quiet = { store: memoryStore(), locks: null, channel: null, network: () => false };
+
+  it("syncQueue(): nxSync sin nombre o con «nx-sync»; una con nombre propio, la última creada", () => {
+    expect(syncQueue()).toBe(nxSync);
+    expect(syncQueue("nx-sync")).toBe(nxSync);
+    expect(syncQueue("nx-sync:sin-crear")).toBeUndefined();
+    const a = createSync({ ...quiet, name: "nx-sync:ana" });
+    expect(syncQueue("nx-sync:ana")).toBe(a);
+    const b = createSync({ ...quiet, name: "nx-sync:ana" });
+    expect(syncQueue("nx-sync:ana")).toBe(b);
+    // Una de prueba sin nombre no reemplaza la de la página.
+    createSync(quiet);
+    expect(syncQueue()).toBe(nxSync);
+  });
+
+  it("onSyncQueue() avisa al crearse (o enseguida) y se puede dejar de esperar", () => {
+    const got: unknown[] = [];
+    const off = onSyncQueue("nx-sync:luis", (q) => got.push(q));
+    const cancel = onSyncQueue("nx-sync:luis", () => got.push("cancelada"));
+    cancel();
+    expect(got).toEqual([]);
+    const q = createSync({ ...quiet, name: "nx-sync:luis" });
+    expect(got).toEqual([q]);
+    off();
+    onSyncQueue("nx-sync:luis", (x) => got.push(x));
+    expect(got).toEqual([q, q]);
   });
 });

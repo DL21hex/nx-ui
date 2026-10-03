@@ -2,8 +2,9 @@
  * Demo de `<nx-account>`: un ERP pequeño (menú de 5 pantallas) con la tarjeta de Diego Llinás al pie.
  *
  * La API es de mentira y vive en esta pestaña (`addDemoRoute("/demo/account", …)`): extender la
- * sesión y buscar personas para «Ver como…». Los cambios sin sincronizar los
- * simula una cola falsa que se pasa en `sync` (se vacía sola al enviar, salvo «Sin conexión»).
+ * sesión y buscar personas para «Ver como…». Los cambios sin sincronizar van a una cola de verdad
+ * (`createSync({name: "nx-sync:demo-cuenta"})`, en memoria) con un servidor lento (4 s por envío): la
+ * cuenta la toma por su nombre (`sync="nx-sync:demo-cuenta"`). «Sin conexión» corta la red de esa cola.
  *
  * La galería ya guarda su tema y su paleta (`nx32-elements-gallery-theme`/`-palette`): la cuenta va con
  * `storage="none"` y, cuando cambia, escribe esas claves y marca los botones de la galería. Así no
@@ -13,6 +14,7 @@ import "../src/components/account/index";
 import "../src/components/keytips/index";
 import type { NxAccount } from "../src/components/account/index";
 import type { NxSidemenu } from "../src/components/sidemenu/index";
+import { createSync, syncMemoryStore, type SyncQueue } from "../src/components/sync/index";
 import { addDemoRoute } from "./demo-api";
 
 const PEOPLE = [
@@ -26,6 +28,9 @@ const PEOPLE = [
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let routes = false;
+/** La cola de la demo: una por página (la cuenta la busca por su nombre). */
+let queue: SyncQueue | undefined;
+let online = true;
 
 function installRoutes(): void {
   if (routes) return;
@@ -88,40 +93,35 @@ export function mountAccountDemo(root: HTMLElement): void {
   ];
   acc.session = { expiresAt: Date.now() + 25 * 60_000, extendEndpoint: "/demo/account/extend" };
 
-  // ---------------------------------------------------------------- cola de sincronización falsa
-  let pending = 0;
-  let online = true;
-  const subs = new Set<(s: { online: boolean; pending: number }) => void>();
-  const emit = () => subs.forEach((fn) => fn({ online, pending }));
-  let draining = false;
-  acc.sync = {
-    subscribe(fn) {
-      subs.add(fn);
-      fn({ online, pending });
-      return () => subs.delete(fn);
+  // ---------------------------------------------------------------- la cola de esta persona
+  // Una cola por usuario, como en una app de verdad; el «servidor» tarda 4 s por cambio, así se alcanza
+  // a ver el anillo ámbar y a cerrar sesión con pendientes.
+  online = true;
+  queue ??= createSync({
+    name: "nx-sync:demo-cuenta",
+    store: syncMemoryStore(),
+    locks: null,
+    channel: null,
+    network: () => online,
+    fetch: async () => {
+      await sleep(4000);
+      if (!online) throw new TypeError("Sin conexión (demo)");
+      return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
     },
-    async flush() {
-      if (draining) return;
-      draining = true;
-      while (pending > 0 && online) {
-        await sleep(900);
-        if (!online) break;
-        pending--;
-        add(`Sincronizado: queda${pending === 1 ? "" : "n"} ${pending}`);
-        emit();
-      }
-      draining = false;
-    },
-  };
+  });
+  const cola = queue;
+  let n = 0;
+  const off = cola.subscribe((st, ev) => {
+    if (!root.isConnected) return off();
+    if (ev?.type === "done") add(`Sincronizado: queda${st.pending === 1 ? "" : "n"} ${st.pending}`);
+  });
   $("#acc-pending").addEventListener("click", () => {
-    pending = 3;
-    emit();
-    add("3 cambios en cola (sin enviar)");
+    for (let i = 0; i < 3; i++) void cola.enqueue({ method: "POST", url: "/demo/account/cambios", body: { n: ++n }, label: `Cambio ${n}` });
+    add("3 cambios en cola (el servidor tarda 4 s por cada uno)");
   });
   $<HTMLInputElement>("#acc-offline").addEventListener("change", (e) => {
     online = !(e.target as HTMLInputElement).checked;
-    emit();
-    if (online && pending) void acc.sync!.flush();
+    void cola.check();
   });
   $("#acc-expire").addEventListener("click", () => {
     acc.session = { expiresAt: Date.now() + 60_000, extendEndpoint: "/demo/account/extend" };

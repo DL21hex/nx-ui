@@ -9,10 +9,12 @@ describe("<Account> de Solid", () => {
     const root = document.body.appendChild(document.createElement("div"));
     const onSelect = vi.fn();
     const onLogout = vi.fn();
-    const dispose = render(() => <Account user={{ name: "Ana" }} logoutUrl="/salir" logoutMethod="get" logoutCsrf="t0k" onSelect={onSelect} onLogout={onLogout} />, root);
+    const dispose = render(() => <Account user={{ name: "Ana" }} logoutUrl="/salir" logoutMethod="get" logoutCsrf="t0k" sync="nx-sync:ana" onSelect={onSelect} onLogout={onLogout} />, root);
     const el = root.querySelector("nx-account")!;
     expect(el.getAttribute("logout-method")).toBe("get");
     expect(el.getAttribute("logout-csrf")).toBe("t0k");
+    // La cola va por su nombre (un atributo), no como objeto.
+    expect(el.getAttribute("sync")).toBe("nx-sync:ana");
     const inner = el.querySelector(".nx-account__card")!;
     inner.dispatchEvent(new CustomEvent("nx-account-select", { detail: { id: "de-dentro" }, bubbles: true }));
     inner.dispatchEvent(new CustomEvent("nx-account-logout", { detail: { pending: 0 }, bubbles: true, cancelable: true }));
