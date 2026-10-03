@@ -74,6 +74,20 @@ describe("<nx-notice>", () => {
     n.tone = "warning";
     expect(n.querySelectorAll(".nx-notice__icon")).toHaveLength(1);
   });
+
+  it("un atributo que no cambia el texto no reemplaza los nodos de texto (la región no se vuelve a anunciar)", () => {
+    const n = mount('<nx-notice text="Vence pronto" action="Renovar"></nx-notice>') as NxNotice;
+    const text = n.querySelector(".nx-notice__text")!.firstChild;
+    const act = n.querySelector(".nx-notice__act")!.firstChild;
+    n.setAttribute("action-href", "/renovar");
+    n.tone = "warning";
+    expect(n.querySelector(".nx-notice__text")!.firstChild).toBe(text);
+    // La acción pasó a enlace (otro nodo); el siguiente cambio ya no la toca.
+    const link = n.querySelector(".nx-notice__act")!.firstChild;
+    expect(link).not.toBe(act);
+    n.setAttribute("action-href", "/renovar/2");
+    expect(n.querySelector(".nx-notice__act")!.firstChild).toBe(link);
+  });
 });
 
 describe("<nx-badge>", () => {

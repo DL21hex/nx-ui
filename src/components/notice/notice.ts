@@ -72,7 +72,8 @@ export class NxNotice extends Base {
     const text = this.getAttribute("text");
     if (text !== null) {
       this.#text ??= h("span", { class: "nx-notice__text" });
-      this.#text.textContent = text;
+      // Solo si cambió: reemplazar el texto de una región `status` puede hacer que se vuelva a anunciar.
+      if (this.#text.textContent !== text) this.#text.textContent = text;
     } else this.#text?.remove();
 
     const label = this.getAttribute("action");
@@ -87,7 +88,7 @@ export class NxNotice extends Base {
       });
     }
     if (this.#act) {
-      this.#act.textContent = label;
+      if (this.#act.textContent !== label) this.#act.textContent = label;
       if (href) this.#act.setAttribute("href", href);
     }
 
