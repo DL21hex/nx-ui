@@ -124,6 +124,21 @@ describe("pintado", () => {
     expect(svg.getAttribute("aria-hidden")).toBe("true");
   });
 
+  it("el medidor se oye: su porcentaje va en texto para el lector y describe la tarjeta", async () => {
+    const el = await mount();
+    const sig = card(el, "ces").querySelector<HTMLElement>(".nx-launcher__signal")!;
+    const sr = sig.querySelector(".nx-sr-only")!;
+    expect(sr.textContent).toMatch(/^71\s?%$/); // con el locale (es-CO)
+    expect(sr.closest("[aria-hidden]")).toBeNull();
+    expect(link(el, "ces").getAttribute("aria-describedby")).toContain(sig.id);
+  });
+
+  it("las vistas ocultas con puntero siguen en el árbol de accesibilidad (sin visibility: hidden)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const css = readFileSync("src/components/launcher/launcher.css", "utf8");
+    expect(css).not.toMatch(/visibility\s*:\s*hidden/);
+  });
+
   it("destacada: dos columnas, línea superior y barra por partes con su leyenda", async () => {
     const el = await mount("", [
       {
@@ -152,6 +167,17 @@ describe("pintado", () => {
     const el = await mount("", [{ id: "x", label: "Malo", href: "javascript:alert(1)" }]);
     expect(link(el, "x").tagName).toBe("BUTTON");
     expect(el.querySelector("[href^='javascript']")).toBeNull();
+  });
+
+  it("si la primera vista tiene un href inseguro, la tarjeta va a la primera segura", async () => {
+    const el = await mount("", [{ id: "x", label: "Mixta", views: [{ label: "Mala", href: "javascript:x" }, { label: "Buena", href: "/ok" }] }]);
+    expect(link(el, "x").tagName).toBe("A");
+    expect(link(el, "x").getAttribute("href")).toBe("/ok");
+  });
+
+  it("un nombre con «$'» o «$&» se escribe tal cual en los textos", async () => {
+    const el = await mount("", [{ id: "x", label: "Pagos $' extra", views: [{ label: "Una", href: "/u" }] }]);
+    expect(card(el, "x").querySelector("ul.nx-launcher__views")!.getAttribute("aria-label")).toBe("Vistas de Pagos $' extra");
   });
 
   it("el texto del backend nunca se interpreta como HTML", async () => {
@@ -347,6 +373,16 @@ describe("buscador", () => {
     otro.focus();
     key(otro, "p");
     expect(document.activeElement).toBe(otro);
+  });
+
+  it("el Enter que confirma una composición (IME) no abre nada", async () => {
+    const el = await mount("search");
+    const log = selects(el);
+    const input = el.querySelector<HTMLInputElement>("input")!;
+    input.value = "perm";
+    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true, cancelable: true }));
+    expect(log).toEqual([]);
   });
 
   it("la propiedad query filtra también sin el campo", async () => {

@@ -66,7 +66,11 @@ function toPx(value: string, em: number): number {
 }
 
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-const isField = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+/** ¿Se está escribiendo en un campo? El origen real del evento: uno dentro de un shadow DOM llega reapuntado a su host. */
+const isField = (e: Event) => {
+  const t = e.composedPath?.()[0] ?? e.target;
+  return t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+};
 
 export class NxLauncher extends Base {
   static observedAttributes = ["items", "labels", "search", "columns", "heading-level", "locale"];
@@ -464,7 +468,11 @@ export class NxLauncher extends Base {
       }
       el.append(svg);
     }
-    if (meter !== null) el.append(h("span", { class: "nx-launcher__meter", "aria-hidden": "true" }, h("i", { style: `inline-size:${meter}%` })));
+    if (meter !== null) {
+      // La barra se ve; el lector oye el porcentaje («71 %»), que también describe la tarjeta.
+      const pct = new Intl.NumberFormat(resolveLocale(this), { style: "percent", maximumFractionDigits: 1 }).format(meter / 100);
+      el.append(h("span", { class: "nx-launcher__meter", "aria-hidden": "true" }, h("i", { style: `inline-size:${meter}%` })), h("span", { class: "nx-sr-only" }, pct));
+    }
     return el;
   }
 
@@ -578,6 +586,8 @@ export class NxLauncher extends Base {
   #onKey = (e: KeyboardEvent): void => {
     const t = e.target as HTMLElement;
     if (t === this.#input) {
+      // Enter o las flechas que confirman una composición (IME: japonés, chino) son de la composición.
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === "Enter") {
         const el = this.#targetEl();
         if (el) {
@@ -610,7 +620,7 @@ export class NxLauncher extends Base {
   #onTypeAhead = (e: KeyboardEvent): void => {
     const input = this.#input;
     if (!this.search || !input || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key.length !== 1 || e.key === " " || isField(e.target)) return;
+    if (e.key.length !== 1 || e.key === " " || isField(e)) return;
     const active = document.activeElement;
     if (active && active !== document.body && !this.contains(active)) return;
     input.focus();
