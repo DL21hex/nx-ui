@@ -4,7 +4,8 @@
 // números que llegan como texto, el tope de reintentos, `row-key` que no cambia la clave efectiva,
 // quitar `source` con un bloque en camino, el aviso de exportar que no pisa el de una vista, listas
 // de filtros cambiadas en su lugar, la búsqueda que no rehace su lista en cada clic y el CRC de la
-// hoja calculado por partes.
+// hoja calculado por partes. Y lo del segundo repaso: bloques agotados que se vuelven a pedir, la
+// misma consulta que no se repite y el valor nuevo en un campo abierto sin tocar.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GridColumn, GridRow, NxGrid } from "../src/index";
 import "../src/index";
@@ -100,6 +101,64 @@ describe("modo servidor", () => {
     expect(fetch).toHaveBeenCalledTimes(6);
   });
 
+  it("un bloque del medio que agotó sus intentos se vuelve a pedir al desplazarse, si el servidor volvió", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "requestAnimationFrame", "cancelAnimationFrame"] });
+    const all = Array.from({ length: 1000 }, (_, i) => ({ id: String(i), oc: `OC-${i}`, prov: "x", monto: i }));
+    let down = true;
+    const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const q = JSON.parse(init.body as string);
+      if (down && q.offset >= 100) return new Response("x", { status: 500 });
+      return new Response(JSON.stringify({ rows: all.slice(q.offset, q.offset + q.limit), total: all.length }));
+    });
+    vi.stubGlobal("fetch", fetch);
+    document.body.innerHTML = '<nx-grid source="/datos"></nx-grid>';
+    const el = document.querySelector("nx-grid")!;
+    el.columns = COLS;
+    await vi.advanceTimersByTimeAsync(50);
+    const middle = () => fetch.mock.calls.filter((c) => JSON.parse((c[1] as RequestInit).body as string).offset >= 100).length;
+    const to = async (r: number) => {
+      scroll(el).scrollTop = r * 32;
+      scroll(el).dispatchEvent(new Event("scroll"));
+      await vi.advanceTimersByTimeAsync(50);
+    };
+    await to(150);
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(middle()).toBe(5);
+    expect(el.querySelectorAll(".nx-grid__rows .is-loading").length).toBeGreaterThan(0);
+    // El servidor vuelve y la persona se desplaza: otra tanda, y las filas llegan.
+    down = false;
+    await to(160);
+    expect(middle()).toBe(6);
+    expect(el.querySelectorAll(".nx-grid__rows .is-loading")).toHaveLength(0);
+    expect(el.querySelector('[data-r="160"]')!.textContent).toContain("OC-160");
+  });
+
+  it("reasignar los mismos filtros u orden no vuelve a pedir ni cierra la edición abierta", async () => {
+    const all = Array.from({ length: 3 }, (_, i) => ({ id: String(i), oc: `OC-${i}`, prov: "x", monto: i }));
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ rows: all, total: all.length })));
+    vi.stubGlobal("fetch", fetch);
+    document.body.innerHTML = '<nx-grid source="/datos"></nx-grid>';
+    const el = document.querySelector("nx-grid")!;
+    el.columns = COLS;
+    el.filters = [{ key: "prov", op: "in", values: ["x"] }];
+    el.sort = { key: "monto", dir: -1 };
+    await sleep(10);
+    const n = fetch.mock.calls.length;
+    key(el, "F2");
+    input(el)!.value = "A MEDIAS";
+    // Una app BDUI que repinta con el mismo estado.
+    el.filters = [{ key: "prov", op: "in", values: ["x"] }];
+    el.sort = { key: "monto", dir: -1 };
+    await sleep(10);
+    expect(fetch.mock.calls.length).toBe(n);
+    expect(input(el)!.value).toBe("A MEDIAS");
+    // Otra consulta sí se pide (y la edición se guarda antes).
+    el.sort = { key: "monto", dir: 1 };
+    await sleep(10);
+    expect(fetch.mock.calls.length).toBe(n + 1);
+    expect(input(el)).toBeNull();
+  });
+
   it("quitar `source` con un bloque en camino: al llegar no se mezcla con las filas del cliente", async () => {
     let answer!: (r: Response) => void;
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((r) => (answer = r))));
@@ -118,6 +177,40 @@ describe("modo servidor", () => {
     el.selected = ["s1", "2"];
     expect(el.selectedRows.map((r) => r.oc)).toEqual(["OC-2"]);
     expect([...el.querySelectorAll('.nx-grid__row > [data-c="0"]')].map((x) => x.textContent)).toEqual(["OC-1", "OC-2", "OC-3"]);
+  });
+});
+
+describe("una edición abierta cuando la app trae datos", () => {
+  it("sin tocar el campo, muestra el valor nuevo de la celda; con algo escrito, lo deja", () => {
+    const el = mount();
+    const got: unknown[] = [];
+    el.addEventListener("nx-grid-change", (e) => got.push(...e.detail.changes));
+    key(el, "F2");
+    expect(input(el)!.value).toBe("OC-1");
+    el.rows = [{ ...ROWS[0], oc: "OC-1 (servidor)" }, ROWS[1], ROWS[2]];
+    expect(input(el)!.value).toBe("OC-1 (servidor)");
+    // Salir sin tocarlo no cambia nada.
+    enter(el);
+    expect(got).toEqual([]);
+    expect(el.rows[0].oc).toBe("OC-1 (servidor)");
+    key(el, "ArrowUp");
+    key(el, "F2");
+    input(el)!.value = "MIO";
+    el.rows = [{ ...ROWS[0], oc: "OTRO" }, ROWS[1], ROWS[2]];
+    expect(input(el)!.value).toBe("MIO");
+  });
+
+  it("si la columna deja de ser editable, lo escrito se descarta y el aviso no dice que la fila se fue", async () => {
+    const el = mount();
+    key(el, "F2");
+    input(el)!.value = "NADA";
+    el.columns = COLS.map((c) => (c.key === "oc" ? { ...c, editable: false } : c));
+    expect(input(el)).toBeNull();
+    expect(el.rows[0].oc).toBe("OC-1");
+    await Promise.resolve();
+    const said = el.querySelector('[role="status"]')!.textContent!;
+    expect(said).toBe(el.labels.editLost);
+    expect(said).not.toMatch(/fila/i);
   });
 });
 
@@ -200,8 +293,11 @@ describe("filtros y búsqueda", () => {
 
   it("un texto largo se pliega bien sin guardarse en la memoria compartida", () => {
     const long = "Observación Ñandú ".repeat(40);
+    const set = vi.spyOn(Map.prototype, "set");
     expect(foldValue(long)).toBe("observacion nandu ".repeat(40));
-    expect(foldValue("Ñandú")).toBe("nandu");
+    expect(set.mock.calls.some((c) => c[0] === long)).toBe(false);
+    expect(foldValue("Ñandú corto")).toBe("nandu corto");
+    expect(set.mock.calls.some((c) => c[0] === "Ñandú corto")).toBe(true);
   });
 });
 
@@ -216,6 +312,11 @@ describe("el aviso sin filas", () => {
     const cell = empty.querySelector<HTMLElement>(':scope > [role="gridcell"]')!;
     expect(cell.querySelector("button")).not.toBeNull();
     expect([...empty.children]).toEqual([cell]);
+    // La cabecera y el aviso: no «fila 2 de 1». La celda abarca las tres columnas.
+    expect(scroll(el).getAttribute("aria-rowcount")).toBe("2");
+    expect(cell.getAttribute("aria-colspan")).toBe("3");
+    el.filters = [];
+    expect(scroll(el).getAttribute("aria-rowcount")).toBe("4");
   });
 });
 

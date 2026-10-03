@@ -392,9 +392,10 @@ Una tabla de datos que se explora sola:
   su id), el campo se queda abierto, con lo escrito y el cursor, en el lugar nuevo de la fila (la
   tabla la sigue si se movió). Si la fila ya no se ve (quedó filtrada, en una columna escondida), lo
   escrito se guarda en ella; si ya no está en los datos (o sin `row-key` llegaron filas nuevas, y la
-  posición no dice cuál era), se descarta y se anuncia (`labels.editLost`). Con `source`, otra
-  consulta trae otras filas: la edición se guarda antes de pedirla. Abrir una celda y salir sin
-  tocarla no cambia nada.
+  posición no dice cuál era), se descarta y se anuncia (`labels.editLost`). Si la app trae otro
+  valor para la celda abierta y el campo sigue sin tocar, el campo muestra el nuevo. Con `source`,
+  otra consulta trae otras filas: la edición se guarda antes de pedirla (reasignar los mismos
+  filtros u orden no pide nada). Abrir una celda y salir sin tocarla no cambia nada.
 - **Teclado.** La tabla es una sola parada de Tab (el patrón grid de la APG): flechas entre celdas,
   ↑ desde la primera fila sube a las cabeceras y ←/→ (Inicio, Fin) las recorren; ahí Enter ordena,
   Alt+↓ abre el filtro, Ctrl+←/→ cambia el ancho (Mayús, de a más), Supr lo devuelve y ↓ vuelve a
@@ -424,8 +425,9 @@ Una tabla de datos que se explora sola:
   al desplazarse, y el backend devuelve los agregados. En el servidor, el filtro de una columna
   espera 250 ms tras el último cambio antes de pedir. Si un bloque no llega, sale `nx-grid-error` y
   se vuelve a pedir más tarde (1 s, 2 s, 4 s… hasta 30 s), hasta cinco intentos: con el servidor
-  caído, la tabla no sigue pidiendo para siempre, y después solo «Reintentar» o `refresh()`. Si es
-  el primero, la tabla lo dice con «Reintentar». Se guardan hasta 50 bloques: los más lejanos a la vista se sueltan. Cambiar la
+  caído, la tabla no sigue pidiendo para siempre. Esos bloques vuelven a pedirse (otra tanda) al
+  desplazarse o cuando llega bien otro bloque, y siempre con `refresh()`; si es el primero, la
+  tabla lo dice con «Reintentar». Se guardan hasta 50 bloques: los más lejanos a la vista se sueltan. Cambiar la
   consulta o sacar la tabla del DOM corta lo que estaba en camino.
 - **O que la tabla elija.** Con `source` y `client-max="20000"`, la primera página dice el total:
   si pasa del tope, sigue en el servidor sin pedir nada más; si cabe, trae la consulta completa una
@@ -467,7 +469,9 @@ Una tabla de datos que se explora sola:
 - **Locale.** Números, montos, fechas, lo que se escribe en una celda y el orden alfabético salen
   de `Intl` con `locale` («es-CO», «en-US», «pt-BR»…; por defecto, el `lang` de la página). Un
   `currency` ISO («COP», «USD») usa el formato de moneda del locale. Los textos de la interfaz van
-  aparte, en `labels`.
+  aparte, en `labels`. Los números de las filas deben llegar como `number`: un texto con punto y
+  grupos de tres («1.250», un `Decimal` serializado con tres decimales) se lee como miles (1250);
+  como texto, sirve con coma decimal («1,25») o sin esa ambigüedad («0.125», «1250.5»).
 
 ```js
 grid.columns = [

@@ -96,7 +96,7 @@ export const GRID_LABELS: GridLabels = {
   redo: "Rehacer",
   undone: "Deshecho",
   redone: "Rehecho",
-  editLost: "La fila que se editaba ya no está: no se guardó lo escrito",
+  editLost: "Lo que se editaba ya no está: no se guardó lo escrito",
   views: "Vistas",
   columns: "Columnas",
   saveView: "Guardar como vista",
@@ -372,6 +372,8 @@ export class NxGrid extends Base {
   #retry?: ReturnType<typeof setTimeout>;
   #retryAt = 0;
   #loadError = false;
+  /** La consulta que se pidió la última vez (ver `#refilter`). */
+  #asked = "";
   /** Los agregados de la última página pintados: un bloque que trae los mismos no repinta la barra. */
   #pageSig = "";
   /** `client-max`: la consulta completa se trajo y se filtra aquí (`local`); ya se miró el total (`decided`). */
@@ -770,6 +772,7 @@ export class NxGrid extends Base {
     else if (this.#resume) {
       // Al salir del DOM quedó una petición cortada o un filtro sin pedir: se pide ahora.
       this.#resume = false;
+      this.#asked = "";
       this.#refilter(true);
     } else this.#paintRows(true);
     // Lo escrito en la búsqueda que no alcanzó a aplicarse antes de salir del DOM.
@@ -927,8 +930,11 @@ export class NxGrid extends Base {
    *  `order`: solo cambió cómo se ordenan o agrupan las filas, no cuáles pasan. */
   #refilter(emit: boolean, stage: "filter" | "order" = "filter"): void {
     if (!this.#built) return;
-    if (this.#server) this.#reload();
-    else this.#recompute(stage);
+    // En el servidor, la misma consulta no se vuelve a pedir: una app (BDUI) que reasigna los mismos
+    // filtros u orden en cada repintado guardaba lo escrito a medias y repetía la petición.
+    if (this.#server) {
+      if (JSON.stringify(this.#query()) !== this.#asked) this.#reload();
+    } else this.#recompute(stage);
     this.#clampSel();
     if (this.#live && !this.#server) this.#live.textContent = this.#rowsText();
     if (emit) this.#emit("nx-grid-filter", { filters: this.#filters, sort: this.#sort, groupBy: this.groupBy, search: this.#search.trim(), count: this.#rowCount() });
@@ -1038,6 +1044,7 @@ export class NxGrid extends Base {
     // Las filas de la consulta anterior se sueltan: una edición abierta no puede seguir a la suya.
     this.#settle();
     this.#gen++;
+    this.#asked = JSON.stringify(this.#query());
     // Lo que seguía en camino de la consulta anterior ya no sirve: se corta.
     this.#ac?.abort();
     this.#ac = new AbortController();
@@ -1114,6 +1121,8 @@ export class NxGrid extends Base {
     }
     const rows = raw.filter((r): r is GridRow => !!r && typeof r === "object").map(own);
     this.#fails.delete(block);
+    // El servidor volvió: los bloques que habían agotado sus intentos se piden otra vez.
+    this.#revive();
     if (block === 0) this.#loadError = false;
     this.#index(rows, offset);
     this.#blocks.set(block, rows);
@@ -1158,6 +1167,7 @@ export class NxGrid extends Base {
   /** Se descarta lo del servidor: lo que seguía en camino (y su reintento) y los bloques guardados. */
   #drop(): void {
     this.#gen++;
+    this.#asked = "";
     this.#ac?.abort();
     this.#ac = undefined;
     this.#blocks.clear();
@@ -1169,8 +1179,8 @@ export class NxGrid extends Base {
 
   /** Un bloque no llegó: se dice (`nx-grid-error`; sin filas, en el aviso, con «Reintentar») y se
    *  vuelve a pedir más tarde, cada vez con más espera, hasta `TRIES` veces: con el servidor caído
-   *  del todo, la tabla no sigue pidiendo (ni emitiendo errores) para siempre. Después, o si ya no
-   *  hay a dónde pedir, solo «Reintentar» o `refresh()`. */
+   *  del todo, la tabla no sigue pidiendo (ni emitiendo errores) para siempre. Después, otra tanda
+   *  al desplazarse o cuando otro bloque llega (`#revive`), «Reintentar» o `refresh()`. */
   #failed(block: number, error: unknown): void {
     const n = (this.#fails.get(block)?.n ?? 0) + 1;
     const again = n < TRIES && !!this.#url("source");
@@ -1180,6 +1190,14 @@ export class NxGrid extends Base {
     if (block === 0) this.#loadError = true;
     this.#emit("nx-grid-error", { offset: block * BLOCK, limit: BLOCK, error: String((error as Error)?.message ?? error) });
     this.#paintChrome();
+  }
+
+  /** Los bloques que agotaron sus intentos empiezan otra tanda: cuando otro bloque llega bien (el
+   *  servidor volvió) o cuando la persona se desplaza (los vuelve a mirar). Si no, uno del medio
+   *  quedaba en esqueleto para siempre, sin «Reintentar» (ese solo está en el aviso sin filas). */
+  #revive(): void {
+    if (!this.#fails.size || !this.#url("source")) return;
+    for (const [b, f] of this.#fails) if (f.at === Infinity) this.#fails.delete(b);
   }
 
   /** Vuelve a pintar (y así a pedir los bloques que faltan) en `at`, si no hay ya un intento antes. */
@@ -1734,13 +1752,16 @@ export class NxGrid extends Base {
     );
     // Cabeceras.
     this.#ths.forEach((th, ci) => this.#paintTh(th, this.#columns[ci]));
-    this.#scroll!.setAttribute("aria-rowcount", String(this.#count() + 1));
     // Sin filas todavía porque el servidor no ha respondido: «Cargando…», no una tabla en blanco
     // (parecía que no había datos). Con filas ya contadas, las que faltan se pintan como esqueleto.
     const loading = this.#server && this.#blocks.get(0) === "loading" && !this.#count() && this.#columns.length > 0;
     // Si la primera página no llegó, se dice (no «Cargando…» para siempre) y se ofrece reintentar.
     const failed = !loading && this.#server && this.#loadError && !this.#count() && this.#columns.length > 0;
     this.#empty!.hidden = !loading && !failed && (this.#count() > 0 || !this.#columns.length);
+    // La cabecera y, si se ve, el aviso (su `aria-rowindex` es 2: no «fila 2 de 1»), con su celda a
+    // lo ancho de todas las columnas.
+    this.#scroll!.setAttribute("aria-rowcount", String(this.#count() + (this.#empty!.hidden ? 1 : 2)));
+    this.#emptyCell!.setAttribute("aria-colspan", this.#scroll!.getAttribute("aria-colcount") || "1");
     // Sin filas, las líneas cruzarían el aviso: solo con filas.
     this.#fill!.hidden = !this.#count();
     this.#empty!.classList.toggle("is-loading", loading);
@@ -1981,7 +2002,11 @@ export class NxGrid extends Base {
       }
     }
     if (ed && (ed.r < start || ed.r >= end)) return this.#endEdit(true, 0, 0, false);
-    if (this.#server) for (let b = Math.floor(start / BLOCK); b <= Math.floor(Math.max(start, end - 1) / BLOCK); b++) void this.#load(b);
+    if (this.#server) {
+      // La persona se desplazó: lo que había agotado sus intentos se vuelve a pedir (ver `#revive`).
+      if (old.start >= 0 && (start !== old.start || end !== old.end)) this.#revive();
+      for (let b = Math.floor(start / BLOCK); b <= Math.floor(Math.max(start, end - 1) / BLOCK); b++) void this.#load(b);
+    }
     // Con el alto escalado (ver `MAX_H`) las filas se corren en cada cuadro, no solo al cambiar la ventana.
     box.style.insetBlockStart = `${start * ROW_H - (top - s.scrollTop)}px`;
     const kids = [...box.children] as HTMLElement[];
@@ -2616,9 +2641,8 @@ export class NxGrid extends Base {
     this.#paintSel();
     const cell = this.#cell(this.#act);
     if (!cell) return false;
-    const v = it.r[col.key];
     const input = h("input", { class: "nx-grid__input", "aria-label": col.label, autocomplete: "off", inputmode: isNumeric(col) ? "decimal" : null });
-    const text = v === null || v === undefined ? "" : colType(col) === "status" ? formatCell(v, col, this.#loc) : isNumeric(col) && num(v) !== null ? this.#editText(num(v)!) : String(v);
+    const text = this.#inputText(it.r[col.key], col);
     input.value = initial ?? text;
     const ed: Editing = { r, c, key: col.key, row: it.r, id: this.#ids.get(it.r) ?? "", text: initial === undefined ? text : null, input, quick: initial !== undefined };
     this.#editing = ed;
@@ -2646,6 +2670,11 @@ export class NxGrid extends Base {
     input.focus();
     if (!ed.quick) input.select();
     return true;
+  }
+
+  /** El texto con que el campo abre un valor (y que, sin tocarlo, no cambia nada al salir). */
+  #inputText(v: unknown, col: GridColumn): string {
+    return v === null || v === undefined ? "" : colType(col) === "status" ? formatCell(v, col, this.#loc) : isNumeric(col) && num(v) !== null ? this.#editText(num(v)!) : String(v);
   }
 
   /** Un número como texto que el campo vuelve a leer igual con el locale de la tabla: sin separador
@@ -2681,6 +2710,15 @@ export class NxGrid extends Base {
       r = at && "r" in at && at.r === row ? ed.r : this.#indexOf(row);
     }
     if (r >= 0) {
+      // Sin tocar el campo, el valor nuevo que trajo la app se ve en él: si no, lo que la persona
+      // escribiera a partir del viejo pisaría el cambio sin que se enterara.
+      const fresh = this.#inputText(row![col!.key], col!);
+      if (ed.text !== null && ed.input.value === ed.text && fresh !== ed.text) {
+        const { input } = ed;
+        const all = input.selectionStart === 0 && input.selectionEnd === input.value.length;
+        input.value = ed.text = fresh;
+        if (all) input.select();
+      }
       ed.row = row!;
       ed.r = r;
       ed.c = c;
