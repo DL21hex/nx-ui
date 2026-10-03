@@ -1,5 +1,14 @@
 # Registro de cambios
 
+## 0.2.2 — 2026-10-03
+
+### `<nx-account>`
+
+- **`appearance="false"`** (en Solid, `appearance={false}`): quita Tema y Color del panel y de la
+  paleta de comandos, y la cuenta deja de tocar `<html>` (`data-theme`, `data-nx-palette`), tampoco
+  con lo que alguien guardó antes. Para una app que maneja su propia apariencia; los recientes de
+  empresa se siguen leyendo de `storage`.
+
 ## 0.2.1 — 2026-10-03
 
 ### `<nx-grid>`

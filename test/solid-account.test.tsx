@@ -26,4 +26,12 @@ describe("<Account> de Solid", () => {
     dispose();
     root.remove();
   });
+
+  it("appearance={false} llega como atributo, para que el SSR lo pinte y el elemento lo vea al conectar", () => {
+    const root = document.body.appendChild(document.createElement("div"));
+    const dispose = render(() => <Account user={{ name: "Ana" }} appearance={false} />, root);
+    expect(root.querySelector("nx-account")!.getAttribute("appearance")).toBe("false");
+    dispose();
+    root.remove();
+  });
 });

@@ -18,6 +18,8 @@ export interface AccountProps extends Omit<JSX.HTMLAttributes<NxAccount>, "onSel
   palettes?: (string | AccountPalette)[];
   locales?: AccountLocale[];
   storage?: string;
+  /** `false` quita Tema y Color y la cuenta no toca `<html>` (la app maneja su apariencia). */
+  appearance?: boolean;
   applyLocale?: boolean;
   session?: AccountSession | null;
   /** Vencimiento de la sesión (ISO o epoch ms); también sirve `session.expiresAt`. */
@@ -50,7 +52,7 @@ export interface AccountProps extends Omit<JSX.HTMLAttributes<NxAccount>, "onSel
 }
 
 export function Account(props: AccountProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "applyLocale", "session", "expiresAt", "warnBefore", "viewAs", "viewAsSource", "logoutUrl", "logoutMethod", "logoutCsrf", "logoutCsrfField", "sync", "labels", "locale", "disabled", "onSwitch", "onStatus", "onTheme", "onLocale", "onSelect", "onViewAs", "onExtend", "onExpired", "onLogout", "children"]);
+  const [local, rest] = splitProps(props, ["user", "tenants", "current", "status", "items", "palettes", "locales", "storage", "appearance", "applyLocale", "session", "expiresAt", "warnBefore", "viewAs", "viewAsSource", "logoutUrl", "logoutMethod", "logoutCsrf", "logoutCsrfField", "sync", "labels", "locale", "disabled", "onSwitch", "onStatus", "onTheme", "onLocale", "onSelect", "onViewAs", "onExtend", "onExpired", "onLogout", "children"]);
   // Solo los eventos de esta cuenta (`e.target === e.currentTarget`), no los que burbujean desde dentro.
   return (
     <nx-account
@@ -66,6 +68,7 @@ export function Account(props: AccountProps): JSX.Element {
       attr:current={local.current}
       attr:status={local.status}
       attr:storage={local.storage}
+      attr:appearance={local.appearance === false ? "false" : undefined}
       attr:apply-locale={local.applyLocale === false ? "false" : undefined}
       attr:expires-at={local.expiresAt}
       attr:warn-before={local.warnBefore === undefined ? undefined : String(local.warnBefore)}
