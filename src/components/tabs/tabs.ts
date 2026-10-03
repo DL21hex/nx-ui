@@ -14,13 +14,15 @@
  *
  * Como la lista va después de los paneles en el DOM, Tab la recorre primero: con `reading-flow`
  * (tabs.css) donde existe, y si no, lo corrige el componente (dentro de un `<nx-dialog>`, lo hace él).
+ * El lector de pantalla también la lee primero: `aria-owns` ordena el árbol de accesibilidad sin
+ * mover nodos.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
 import { h } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
-import { FOCUSABLE, shown, stepTab, tabOrder } from "../../core/order";
-import type { TabChangeDetail, TabItem, TabsLabels } from "./types";
+import { focusFrom, readingFlow, stepTab, tabOrder } from "../../core/order";
+import type { TabItem, TabsChangeDetail, TabsLabels } from "./types";
 
 export const TABS_LABELS: TabsLabels = { errors: "{n} por corregir" };
 
@@ -43,8 +45,6 @@ function wire(): void {
     true,
   );
 }
-/** El navegador ordena Tab según `order` (tabs.css): no hace falta corregirlo. */
-const readingFlow = () => typeof CSS !== "undefined" && !!CSS.supports?.("reading-flow", "flex-visual");
 
 const num = (v: unknown) => {
   const n = Number(v);
@@ -144,7 +144,7 @@ export class NxTabs extends Base {
   // ---------------------------------------------------------------- interno
 
   #build(): void {
-    this.#list = h("div", { class: "nx-tabs__list", role: "tablist" });
+    this.#list = h("div", { class: "nx-tabs__list", role: "tablist", id: `${this.#uid}-list` });
     this.#list.addEventListener("click", (e) => {
       const b = (e.target as Element).closest<HTMLButtonElement>("[data-v]");
       if (b && !b.disabled) this.#select(b.dataset.v!, false);
@@ -254,6 +254,12 @@ export class NxTabs extends Base {
     // Paneles que ya no tienen pestaña (cambió `tabs`): ocultos.
     for (const p of panels) if (!items.some((t) => this.#panelFor([p], t.value))) p.hidden = true;
     if (this.#list.parentNode !== this) this.append(this.#list);
+    // El árbol de accesibilidad, en el orden en que se ve: la lista y después los paneles. Solo si
+    // todos tienen id (uno sin id quedaría antes de la lista).
+    const kids = [...this.children].filter((el) => el !== this.#list && el.localName !== "template");
+    const owns = this.#list.previousElementSibling && kids.every((el) => el.id) ? [this.#list.id, ...kids.map((el) => el.id)].join(" ") : null;
+    if (owns === null) this.removeAttribute("aria-owns");
+    else if (this.getAttribute("aria-owns") !== owns) this.setAttribute("aria-owns", owns);
     if (focused) this.#list.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
     this.#watch();
   }
@@ -269,12 +275,25 @@ export class NxTabs extends Base {
   #tab(e: KeyboardEvent): void {
     if (e.key !== "Tab" || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || !this.#reorder()) return;
     const back = e.shiftKey;
-    let to = stepTab(this, document.activeElement, back).to;
+    const { els, to, native } = stepTab(this, document.activeElement, back);
+    // Adonde el navegador ya va solo (dentro de un panel), lo hace él.
+    if (native) return;
+    // Si el de destino no acepta el foco, el siguiente en la misma dirección.
+    if (to && focusFrom(els, els.indexOf(to), back, false)) return void e.preventDefault();
     // Sale de las pestañas: si están dentro de otras, esas eligen (el evento les llega después).
-    if (!to && !this.parentElement?.closest("nx-tabs")) to = this.#outside(back) ?? null;
-    if (!to) return;
-    e.preventDefault();
-    to.focus();
+    if (!this.parentElement?.closest("nx-tabs")) this.#leave(back);
+  }
+
+  /** Sale de las pestañas con el Tab del navegador, que sigue con lo de afuera (o con su barra, si son
+   *  lo último de la página): solo se le esconde lo que en el documento queda de ese lado dentro de
+   *  las pestañas y se ve del otro (la lista, que va al final; o los paneles, hacia atrás). */
+  #leave(back: boolean): void {
+    const a = document.activeElement;
+    if (!a) return;
+    const side = back ? Node.DOCUMENT_POSITION_FOLLOWING : Node.DOCUMENT_POSITION_PRECEDING;
+    const skip = [...this.children].filter((el) => !el.contains(a) && !el.hasAttribute("inert") && el.compareDocumentPosition(a) & side);
+    for (const el of skip) el.toggleAttribute("inert", true);
+    setTimeout(() => skip.forEach((el) => el.removeAttribute("inert")));
   }
 
   /** El foco entra con Tab desde afuera: por la lista (hacia adelante) o por el final del panel (hacia atrás). */
@@ -286,13 +305,6 @@ export class NxTabs extends Base {
     if (want && want !== e.target) want.focus();
   }
 
-  /** El primer enfocable después de las pestañas (o el último antes), en el orden del documento. */
-  #outside(back: boolean): HTMLElement | undefined {
-    const all = [...document.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !this.contains(el) && shown(el));
-    const after = (el: Element) => !!(this.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
-    return back ? all.filter((el) => !after(el)).pop() : all.find(after);
-  }
-
   #panelId(panel: HTMLElement, i: number): string {
     if (!panel.id) panel.id = `${this.#uid}-p${i}`;
     return panel.id;
@@ -301,7 +313,7 @@ export class NxTabs extends Base {
   #select(value: string, focus: boolean): void {
     const previous = this.#current;
     if (value === previous) return;
-    const detail: TabChangeDetail = { value, previous };
+    const detail: TabsChangeDetail = { value, previous };
     if (!this.dispatchEvent(new CustomEvent("nx-tabs-change", { detail, bubbles: true, composed: true, cancelable: true }))) return;
     this.#current = value;
     this.#paint();

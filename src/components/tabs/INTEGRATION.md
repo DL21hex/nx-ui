@@ -7,8 +7,11 @@ la lista se quede arriba (en un `<nx-dialog>`, bajo su cabecera: el diálogo pon
 
 Orden de Tab: cuando la lista queda después de los paneles en el DOM (módulo diferido, SSR), Tab la
 recorre igual primero. Lo hace `reading-flow: flex-visual` (tabs.css) donde existe; si no, el
-componente intercepta Tab al entrar, dentro y al salir (`src/core/order.ts`). Dentro de un
-`<nx-dialog>` no hace nada: el diálogo ordena Tab en todo su contenido.
+componente corrige Tab donde el documento no va en el orden en que se ve (al entrar, de la lista al
+panel y al salir, con `src/core/order.ts`) y deja al navegador lo demás (dentro de un panel, o lo que
+sigue afuera). Dentro de un `<nx-dialog>` no hace nada: el diálogo ordena Tab en todo su contenido.
+El lector de pantalla también lee la lista primero: `aria-owns` en `<nx-tabs>` (la lista y luego los
+paneles, si todos sus hijos tienen id) ordena el árbol de accesibilidad sin mover nodos.
 
 Archivos: `tabs.ts`, `types.ts`, `tabs.css`, `index.ts`. Pruebas: `test/tabs.dom.test.ts` (y el caso
 de hijos en `test/solid-children.test.tsx`). Galería: página «Ficha lateral» (`gallery/demo-drawer.ts`).

@@ -22,8 +22,13 @@ export const FOCUSABLE = [
   .map((s) => `${s}:not([tabindex^="-"])`)
   .join(",");
 
-/** Se ve y se puede enfocar: tiene caja y no está dentro de algo `hidden` o `inert`. */
-export const shown = (el: Element): boolean => el.getClientRects().length > 0 && !el.closest("[hidden], [inert]");
+/** Se ve y se puede enfocar: tiene caja, no está dentro de algo `hidden` o `inert` y no lo oculta
+ *  `visibility` (con caja, pero el navegador no lo enfoca). */
+export const shown = (el: Element): boolean =>
+  el.getClientRects().length > 0 && !el.closest("[hidden], [inert]") && (el.checkVisibility?.({ visibilityProperty: true }) ?? true);
+
+/** El navegador recorre con Tab el orden en que se ve (`reading-flow`, Chrome 137+). */
+export const readingFlow = (): boolean => typeof CSS !== "undefined" && !!CSS.supports?.("reading-flow", "flex-visual");
 
 /** Compara dos nodos de `root` por el orden en que se ven: el del documento, salvo que un
  *  contenedor flex o grid reordene a sus hijos con `order`. */
@@ -71,7 +76,8 @@ export function tabOrder(root: Element): HTMLElement[] {
   const groups = new Map<HTMLFormElement | null, Map<string, HTMLInputElement[]>>();
   const all: HTMLInputElement[][] = [];
   const els = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => {
-    if (!shown(el)) return false;
+    // `:disabled` también alcanza lo de adentro de un `<fieldset disabled>` y un `<button disabled tabindex="0">`.
+    if (!shown(el) || el.matches(":disabled")) return false;
     if (el instanceof HTMLInputElement && el.type === "radio" && el.name) {
       let byName = groups.get(el.form);
       if (!byName) groups.set(el.form, (byName = new Map()));
@@ -92,18 +98,51 @@ export function tabOrder(root: Element): HTMLElement[] {
 
 /** A dónde va el foco con Tab (o Mayús+Tab, `back`) desde `from`, en el orden en que se ve `root`.
  *  `to` es `null` si sale de `root` (desde su último o su primer enfocable, o si no hay ninguno);
- *  desde fuera de `root` (o desde `root` mismo), entra por el primero o por el último. */
-export function stepTab(root: Element, from: Element | null, back: boolean): { els: HTMLElement[]; to: HTMLElement | null } {
+ *  desde fuera de `root` (o desde `root` mismo), entra por el primero o por el último.
+ *
+ *  `native`: el navegador ya va a `to` por su cuenta (es el de al lado en el documento, o lo ordena
+ *  `reading-flow`), así que no hace falta evitar su Tab. Dejarlo hace que recorra también lo que hay
+ *  dentro de un control (los segmentos de una fecha, un shadow DOM) y salte lo que no se enfoca. */
+export function stepTab(root: Element, from: Element | null, back: boolean): { els: HTMLElement[]; to: HTMLElement | null; native: boolean } {
   const els = tabOrder(root);
   const n = els.length;
-  if (!from || from === root || !root.contains(from)) return { els, to: (back ? els[n - 1] : els[0]) ?? null };
+  if (!from || from === root || !root.contains(from)) return { els, to: (back ? els[n - 1] : els[0]) ?? null, native: false };
   let i = els.indexOf(from as HTMLElement);
   if (i >= 0) i += back ? -1 : 1;
   else {
-    // Un nodo que no está en la lista (`tabindex="-1"`): se ubica entre los que sí.
+    // Un nodo que no está en la lista (`tabindex="-1"`, un host con shadow DOM): se ubica entre los que sí.
     const cmp = comparer(root);
     const after = els.findIndex((el) => cmp(from, el) < 0);
     i = after < 0 ? (back ? n - 1 : n) : back ? after - 1 : after;
   }
-  return { els, to: els[i] ?? null };
+  const to = els[i] ?? null;
+  // Un `tabindex` positivo cambia el orden del navegador: ahí no se le deja nada.
+  const native = !!to && !els.some((el) => el.tabIndex > 0) && (readingFlow() || to === beside(els, from, back));
+  return { els, to, native };
+}
+
+/** El de `els` que sigue a `from` (o el de antes, `back`) en el orden del documento: adonde iría el
+ *  navegador. Lo de adentro de `from` va después; lo que lo contiene, antes. */
+function beside(els: HTMLElement[], from: Element, back: boolean): HTMLElement | undefined {
+  const bit = back ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
+  let best: HTMLElement | undefined;
+  for (const el of els) {
+    if (el === from || !(from.compareDocumentPosition(el) & bit)) continue;
+    // El más cercano a `from`: el primero que sigue, o el último que precede.
+    if (!best || !(best.compareDocumentPosition(el) & bit)) best = el;
+  }
+  return best;
+}
+
+/** Enfoca `els[i]` y, si no acepta el foco (algo que el navegador no enfoca aunque lo parezca), el
+ *  siguiente en la misma dirección; con `wrap`, da la vuelta. Devuelve el que quedó con el foco. */
+export function focusFrom(els: HTMLElement[], i: number, back: boolean, wrap: boolean): HTMLElement | null {
+  const n = els.length;
+  for (let k = 0; k < n; k++, i += back ? -1 : 1) {
+    if (wrap) i = (i + n) % n;
+    else if (i < 0 || i >= n) break;
+    els[i].focus();
+    if (document.activeElement === els[i]) return els[i];
+  }
+  return null;
 }

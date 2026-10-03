@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FOCUSABLE, shown } from "../src/core/order";
 import "../src/components/tabs/index";
 import type { NxTabs } from "../src/components/tabs/index";
 
@@ -117,6 +118,23 @@ describe("<nx-tabs>", () => {
     expect(t.querySelector('[role="tablist"]')!.getAttribute("aria-label")).toBe("Secciones del empleado");
   });
 
+  it("el lector de pantalla lee la lista primero: aria-owns con la lista y luego los paneles", async () => {
+    const t = await mount();
+    const list = t.querySelector('[role="tablist"]')!;
+    // Con la lista primero en el DOM no hace falta.
+    expect(t.firstElementChild).toBe(list);
+    expect(t.hasAttribute("aria-owns")).toBe(false);
+    // Como con el módulo diferido (o Solid): la lista, después de los paneles (y algo que repinte).
+    t.append(list);
+    panels(t)[0].dataset.count = "1";
+    await tick();
+    expect(t.getAttribute("aria-owns")!.split(" ")).toEqual([list.id, ...panels(t).map((p) => p.id)]);
+    // Un hijo sin id quedaría antes de la lista: entonces no se ordena.
+    t.insertBefore(document.createElement("p"), list);
+    await tick();
+    expect(t.hasAttribute("aria-owns")).toBe(false);
+  });
+
   it("al repintar, los botones se actualizan en su lugar (no se recrean)", async () => {
     const t = await mount();
     const [b0, , b2] = tabs(t);
@@ -185,21 +203,72 @@ describe("<nx-tabs>: Tab en el orden en que se ve (sin reading-flow)", () => {
     el.dispatchEvent(e);
     return e;
   };
+  /** Tab como en el navegador: si nadie lo evitó, el foco pasa al siguiente enfocable del documento
+   *  que lo acepte (lo `inert` no), o sale de la página. */
+  const press = (shiftKey = false) => {
+    const from = document.activeElement ?? document.body;
+    const e = tab(from, shiftKey);
+    if (e.defaultPrevented) return e;
+    const bit = shiftKey ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
+    const all = [...document.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => shown(el) && !el.matches(":disabled") && from.compareDocumentPosition(el) & bit);
+    for (const el of shiftKey ? all.reverse() : all) {
+      el.focus();
+      if (document.activeElement === el) return e;
+    }
+    (document.activeElement as HTMLElement | null)?.blur();
+    return e;
+  };
 
   it("de la pestaña al panel, del panel a lo que sigue, y Mayús+Tab de vuelta a lo de antes", async () => {
     const t = await mountAround();
     const [b0] = tabs(t);
     const p0 = panels(t)[0];
     b0.focus();
-    expect(tab(b0).defaultPrevented).toBe(true);
+    expect(press().defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(p0);
-    tab(p0);
+    // Dentro del panel, al de al lado en el documento: lo hace el navegador.
+    expect(press().defaultPrevented).toBe(false);
     expect(document.activeElement).toBe(document.getElementById("i"));
-    tab(document.activeElement!);
+    // Al salir, el navegador sigue con lo de afuera sin pasar por la lista (que va después en el DOM).
+    expect(press().defaultPrevented).toBe(false);
     expect(document.activeElement).toBe(document.getElementById("despues"));
+    await tick();
     b0.focus();
-    tab(b0, true);
+    press(true);
     expect(document.activeElement).toBe(document.getElementById("antes"));
+    // Lo que se escondió para ese Tab vuelve enseguida.
+    await tick();
+    expect(t.querySelector("[inert]")).toBeNull();
+  });
+
+  it("si son lo último (o lo primero) de la página, Tab sale de ella en vez de volver a la lista", async () => {
+    const t = await mountAround();
+    document.getElementById("antes")!.remove();
+    document.getElementById("despues")!.remove();
+    const [b0] = tabs(t);
+    document.getElementById("i")!.focus();
+    press();
+    expect(document.activeElement).not.toBe(b0);
+    expect(t.contains(document.activeElement)).toBe(false);
+    await tick();
+    b0.focus();
+    press(true);
+    expect(t.contains(document.activeElement)).toBe(false);
+  });
+
+  it("lo que no acepta el foco (dentro de un <fieldset disabled>) no atasca a Tab", async () => {
+    document.body.innerHTML = `<nx-tabs><section data-tab="Uno" tabindex="-1"><fieldset disabled><button id="dis">No</button></fieldset><input id="i"></section></nx-tabs>`;
+    await tick();
+    const t = document.querySelector("nx-tabs")!;
+    t.append(t.querySelector('[role="tablist"]')!);
+    await tick();
+    const dis = document.getElementById("dis")!;
+    // Como en un navegador (happy-dom no hereda `:disabled` del fieldset).
+    vi.spyOn(dis, "focus").mockImplementation(() => {});
+    const [b0] = tabs(t);
+    b0.focus();
+    expect(press().defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(document.getElementById("i"));
   });
 
   it("al entrar con Tab desde antes, el foco cae en la pestaña activa, no en el panel", async () => {

@@ -18,7 +18,7 @@ import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
-import { FOCUSABLE, stepTab, tabOrder } from "../../core/order";
+import { FOCUSABLE, focusFrom, stepTab, tabOrder } from "../../core/order";
 import type { BadgeTone } from "../badge/types";
 import type { DialogHead } from "./dialog-head";
 import type { CloseReason, DialogAction, DialogLabels, DialogMode, DialogSize } from "./types";
@@ -36,9 +36,10 @@ export const DIALOG_LABELS: DialogLabels = {
 
 const X = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
 /** Las capas que viven fuera del diálogo y pueden tener el foco encima de él: los avisos, la paleta
- *  de comandos y cualquier popover abierto que no sea otro diálogo (la tarjeta de <nx-explain> o de
- *  <nx-trend>, un recorrido), que cuelgan de <body>. */
-const LAYER = "nx-toaster, nx-command, :popover-open:not(nx-dialog)";
+ *  de comandos y un popover abierto que cuelga de <body> y no es otro diálogo (la tarjeta de
+ *  <nx-explain> o de <nx-trend>, un recorrido). De estos últimos, solo los que se abrieron después
+ *  del diálogo (ver `layer()`). */
+const LAYER = "nx-toaster, nx-command, body > :popover-open:not(nx-dialog)";
 /** Cuánto vale «lo último que se pulsó» como origen de un `show()` sin foco (ms). */
 const INVOKER_TTL = 10_000;
 /** Cerrar arrastrando: esta distancia (px), o un gesto rápido. */
@@ -111,7 +112,7 @@ function wire(): void {
     if (lastInvoker && !lastInvoker.contains(t)) lastInvoker = null;
     const top = stack[stack.length - 1];
     // El foco no se escapa del diálogo de arriba (las capas de `LAYER` sí pueden recibirlo).
-    if (top && !top.contains(t) && !t.closest?.(LAYER)) top.focusFirst();
+    if (top && !top.contains(t) && !top.layer(t)) top.focusFirst();
   });
   addEventListener("popstate", () => {
     if (ownBacks > 0) return void ownBacks--;
@@ -191,6 +192,8 @@ export class NxDialog extends Base {
   #pending: { value: string | undefined; reason: CloseReason } | null = null;
   #downOutside = false;
   #drag: { y: number; t: number; id: number } | null = null;
+  /** Los popovers de la página que ya estaban abiertos al abrirse: quedan debajo, el foco no va a ellos. */
+  #under = new Set<Element>();
   /** La entrada de historial que agregó al abrirse (`url`), para que «atrás» lo cierre. */
   pushedState: string | null = null;
   returnValue: string | undefined;
@@ -324,7 +327,9 @@ export class NxDialog extends Base {
     // lo último que se pulsó (Safari no enfoca los botones al hacer clic).
     const active = document.activeElement;
     this.#origin = origin ?? (active && active !== document.body && !this.contains(active) ? active : recentInvoker());
-    this.#promise = new Promise((r) => (this.#resolve = r));
+    // La de esta apertura: si falla en el acto (`showPopover` lanza), `#finish` ya la resolvió y la quitó.
+    const promise = (this.#promise = new Promise((r) => (this.#resolve = r)));
+    this.#under = new Set([...document.body.children].filter((c) => !c.matches("nx-dialog, nx-toaster, nx-command") && popoverOpen(c)));
     stack.push(this);
     const gen = ++this.#gen;
     const update = () => {
@@ -365,7 +370,7 @@ export class NxDialog extends Base {
     // Los paneles se deslizan desde el borde; el modal nace del botón.
     if (this.mode === "modal") morph(this.#origin, this, update);
     else update();
-    return this.#promise;
+    return promise;
   }
 
   /**
@@ -438,7 +443,7 @@ export class NxDialog extends Base {
     if (e.defaultPrevented || (e.key !== "Escape" && e.key !== "Tab")) return;
     // El foco está en una capa de encima (la tarjeta de <nx-explain>): Escape y Tab son de ella.
     const a = document.activeElement;
-    if (a && !this.contains(a) && a.closest(LAYER)) return;
+    if (a && !this.contains(a) && this.layer(a)) return;
     if (e.key === "Escape") {
       // Un popover del autor abierto adentro (un menú propio): Escape lo cierra a él, no al diálogo.
       if (this.#popoverInside()) return;
@@ -448,12 +453,21 @@ export class NxDialog extends Base {
       this.close(undefined, "escape");
     } else {
       // Tab recorre el diálogo en el orden en que se ve (la cabecera, que el componente agrega al
-      // final, va primero; el pie, al final) y da la vuelta en los extremos.
-      const { els, to } = stepTab(this, a, e.shiftKey);
+      // final, va primero; el pie, al final) y da la vuelta en los extremos. Adonde el navegador ya
+      // va solo, lo hace él (así recorre los segmentos de una fecha o un shadow DOM).
+      const back = e.shiftKey;
+      const { els, to, native } = stepTab(this, a, back);
+      if (native) return;
       e.preventDefault();
-      if (!els.length) return this.focus();
-      (to ?? (e.shiftKey ? els[els.length - 1] : els[0])).focus();
+      // Si el de destino no acepta el foco, el siguiente: el foco nunca se queda atascado.
+      if (!focusFrom(els, to ? els.indexOf(to) : back ? els.length - 1 : 0, back, true)) this.focus();
     }
+  }
+
+  /** `el` está en una capa de encima del diálogo (`LAYER`), no en un popover que ya estaba debajo. */
+  layer(el: Element): boolean {
+    const l = el.closest?.(LAYER);
+    return !!l && !this.#under.has(l);
   }
 
   /** El primer campo (o `[autofocus]`); si no hay, el diálogo mismo. */
@@ -652,6 +666,7 @@ export class NxDialog extends Base {
 
   #finish(value: string | undefined, reason: CloseReason, silent = false): void {
     this.#open = false;
+    this.#under.clear();
     const gen = ++this.#gen;
     this.returnValue = value;
     this.#showGuard(false);
