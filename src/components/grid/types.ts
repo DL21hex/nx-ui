@@ -117,6 +117,7 @@ export interface GridLabels {
   searchIn: string;
   enterOnly: string;
   noValues: string;
+  moreValues: string;
   from: string;
   to: string;
   fromValue: string;

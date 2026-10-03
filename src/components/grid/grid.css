@@ -978,12 +978,14 @@ nx-grid .nx-grid__chev {
 
 /* ---------------------------------------------------------------- filtro por columna */
 
+/* `--_left` y `--_top` salen de `getBoundingClientRect`, que es físico: van en `left` y `top` (en
+   RTL, `inset-inline-start` sería la derecha y el panel abriría del lado contrario al embudo). */
 .nx-grid__filter,
 .nx-grid__menu {
   position: fixed;
   inset: auto;
-  inset-block-start: var(--_top, 64px);
-  inset-inline-start: var(--_left, 16px);
+  top: var(--_top, 64px);
+  left: var(--_left, 16px);
   margin: 0;
   border: 1px solid var(--nx-border);
   border-radius: var(--nx-radius-lg);
@@ -1077,9 +1079,22 @@ nx-grid .nx-grid__chev {
   border-end-end-radius: 0;
   color: var(--nx-muted-foreground);
 }
+/* Una opción con «Solo»: la casilla, su texto y el conteo van en el label (toda la fila menos el
+   botón la marca); «Solo» va al lado, fuera del label. */
+.nx-grid__opt-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+  align-self: stretch;
+  cursor: pointer;
+}
 .nx-grid__only {
   display: none;
-  padding: 0;
+  align-items: center;
+  min-block-size: 24px;
+  padding: 0 2px;
   border: 0;
   background: none;
   color: var(--nx-primary-ink);
@@ -1091,11 +1106,11 @@ nx-grid .nx-grid__chev {
     text-decoration: underline;
   }
   .nx-grid__opt:is(:hover, :focus-within) > & {
-    display: inline;
+    display: inline-flex;
   }
 }
 /* Al pasar por una opción, «Solo» ocupa el lugar del conteo. */
-.nx-grid__opt:is(:hover, :focus-within) > .nx-grid__opt-n:has(+ .nx-grid__only) {
+.nx-grid__opt:is(:hover, :focus-within):has(> .nx-grid__only) .nx-grid__opt-n {
   display: none;
 }
 .nx-grid__dot {
@@ -1346,6 +1361,9 @@ nx-grid mark {
 .nx-grid__vpop {
   inline-size: 290px;
   max-inline-size: calc(100vw - 16px);
+  /* Lo pone la tabla: el lugar que hay bajo (o sobre) el botón. */
+  max-block-size: var(--_maxh, 70vh);
+  overflow: auto;
   padding: 6px;
 
   & .nx-grid__f-opts {
@@ -1529,12 +1547,62 @@ nx-grid mark {
     transition: none !important;
   }
 }
+/* Con colores forzados (contraste alto de Windows) el navegador quita los `box-shadow` y cambia los
+   fondos: el foco y la celda activa se marcan con `outline` en colores del sistema. */
 @media (forced-colors: active) {
   .nx-grid__cell.is-sel {
     outline: 1px solid Highlight;
     outline-offset: -1px;
   }
+  .nx-grid__cell.is-active {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .nx-grid__scroll:not(:focus-within) .nx-grid__cell.is-active {
+    outline-width: 1px;
+    outline-offset: -1px;
+  }
+  .nx-grid__scroll:focus-visible,
+  .nx-grid__search:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+  .nx-grid__menu-item:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .nx-grid__resize:is(:hover, :focus-visible)::after {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
   .nx-grid__fbar::after {
+    background: Highlight;
+  }
+  .nx-grid__track {
+    forced-color-adjust: none;
+    background: GrayText;
+
+    & i {
+      background: Highlight;
+    }
+  }
+  .nx-grid__slider input {
+    forced-color-adjust: none;
+  }
+  .nx-grid__slider input::-webkit-slider-thumb {
+    border-color: ButtonText;
+    background: ButtonFace;
+  }
+  .nx-grid__slider input::-moz-range-thumb {
+    border-color: ButtonText;
+    background: ButtonFace;
+  }
+  .nx-grid__slider input:focus-visible::-webkit-slider-thumb {
+    border-color: Highlight;
+    background: Highlight;
+  }
+  .nx-grid__slider input:focus-visible::-moz-range-thumb {
+    border-color: Highlight;
     background: Highlight;
   }
 }

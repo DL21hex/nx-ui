@@ -238,3 +238,78 @@ describe("<nx-grid>: vistas guardadas", () => {
     expect(el.applyView("nada")).toBe(false);
   });
 });
+
+describe("<nx-grid>: el menú de vistas guarda sobre la lista de ahora", () => {
+  const stored = () => JSON.parse(localStorage.getItem(KEY)!).views.map((v: GridSavedView) => v.name);
+
+  it("otra pestaña guardó con el formulario abierto: su vista no se pierde", async () => {
+    const el = mount(`views-storage="${KEY}"`);
+    el.filters = [{ key: "estado", op: "in", values: ["pend"] }];
+    viewsBtn(el).click();
+    await until(() => pops(el)[0]?.querySelector(".nx-grid__menu-item"));
+    itemText(el, "Guardar como vista nueva").click();
+    const form = pops(el)[0].querySelector("form")!;
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, views: [{ id: "b", name: "De la otra pestaña" }] }));
+    window.dispatchEvent(new StorageEvent("storage", { key: KEY }));
+    form.querySelector<HTMLInputElement>("input[type=text]")!.value = "Mía";
+    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    expect(stored()).toEqual(["De la otra pestaña", "Mía"]);
+    expect(el.views.map((v) => v.name)).toEqual(["De la otra pestaña", "Mía"]);
+  });
+
+  it("dos tablas con la misma clave en una página: guardar desde una no borra lo que guardó la otra", async () => {
+    document.body.innerHTML = `<nx-grid views-storage="${KEY}"></nx-grid><nx-grid views-storage="${KEY}"></nx-grid>`;
+    const [a, b] = [...document.querySelectorAll("nx-grid")];
+    for (const g of [a, b]) {
+      g.columns = COLS;
+      g.rows = ROWS;
+    }
+    const open = async (g: NxGrid, name: string) => {
+      viewsBtn(g).click();
+      await until(() => pops(g)[0]?.querySelector(".nx-grid__menu-item"));
+      itemText(g, "Guardar como vista nueva").click();
+      const form = pops(g)[0].querySelector("form")!;
+      form.querySelector<HTMLInputElement>("input[type=text]")!.value = name;
+      return () => form.dispatchEvent(new Event("submit", { cancelable: true }));
+    };
+    const fromA = await open(a, "De A");
+    (await open(b, "De B"))();
+    fromA();
+    expect(stored()).toEqual(["De B", "De A"]);
+    // Borrar desde A, que no había vuelto a leer la lista, tampoco se lleva la de B.
+    viewsBtn(a).click();
+    itemText(a, "Borrar").click();
+    pops(a)[0].querySelector<HTMLButtonElement>(".is-danger")!.click();
+    expect(stored()).toEqual(["De B"]);
+  });
+
+  it("la lista abierta se repinta si otra pestaña guarda", async () => {
+    const el = mount(`views-storage="${KEY}"`);
+    viewsBtn(el).click();
+    await until(() => pops(el)[0]?.querySelector(".nx-grid__v-text"));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, views: [{ id: "b", name: "Nueva" }] }));
+    window.dispatchEvent(new StorageEvent("storage", { key: KEY }));
+    expect(menuItems(el).map((b) => b.textContent)).toContain("Nueva");
+  });
+
+  it("el menú sigue a su botón al desplazar la página y abre hacia arriba si abajo no cabe", async () => {
+    const el = mount(`views-storage="${KEY}"`);
+    const btn = viewsBtn(el);
+    let top = 700;
+    btn.getBoundingClientRect = () => ({ top, bottom: top + 36, left: 20, right: 120, width: 100, height: 36, x: 20, y: top, toJSON: () => ({}) }) as DOMRect;
+    btn.click();
+    const pop = await until(() => pops(el)[0]?.querySelector(".nx-grid__v-text") && pops(el)[0]);
+    Object.defineProperty(pop, "offsetHeight", { configurable: true, get: () => 300 });
+    window.dispatchEvent(new Event("resize"));
+    expect(pop.style.getPropertyValue("--_top")).toBe(`${700 - 6 - 300}px`);
+    expect(pop.style.getPropertyValue("--_maxh")).toBe(`${700 - 14}px`);
+    top = 100;
+    document.dispatchEvent(new Event("scroll"));
+    expect(pop.style.getPropertyValue("--_top")).toBe("142px");
+    // Cerrado, ya no escucha.
+    pop.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    top = 300;
+    window.dispatchEvent(new Event("resize"));
+    expect(pop.style.getPropertyValue("--_top")).toBe("142px");
+  });
+});

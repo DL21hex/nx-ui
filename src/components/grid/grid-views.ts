@@ -84,6 +84,11 @@ export class ViewsUI {
   #cpop: HTMLDivElement;
   #mode: Mode = "list";
   #open = new Set<HTMLDivElement>();
+  /** Lo que muestra la lista pintada (para repintarla solo si cambió). */
+  #sig = "";
+  #place = () => {
+    for (const pop of this.#open) this.#position(pop);
+  };
 
   constructor(host: ViewsHost) {
     this.#host = host;
@@ -109,7 +114,7 @@ export class ViewsUI {
       // Un clic afuera lo cierra el navegador: el estado se entera antes.
       pop.addEventListener("beforetoggle", (e) => {
         if ((e as ToggleEvent).newState !== "closed") return;
-        this.#open.delete(pop);
+        this.#forget(pop);
         btn.setAttribute("aria-expanded", "false");
       });
     }
@@ -139,7 +144,8 @@ export class ViewsUI {
     for (const pop of [...this.#open]) this.#hide(pop, pop === this.#pop ? this.#host.viewsBtn : this.#host.colsBtn, false);
   }
 
-  /** La tabla cambió: el nombre del botón (y si la vista quedó modificada) y las casillas abiertas. */
+  /** La tabla cambió: el nombre del botón (y si la vista quedó modificada), las casillas abiertas y
+   *  la lista de vistas abierta, si otra pestaña guardó mientras tanto. */
   refresh(): void {
     const L = this.#L;
     const cur = this.#current();
@@ -148,6 +154,33 @@ export class ViewsUI {
     btn.lastElementChild!.replaceChildren(cur ? cur.name : L.views, mod ? h("small", null, ` · ${L.viewModified}`) : "");
     btn.setAttribute("aria-label", cur ? `${L.views}: ${cur.name}${mod ? ` (${L.viewModified})` : ""}` : L.views);
     if (this.#open.has(this.#cpop)) this.#syncColumns();
+    if (this.#open.has(this.#pop) && this.#mode === "list" && this.#signature() !== this.#sig) {
+      // El foco sigue en el mismo lugar de la lista.
+      const items = () => [...this.#pop.querySelectorAll<HTMLElement>(".nx-grid__menu-item")];
+      const at = items().indexOf(document.activeElement as HTMLElement);
+      this.#paintViews();
+      this.#position(this.#pop);
+      if (at >= 0) (items()[at] ?? items().at(-1))?.focus();
+    }
+  }
+
+  #signature(): string {
+    const cur = this.#current();
+    return JSON.stringify([this.#host.views.map((v) => [v.id, v.name, !!v.default]), this.#host.active, !!cur && !sameView(cur, this.#host.view), isOriginal(this.#host.view)]);
+  }
+
+  /** La lista guardada de ahora, no la de cuando se pintó el menú: otra pestaña, u otra tabla con la
+   *  misma clave en esta página, pudo guardar mientras tanto. Lo que se guarda es un cambio puntual
+   *  (agregar, reemplazar o quitar una) sobre esta lista. La tabla la limpia al guardarla. */
+  #fresh(): GridSavedView[] {
+    const key = this.#host.el.getAttribute("views-storage");
+    try {
+      const raw = key && (JSON.parse(localStorage.getItem(key) || "null") as { views?: unknown } | null)?.views;
+      if (Array.isArray(raw)) return raw.filter((v): v is GridSavedView => !!v && typeof v === "object" && typeof v.id === "string" && typeof v.name === "string");
+    } catch {
+      /* guardado roto o sin acceso: la lista de la tabla */
+    }
+    return this.#host.views;
   }
 
   #current(): GridSavedView | undefined {
@@ -156,17 +189,43 @@ export class ViewsUI {
 
   #show(pop: HTMLDivElement, btn: HTMLButtonElement): void {
     if (!this.#open.has(pop)) pop.showPopover?.();
+    // Mientras haya uno abierto, sigue a su botón al desplazar la página o cambiar el tamaño.
+    if (!this.#open.size) {
+      addEventListener("resize", this.#place);
+      addEventListener("scroll", this.#place, true);
+    }
     this.#open.add(pop);
     btn.setAttribute("aria-expanded", "true");
-    const r = btn.getBoundingClientRect();
-    const w = pop.offsetWidth || 280;
-    pop.style.setProperty("--_left", `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`);
-    pop.style.setProperty("--_top", `${r.bottom + 6}px`);
+    this.#position(pop);
     this.#focus(pop);
   }
 
-  #hide(pop: HTMLDivElement, btn: HTMLButtonElement, focus = true): void {
+  /** Bajo su botón; si no cabe abajo y arriba hay más lugar, encima. Nunca se sale de la pantalla:
+   *  el alto queda acotado al lugar que hay (`--_maxh`) y lo demás se desplaza adentro. */
+  #position(pop: HTMLDivElement): void {
+    const r = (pop === this.#pop ? this.#host.viewsBtn : this.#host.colsBtn).getBoundingClientRect();
+    const w = pop.offsetWidth || 280;
+    const hgt = pop.offsetHeight;
+    const below = innerHeight - r.bottom - 14;
+    const above = r.top - 14;
+    const up = hgt > below && above > below;
+    const room = Math.max(160, up ? above : below);
+    pop.style.setProperty("--_left", `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`);
+    pop.style.setProperty("--_top", `${Math.max(8, up ? r.top - 6 - Math.min(hgt, room) : r.bottom + 6)}px`);
+    pop.style.setProperty("--_maxh", `${room}px`);
+  }
+
+  #forget(pop: HTMLDivElement): boolean {
     const was = this.#open.delete(pop);
+    if (!this.#open.size) {
+      removeEventListener("resize", this.#place);
+      removeEventListener("scroll", this.#place, true);
+    }
+    return was;
+  }
+
+  #hide(pop: HTMLDivElement, btn: HTMLButtonElement, focus = true): void {
+    const was = this.#forget(pop);
     btn.setAttribute("aria-expanded", "false");
     if (was) pop.hidePopover?.();
     if (focus) btn.focus();
@@ -188,6 +247,7 @@ export class ViewsUI {
   #to(mode: Mode): void {
     this.#mode = mode;
     this.#paintViews();
+    this.#position(this.#pop);
     this.#focus(this.#pop);
   }
 
@@ -205,7 +265,7 @@ export class ViewsUI {
       const yes = h("button", { type: "button", class: "nx-grid__btn is-danger" }, L.viewDeleteYes);
       yes.addEventListener("click", () => {
         host.save(
-          views.filter((v) => v.id !== cur.id),
+          this.#fresh().filter((v) => v.id !== cur.id),
           null,
         );
         done();
@@ -234,10 +294,10 @@ export class ViewsUI {
         h("hr"),
         cur && mod
           ? this.#item(fmt(L.viewSaveChanges, { name: cur.name }), () => {
-              host.save(
-                views.map((v) => (v.id === cur.id ? { ...v, ...host.view } : v)),
-                cur.id,
-              );
+              const list = this.#fresh();
+              const now = list.find((v) => v.id === cur.id);
+              // Si otra pestaña la borró mientras tanto, vuelve a quedar guardada.
+              host.save(now ? list.map((v) => (v === now ? { ...v, ...host.view } : v)) : [...list, { ...cur, ...host.view }], cur.id);
               done();
             })
           : null,
@@ -255,6 +315,7 @@ export class ViewsUI {
     }
     this.#pop.setAttribute("aria-label", L.views);
     this.#pop.replaceChildren(...body.filter((x): x is Node => !!x));
+    this.#sig = this.#signature();
   }
 
   #cancel(): HTMLButtonElement {
@@ -267,7 +328,6 @@ export class ViewsUI {
   #form(cur: GridSavedView | undefined): HTMLFormElement {
     const L = this.#L;
     const host = this.#host;
-    const views = host.views;
     const id = `nx-grid-view${++uid}`;
     const name = h("input", { type: "text", id, class: "nx-grid__field", required: true, maxlength: 80, autocomplete: "off" });
     name.value = cur ? cur.name : this.#suggest();
@@ -287,6 +347,7 @@ export class ViewsUI {
       e.preventDefault();
       const n = name.value.trim();
       if (!n) return name.focus();
+      const views = this.#fresh();
       if (views.some((v) => v.id !== cur?.id && foldText(v.name) === foldText(n))) {
         err.textContent = L.viewDuplicate;
         err.hidden = false;
@@ -296,10 +357,8 @@ export class ViewsUI {
       // Solo una abre la tabla.
       const rest = def.checked ? views.map((v) => ({ ...v, default: false })) : views;
       if (cur) {
-        host.save(
-          rest.map((v) => (v.id === cur.id ? { ...v, name: n, default: def.checked } : v)),
-          host.active,
-        );
+        const now = rest.some((v) => v.id === cur.id);
+        host.save(now ? rest.map((v) => (v.id === cur.id ? { ...v, name: n, default: def.checked } : v)) : [...rest, { ...cur, name: n, default: def.checked }], host.active);
       } else {
         const v: GridSavedView = { id: `v${Date.now().toString(36)}${(++uid).toString(36)}`, name: n, ...host.view, default: def.checked };
         host.save([...rest, v], v.id);

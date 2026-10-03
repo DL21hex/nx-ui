@@ -106,15 +106,43 @@ export function rowTexter(cols: readonly GridColumn[], f: NxFormat = nxFormat())
 let needle = { raw: "", folded: "" };
 const folded = (q: string) => (needle.raw === q ? needle.folded : (needle = { raw: q, folded: foldText(q) }).folded);
 
+/** Cada dato se pliega (sin tildes ni mayúsculas) una sola vez: «contiene» se vuelve a evaluar en
+ *  cada cambio de filtro, en cada faceta y en la muestra del panel, siempre sobre los mismos datos.
+ *  Va por valor, no por fila: una celda editada es otro valor. Con más valores distintos que el
+ *  tope se empieza de nuevo (la memoria no crece sin fin). */
+const FOLD_MAX = 200_000;
+let foldMemo = new Map<string, string>();
+export function foldValue(s: string): string {
+  let t = foldMemo.get(s);
+  if (t === undefined) {
+    if (foldMemo.size >= FOLD_MAX) foldMemo = new Map();
+    foldMemo.set(s, (t = foldText(s)));
+  }
+  return t;
+}
+
+/** Los valores de un `in` / `notIn` como conjunto, armado una vez por lista: con miles de valores,
+ *  buscar en la lista por cada fila congelaba la página varios segundos. */
+const valueSets = new WeakMap<readonly string[], { n: number; set: Set<string> }>();
+function valueSet(values: readonly string[]): Set<string> {
+  let s = valueSets.get(values);
+  // Una lista cambiada en su lugar (otro largo) se vuelve a armar.
+  if (!s || s.n !== values.length) valueSets.set(values, (s = { n: values.length, set: new Set(values) }));
+  return s.set;
+}
+
 export function matchFilter(row: GridRow, f: GridFilter): boolean {
-  const v = row[f.key];
+  return matchValue(row[f.key], f);
+}
+
+function matchValue(v: unknown, f: GridFilter): boolean {
   switch (f.op) {
     case "in":
-      return f.values.includes(String(v ?? ""));
+      return valueSet(f.values).has(String(v ?? ""));
     case "notIn":
-      return !f.values.includes(String(v ?? ""));
+      return !valueSet(f.values).has(String(v ?? ""));
     case "contains":
-      return foldText(String(v ?? "")).includes(folded(f.value));
+      return foldValue(String(v ?? "")).includes(folded(f.value));
     case "range": {
       if (v === null || v === undefined || v === "") return false;
       const x = typeof f.min === "string" || typeof f.max === "string" ? String(v) : num(v);
@@ -244,7 +272,7 @@ export function resolveRel(filters: readonly GridFilter[], today = todayISO()): 
 export function selection(filters: readonly GridFilter[], key: string, values: readonly string[]): Set<string> | null {
   const own = filters.filter((f) => f.key === key && (f.op === "in" || f.op === "notIn"));
   if (!own.length) return null;
-  return new Set(values.filter((v) => own.every((f) => matchFilter({ [key]: v }, f))));
+  return new Set(values.filter((v) => own.every((f) => matchValue(v, f))));
 }
 
 /** Lo marcado → los filtros de la columna. Todo marcado es no filtrar; con más de la mitad (si se
