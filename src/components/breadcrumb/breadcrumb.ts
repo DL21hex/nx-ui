@@ -322,9 +322,15 @@ export class NxBreadcrumb extends Base {
     try {
       ({ BreadcrumbMenu: Menu } = await import("./breadcrumb-menu"));
     } catch (err) {
-      // Sin el menú (un despliegue nuevo borró el archivo, o se cayó la red) el separador no abre
-      // nada, pero tampoco deja una promesa rechazada sin atender. El próximo clic lo reintenta.
+      // Sin el menú (un despliegue nuevo borró el archivo, o se cayó la red) no queda una promesa
+      // rechazada sin atender. Un separador lleva a la página de su nivel, que lista lo mismo que
+      // el menú (y una página nueva trae los archivos del despliegue nuevo); avisa con
+      // `nx-breadcrumb-navigate` («link»), cancelable. El «…» no abre nada: el próximo clic lo reintenta.
       console.warn("[nx-breadcrumb] no se pudo cargar el menú", err);
+      const sep = trigger.dataset.sep;
+      const parent = sep === undefined ? undefined : this.#path[+sep];
+      const href = safeHref(parent?.href);
+      if (parent && href && trigger.isConnected && this.#go(parent, +sep!, "link")) location.assign(href);
       return;
     }
     const m = (this.#m ??= new Menu(this.#menu!, { labels: () => this.#labels, go: (it, level, via) => this.#go(it, level, via) }));

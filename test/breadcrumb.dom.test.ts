@@ -460,6 +460,31 @@ describe("<nx-breadcrumb> hijos pedidos, foco y lugar del menú", () => {
     }
   });
 
+  it("desplazar con el foco en el buscador: con puntero fino cierra; en táctil recoloca, salvo que el botón ya no se vea", async () => {
+    const b = await withItems(PATH);
+    await open(b, '[data-sep="1"]');
+    expect(document.activeElement).toBe(menu(b).querySelector("input"));
+    window.dispatchEvent(new Event("scroll"));
+    expect(menu(b).hidden).toBe(true);
+
+    const mm = vi.spyOn(window, "matchMedia").mockImplementation((q: string) => ({ matches: !q.includes("pointer: fine"), media: q, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList);
+    try {
+      const sep = await open(b, '[data-sep="1"]');
+      menu(b).querySelector("input")!.focus();
+      let top = 100;
+      sep.getBoundingClientRect = () => ({ top, bottom: top + 20, left: 100, right: 120, width: 20, height: 20, x: 100, y: top }) as DOMRect;
+      window.dispatchEvent(new Event("scroll"));
+      await new Promise((r) => requestAnimationFrame(r));
+      expect(menu(b).hidden).toBe(false);
+      expect(menu(b).style.top).toBe("126px");
+      top = -50;
+      window.dispatchEvent(new Event("scroll"));
+      expect(menu(b).hidden).toBe(true);
+    } finally {
+      mm.mockRestore();
+    }
+  });
+
   it("quitar el atributo labels vuelve a los textos de fábrica", async () => {
     const b = await mount(`<nx-breadcrumb labels='{"label":"Camino"}'><a href="/a">A</a><span>B</span></nx-breadcrumb>`);
     expect(b.labels.label).toBe("Camino");

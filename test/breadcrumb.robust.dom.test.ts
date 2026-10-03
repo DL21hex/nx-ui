@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 //
 // El menú de `<nx-breadcrumb>` llega con `import()`. Si ese archivo no carga (un despliegue nuevo lo
-// borró, o se cayó la red), el separador no abre nada pero tampoco deja una promesa rechazada sin
-// atender: avisa por consola y el próximo clic lo reintenta.
+// borró, o se cayó la red), no deja una promesa rechazada sin atender: avisa por consola y el
+// separador lleva a la página de su nivel.
 import { describe, expect, it, vi } from "vitest";
 import "../src/components/breadcrumb/index";
 import type { NxBreadcrumb } from "../src/components/breadcrumb/index";
@@ -32,6 +32,24 @@ describe("<nx-breadcrumb> sin el módulo del menú", () => {
       expect(unhandled).not.toHaveBeenCalled();
     } finally {
       process.off("unhandledRejection", unhandled);
+      warn.mockRestore();
+    }
+  });
+
+  it("el separador lleva a la página de su nivel (nx-breadcrumb-navigate «link», cancelable)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      document.body.innerHTML = `<nx-breadcrumb></nx-breadcrumb>`;
+      await tick();
+      const b = document.querySelector<NxBreadcrumb>("nx-breadcrumb")!;
+      b.items = [{ label: "A", href: "/a", children: [{ label: "B" }, { label: "C" }] }, { label: "B" }];
+      await tick();
+      const go = vi.fn((e: Event) => e.preventDefault());
+      b.addEventListener("nx-breadcrumb-navigate", go);
+      b.querySelector<HTMLElement>('[data-sep="0"]')!.click();
+      await vi.waitFor(() => expect(go).toHaveBeenCalledOnce());
+      expect((go.mock.calls[0][0] as CustomEvent).detail).toMatchObject({ item: { label: "A" }, level: 0, via: "link" });
+    } finally {
       warn.mockRestore();
     }
   });

@@ -28,6 +28,12 @@ página «Ruta navegable» (`gallery/demo-breadcrumb.ts`). Maqueta: `maquetas/nx
   «Cargando…»; si falla, «No se pudo cargar» (los dos en una región viva fija, que se anuncia).
 - Mientras carga, el foco sigue en el separador: `Esc` cierra desde ahí, y si el foco se va a otra
   parte el menú se cierra (al llegar los datos no se lo roba).
+- Desplazar la página o cambiar el tamaño de la ventana cierra el menú. Solo con pantalla táctil y
+  el foco en el buscador (el teclado virtual mueve la ventana) se recoloca, mientras el separador
+  siga a la vista.
+- Si el archivo del menú no carga (`import()` falla: un despliegue nuevo, o sin red), el separador
+  lleva a la página de su nivel, que lista lo mismo, con `nx-breadcrumb-navigate` (`via: "link"`,
+  cancelable). El «…» no abre nada; el próximo clic lo reintenta.
 - **Conservar la sección** al cambiar de persona es cosa de la app: el `href` de cada hermano ya
   apunta a la misma sección («/empleados/483/contratos»). El componente no conoce el árbol.
 

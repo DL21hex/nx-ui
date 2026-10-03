@@ -7,6 +7,8 @@
  * `position: fixed` junto al botón que lo abrió (debajo, o encima si abajo no cabe). Se cierra con
  * `Esc` (el foco vuelve al botón, también mientras carga), `Tab` (sigue desde el botón), un clic
  * afuera, al irse el foco a otra parte, al desplazar la página o al cambiar el tamaño de la ventana.
+ * La excepción es escribir en el buscador con pantalla táctil: el teclado virtual mueve la ventana, y
+ * ahí el menú se recoloca (una vez por frame) mientras su botón siga a la vista.
  */
 import { h, safeHref } from "../../core/dom";
 import { glyph, hasIcon, icon } from "../../core/icons";
@@ -51,11 +53,28 @@ export class BreadcrumbMenu {
     // Dentro del menú (también su lista al desplazarse) o en el botón que lo abrió, nada.
     const t = e.target;
     if (t instanceof Node && (this.#el.contains(t) || (e.type === "pointerdown" && this.#open?.trigger.contains(t)))) return;
-    // Escribiendo en el buscador, el teclado virtual (o el navegador al mostrarlo) mueve la ventana:
-    // se recoloca en vez de cerrar.
-    if (e.type !== "pointerdown" && document.activeElement?.localName === "input" && this.#el.contains(document.activeElement)) return this.#place();
+    // Escribiendo en el buscador con pantalla táctil, el teclado virtual (o el navegador al
+    // mostrarlo) mueve la ventana: se recoloca en vez de cerrar, salvo que el botón ya no se vea.
+    // Con puntero fino, desplazar la página cierra, como siempre.
+    if (e.type !== "pointerdown" && this.#typing() && this.#open) {
+      const r = this.#open.trigger.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < innerHeight) {
+        this.#raf ||= requestAnimationFrame(() => {
+          this.#raf = 0;
+          if (this.#open) this.#place();
+        });
+        return;
+      }
+    }
     this.close(false);
   };
+  #raf = 0;
+  /** El foco en el buscador, con pantalla táctil (donde lo acompaña un teclado virtual). */
+  #typing(): boolean {
+    const a = document.activeElement;
+    const coarse = typeof matchMedia === "function" && !matchMedia("(pointer: fine)").matches;
+    return coarse && a?.localName === "input" && this.#el.contains(a);
+  }
   /** El foco se fue a otra parte (Tab desde el botón mientras carga): se cierra sin robárselo. */
   #focusin = (e: FocusEvent): void => {
     const t = e.target as Node;
@@ -141,6 +160,8 @@ export class BreadcrumbMenu {
 
   close(refocus: boolean): void {
     this.#token++;
+    cancelAnimationFrame(this.#raf);
+    this.#raf = 0;
     document.removeEventListener("pointerdown", this.#outside, true);
     document.removeEventListener("focusin", this.#focusin);
     removeEventListener("scroll", this.#outside, true);

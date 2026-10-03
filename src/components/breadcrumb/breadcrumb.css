@@ -232,6 +232,13 @@ button.nx-breadcrumb__sep[aria-expanded="true"] .nx-glyph {
   &[data-up] {
     transform-origin: bottom left;
   }
+  /* En RTL se alinea por el borde derecho del botón: la animación nace en esa esquina. */
+  &:dir(rtl) {
+    transform-origin: top right;
+  }
+  &[data-up]:dir(rtl) {
+    transform-origin: bottom right;
+  }
   & ul {
     max-block-size: var(--_max, 320px);
     margin: 0;
