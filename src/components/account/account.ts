@@ -9,8 +9,9 @@
  *   reemplazan el contenido del mismo panel; Esc vuelve.
  * - **Cerrado no hace nada** salvo un `setTimeout` de la sesión (un intervalo de 1 s solo en el tramo
  *   del aviso) y el de «No molestar hasta…».
- * - **Lo pesado va aparte:** el panel (`./account-panel`), la franja de «Ver como» (`./view-as`) y la
- *   cola de `nx-sync` se cargan con `import()`; el panel y la franja, en reposo, antes de usarlos.
+ * - **Lo pesado va aparte:** el panel (`./account-panel`) y la cola de `nx-sync` se cargan con
+ *   `import()`; el panel, en reposo, antes de usarlo. La franja de «Ver como» (`./view-as`) va en la
+ *   entrada: un aviso de suplantación no puede depender de la red.
  */
 import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
@@ -41,6 +42,7 @@ import {
 } from "./logic";
 import type { AccountView } from "./account-panel";
 import type { SyncQueue } from "../sync/logic";
+import { showViewAsBanner } from "./view-as";
 
 /** Un módulo aparte, una sola vez por página. Si falla (sin red), se reintenta en el próximo pedido. */
 function once<T>(load: () => Promise<T>): () => Promise<T> {
@@ -54,8 +56,6 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
 let panel: typeof import("./account-panel") | undefined;
 /** El contenido del panel. */
 const loadPanel = once(() => import("./account-panel").then((m) => (panel = m)));
-/** La franja de «Ver como». */
-const loadViewAs = once(() => import("./view-as"));
 import type {
   AccountCommand,
   AccountItem,
@@ -139,8 +139,6 @@ const CLEAN: { [K in keyof Data]: (v: unknown) => Data[K] } = {
 };
 const JSON_ATTRS = ["user", "tenants", "items", "palettes", "locales", "view-as", "session", "labels"];
 const LOGOUT_WAIT = 10_000;
-/** Reintentos de la franja de «Ver como» si su módulo no carga: 1 s, 2 s, 4 s… hasta 30 s. */
-const VIEW_AS_RETRY = 30_000;
 
 type View = "main" | "tenant" | "locale" | "viewas";
 type ViewTransition = { ready: Promise<void>; finished: Promise<void>; updateCallbackDone: Promise<void> };
@@ -250,8 +248,6 @@ export class NxAccount extends Base {
   #unsub?: () => void;
   /** Cada cambio de `sync` (o desconexión) descarta lo que llegue de antes. */
   #syncGen = 0;
-  /** Cada franja pedida descarta los reintentos de la anterior. */
-  #bannerGen = 0;
   /** Las acciones para `<nx-command>`, mientras no cambie lo que las arma (mismos objetos). */
   #cmds?: { deps: unknown[]; list: AccountCommand[] };
   /** Cerrando sesión con cambios en cola: `stuck` si pasó el tope. */
@@ -267,7 +263,7 @@ export class NxAccount extends Base {
   #hovering = false;
   #queued = false;
   // Temporizadores y listeners.
-  #timers: Record<"session" | "tick" | "until" | "leave" | "viewas", ReturnType<typeof setTimeout> | undefined> = { session: undefined, tick: undefined, until: undefined, leave: undefined, viewas: undefined };
+  #timers: Record<"session" | "tick" | "until" | "leave", ReturnType<typeof setTimeout> | undefined> = { session: undefined, tick: undefined, until: undefined, leave: undefined };
   #ac?: AbortController;
   #openAc?: AbortController;
   // Nodos.
@@ -448,7 +444,6 @@ export class NxAccount extends Base {
     this.#unsub?.();
     this.#unsub = undefined;
     this.#syncGen++;
-    this.#bannerGen++;
     const t = this.#timers;
     for (const k in t) {
       clearTimeout(t[k as keyof typeof t]);
@@ -542,14 +537,10 @@ export class NxAccount extends Base {
     this.#card.append(this.#cardAv, h("span", { class: "nx-account__text" }, this.#cardName, this.#cardOrg, this.#cardExtra), glyph(UPDOWN, "nx-account__chev"));
     this.append(this.#strip, this.#card, this.#pop, this.#live);
     // El panel se trae en cuanto la página queda libre, o antes si alguien apunta a la tarjeta: así
-    // abrirlo es inmediato (también sin red, si ya se había cargado). Con «Ver como» posible, también
-    // su franja: suplantar sin red no puede quedar sin aviso.
+    // abrirlo es inmediato (también sin red, si ya se había cargado).
     const fetchPanel = () => void loadPanel().catch(quiet);
     for (const t of ["pointerenter", "focus", "touchstart"]) this.#card.addEventListener(t, fetchPanel, { passive: true });
-    (globalThis.requestIdleCallback ?? setTimeout)(() => {
-      fetchPanel();
-      if (this.getAttribute("view-as-source") || this.#d.viewAs) void loadViewAs().catch(quiet);
-    }, { timeout: 4000 } as never);
+    (globalThis.requestIdleCallback ?? setTimeout)(fetchPanel, { timeout: 4000 } as never);
 
     const pop = this.#pop;
     pop.addEventListener("beforetoggle", (e) => {
@@ -939,40 +930,22 @@ export class NxAccount extends Base {
     this.hide();
   }
 
-  /** La franja de «Ver como» (módulo aparte), si hay a quién y el elemento está en la página. La
-   *  tarjeta lleva `data-view-as` siempre: si el módulo no carga, el CSS la marca y se reintenta. */
+  /** La franja de «Ver como», si hay a quién y el elemento está en la página. Va en la entrada y no
+   *  en un `import()`: Chromium recuerda un `import()` fallido hasta recargar, y suplantar sin aviso no
+   *  puede depender de la red. La tarjeta lleva `data-view-as` siempre: sin franja, el CSS la marca y
+   *  su texto oculto lo dice. */
   #banner(): void {
     this.#unbanner?.();
     this.#unbanner = undefined;
-    clearTimeout(this.#timers.viewas);
-    this.#timers.viewas = undefined;
     const p = this.#d.viewAs;
     toggleAttr(this, "data-view-as", p ? p.id : null);
-    // Una sola cadena de reintentos: la de un pedido anterior (conectar y actualizar a la vez) se descarta.
-    const gen = ++this.#bannerGen;
-    if (p && this.isConnected) this.#showBanner(p, 0, gen);
-  }
-
-  #showBanner(p: AccountPerson, tries: number, gen: number): void {
-    const live = () => gen === this.#bannerGen && this.#d.viewAs === p && this.isConnected;
-    const retry = (err: unknown) => {
+    if (!p || !this.isConnected) return;
+    try {
+      this.#unbanner = showViewAsBanner(p, { labels: this.#rawLabels, onExit: () => this.#exitViewAs() });
+    } catch (err) {
       console.warn("[nx-account] no se pudo mostrar la franja", err);
-      if (!live()) return;
-      clearTimeout(this.#timers.viewas);
-      this.#timers.viewas = setTimeout(() => this.#showBanner(p, tries + 1, gen), Math.min(VIEW_AS_RETRY, 1000 * 2 ** tries));
-    };
-    loadViewAs().then((m) => {
-      if (!live()) return;
-      this.#unbanner?.();
-      this.#unbanner = undefined;
-      try {
-        this.#unbanner = m.showViewAsBanner(p, { labels: this.#rawLabels, onExit: () => this.#exitViewAs() });
-      } catch (err) {
-        return retry(err);
-      }
-      // Con la franja puesta, la tarjeta ya no necesita decirlo en su texto oculto.
-      this.#paintNet();
-    }, retry);
+    }
+    this.#paintNet();
   }
 
   // ---------------------------------------------------------------- sincronización y salida

@@ -166,9 +166,10 @@ nx-account[data-session="expired"] .nx-account__card .nx-account__av {
     0 0 0 2px var(--_bg),
     0 0 0 3.5px var(--nx-danger);
 }
-/* «Ver como» sin franja (su módulo no cargó: sin red o un despliegue nuevo): la tarjeta lo dice. */
+/* «Ver como» sin franja (su módulo no cargó: sin red o un despliegue nuevo): la tarjeta lo dice (y su
+   texto oculto también). El ámbar oscuro: el claro no llega a 3:1 contra el fondo del menú. */
 html:not([data-nx-view-as]) nx-account[data-view-as] .nx-account__card {
-  outline: 2px solid var(--_amber);
+  outline: 2px solid var(--_amber-ink);
   outline-offset: -2px;
 }
 

@@ -956,15 +956,16 @@ describe("<nx-account> salir de «Ver como»", () => {
     expect(el.hasAttribute("data-view-as")).toBe(false);
   });
 
-  it("la tarjeta marca la suplantación desde el primer momento (data-view-as), sin esperar la franja", () => {
+  it("la tarjeta marca la suplantación (data-view-as) y la franja sale enseguida, sin import()", () => {
     const el = mount();
     el.viewAs = { id: "u9", name: "Marta" };
     expect(el.getAttribute("data-view-as")).toBe("u9");
-    expect(mocks.showViewAsBanner).not.toHaveBeenCalled();
+    // En la entrada, no en un chunk: Chromium recuerda un import() fallido hasta recargar.
+    expect(mocks.showViewAsBanner).toHaveBeenCalledOnce();
   });
 });
 
-describe("<nx-account> repaso: franja que no carga y formulario de salida", () => {
+describe("<nx-account> repaso: sin franja y formulario de salida", () => {
   it("sin la franja, el texto oculto de la tarjeta dice a quién se suplanta; con la franja, no", async () => {
     const el = mount();
     el.viewAs = { id: "u9", name: "Marta" };
@@ -978,23 +979,24 @@ describe("<nx-account> repaso: franja que no carga y formulario de salida", () =
     expect(card(el).textContent).not.toContain("Viendo como");
   });
 
-  it("si showViewAsBanner lanza, se reintenta (sin rechazo sin manejar) y queda una sola cadena", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    const boom = () => {
+  it("si showViewAsBanner lanza, no rompe la cuenta: la tarjeta lo dice y la próxima vez sale", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mocks.showViewAsBanner.mockImplementationOnce(() => {
       throw new Error("boom");
-    };
-    mocks.showViewAsBanner.mockImplementationOnce(boom).mockImplementationOnce(boom).mockReturnValue(mocks.unbanner);
-    // Conectar con `view-as` ya puesto: el setter y connectedCallback piden la franja a la vez.
-    document.body.innerHTML = `<nx-account user='{"name":"Ana"}' view-as='{"id":"u7","name":"Laura"}'></nx-account>`;
-    const el = document.querySelector("nx-account")!;
-    await vi.advanceTimersByTimeAsync(10_000);
-    // Tras los fallos, una sola franja puesta y ningún reintento pendiente.
-    expect(mocks.showViewAsBanner.mock.results.filter((r) => r.type === "return")).toHaveLength(1);
-    const calls = mocks.showViewAsBanner.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(mocks.showViewAsBanner.mock.calls.length).toBe(calls);
+    });
+    mocks.showViewAsBanner.mockReturnValue(mocks.unbanner);
+    const el = mount();
+    const laura = { id: "u7", name: "Laura" };
+    el.viewAs = laura;
+    await flushAll();
+    expect(warn).toHaveBeenCalled();
+    expect(el.getAttribute("data-view-as")).toBe("u7");
+    expect(card(el).textContent).toContain("Viendo como Laura.");
+    el.viewAs = laura;
+    await flushAll();
     expect(card(el).textContent).not.toContain("Viendo como");
+    el.remove();
+    expect(mocks.unbanner).toHaveBeenCalledOnce();
   });
 
   it("el formulario de salida no se queda en el body", () => {
