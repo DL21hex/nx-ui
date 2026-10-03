@@ -27,12 +27,18 @@ export const FOCUSABLE = [
 export const shown = (el: Element): boolean =>
   el.getClientRects().length > 0 && !el.closest("[hidden], [inert]") && (el.checkVisibility?.({ visibilityProperty: true }) ?? true);
 
-/** El navegador recorre con Tab el orden en que se ve (`reading-flow`, Chrome 137+). */
-export const readingFlow = (): boolean => typeof CSS !== "undefined" && !!CSS.supports?.("reading-flow", "flex-visual");
+/** El navegador recorre con Tab el orden en que se ve (`reading-flow`, Chrome 137+): en general, o
+ *  dentro de `el`. El CSS lo apaga donde un hijo tiene `tabindex` negativo: con `reading-flow` cada
+ *  hijo es un ámbito de foco, y el navegador se salta todo lo de adentro de uno con `tabindex="-1"`. */
+export const readingFlow = (el?: Element): boolean =>
+  typeof CSS !== "undefined" && !!CSS.supports?.("reading-flow", "flex-visual") && (!el || getComputedStyle(el).getPropertyValue("reading-flow") !== "normal");
+
+/** El `tabThrough` en curso (hasta su temporizador): el próximo Tab lo termina primero. */
+let pending: (() => void) | null = null;
 
 /** Compara dos nodos de `root` por el orden en que se ven: el del documento, salvo que un
- *  contenedor flex o grid reordene a sus hijos con `order`. */
-function comparer(root: Element): (a: Element, b: Element) => number {
+ *  contenedor flex o grid reordene a sus hijos con `order` (esos contenedores se anotan en `moved`). */
+function comparer(root: Element, moved?: Set<Element>): (a: Element, b: Element) => number {
   const order = new Map<Element, number>();
   const flex = new Map<Element, boolean>();
   const ord = (el: Element) => {
@@ -62,15 +68,16 @@ function comparer(root: Element): (a: Element, b: Element) => number {
     const parent = pa[i].parentElement;
     if (parent && isFlex(parent)) {
       const d = ord(pa[i]) - ord(pb[i]);
-      if (d) return d;
+      if (d) return moved?.add(parent), d;
     }
     return pa[i].compareDocumentPosition(pb[i]) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
   };
 }
 
 /** Los enfocables con Tab dentro de `root`, en el orden en que se ven. De un grupo de radios
- *  queda uno, como hace el navegador: el que tiene el foco, el marcado o el primero. */
-export function tabOrder(root: Element): HTMLElement[] {
+ *  queda uno, como hace el navegador: el que tiene el foco, el marcado o el primero. En `moved`
+ *  quedan los contenedores cuyo `order` cambió el orden del documento. */
+export function tabOrder(root: Element, moved?: Set<Element>): HTMLElement[] {
   const active = document.activeElement;
   // Por formulario (o ninguno) y nombre.
   const groups = new Map<HTMLFormElement | null, Map<string, HTMLInputElement[]>>();
@@ -93,7 +100,7 @@ export function tabOrder(root: Element): HTMLElement[] {
     const pick = g.find((r) => r === active) ?? g.find((r) => r.checked) ?? g[0];
     if (pick !== g[0]) els[els.indexOf(g[0])] = pick;
   }
-  return els.sort(comparer(root));
+  return els.sort(comparer(root, moved));
 }
 
 /** A dónde va el foco con Tab (o Mayús+Tab, `back`) desde `from`, en el orden en que se ve `root`.
@@ -101,23 +108,28 @@ export function tabOrder(root: Element): HTMLElement[] {
  *  desde fuera de `root` (o desde `root` mismo), entra por el primero o por el último.
  *
  *  `native`: el navegador ya va a `to` por su cuenta (es el de al lado en el documento, o lo ordena
- *  `reading-flow`), así que no hace falta evitar su Tab. Dejarlo hace que recorra también lo que hay
- *  dentro de un control (los segmentos de una fecha, un shadow DOM) y salte lo que no se enfoca. */
+ *  `reading-flow` en cada contenedor que reordena), así que no hace falta evitar su Tab. Dejarlo hace
+ *  que recorra también lo que hay dentro de un control (los segmentos de una fecha, un shadow DOM) y
+ *  salte lo que no se enfoca. */
 export function stepTab(root: Element, from: Element | null, back: boolean): { els: HTMLElement[]; to: HTMLElement | null; native: boolean } {
-  const els = tabOrder(root);
+  // Lo provisional de un Tab anterior desde una fecha no cuenta (la raíz con `tabindex="0"`).
+  pending?.();
+  const moved = new Set<Element>();
+  const els = tabOrder(root, moved);
   const n = els.length;
   if (!from || from === root || !root.contains(from)) return { els, to: (back ? els[n - 1] : els[0]) ?? null, native: false };
   let i = els.indexOf(from as HTMLElement);
   if (i >= 0) i += back ? -1 : 1;
   else {
     // Un nodo que no está en la lista (`tabindex="-1"`, un host con shadow DOM): se ubica entre los que sí.
-    const cmp = comparer(root);
+    const cmp = comparer(root, moved);
     const after = els.findIndex((el) => cmp(from, el) < 0);
     i = after < 0 ? (back ? n - 1 : n) : back ? after - 1 : after;
   }
   const to = els[i] ?? null;
   // Un `tabindex` positivo cambia el orden del navegador: ahí no se le deja nada.
-  const native = !!to && !els.some((el) => el.tabIndex > 0) && (readingFlow() || to === beside(els, from, back));
+  const flows = readingFlow() && [...moved].every((el) => readingFlow(el));
+  const native = !!to && !els.some((el) => el.tabIndex > 0) && (flows || to === beside(els, from, back));
   return { els, to, native };
 }
 
@@ -132,6 +144,47 @@ function beside(els: HTMLElement[], from: Element, back: boolean): HTMLElement |
     if (!best || !(best.compareDocumentPosition(el) & bit)) best = el;
   }
   return best;
+}
+
+/** Un control con paradas propias: Tab recorre los segmentos de una fecha o una hora sin que cambie
+ *  `document.activeElement`, así que desde afuera no se sabe si el próximo Tab sale de él. */
+export const hasStops = (el: Element | null): el is HTMLInputElement => el instanceof HTMLInputElement && /^(date|time|datetime-local|month|week)$/.test(el.type);
+
+/**
+ * Tab desde un control con paradas propias (`hasStops`) cuando el navegador no iría solo adonde
+ * toca: se le deja mover (al segmento siguiente, si lo hay) y, si el foco sale del control, `go` lo
+ * lleva a su lugar en el acto. Durante esa pulsación `root` recibe el foco (Mayús+Tab desde lo primero
+ * del documento no se sale de él) y Tab sigue el orden del documento: sin `reading-flow`, que al pasar
+ * del último lo sacaría de `root`.
+ */
+export function tabThrough(root: HTMLElement, from: Element, go: () => void): void {
+  // Otro Tab llegó antes que el temporizador del anterior: ese termina primero (si no, el `tabindex`
+  // provisional de la raíz pasaría por el original).
+  pending?.();
+  const tabindex = root.getAttribute("tabindex");
+  const flow = root.style.getPropertyValue("reading-flow");
+  root.tabIndex = 0;
+  if (readingFlow(root)) root.style.setProperty("reading-flow", "normal");
+  let done = false;
+  const finish = (moved: boolean) => {
+    if (done) return;
+    done = true;
+    pending = null;
+    document.removeEventListener("focusin", leave, true);
+    clearTimeout(timer);
+    if (tabindex === null) root.removeAttribute("tabindex");
+    else root.setAttribute("tabindex", tabindex);
+    if (flow) root.style.setProperty("reading-flow", flow);
+    else root.style.removeProperty("reading-flow");
+    if (moved) go();
+  };
+  // Salió del control (pasar de segmento no mueve el foco del documento): a su lugar, antes de pintar.
+  const leave = (e: Event) => e.target !== from && finish(true);
+  document.addEventListener("focusin", leave, true);
+  // Si el foco se fue sin `focusin` (a la barra del navegador), también.
+  const settle = () => finish(document.activeElement !== from);
+  const timer = setTimeout(settle);
+  pending = settle;
 }
 
 /** Enfoca `els[i]` y, si no acepta el foco (algo que el navegador no enfoca aunque lo parezca), el

@@ -15,6 +15,11 @@ nx-tabs {
      existe, `tabs.ts` corrige el orden de Tab. */
   reading-flow: flex-visual;
 }
+/* Con `reading-flow`, el navegador se salta todo lo de adentro de un panel con `tabindex="-1"`: ahí
+   lo corrige `tabs.ts`. */
+nx-tabs:has(> [tabindex^="-"]) {
+  reading-flow: normal;
+}
 nx-tabs > [hidden] {
   display: none !important;
 }
