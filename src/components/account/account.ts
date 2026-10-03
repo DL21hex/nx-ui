@@ -1,16 +1,16 @@
 /**
  * `<nx-account>`: la tarjeta de cuenta al pie del menú lateral. Un clic abre un panel con todo lo de
  * la persona: empresa/sede/rol, estado, tema y color (con vista previa en vivo y una transición
- * circular desde el clic), enlaces de la app, idioma y formatos, atajos, «Ver como…», bloquear y
- * cerrar sesión. Además avisa antes de que venza la sesión y deja extenderla.
+ * circular desde el clic), enlaces de la app, idioma y formatos, atajos, «Ver como…» y cerrar
+ * sesión. Además avisa antes de que venza la sesión y deja extenderla.
  *
  * - **Light DOM, un solo popover** (`popover="auto"`): capa superior, clic fuera y «uno a la vez» son
  *   nativos, y `<nx-keytips>` limita sus letras al panel. Las sub-vistas (empresa, idioma, ver como)
  *   reemplazan el contenido del mismo panel; Esc vuelve.
  * - **Cerrado no hace nada** salvo un `setTimeout` de la sesión (un intervalo de 1 s solo en el tramo
- *   del aviso), el de inactividad (`lock-after`) y el de «No molestar hasta…».
- * - **Lo pesado va aparte:** la pantalla de bloqueo (`./lock`), la franja de «Ver como» (`./view-as`)
- *   y la cola de `nx-sync` se cargan con `import()` solo cuando se usan.
+ *   del aviso) y el de «No molestar hasta…».
+ * - **Lo pesado va aparte:** el panel (`./account-panel`), la franja de «Ver como» (`./view-as`) y la
+ *   cola de `nx-sync` se cargan con `import()`; el panel y la franja, en reposo, antes de usarlos.
  */
 import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
 import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
@@ -41,20 +41,20 @@ import {
 } from "./logic";
 import type { AccountView } from "./account-panel";
 
-type Panel = typeof import("./account-panel");
-let panel: Panel | undefined;
-let loading: Promise<Panel> | undefined;
-/** El contenido del panel (módulo aparte): una sola vez por página. Si falla (sin red), se reintenta
- *  en el próximo pedido. */
-function loadPanel(): Promise<Panel> {
-  return (loading ??= import("./account-panel").then(
-    (m) => (panel = m),
-    (err) => {
+/** Un módulo aparte, una sola vez por página. Si falla (sin red), se reintenta en el próximo pedido. */
+function once<T>(load: () => Promise<T>): () => Promise<T> {
+  let loading: Promise<T> | undefined;
+  return () =>
+    (loading ??= load().catch((err) => {
       loading = undefined;
       throw err;
-    },
-  ));
+    }));
 }
+let panel: typeof import("./account-panel") | undefined;
+/** El contenido del panel. */
+const loadPanel = once(() => import("./account-panel").then((m) => (panel = m)));
+/** La franja de «Ver como». */
+const loadViewAs = once(() => import("./view-as"));
 import type {
   AccountCommand,
   AccountItem,
@@ -96,7 +96,6 @@ export const ACCOUNT_LABELS: AccountLabels = {
   shortcuts: "Atajos de teclado",
   viewAs: "Ver como…",
   stopViewAs: "Dejar de ver como {name}",
-  lock: "Bloquear pantalla",
   logout: "Cerrar sesión",
   back: "Volver",
   offline: "Sin conexión",
@@ -139,6 +138,8 @@ const CLEAN: { [K in keyof Data]: (v: unknown) => Data[K] } = {
 };
 const JSON_ATTRS = ["user", "tenants", "items", "palettes", "locales", "view-as", "session", "labels"];
 const LOGOUT_WAIT = 10_000;
+/** Reintentos de la franja de «Ver como» si su módulo no carga: 1 s, 2 s, 4 s… hasta 30 s. */
+const VIEW_AS_RETRY = 30_000;
 
 type View = "main" | "tenant" | "locale" | "viewas";
 type ViewTransition = { ready: Promise<void>; finished: Promise<void>; updateCallbackDone: Promise<void> };
@@ -147,6 +148,14 @@ let uid = 0;
 const quiet = () => {};
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const toggleAttr = (el: Element, name: string, v: string | null) => (v === null ? el.removeAttribute(name) : el.setAttribute(name, v));
+/** El avatar: la foto o, sin ella o si no carga (una URL vencida), las iniciales. */
+function avatarContent(u: AccountUser | null): Node | string {
+  const src = safeImageSrc(u?.avatar);
+  if (!src) return accountInitials(u);
+  const img = h("img", { src, alt: "", referrerpolicy: "no-referrer" });
+  img.addEventListener("error", () => img.replaceWith(accountInitials(u)), { once: true });
+  return img;
+}
 /** Tema y paleta en `<html>`: `system` quita `data-theme` (manda el sistema). */
 function applyLook(theme: AccountTheme | undefined, palette: string | undefined): void {
   const d = document.documentElement;
@@ -192,15 +201,17 @@ function reveal(x: number, y: number, update: () => void): void {
 
 export class NxAccount extends Base {
   static {
-    // `lock` queda solo como atributo: `lock()` es el método que bloquea la pantalla.
-    attrProps(this, ["applyLocale", "expiresAt", "viewAsSource", "lockEndpoint", "lockAfter", "logoutUrl", "locale"]);
+    attrProps(this, ["applyLocale", "expiresAt", "viewAsSource", "logoutUrl", "logoutMethod", "logoutCsrf", "logoutCsrfField", "locale"]);
   }
   declare applyLocale: string | null;
   declare expiresAt: string | null;
   declare viewAsSource: string | null;
-  declare lockEndpoint: string | null;
-  declare lockAfter: string | null;
+  /** A dónde ir al salir (mismo origen). Por defecto con `POST` (un formulario); `logout-method="get"` navega. */
   declare logoutUrl: string | null;
+  declare logoutMethod: string | null;
+  /** El token CSRF que lleva el `POST` de salida, en el campo `logout-csrf-field` (`_csrf`). */
+  declare logoutCsrf: string | null;
+  declare logoutCsrfField: string | null;
   declare locale: string | null;
   static observedAttributes = [
     ...JSON_ATTRS,
@@ -210,9 +221,6 @@ export class NxAccount extends Base {
     "expires-at",
     "warn-before",
     "view-as-source",
-    "lock",
-    "lock-endpoint",
-    "lock-after",
     "logout-url",
     "locale",
     "disabled",
@@ -221,7 +229,7 @@ export class NxAccount extends Base {
   #uid = `nx-acc${++uid}`;
   #d: Data = { user: null, tenants: [], items: [], palettes: normalizePalettes(null), locales: DEFAULT_LOCALES, viewAs: null };
   #labels: AccountLabels = ACCOUNT_LABELS;
-  /** Los `labels` tal como llegaron: también llevan los de la pantalla de bloqueo y la franja. */
+  /** Los `labels` tal como llegaron: también llevan los de la franja de «Ver como». */
   #rawLabels: Record<string, string> = {};
   #session: { expiresAt: number | null; extendEndpoint?: string } = { expiresAt: null };
   #phase: ReturnType<typeof sessionPhase> = "none";
@@ -235,9 +243,6 @@ export class NxAccount extends Base {
   #unsub?: () => void;
   /** Cerrando sesión con cambios en cola: `stuck` si pasó el tope. */
   #leaving: { stuck: boolean } | null = null;
-  #lockVerify?: (password: string) => Promise<boolean>;
-  #locking = false;
-  #activity = Date.now();
   // Panel.
   #open = false;
   #view: View = "main";
@@ -249,11 +254,17 @@ export class NxAccount extends Base {
   #hovering = false;
   #queued = false;
   // Temporizadores y listeners.
-  #timers: Record<"session" | "tick" | "idle" | "until" | "leave", ReturnType<typeof setTimeout> | undefined> = { session: undefined, tick: undefined, idle: undefined, until: undefined, leave: undefined };
+  #timers: Record<"session" | "tick" | "until" | "leave" | "viewas", ReturnType<typeof setTimeout> | undefined> = { session: undefined, tick: undefined, until: undefined, leave: undefined, viewas: undefined };
   #ac?: AbortController;
   #openAc?: AbortController;
   // Nodos.
   #card?: HTMLButtonElement;
+  /** Las partes de la tarjeta: se actualizan en su lugar. */
+  #cardAv?: HTMLSpanElement;
+  #cardAvKey?: string;
+  #cardName?: HTMLSpanElement;
+  #cardOrg?: HTMLSpanElement;
+  #cardExtra?: HTMLSpanElement;
   #strip?: HTMLDivElement;
   #pop?: HTMLDivElement;
   #live?: HTMLParagraphElement;
@@ -286,7 +297,8 @@ export class NxAccount extends Base {
         set(this: NxAccount, v: unknown) {
           (this.#d as Record<string, unknown>)[k] = CLEAN[k](parseJsonAttr(v));
           if (k === "viewAs") this.#banner();
-          if (k === "user") this.#relock();
+          // La sub-vista de empresas abierta muestra la lista nueva (y no elige una que ya no está).
+          if (k === "tenants" && this.#view === "tenant") this.#sub?.refresh(this.#d.tenants);
           this.#schedule();
         },
       });
@@ -344,13 +356,6 @@ export class NxAccount extends Base {
     this.#queue = v && typeof v.subscribe === "function" ? v : null;
     if (this.isConnected) this.#subscribe();
   }
-  /** Para la pantalla de bloqueo sin `lock-endpoint`: la app verifica la clave. */
-  get lockVerify(): ((password: string) => Promise<boolean>) | undefined {
-    return this.#lockVerify;
-  }
-  set lockVerify(v: ((password: string) => Promise<boolean>) | undefined) {
-    this.#lockVerify = typeof v === "function" ? v : undefined;
-  }
   get storage(): string {
     return this.getAttribute("storage") || "nx-account";
   }
@@ -368,7 +373,7 @@ export class NxAccount extends Base {
   }
   /** Las acciones de la cuenta con la forma de los `items` de `<nx-command>` (ver `account="id"`). */
   get commands(): AccountCommand[] {
-    return accountCommands({ account: this.#uid, labels: this.#labels, palettes: this.#d.palettes, tenants: this.#d.tenants, locales: this.#d.locales, viewAs: !!this.getAttribute("view-as-source"), lock: this.#lockOn() });
+    return accountCommands({ account: this.#uid, labels: this.#labels, palettes: this.#d.palettes, tenants: this.#d.tenants, locales: this.#d.locales, viewAs: !!this.getAttribute("view-as-source") });
   }
 
   // ---------------------------------------------------------------- API
@@ -380,30 +385,6 @@ export class NxAccount extends Base {
   }
   hide(): void {
     if (this.#open) this.#pop!.hidePopover?.();
-  }
-
-  /** Bloquea la pantalla (carga `./lock` la primera vez). Se resuelve al desbloquear. */
-  lock(): Promise<void> {
-    if (!this.#d.user || this.#locking) return Promise.resolve();
-    this.#locking = true;
-    this.hide();
-    return import("./lock")
-      .then((m) =>
-        m.nxLock({
-          user: this.#d.user!,
-          endpoint: this.getAttribute("lock-endpoint") ?? undefined,
-          verify: this.#lockVerify,
-          labels: this.#rawLabels,
-          locale: resolveLocale(this),
-          onLogout: () => this.logout(),
-        }),
-      )
-      .catch((err) => console.warn("[nx-account] no se pudo bloquear", err))
-      .finally(() => {
-        this.#locking = false;
-        this.#activity = Date.now();
-        this.#armIdle();
-      });
   }
 
   /**
@@ -439,22 +420,19 @@ export class NxAccount extends Base {
     document.addEventListener("nx-sync-change", (e) => this.#onNet((e as CustomEvent).detail), { signal });
     document.addEventListener("nx-command-select", this.#onCommand, { signal });
     document.addEventListener("keydown", this.#onKey, { signal });
-    document.addEventListener("visibilitychange", () => (this.#scheduleSession(), this.#armIdle()), { signal });
-    const seen = () => (this.#activity = Date.now());
-    for (const t of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"]) document.addEventListener(t, seen, { signal, capture: true, passive: true });
+    document.addEventListener("visibilitychange", () => this.#scheduleSession(), { signal });
     this.#subscribe();
     this.#scheduleSession();
-    this.#armIdle();
     this.#armUntil();
     this.#banner();
     this.#paint();
-    this.#relock();
   }
 
   disconnectedCallback(): void {
     this.#ac?.abort();
     this.#openAc?.abort();
     this.#sub?.stop();
+    this.#sub = undefined;
     this.#unsub?.();
     this.#unsub = undefined;
     const t = this.#timers;
@@ -474,15 +452,15 @@ export class NxAccount extends Base {
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
+    // Quitar el atributo es `null`: cada setter vuelve a lo de por defecto (sin usuario, sin franja…).
     if (JSON_ATTRS.includes(name)) {
-      if (value !== null) (this as unknown as Record<string, unknown>)[name === "view-as" ? "viewAs" : name] = value;
+      (this as unknown as Record<string, unknown>)[name === "view-as" ? "viewAs" : name] = value;
       return;
     }
     if (name === "expires-at") {
       this.#session = { ...this.#session, expiresAt: parseExpiry(value) };
       this.#scheduleSession();
     } else if (name === "warn-before") this.#scheduleSession();
-    else if (name === "lock-after" || name === "lock" || name === "lock-endpoint") this.#armIdle(), this.#relock();
     else if (name === "disabled" && value !== null) this.hide();
     this.#schedule();
   }
@@ -504,22 +482,6 @@ export class NxAccount extends Base {
 
   #num(n: number): string {
     return n.toLocaleString(resolveLocale(this));
-  }
-
-  /** Se recargó la página estando bloqueada (`./lock` deja `nx-locked` en sessionStorage): vuelve a
-   *  bloquear en cuanto hay usuario y bloqueo activo. Se mira aquí, sin cargar `./lock`. */
-  #relock(): void {
-    let locked = false;
-    try {
-      locked = sessionStorage.getItem("nx-locked") !== null;
-    } catch {
-      /* sin almacenamiento: el bloqueo no sobrevivió a la recarga */
-    }
-    if (locked && this.isConnected && this.#lockOn() && this.#d.user && !this.#locking && !this.disabled) void this.lock();
-  }
-
-  #lockOn(): boolean {
-    return boolAttr(this, "lock") || this.hasAttribute("lock-endpoint");
   }
 
   #tenant(): AccountTenant | undefined {
@@ -551,12 +513,22 @@ export class NxAccount extends Base {
     this.#card = h("button", { type: "button", class: "nx-account__card", popovertarget: popId, "aria-haspopup": "dialog", "aria-expanded": "false", "aria-controls": popId });
     this.#pop = h("div", { id: popId, class: "nx-account__pop", popover: "auto", role: "dialog" });
     this.#live = h("p", { class: "nx-account__vh", role: "status" });
+    // La tarjeta se arma una vez; `#paint` cambia sus textos y el avatar en su lugar.
+    this.#cardAv = h("span", { class: "nx-account__av", "aria-hidden": "true" }, new Text(), h("span", { class: "nx-account__dot" }));
+    this.#cardName = h("span", { class: "nx-account__name" });
+    this.#cardOrg = h("span", { class: "nx-account__org" });
+    this.#cardExtra = h("span", { class: "nx-account__vh" });
+    this.#card.append(this.#cardAv, h("span", { class: "nx-account__text" }, this.#cardName, this.#cardOrg, this.#cardExtra), glyph(UPDOWN, "nx-account__chev"));
     this.append(this.#strip, this.#card, this.#pop, this.#live);
     // El panel se trae en cuanto la página queda libre, o antes si alguien apunta a la tarjeta: así
-    // abrirlo es inmediato (también sin red, si ya se había cargado).
+    // abrirlo es inmediato (también sin red, si ya se había cargado). Con «Ver como» posible, también
+    // su franja: suplantar sin red no puede quedar sin aviso.
     const fetchPanel = () => void loadPanel().catch(quiet);
     for (const t of ["pointerenter", "focus", "touchstart"]) this.#card.addEventListener(t, fetchPanel, { passive: true });
-    (globalThis.requestIdleCallback ?? setTimeout)(fetchPanel, { timeout: 4000 } as never);
+    (globalThis.requestIdleCallback ?? setTimeout)(() => {
+      fetchPanel();
+      if (this.getAttribute("view-as-source") || this.#d.viewAs) void loadViewAs().catch(quiet);
+    }, { timeout: 4000 } as never);
 
     const pop = this.#pop;
     pop.addEventListener("beforetoggle", (e) => {
@@ -571,7 +543,9 @@ export class NxAccount extends Base {
         requestAnimationFrame(() => this.#open && this.#place());
         addEventListener("resize", () => this.#place(), { passive: true, signal: (this.#openAc = new AbortController()).signal });
       } else {
+        // La sub-vista se va con el panel: al reabrir se enfoca la vista principal, no un nodo viejo.
         this.#sub?.stop();
+        this.#sub = undefined;
         this.#preview(null);
       }
       this.#emit("nx-open-change", { open });
@@ -609,42 +583,47 @@ export class NxAccount extends Base {
 
   // ---------------------------------------------------------------- pintado
 
-  #avatar(big: boolean): HTMLElement {
-    const u = this.#d.user;
-    const src = safeImageSrc(u?.avatar);
-    return h(
-      "span",
-      { class: big ? "nx-account__av nx-account__av--lg" : "nx-account__av", "aria-hidden": "true" },
-      src ? h("img", { src, alt: "", referrerpolicy: "no-referrer" }) : accountInitials(u),
-      big ? null : h("span", { class: "nx-account__dot" }),
-    );
-  }
-
+  /** La tarjeta, en su lugar: el avatar solo se rehace si cambió la foto o las iniciales. */
   #paint(): void {
     if (!this.#card) return;
     const L = this.#labels;
     const t = this.#tenant();
-    const net = this.#net;
-    const sync = !net.online ? "offline" : net.pending ? "pending" : null;
-    toggleAttr(this, "data-sync", sync);
+    const u = this.#d.user;
     toggleAttr(this, "data-session", this.#phase === "warn" || this.#phase === "expired" ? this.#phase : null);
-    const extra = [this.status !== "online" && L[this.status], sync === "offline" && L.offline, net.pending > 0 && pendingText(net.pending, L, (n) => this.#num(n))].filter(Boolean).join(" ");
     this.#card.disabled = this.disabled;
     this.#pop!.setAttribute("aria-label", L.account);
-    this.#card.replaceChildren(
-      this.#avatar(false),
-      h(
-        "span",
-        { class: "nx-account__text" },
-        h("span", { class: "nx-account__name" }, this.#d.user?.name ?? L.account),
-        t ? h("span", { class: "nx-account__org" }, [t.name, t.detail].filter(Boolean).join(" · ")) : null,
-        extra ? h("span", { class: "nx-account__vh" }, ` · ${extra}`) : null,
-      ),
-      glyph(UPDOWN, "nx-account__chev"),
-    );
+    const avKey = `${safeImageSrc(u?.avatar) ?? ""}|${accountInitials(u)}`;
+    if (avKey !== this.#cardAvKey) {
+      this.#cardAvKey = avKey;
+      this.#cardAv!.firstChild!.replaceWith(avatarContent(u));
+    }
+    this.#cardName!.textContent = u?.name ?? L.account;
+    const org = t ? [t.name, t.detail].filter(Boolean).join(" · ") : "";
+    this.#cardOrg!.textContent = org;
+    this.#cardOrg!.hidden = !org;
+    this.#paintNet();
     this.#paintStrip(this.#strip!, false);
     // Una sub-vista no muestra nada de esto: no se rehace (movería el cursor de quien escribe).
     if (this.#open && this.#view === "main") this.#render();
+  }
+
+  /** Lo que depende de la conexión y la cola, en su lugar: `data-sync`, el texto oculto de la tarjeta
+   *  y, cerrando sesión, la franja del panel. Un `nx-sync-change` no rehace nada más. */
+  #paintNet(): void {
+    if (!this.#card) return;
+    const L = this.#labels;
+    const net = this.#net;
+    const sync = !net.online ? "offline" : net.pending ? "pending" : null;
+    toggleAttr(this, "data-sync", sync);
+    const extra = [this.status !== "online" && L[this.status], sync === "offline" && L.offline, net.pending > 0 && pendingText(net.pending, L, (n) => this.#num(n))].filter(Boolean).join(" ");
+    this.#cardExtra!.textContent = extra ? ` · ${extra}` : "";
+    this.#cardExtra!.hidden = !extra;
+    const leaving = this.#leaving && this.#pop!.querySelector(".nx-account__leaving p");
+    if (leaving) leaving.textContent = this.#leavingText();
+  }
+
+  #leavingText(): string {
+    return `${pendingText(this.#net.pending, this.#labels, (x) => this.#num(x))} ${this.#leaving?.stuck ? this.#labels.pendingStuck : this.#labels.pendingWait}`;
   }
 
   /** La franja de la sesión (en la tarjeta y arriba del panel): cuenta regresiva y «Extender». */
@@ -681,14 +660,14 @@ export class NxAccount extends Base {
     const focused = (document.activeElement as HTMLElement | null)?.closest?.<HTMLElement>("[data-k]");
     const key = focused && pop.contains(focused) ? focused.dataset.k : null;
     const d = document.documentElement;
-    const n = this.#net.pending;
+    const u = this.#d.user;
     pop.dataset.view = "main";
     pop.replaceChildren(
       ...panel.mainView({
         uid: this.#uid,
         labels: this.#labels,
-        avatar: this.#avatar(true),
-        user: this.#d.user,
+        avatar: h("span", { class: "nx-account__av nx-account__av--lg", "aria-hidden": "true" }, avatarContent(u)),
+        user: u,
         tenant: this.#tenant(),
         hasTenants: !!this.#d.tenants.length,
         status: this.status,
@@ -700,9 +679,8 @@ export class NxAccount extends Base {
         locale: this.#locale(),
         viewAs: this.#d.viewAs,
         viewAsSource: !!this.getAttribute("view-as-source"),
-        lock: this.#lockOn(),
         strip: this.#phase === "warn" || this.#phase === "expired" ? this.#paintStrip(h("div"), true) : null,
-        leaving: this.#leaving && { stuck: this.#leaving.stuck, text: `${pendingText(n, this.#labels, (x) => this.#num(x))} ${this.#leaving.stuck ? this.#labels.pendingStuck : this.#labels.pendingWait}` },
+        leaving: this.#leaving && { stuck: this.#leaving.stuck, text: this.#leavingText() },
       }),
     );
     this.#place();
@@ -722,7 +700,7 @@ export class NxAccount extends Base {
   }
 
   #focusFirst(): void {
-    if (this.#sub) this.#sub.focus();
+    if (this.#sub && this.#pop!.contains(this.#sub.root)) this.#sub.focus();
     else this.#pop!.querySelector<HTMLElement>("button:not([disabled]), a[href]")?.focus({ preventScroll: true });
   }
 
@@ -751,7 +729,13 @@ export class NxAccount extends Base {
           locales: d.locales,
           locale: this.#locale(),
           source: this.getAttribute("view-as-source"),
-          pick: (value, person) => (v === "tenant" ? this.#switchTo(d.tenants.find((t) => t.id === value)!) : v === "locale" ? this.#setLocale(value) : this.#startViewAs(person!)),
+          pick: (value, person) => {
+            if (v === "locale") return this.#setLocale(value);
+            if (v === "viewas") return void (person && this.#startViewAs(person));
+            // `tenants` pudo cambiar con la sub-vista abierta: la que ya no está no se elige.
+            const t = d.tenants.find((x) => x.id === value);
+            if (t) this.#switchTo(t);
+          },
         });
         this.#pop!.dataset.view = v;
         this.#pop!.replaceChildren(this.#sub.root);
@@ -796,8 +780,6 @@ export class NxAccount extends Base {
         else this.#emit("nx-account-select", { id: "shortcuts" });
         return;
       }
-      case "lock":
-        return void this.lock();
       case "logout":
         return this.logout();
       case "anyway":
@@ -826,11 +808,6 @@ export class NxAccount extends Base {
       e.preventDefault();
       if (this.#view !== "main") this.#go("main", this.#view);
       else this.hide();
-      return;
-    }
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "l" && this.#lockOn() && !this.disabled && this.#d.user) {
-      e.preventDefault();
-      void this.lock();
     }
   };
 
@@ -847,8 +824,7 @@ export class NxAccount extends Base {
     else if (d.action === "view-as") {
       this.show();
       if (this.#open) this.#go("viewas");
-    } else if (d.action === "lock") void this.lock();
-    else if (d.action === "logout") this.logout();
+    } else if (d.action === "logout") this.logout();
   };
 
   #switchTo(t: AccountTenant): void {
@@ -856,7 +832,8 @@ export class NxAccount extends Base {
       if (!this.#emit("nx-account-switch", { tenant: t }, true)) return;
       this.current = t.id;
       this.#save({ recent: pushRecent(this.#prefs.recent ?? [], t.id) });
-      this.#say(this.#labels.switched.replace("{name}", [t.name, t.detail].filter(Boolean).join(" · ")));
+      const name = [t.name, t.detail].filter(Boolean).join(" · ");
+      this.#say(this.#labels.switched.replace("{name}", () => name));
     }
     this.hide();
   }
@@ -930,27 +907,39 @@ export class NxAccount extends Base {
     this.hide();
   }
 
+  /** Salir es cancelable, como entrar: la app puede cancelar, terminar la suplantación en el servidor
+   *  y, cuando lo confirme, asignar `viewAs = null`. Hasta entonces la franja sigue. */
   #exitViewAs(): void {
-    this.#d.viewAs = null;
-    this.#banner();
-    this.#emit("nx-account-view-as", { user: null });
-    this.#schedule();
-    if (this.#open) this.hide();
+    if (!this.#d.viewAs || !this.#emit("nx-account-view-as", { user: null }, true)) return;
+    this.viewAs = null;
+    this.hide();
   }
 
-  /** La franja de «Ver como» (módulo aparte), si hay a quién y el elemento está en la página. */
+  /** La franja de «Ver como» (módulo aparte), si hay a quién y el elemento está en la página. La
+   *  tarjeta lleva `data-view-as` siempre: si el módulo no carga, el CSS la marca y se reintenta. */
   #banner(): void {
     this.#unbanner?.();
     this.#unbanner = undefined;
+    clearTimeout(this.#timers.viewas);
+    this.#timers.viewas = undefined;
     const p = this.#d.viewAs;
-    if (!p || !this.isConnected) return;
-    import("./view-as")
-      .then((m) => {
+    toggleAttr(this, "data-view-as", p ? p.id : null);
+    if (p && this.isConnected) this.#showBanner(p, 0);
+  }
+
+  #showBanner(p: AccountPerson, tries: number): void {
+    loadViewAs().then(
+      (m) => {
         if (this.#d.viewAs !== p || !this.isConnected) return;
         this.#unbanner?.();
         this.#unbanner = m.showViewAsBanner(p, { labels: this.#rawLabels, onExit: () => this.#exitViewAs() });
-      })
-      .catch((err) => console.warn("[nx-account] no se pudo mostrar la franja", err));
+      },
+      (err) => {
+        console.warn("[nx-account] no se pudo mostrar la franja", err);
+        if (this.#d.viewAs !== p || !this.isConnected) return;
+        this.#timers.viewas = setTimeout(() => this.#showBanner(p, tries + 1), Math.min(VIEW_AS_RETRY, 1000 * 2 ** tries));
+      },
+    );
   }
 
   // ---------------------------------------------------------------- sincronización y salida
@@ -962,9 +951,11 @@ export class NxAccount extends Base {
 
   #onNet(s: { online?: boolean; pending?: number } | undefined): void {
     if (!s) return;
-    this.#net = { online: s.online !== false, pending: Math.max(0, Number(s.pending) || 0) };
-    if (this.#leaving && !this.#net.pending) return this.#leave(0);
-    this.#schedule();
+    const net = { online: s.online !== false, pending: Math.max(0, Number(s.pending) || 0) };
+    if (net.online === this.#net.online && net.pending === this.#net.pending) return;
+    this.#net = net;
+    if (this.#leaving && !net.pending) return this.#leave(0);
+    this.#paintNet();
   }
 
   #leave(pending: number): void {
@@ -975,16 +966,23 @@ export class NxAccount extends Base {
     this.hide();
     const href = safeHref(this.getAttribute("logout-url"));
     if (!href) return;
+    let u: URL;
     try {
-      const u = new URL(href, location.href);
-      if (u.origin === location.origin) location.assign(u.href);
-      else console.warn(`[nx-account] logout-url de otro origen ignorado: ${u.origin}`);
+      u = new URL(href, location.href);
     } catch {
-      /* inválido */
+      return; /* inválido */
     }
+    if (u.origin !== location.origin) return console.warn(`[nx-account] logout-url de otro origen ignorado: ${u.origin}`);
+    if (this.getAttribute("logout-method")?.toLowerCase() === "get") return location.assign(u.href);
+    // Por defecto, `POST`: un `GET` que cierra sesión lo dispara cualquier <img> de otro sitio o un
+    // precargador de enlaces. El formulario lleva las cookies (SameSite=Lax) y el token CSRF.
+    const csrf = this.getAttribute("logout-csrf");
+    const form = h("form", { method: "post", action: u.href, hidden: true }, csrf ? h("input", { type: "hidden", name: this.getAttribute("logout-csrf-field") || "_csrf", value: csrf }) : null);
+    document.body.append(form);
+    form.submit();
   }
 
-  // ---------------------------------------------------------------- sesión e inactividad
+  // ---------------------------------------------------------------- sesión
 
   /**
    * Un `setTimeout` hasta la entrada al aviso; en el aviso, un intervalo de 1 s que solo cambia el
@@ -1035,17 +1033,5 @@ export class NxAccount extends Base {
     this.#extending = false;
     this.#scheduleSession();
     this.#schedule();
-  }
-
-  /** Bloqueo por inactividad: un solo `setTimeout` que, al cumplirse, mira cuándo fue lo último
-   *  (los eventos solo anotan la hora) y se reprograma por lo que falte. Nada por frame. */
-  #armIdle(): void {
-    clearTimeout(this.#timers.idle);
-    this.#timers.idle = undefined;
-    const mins = Number(this.getAttribute("lock-after"));
-    if (!this.isConnected || !(mins > 0) || !this.#lockOn() || this.#locking) return;
-    const left = this.#activity + mins * 60_000 - Date.now();
-    if (left <= 0) return void this.lock();
-    this.#timers.idle = setTimeout(() => this.#armIdle(), clampDelay(left) + 20);
   }
 }

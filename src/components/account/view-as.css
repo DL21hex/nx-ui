@@ -1,0 +1,75 @@
+/* showViewAsBanner() (franja de «Ver como»), de <nx-account>. */
+
+/* El contenido baja lo que mide la franja; una barra fija de la app puede usar la misma variable. */
+html[data-nx-view-as] body {
+  padding-top: var(--nx-view-as-offset);
+}
+/* Ámbar fuerte con texto oscuro en los dos temas (≥ 8:1), rayas tenues y borde marcado: no se
+   confunde con un aviso normal. */
+.nx-viewas {
+  --_bg: light-dark(oklch(0.84 0.15 80), oklch(0.77 0.14 75));
+  --_ink: light-dark(oklch(0.24 0.05 60), oklch(0.19 0.04 60));
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--nx-view-as-offset, 36px);
+  margin: 0;
+  padding: 0 6px 0 16px;
+  overflow: hidden;
+  border: 0;
+  border-bottom: 2px solid oklch(0.55 0.13 62);
+  background: repeating-linear-gradient(-45deg, #0000 0 10px, #0000000d 10px 20px) var(--_bg);
+  color: var(--_ink);
+  font: 13px/1.2 var(--nx-font-sans);
+}
+.nx-viewas[data-enter] {
+  animation: nx-viewas-in var(--nx-motion-base) var(--nx-ease-out);
+}
+.nx-viewas > svg {
+  flex: none;
+  width: 16px;
+}
+.nx-viewas__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nx-viewas__exit {
+  flex: none;
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: var(--_ink);
+  color: var(--_bg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nx-viewas__exit:focus-visible {
+  outline: 2px solid var(--nx-ring);
+  outline-offset: 2px;
+}
+/* Solo para lectores de pantalla (recortado del todo). */
+.nx-viewas__sr {
+  position: absolute;
+  clip-path: inset(50%);
+}
+@keyframes nx-viewas-in {
+  from {
+    translate: 0 -100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-viewas {
+    animation: none !important;
+  }
+}

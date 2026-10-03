@@ -13,6 +13,7 @@ import {
   pickTheme,
   pushRecent,
   revealRadius,
+  safePaletteColor,
   sessionPhase,
   sessionRemaining,
   statusUntil,
@@ -97,6 +98,8 @@ describe("recientes y búsqueda de empresas", () => {
     expect(tenantMatches(T[0], "CREAR medellin")).toBe(true);
     expect(tenantMatches(T[0], "crear cali")).toBe(false);
     expect(tenantMatches(T[2], "admin")).toBe(true);
+    // Las palabras ya plegadas (lo que hace `tenantSections` una vez por consulta).
+    expect(tenantMatches(T[1], ["crear", "bogota"])).toBe(true);
   });
 
   it("agrupa por empresa en su orden; con consulta, solo lo que coincide", () => {
@@ -139,6 +142,14 @@ describe("tema y paletas", () => {
     expect(normalizePalettes([])).toHaveLength(9);
   });
 
+  it("un `color` que no es un color se descarta: no entra CSS al atributo style (BDUI)", () => {
+    const evil = "red;position:fixed;inset:0;background:url(https://evil.example/x)";
+    expect(normalizePalettes([{ id: "marca", label: "Marca", color: evil }])[0].color).toBeUndefined();
+    expect(safePaletteColor("url(https://evil.example/x)")).toBeUndefined();
+    expect(safePaletteColor("red}body{display:none")).toBeUndefined();
+    for (const ok of ["#e30613", "teal", "rgb(10 20 30 / 50%)", "oklch(0.6 0.15 250)", "var(--marca)"]) expect(safePaletteColor(ok)).toBe(ok);
+  });
+
   it("el tema y lo guardado se validan", () => {
     expect(pickTheme("dark")).toBe("dark");
     expect(pickTheme("auto")).toBe("system");
@@ -168,7 +179,7 @@ describe("paleta de comandos", () => {
   const base = { account: "acc1", labels: ACCOUNT_LABELS, palettes: normalizePalettes(["indigo", "oceano"]), tenants: T, locales: [{ value: "en-US", label: "English" }] };
 
   it("tema, cada paleta, cada empresa, cada idioma y cerrar sesión, con la forma de <nx-command>", () => {
-    const c = accountCommands({ ...base, viewAs: false, lock: false });
+    const c = accountCommands({ ...base, viewAs: false });
     expect(c.map((x) => x.id)).toEqual([
       "account:theme:light",
       "account:theme:dark",
@@ -186,9 +197,7 @@ describe("paleta de comandos", () => {
     expect(c[6]).toMatchObject({ label: "Crear Colombia S.A.S. · Sede Bogotá", hint: "Consulta", keywords: ["Crear Colombia S.A.S."] });
   });
 
-  it("«Ver como» y «Bloquear» solo si están activos", () => {
-    const ids = accountCommands({ ...base, viewAs: true, lock: true }).map((x) => x.id);
-    expect(ids).toContain("account:view-as");
-    expect(ids).toContain("account:lock");
+  it("«Ver como» solo si está activo", () => {
+    expect(accountCommands({ ...base, viewAs: true }).map((x) => x.id)).toContain("account:view-as");
   });
 });

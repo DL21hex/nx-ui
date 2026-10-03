@@ -92,13 +92,19 @@ export function pushRecent(recent: readonly string[], value: string, max = 5): s
   return [value, ...recent.filter((r) => r !== value)].slice(0, max);
 }
 
+/** El texto sin tildes de cada empresa, calculado una vez por dato (no una vez por tecla). */
+const folded = new WeakMap<AccountTenant, string>();
+const hayOf = (t: AccountTenant): string => {
+  let hay = folded.get(t);
+  if (hay === undefined) folded.set(t, (hay = foldText([t.name, t.detail, t.role, t.group].filter(Boolean).join(" "))));
+  return hay;
+};
+const wordsOf = (query: string): string[] => foldText(query).split(/\s+/).filter(Boolean);
+
 /** Si una empresa coincide con la consulta: cada palabra (sin tildes) en su nombre, sede, rol o grupo. */
-export function tenantMatches(t: AccountTenant, query: string): boolean {
-  const hay = foldText([t.name, t.detail, t.role, t.group].filter(Boolean).join(" "));
-  return foldText(query)
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((w) => hay.includes(w));
+export function tenantMatches(t: AccountTenant, query: string | readonly string[]): boolean {
+  const hay = hayOf(t);
+  return (typeof query === "string" ? wordsOf(query) : query).every((w) => hay.includes(w));
 }
 
 export interface TenantSection {
@@ -115,7 +121,8 @@ export interface TenantSection {
 export function tenantSections(tenants: readonly AccountTenant[], opts: { query?: string; recent?: readonly string[]; recentLabel?: string; current?: string | null; minForRecent?: number }): TenantSection[] {
   const q = opts.query?.trim() ?? "";
   const out: TenantSection[] = [];
-  let rest = q ? tenants.filter((t) => tenantMatches(t, q)) : [...tenants];
+  const words = wordsOf(q);
+  let rest = q ? tenants.filter((t) => tenantMatches(t, words)) : [...tenants];
   if (!q && tenants.length > (opts.minForRecent ?? 5)) {
     const byId = new Map(tenants.map((t) => [t.id, t]));
     const recent = (opts.recent ?? []).filter((r) => r !== opts.current && byId.has(r)).slice(0, 3).map((r) => byId.get(r)!);
@@ -148,10 +155,15 @@ export const BUILTIN_PALETTES: readonly AccountPalette[] = [
   ["grafito", "Grafito"],
 ].map(([id, label]) => ({ id, label }));
 
+/** Un color de CSS inofensivo (sin `;`, `url()` ni otra declaración): hex, un nombre, una función de
+ *  color o `var(--x)`. Va al atributo `style` de la muestra y puede venir del servidor (BDUI). */
+export const safePaletteColor = (v: unknown): string | undefined =>
+  typeof v === "string" && /^(#[\da-f]{3,8}|[a-z]{3,20}|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch)\([\d\s.,%/a-z+-]+\)|var\(--[\w-]+\))$/i.test(v.trim()) ? v.trim() : undefined;
+
 /**
  * Las paletas a ofrecer, en el orden que se pidieron: ids de `palettes.css` (`["indigo","oceano"]`,
  * con su nombre en español) u objetos `{id, label, color}`. Sin ids repetidos. Vacío o inválido:
- * las 9 de la librería.
+ * las 9 de la librería. Un `color` que no es un color se descarta (la muestra usa la paleta).
  */
 export function normalizePalettes(v: unknown): AccountPalette[] {
   const seen = new Set<string>();
@@ -162,7 +174,7 @@ export function normalizePalettes(v: unknown): AccountPalette[] {
     if (!pid || seen.has(pid) || !/^[\w-]+$/.test(pid)) continue;
     seen.add(pid);
     const known = BUILTIN_PALETTES.find((p) => p.id === pid);
-    out.push({ id: pid, label: str(o?.label) ?? known?.label ?? pid, color: str(o?.color) });
+    out.push({ id: pid, label: str(o?.label) ?? known?.label ?? pid, color: safePaletteColor(o?.color) });
   }
   return out.length ? out : [...BUILTIN_PALETTES];
 }
@@ -201,12 +213,11 @@ export interface CommandSource {
   tenants: readonly AccountTenant[];
   locales: readonly AccountLocale[];
   viewAs: boolean;
-  lock: boolean;
 }
 
 /**
  * Las acciones de la cuenta como entradas de `<nx-command>`: tema, cada paleta, cada empresa, cada
- * idioma, «Ver como…», bloquear y cerrar sesión. Planas (no submenús): «oscuro», «océano» o
+ * idioma, «Ver como…» y cerrar sesión. Planas (no submenús): «oscuro», «océano» o
  * «bogotá» las encuentran desde la raíz.
  */
 export function accountCommands(s: CommandSource): AccountCommand[] {
@@ -224,7 +235,6 @@ export function accountCommands(s: CommandSource): AccountCommand[] {
     ...s.tenants.map((t) => cmd("tenant", t.detail ? `${t.name} · ${t.detail}` : t.name, L.tenant, { hint: t.role, keywords: t.group ? [t.group] : undefined }, t.id)),
     ...s.locales.map((l) => cmd("locale", l.label, L.language, { hint: l.value }, l.value)),
     ...(s.viewAs ? [cmd("view-as", L.viewAs, L.account)] : []),
-    ...(s.lock ? [cmd("lock", L.lock, L.account, { shortcut: "Ctrl L" })] : []),
     cmd("logout", L.logout, L.account),
   ];
 }

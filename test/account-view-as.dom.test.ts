@@ -38,6 +38,11 @@ describe("showViewAsBanner()", () => {
     expect(bar()!.querySelector(".nx-viewas__text")!.textContent).toBe("Estás viendo como Pedro");
   });
 
+  it("«$&» o «$'» en el rol son texto, no patrones de reemplazo", () => {
+    remove = showViewAsBanner({ id: "u1", name: "Ana", role: "Caja $& Bodega $'" }, { onExit: () => {} });
+    expect(bar()!.querySelector(".nx-viewas__text")!.textContent).toBe("Estás viendo como Ana (Caja $& Bodega $')");
+  });
+
   it("un nombre con HTML sale como texto", () => {
     remove = showViewAsBanner({ id: "x", name: '<img src=x onerror="alert(1)">', role: "<b>Admin</b>" }, { onExit: () => {} });
     expect(bar()!.querySelector("img, b")).toBeNull();
@@ -111,7 +116,7 @@ describe("showViewAsBanner()", () => {
     expect(document.title).toBe("[As] Inventario");
   });
 
-  it("vuelve a subir cuando se abre un diálogo después (salvo con la pantalla bloqueada)", () => {
+  it("vuelve a subir cuando se abre un diálogo después", () => {
     const show = vi.fn();
     const hide = vi.fn();
     HTMLElement.prototype.showPopover = show;
@@ -121,10 +126,7 @@ describe("showViewAsBanner()", () => {
       expect(show).toHaveBeenCalledTimes(1);
       document.dispatchEvent(new CustomEvent("nx-open-change", { detail: { open: true } }));
       expect(show).toHaveBeenCalledTimes(2);
-      root.setAttribute("data-nx-locked", "");
-      document.dispatchEvent(new CustomEvent("nx-open-change", { detail: { open: true } }));
-      expect(show).toHaveBeenCalledTimes(2);
-      root.removeAttribute("data-nx-locked");
+      expect(hide).toHaveBeenCalledTimes(1);
     } finally {
       delete (HTMLElement.prototype as Partial<HTMLElement>).showPopover;
       delete (HTMLElement.prototype as Partial<HTMLElement>).hidePopover;

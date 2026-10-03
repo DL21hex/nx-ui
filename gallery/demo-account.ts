@@ -1,8 +1,8 @@
 /**
  * Demo de `<nx-account>`: un ERP pequeño (menú de 5 pantallas) con la tarjeta de Diego Llinás al pie.
  *
- * La API es de mentira y vive en esta pestaña (`addDemoRoute("/demo/account", …)`): desbloquear con
- * «1234», extender la sesión y buscar personas para «Ver como…». Los cambios sin sincronizar los
+ * La API es de mentira y vive en esta pestaña (`addDemoRoute("/demo/account", …)`): extender la
+ * sesión y buscar personas para «Ver como…». Los cambios sin sincronizar los
  * simula una cola falsa que se pasa en `sync` (se vacía sola al enviar, salvo «Sin conexión»).
  *
  * La galería ya guarda su tema y su paleta (`nx32-elements-gallery-theme`/`-palette`): la cuenta va con
@@ -38,15 +38,6 @@ function installRoutes(): void {
       out.end(JSON.stringify(o));
     };
     await sleep(300);
-    if (path === "/unlock") {
-      let password = "";
-      try {
-        password = String(JSON.parse(req.body || "{}").password ?? "");
-      } catch {
-        /* cuerpo raro: clave vacía */
-      }
-      return password === "1234" ? reply({ ok: true }) : reply({ error: "Clave incorrecta" }, 401);
-    }
     if (path === "/extend") return reply({ expiresAt: new Date(Date.now() + 30 * 60_000).toISOString() });
     if (path === "/people") {
       const q = fold(req.url.searchParams.get("q") ?? "");
@@ -96,8 +87,6 @@ export function mountAccountDemo(root: HTMLElement): void {
     { id: "config", label: "Configuración", icon: "settings", hint: "Ctrl ," },
   ];
   acc.session = { expiresAt: Date.now() + 25 * 60_000, extendEndpoint: "/demo/account/extend" };
-  // En la demo, cualquier clave de 4 cifras que no sea 1234 es «incorrecta» (la valida la ruta de mentira).
-  acc.setAttribute("lock", "");
 
   // ---------------------------------------------------------------- cola de sincronización falsa
   let pending = 0;
