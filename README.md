@@ -5,43 +5,44 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 
 | Paquete | min + gzip |
 |---|---|
-| `<nx-sidemenu>` + núcleo (ESM) | ≈ 6,6 KB |
-| `<nx-button>` + núcleo (ESM) | ≈ 5,4 KB |
-| `<nx-select>` + núcleo (ESM) | ≈ 6,2 KB |
-| `<nx-ai-answer>` + núcleo (ESM) | ≈ 7 KB |
-| `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 11,2 KB |
-| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,6 KB, se carga al exportar | ≈ 20,1 KB |
-| `<nx-dialog>` + núcleo (ESM) | ≈ 6,5 KB |
-| `nxToast()` + núcleo (ESM) | ≈ 2,5 KB |
-| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 11,5 KB |
-| `<nx-agent>` + IA + botón + BDUI + recorrido + núcleo (ESM) | ≈ 18,6 KB |
-| `<nx-command>` + núcleo (ESM) | ≈ 7,1 KB |
-| `<nx-explain>` + núcleo (ESM) | ≈ 7,9 KB |
-| `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 10,2 KB |
-| `<nx-survey>` + núcleo (ESM) | ≈ 12,1 KB |
-| `<nx-import>` + núcleo (ESM); el lector de .xlsx, ≈ 2 KB, se carga al llegar un libro | ≈ 16,4 KB |
-| `<nx-keytips>` + núcleo (ESM) | ≈ 4 KB |
-| `<nx-guard>` + núcleo (ESM) | ≈ 8,8 KB |
-| `<nx-handoff>` + QR + núcleo (ESM); el lado celular, ≈ 5 KB, se carga con `side="phone"` | ≈ 8,9 KB |
-| `<nx-award>` + núcleo (ESM) | ≈ 15,1 KB |
-| `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,5 KB |
-| `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
-| `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
-| `<nx-org>` + núcleo (ESM) | ≈ 12,5 KB |
-| `<nx-breadcrumb>` + núcleo (ESM); el menú de hermanos, ≈ 2,5 KB, se carga al abrir el primero | ≈ 4,8 KB |
-| `<nx-print>` + núcleo (ESM) | ≈ 7,9 KB |
-| `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 6,9 KB |
-| `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 13,9 KB |
-| `<nx-review>` + núcleo (ESM) | ≈ 10,4 KB |
-| `<nx-voice>` + núcleo (ESM); el dictado en un campo y el servidor se cargan aparte | ≈ 5,9 KB |
-| `<nx-thread>` + núcleo (ESM); las sugerencias, el stream y las anclas se cargan aparte | ≈ 11,9 KB |
-| `<nx-checklist>` + núcleo (ESM); los campos de evidencia, el resumen y la firma se cargan aparte | ≈ 11,8 KB |
-| `<nx-recurrence>` + núcleo (ESM); el intérprete de frases y los controles se cargan aparte | ≈ 9,1 KB |
-| `<nx-jobs>` + núcleo (ESM); el panel se carga aparte | ≈ 8,8 KB |
-| `nx32-elements.css` (tokens + todos los componentes) | ≈ 37,1 KB |
-| `nx32-elements.iife.js` todo-en-uno con íconos | ≈ 207 KB |
+| `<nx-sidemenu>` + núcleo (ESM) | ≈ 7,1 KB |
+| `<nx-button>` + núcleo (ESM) | ≈ 6,1 KB |
+| `<nx-select>` + núcleo (ESM) | ≈ 8 KB |
+| `<nx-ai-answer>` + núcleo (ESM) | ≈ 7,4 KB |
+| `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 11,9 KB |
+| `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,8 KB, se carga al exportar | ≈ 24,9 KB |
+| `<nx-dialog>` + núcleo (ESM) | ≈ 7,1 KB |
+| `nxToast()` + núcleo (ESM) | ≈ 3 KB |
+| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 12,4 KB |
+| `<nx-agent>` + IA + botón + BDUI + recorrido + núcleo (ESM) | ≈ 19,2 KB |
+| `<nx-command>` + núcleo (ESM) | ≈ 8,4 KB |
+| `<nx-explain>` + núcleo (ESM) | ≈ 8,6 KB |
+| `<nx-inbox>` + avisos + núcleo (ESM) | ≈ 11 KB |
+| `<nx-survey>` + núcleo (ESM) | ≈ 12,9 KB |
+| `<nx-import>` + núcleo (ESM); el lector de .xlsx, ≈ 2 KB, se carga al llegar un libro | ≈ 17,1 KB |
+| `<nx-keytips>` + núcleo (ESM) | ≈ 4,5 KB |
+| `<nx-guard>` + núcleo (ESM) | ≈ 9,6 KB |
+| `<nx-handoff>` + QR + núcleo (ESM); el lado celular, ≈ 5 KB, se carga con `side="phone"` | ≈ 9,5 KB |
+| `<nx-award>` + núcleo (ESM) | ≈ 15,8 KB |
+| `<nx-account>` + núcleo (ESM), con «Ver como»; el panel, ≈ 3,2 KB, se carga aparte | ≈ 10,5 KB |
+| `<nx-launcher>` + núcleo (ESM) | ≈ 8,7 KB |
+| `<nx-cards>` + núcleo (ESM) | ≈ 10,8 KB |
+| `<nx-org>` + núcleo (ESM) | ≈ 13,2 KB |
+| `<nx-breadcrumb>` + núcleo (ESM); el menú de hermanos, ≈ 1,8 KB, se carga al abrir el primero | ≈ 5,3 KB |
+| `<nx-print>` + núcleo (ESM) | ≈ 8,6 KB |
+| `<nx-signature>` + núcleo (ESM); el PNG, la ubicación y el celular se cargan aparte | ≈ 7,3 KB |
+| `<nx-planner>` + núcleo (ESM); el aviso se carga aparte | ≈ 14,2 KB |
+| `<nx-review>` + núcleo (ESM) | ≈ 11,1 KB |
+| `<nx-voice>` + núcleo (ESM); el dictado en un campo y el servidor se cargan aparte | ≈ 6,2 KB |
+| `<nx-thread>` + núcleo (ESM); las sugerencias, el stream y las anclas se cargan aparte | ≈ 12,2 KB |
+| `<nx-checklist>` + núcleo (ESM); los campos de evidencia, el resumen y la firma se cargan aparte | ≈ 12,1 KB |
+| `<nx-recurrence>` + núcleo (ESM); el intérprete de frases y los controles se cargan aparte | ≈ 9,4 KB |
+| `<nx-jobs>` + núcleo (ESM); el panel se carga aparte | ≈ 9,2 KB |
+| `nx32-elements.css` (tokens + todos los componentes) | ≈ 62,2 KB |
+| `nx32-elements.iife.js` todo-en-uno con íconos | ≈ 369 KB |
 
 Cada componente es una subruta (`nx32-elements/sidemenu`, `nx32-elements/button`): una app solo carga lo que importa.
+Los cambios de cada versión, y cómo migrar, están en [CHANGELOG.md](CHANGELOG.md).
 
 `npm run size` imprime los números actuales y marca con ⚠ la pieza (el JS o el CSS de un
 componente, o los tokens) que pasa su peso de referencia. Por ahora no hace fallar el build: primero
