@@ -269,6 +269,62 @@ describe("<nx-grid>", () => {
     expect([...el.querySelectorAll(".nx-grid__th")].map((th) => !!th.querySelector(".nx-grid__funnel"))).toEqual([true, false, true, true]);
   });
 
+  describe("facets-open sólo abre el panel si cabe al lado de la tabla", () => {
+    /** Como `mount`, con el ancho que mediría el navegador (happy-dom mide 0). */
+    function mountAt(width: number, attrs = "facets-open"): NxGrid {
+      document.body.innerHTML = `<nx-grid ${attrs}></nx-grid>`;
+      const el = document.querySelector("nx-grid")!;
+      let w = width;
+      el.getBoundingClientRect = () => ({ width: w }) as DOMRect;
+      (el as NxGrid & { resizeTo(n: number): void }).resizeTo = (n) => (w = n);
+      el.columns = COLS;
+      el.rows = ROWS;
+      return el;
+    }
+    const aside = (el: NxGrid) => el.querySelector<HTMLElement>(".nx-grid__facets")!;
+    const toggle = (el: NxGrid) => el.querySelector<HTMLButtonElement>(".nx-grid__bar .nx-grid__btn[aria-controls]")!;
+
+    it("ancha (640 px o más): abierto", () => {
+      const el = mountAt(640);
+      expect(el.facetsOpen).toBe(true);
+      expect(aside(el).hidden).toBe(false);
+      expect(toggle(el).getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("angosta: cerrado, y lo que se abra con el botón no se vuelve a cerrar", () => {
+      const el = mountAt(375);
+      expect(el.facetsOpen).toBe(false);
+      expect(aside(el).hidden).toBe(true);
+      expect(toggle(el).getAttribute("aria-expanded")).toBe("false");
+      toggle(el).click();
+      expect(el.facetsOpen).toBe(true);
+      el.rows = ROWS;
+      expect(aside(el).hidden).toBe(false);
+    });
+
+    it("sin maquetar (ancho 0) no decide: espera al siguiente pintado", () => {
+      const el = mountAt(0) as NxGrid & { resizeTo(n: number): void };
+      expect(aside(el).hidden).toBe(false);
+      el.resizeTo(375);
+      el.rows = ROWS;
+      expect(el.facetsOpen).toBe(false);
+      expect(aside(el).hidden).toBe(true);
+      // Ya juzgado: crecer después no lo reabre solo (lo abre el botón).
+      el.resizeTo(1200);
+      el.rows = ROWS;
+      expect(el.facetsOpen).toBe(false);
+    });
+
+    it("sin facets-open, angosta: el botón lo abre y se queda abierto", () => {
+      const el = mountAt(375, "");
+      expect(aside(el).hidden).toBe(true);
+      toggle(el).click();
+      el.rows = ROWS;
+      expect(el.facetsOpen).toBe(true);
+      expect(aside(el).hidden).toBe(false);
+    });
+  });
+
   it("panel de facetas: conteos sin la propia faceta, opciones en 0 deshabilitadas", () => {
     const el = mount("facets-open");
     const aside = el.querySelector<HTMLElement>(".nx-grid__facets")!;

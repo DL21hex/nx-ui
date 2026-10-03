@@ -171,6 +171,9 @@ const TRIES = 5;
  *  y el desplazamiento se escala. */
 const MAX_H = 8_000_000;
 const FACET_SHOWN = 6;
+/** Desde este ancho (el de `nx-grid`, que es el contenedor) el panel de filtros va AL LADO de la tabla;
+ *  más angosto va encima. Es el umbral de la `@container (width < 640px)` de grid.css. */
+const FACETS_BESIDE = 640;
 /** Exportar pide las filas al servidor de a este tanto, hasta el tope de filas de una hoja de Excel. */
 const EXPORT_BLOCK = 5000;
 const EXPORT_MAX = 1_048_575;
@@ -340,6 +343,8 @@ export class NxGrid extends Base {
   // Agregados (las barras llegan del servidor; en el cliente se calculan al abrir un filtro).
   #hist = new Map<string, GridHistogram>();
   #facetList: GridFacet[] = [];
+  /** Ya se juzgó si `facets-open` cabe (ver `#fitFacets`). */
+  #facetsFitted = false;
   #presets: GridPreset[] = [];
   /** Conteos de los atajos: del servidor, o calculados aquí sobre `#all` (se olvidan al cambiar los datos). */
   #presetN = new Map<string, number>();
@@ -1440,7 +1445,11 @@ export class NxGrid extends Base {
     this.#colsBtn = h("button", { type: "button", class: "nx-grid__btn", "aria-haspopup": "dialog" }, glyph(COLUMNS), h("span"));
     this.#colsBtn.addEventListener("click", () => this.#withViews((v) => v.toggleColumns()));
     this.#facetBtn = h("button", { type: "button", class: "nx-grid__btn", "aria-controls": `${u}-facets` }, glyph(SLIDERS), h("span"), h("span", { class: "nx-grid__badge" }));
-    this.#facetBtn.addEventListener("click", () => (this.facetsOpen = !this.facetsOpen));
+    this.#facetBtn.addEventListener("click", () => {
+      // Lo que decide quien mira manda: el panel abierto con el botón no se cierra por angosto.
+      this.#facetsFitted = true;
+      this.facetsOpen = !this.facetsOpen;
+    });
     // `data-nx-ephemeral`: filtrar, agrupar o seleccionar no son cambios de datos (un <nx-dialog> que
     // contiene la tabla no los cuenta como «cambios sin guardar»).
     this.#groupSel = h("select", { class: "nx-grid__btn nx-grid__group", "data-nx-ephemeral": "" });
@@ -1719,6 +1728,7 @@ export class NxGrid extends Base {
     this.#paintSearch();
     const applied = this.#filters.reduce((a, f) => a + ("values" in f ? f.values.length : 1), 0);
     this.#facetBtn!.hidden = !this.#facetList.length;
+    this.#fitFacets();
     this.#facetBtn!.setAttribute("aria-expanded", String(this.facetsOpen));
     this.#facetBtn!.children[1].textContent = L.filters;
     this.#facetBtn!.children[2].textContent = applied ? String(applied) : "";
@@ -1887,6 +1897,23 @@ export class NxGrid extends Base {
     const label = own.length ? this.#fmt(this.#labels.filterOn, { col: c.label, filter: own.map((f) => this.#chipText(f)).join(", ") }) : this.#fmt(this.#labels.filterBy, { col: c.label });
     funnel.setAttribute("aria-label", label);
     funnel.title = label;
+  }
+
+  /** `facets-open` abre el panel de arranque sólo si cabe AL LADO de la tabla: más angosto iría
+   *  encima y la empujaría hacia abajo (en un celular, fuera de la pantalla); ahí queda cerrado y
+   *  lo abre el botón «Filtros». Se juzga una vez, la primera vez que el panel se mostraría, con el
+   *  ancho del propio elemento; en 0 (aún sin maquetar, o en un contenedor oculto) se espera al
+   *  siguiente pintado. */
+  #fitFacets(): void {
+    if (this.#facetsFitted || !this.facetsOpen || !this.#facetList.length) return;
+    const width = this.getBoundingClientRect().width;
+    if (!width) return;
+    this.#facetsFitted = true;
+    if (width >= FACETS_BESIDE) return;
+    // Cerrarlo es pintar lo que ya se está pintando: el aviso del atributo no repinta otra vez.
+    this.#quiet = true;
+    this.facetsOpen = false;
+    this.#quiet = false;
   }
 
   #paintFacets(): void {

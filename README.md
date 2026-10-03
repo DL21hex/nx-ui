@@ -410,6 +410,11 @@ Una tabla de datos que se explora sola:
   - las opciones de una faceta se suman (O) y las facetas se restringen entre sí (Y);
   - cada opción se cuenta con los demás filtros, nunca con el suyo;
   - una opción en 0 queda deshabilitada.
+
+  `facets-open` lo abre de arranque **si cabe al lado de la tabla** (la tabla mide 640 px o más).
+  Más angosta, el panel iría encima y empujaría la tabla hacia abajo: queda cerrado y lo abre el
+  botón «Filtros». Se juzga una vez, la primera vez que el panel se mostraría; lo que se abra con el
+  botón no se vuelve a cerrar.
 - **Un solo modelo de filtros.** El filtro de la columna, la casilla y el menú de la celda producen
   el mismo filtro y el mismo chip.
 - **Hoja de cálculo.** Navegación con teclado, rangos con suma, promedio, mínimo y máximo, copiar y
