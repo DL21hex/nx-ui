@@ -72,6 +72,14 @@ const isField = (e: Event) => {
   return t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 };
 
+/** El formato de porcentaje, uno por locale (el mismo de `fmt`, ya validado). */
+const percents = new Map<string, Intl.NumberFormat>();
+function percent(locale: string): Intl.NumberFormat {
+  let f = percents.get(locale);
+  if (!f) percents.set(locale, (f = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 })));
+  return f;
+}
+
 export class NxLauncher extends Base {
   static observedAttributes = ["items", "labels", "search", "columns", "heading-level", "locale"];
 
@@ -470,7 +478,7 @@ export class NxLauncher extends Base {
     }
     if (meter !== null) {
       // La barra se ve; el lector oye el porcentaje («71 %»), que también describe la tarjeta.
-      const pct = new Intl.NumberFormat(resolveLocale(this), { style: "percent", maximumFractionDigits: 1 }).format(meter / 100);
+      const pct = percent(fmt.locale).format(meter / 100);
       el.append(h("span", { class: "nx-launcher__meter", "aria-hidden": "true" }, h("i", { style: `inline-size:${meter}%` })), h("span", { class: "nx-sr-only" }, pct));
     }
     return el;

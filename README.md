@@ -625,7 +625,8 @@ fuentes, todas JSON:
   pestaña); con `children` abre un submenú; sin ninguno de los dos, avisa con `nx-command-select`.
 - `menu="id"`: las pantallas de un `<nx-sidemenu>`, con su ruta como pista («Ventas › Pedidos»).
 - `account="id"`: las acciones de un `<nx-account>` (tema, paleta, empresa, idioma, salir…); las
-  ejecuta la propia cuenta al oír `nx-command-select`.
+  ejecuta la propia cuenta al oír `nx-command-select`. Si la cuenta cambia con la paleta abierta, se ven
+  enseguida.
 - `source="/url"`: registros del servidor mientras se escribe (`GET /url?q=…` → entradas, o `{items}`).
 - `agent="id"`: lo que se escribe se le puede preguntar a ese `<nx-agent>`.
 
@@ -640,7 +641,8 @@ va al mismo origen (o `allowOrigins`). Un `hotkey` sin modificador (`"/"`) no se
 escribe en un campo, tampoco en la caja de la paleta. El atajo compara el carácter: «/» vale aunque
 el teclado lo escriba con Shift (Shift+7 en español), y una letra vale por su tecla física con una
 distribución no latina. Cuántos resultados hay, «Sin resultados» o «Buscando…» se anuncian al lector
-de pantalla. El elemento es la capa superior (Popover API): `<button popovertarget="cmd">` la abre
+de pantalla. En un submenú, la miga de arriba vuelve con un clic (con el teclado, Escape o Backspace) y
+la caja se describe como «En: Cambiar paleta» (`labels.where`). El elemento es la capa superior (Popover API): `<button popovertarget="cmd">` la abre
 sin JS.
 
 ```html

@@ -426,15 +426,17 @@ describe("<nx-command>: casos de borde", () => {
     expect(groups(el)).toEqual(["Commands"]);
   });
 
-  it("la miga del submenú describe la caja y se puede usar como botón", () => {
+  it("la miga del submenú es texto (un clic vuelve); la caja se describe con «En: …»", () => {
     const el = mount();
     el.show();
     type(el, "paleta");
     key(el, "Enter");
     const crumbs = el.querySelector<HTMLElement>(".nx-command__crumbs")!;
-    expect(crumbs.getAttribute("role")).toBe("button");
-    expect(crumbs.getAttribute("aria-label")).toBe("Volver: Cambiar paleta");
-    expect(input(el).getAttribute("aria-describedby")).toBe(crumbs.id);
+    // No es un botón que no se pueda operar con el teclado: el teclado vuelve con Escape o Backspace.
+    expect(crumbs.hasAttribute("role")).toBe(false);
+    expect(crumbs.getAttribute("aria-hidden")).toBe("true");
+    const where = document.getElementById(input(el).getAttribute("aria-describedby")!)!;
+    expect(where.textContent).toBe("En: Cambiar paleta");
     crumbs.click();
     expect(texts(el)).toContain("Cambiar paleta");
     expect(input(el).hasAttribute("aria-describedby")).toBe(false);
@@ -449,5 +451,24 @@ describe("<nx-command>: casos de borde", () => {
     key(el, "Enter", { isComposing: true });
     expect(got).toEqual([]);
     expect(el.open).toBe(true);
+  });
+});
+
+describe("<nx-command> acciones de la cuenta con la paleta abierta", () => {
+  it("si la cuenta cambia sus acciones después de abrir, aparecen sin cerrar y volver a abrir", () => {
+    document.body.innerHTML = `<div id="cuenta"></div><nx-command account="cuenta"></nx-command>`;
+    const acc = document.getElementById("cuenta") as HTMLElement & { commands?: CommandItem[] };
+    const el = document.querySelector("nx-command")!;
+    el.show();
+    type(el, "tema");
+    expect(texts(el)).toEqual([]);
+    acc.commands = [{ id: "account:theme:dark", label: "Tema: Oscuro", group: "Tema" }];
+    type(el, "tema o");
+    expect(texts(el)).toEqual(["Tema: Oscuro"]);
+    // El mismo arreglo: no se limpia de nuevo (las entradas son las mismas en cada tecla).
+    const same = acc.commands;
+    type(el, "tema os");
+    expect(acc.commands).toBe(same);
+    expect(texts(el)).toEqual(["Tema: Oscuro"]);
   });
 });
