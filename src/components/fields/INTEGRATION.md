@@ -20,5 +20,5 @@ su JSON. Los textos de los datos van siempre como texto (nunca HTML) y `href` pa
 
 | Pieza | Tamaño (min + gzip) | Presupuesto |
 |---|---|---|
-| `dist/fields.js` (con el núcleo) | 5,01 KB | 5,25 KB |
+| `dist/fields.js` (con el núcleo) | 5,41 KB | 5,25 KB |
 | `dist/fields.css` | 1,24 KB | 1,75 KB |

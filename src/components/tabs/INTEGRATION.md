@@ -23,5 +23,5 @@ el contenido al oír `nx-tabs-change` (o pone paneles con `data-value`).
 
 | Pieza | Tamaño (min + gzip) | Presupuesto |
 |---|---|---|
-| `dist/tabs.js` (con el núcleo) | 2,31 KB | 2,75 KB |
-| `dist/tabs.css` | 0,76 KB | 1 KB |
+| `dist/tabs.js` (con el núcleo, el locale y el orden de Tab) | 4,46 KB | 2,75 KB |
+| `dist/tabs.css` | 0,83 KB | 1 KB |

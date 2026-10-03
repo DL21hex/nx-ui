@@ -11,9 +11,9 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-ai-answer>` + núcleo (ESM) | ≈ 7 KB |
 | `<nx-doc-capture>` + botón + núcleo (ESM) | ≈ 11,2 KB |
 | `<nx-grid>` + núcleo (ESM); el generador de XLSX, ≈ 2,6 KB, se carga al exportar | ≈ 20,1 KB |
-| `<nx-dialog>` + núcleo (ESM) | ≈ 4,8 KB |
+| `<nx-dialog>` + núcleo (ESM) | ≈ 6,1 KB |
 | `nxToast()` + núcleo (ESM) | ≈ 2,5 KB |
-| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 9,8 KB |
+| `nxConfirm()` + diálogo + botón + núcleo (ESM) | ≈ 11,2 KB |
 | `<nx-agent>` + IA + botón + BDUI + recorrido + núcleo (ESM) | ≈ 18,6 KB |
 | `<nx-command>` + núcleo (ESM) | ≈ 7,1 KB |
 | `<nx-explain>` + núcleo (ESM) | ≈ 7,9 KB |
