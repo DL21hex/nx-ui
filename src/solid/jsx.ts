@@ -153,7 +153,6 @@ declare module "solid-js" {
       locales: AccountLocale[] | undefined;
       session: AccountSession | null | undefined;
       viewAs: AccountPerson | null | undefined;
-      lockVerify: ((password: string) => Promise<boolean>) | undefined;
       sync: AccountSyncQueue | null | undefined;
       value: string | string[] | number | DateRangeValue | SignatureValue | null | undefined;
       // Los atajos del selector de fechas y los de la tabla: la misma propiedad en dos componentes.
@@ -276,9 +275,10 @@ declare module "solid-js" {
       "expires-at": string | undefined;
       "warn-before": string | undefined;
       "view-as-source": string | undefined;
-      "lock-endpoint": string | undefined;
-      "lock-after": string | undefined;
       "logout-url": string | undefined;
+      "logout-method": string | undefined;
+      "logout-csrf": string | undefined;
+      "logout-csrf-field": string | undefined;
       agent: string | undefined;
       hotkey: string | undefined;
       limit: string | undefined;
@@ -313,7 +313,6 @@ declare module "solid-js" {
       auto: boolean;
       search: boolean;
       searchable: boolean;
-      lock: boolean;
       autostart: boolean;
       muted: boolean;
       collapsed: boolean;

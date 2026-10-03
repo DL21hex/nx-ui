@@ -22,7 +22,6 @@ const MONITOR = '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21
 const GLOBE = '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/>';
 const KEYS = '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/>';
 const EYE = '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12"/><circle cx="12" cy="12" r="3"/>';
-const LOCK = '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
 const EXIT = '<path d="m16 17 5-5-5-5m5 5H9m0 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>';
 const CHECK = '<path d="M20 6 9 17l-5-5"/>';
 const DEBOUNCE_MS = 250;
@@ -48,7 +47,6 @@ export interface PanelState {
   locale: string;
   viewAs: AccountPerson | null;
   viewAsSource: boolean;
-  lock: boolean;
   /** La franja de la sesión (si está por vencer), arriba de todo. */
   strip: Node | null;
   /** Cerrando sesión con cambios en cola: el texto ya armado. */
@@ -88,12 +86,11 @@ function seg(uid: string, name: string, label: string, opts: [string, string, st
 }
 
 /** La vista principal, en el orden acordado: quién, empresa, estado, tema, color, enlaces, idioma,
- *  atajos, ver como, bloquear y cerrar sesión. */
+ *  atajos, ver como y cerrar sesión. */
 export function mainView(s: PanelState): Node[] {
   const L = s.labels;
   const t = s.tenant;
   const line = t && tenantLine(t);
-  const mod = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘" : "Ctrl";
   const nodes: (Node | null | false)[] = [
     s.strip,
     h(
@@ -128,6 +125,7 @@ export function mainView(s: PanelState): Node[] {
             "data-k": `palette:${p.id}`,
             "data-palette": p.id,
             "data-nx-palette": p.color ? null : p.id,
+            // `color` ya viene validado (`normalizePalettes`): nunca otra declaración ni `url()`.
             style: p.color ? `--_sw:${p.color}` : null,
             "aria-label": p.label,
             title: p.label,
@@ -145,8 +143,7 @@ export function mainView(s: PanelState): Node[] {
     }),
     row("locale", GLOBE, L.language, s.locale, true),
     row("shortcuts", KEYS, L.shortcuts, "Alt"),
-    s.viewAs ? row("viewas", EYE, L.stopViewAs.replace("{name}", s.viewAs.name)) : s.viewAsSource && row("viewas", EYE, L.viewAs, null, true),
-    s.lock && row("lock", LOCK, L.lock, `${mod} L`),
+    s.viewAs ? row("viewas", EYE, L.stopViewAs.replace("{name}", () => s.viewAs!.name)) : s.viewAsSource && row("viewas", EYE, L.viewAs, null, true),
     h("hr"),
     s.leaving &&
       h(
@@ -160,8 +157,9 @@ export function mainView(s: PanelState): Node[] {
   return nodes.filter((n): n is Node => !!n);
 }
 
-/** Arriba de la tarjeta (o a la derecha del riel compacto), dentro de la ventana; hacia abajo si
- *  arriba no cabe. En móvil el CSS lo vuelve una hoja desde abajo y aquí no se toca. */
+/** Arriba de la tarjeta (o a la derecha del riel compacto), dentro de la ventana y debajo de la franja
+ *  de «Ver como» (`--nx-view-as-offset`); hacia abajo si arriba no cabe. En móvil el CSS lo vuelve una
+ *  hoja desde abajo y aquí no se toca. */
 export function placePanel(pop: HTMLElement, card: HTMLElement, host: HTMLElement): void {
   const s = pop.style;
   s.left = s.top = s.bottom = s.maxBlockSize = "";
@@ -173,10 +171,11 @@ export function placePanel(pop: HTMLElement, card: HTMLElement, host: HTMLElemen
   const side = !!rail?.matches(COLLAPSED);
   const up = side || r.top > vh - r.bottom;
   const edge = side ? r.bottom : r.top - 6;
+  const top = 8 + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--nx-view-as-offset")) || 0);
   s.left = `${Math.max(8, Math.min(side ? rail!.getBoundingClientRect().right + 8 : r.left, vw - (pop.offsetWidth || 320) - 8))}px`;
   if (up) s.bottom = `${Math.max(8, vh - edge)}px`;
   else s.top = `${r.bottom + 6}px`;
-  s.maxBlockSize = `${Math.max(200, up ? edge - 8 : vh - r.bottom - 14)}px`;
+  s.maxBlockSize = `${Math.max(200, up ? edge - top : vh - r.bottom - 14)}px`;
 }
 
 /**
@@ -227,6 +226,8 @@ export interface AccountView {
   focus(): void;
   /** Corta lo que esté en curso (la búsqueda de personas). */
   stop(): void;
+  /** Las empresas cambiaron con la sub-vista abierta: se vuelve a pintar la lista. */
+  refresh(tenants: readonly AccountTenant[]): void;
 }
 
 /** «1.234.567,50 · 26 sept 2026» / «1,234,567.50 · Sep 26, 2026»: cómo se verán los números y las
@@ -265,6 +266,7 @@ export function accountView(o: AccountViewOptions): AccountView {
     input && h("div", { class: "nx-account__search" }, glyph("search"), input),
     list,
   );
+  let tenants = o.tenants;
   let people: AccountPerson[] = [];
   let state: "" | "loading" | "error" = "";
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -283,7 +285,7 @@ export function accountView(o: AccountViewOptions): AccountView {
     const rows: Node[] = [];
     let n = 0;
     if (o.kind === "tenant") {
-      for (const s of tenantSections(o.tenants, { query: input!.value, recent: o.recent, recentLabel: L.recent, current: o.current })) {
+      for (const s of tenantSections(tenants, { query: input!.value, recent: o.recent, recentLabel: L.recent, current: o.current })) {
         if (s.group) rows.push(h("p", { class: "nx-account__group" }, s.group));
         for (const t of s.items) {
           // Dentro del grupo de su empresa, la sede es lo que distingue una fila de otra.
@@ -296,7 +298,10 @@ export function accountView(o: AccountViewOptions): AccountView {
     } else {
       people.forEach((p, i) => {
         const src = safeImageSrc(p.avatar);
-        const av = h("span", { class: "nx-account__av", "aria-hidden": "true" }, src ? h("img", { src, alt: "", referrerpolicy: "no-referrer" }) : accountInitials(p));
+        const img = src ? h("img", { src, alt: "", referrerpolicy: "no-referrer" }) : null;
+        // Una foto que no carga deja las iniciales, no el ícono de imagen rota.
+        img?.addEventListener("error", () => img.replaceWith(accountInitials(p)), { once: true });
+        const av = h("span", { class: "nx-account__av", "aria-hidden": "true" }, img ?? accountInitials(p));
         rows.push(option(String(i), p.name, p.role, false, ++n, av));
       });
       if (!rows.length && state) rows.push(h("p", { class: "nx-account__empty" }, state === "loading" ? L.loading : L.error));
@@ -358,6 +363,10 @@ export function accountView(o: AccountViewOptions): AccountView {
     stop: () => {
       clearTimeout(timer);
       ac?.abort();
+    },
+    refresh: (t) => {
+      tenants = t;
+      if (o.kind === "tenant") paint();
     },
   };
 }

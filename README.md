@@ -24,7 +24,7 @@ página HTML plana, en SolidJS (con SSR) o pintados desde un JSON que manda el b
 | `<nx-guard>` + núcleo (ESM) | ≈ 8,8 KB |
 | `<nx-handoff>` + QR + núcleo (ESM); el lado celular, ≈ 5 KB, se carga con `side="phone"` | ≈ 8,9 KB |
 | `<nx-award>` + núcleo (ESM) | ≈ 15,1 KB |
-| `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB), el bloqueo (≈ 3,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,3 KB |
+| `<nx-account>` + núcleo (ESM); el panel (≈ 4,2 KB) y «Ver como» (≈ 1,2 KB) se cargan aparte | ≈ 9,5 KB |
 | `<nx-launcher>` + núcleo (ESM) | ≈ 7,9 KB |
 | `<nx-cards>` + núcleo (ESM) | ≈ 10 KB |
 | `<nx-org>` + núcleo (ESM) | ≈ 12,5 KB |
@@ -1502,9 +1502,14 @@ compacto; en el celular, una hoja desde abajo):
   Se guarda en `localStorage` y se aplica al cargar (`applyAccountPrefs()` en el `<head>` evita el destello).
 - **Idioma y formatos**: cada locale con su muestra («1.234.567,50 · 26 sept 2026»); elegir pone
   `<html lang>` y toda la librería lo sigue.
-- **Ver como…**, **Bloquear pantalla** (<kbd>Ctrl</kbd> <kbd>L</kbd> y por inactividad) y **Cerrar
-  sesión** sin «¿Seguro?»: si hay cambios sin sincronizar, se envían antes (con tope y «Salir de
-  todos modos»).
+- **Ver como…**: busca a la persona en `view-as-source` y pone la franja «Estás viendo como…»
+  (la tarjeta, además, lleva `data-view-as`). Entrar y salir emiten `nx-account-view-as`, cancelable:
+  la app puede terminar la suplantación en su servidor y luego asignar `viewAs = null`.
+- **Cerrar sesión** sin «¿Seguro?»: si hay cambios sin sincronizar, se envían antes (con tope y «Salir
+  de todos modos»). Con `logout-url`, sale con un `POST` (un formulario con el token de `logout-csrf`
+  en el campo `_csrf`, o el de `logout-csrf-field`); `logout-method="get"` navega. «Salir de todos
+  modos» deja lo pendiente en la cola de este equipo: usa una cola por usuario (`createSync({name})`,
+  ver `<nx-sync>`) y, en `nx-account-logout` con `pending > 0`, decide si la vacías (`clear()`).
 - **Sesión por vencer**: «Tu sesión vence en 4:59 · Extender», un solo anuncio para el lector de pantalla.
 - **Paleta de comandos**: `<nx-command account="cuenta">` suma sus acciones («Tema: Oscuro», «Color:
   Océano», cada sede…).
@@ -1514,16 +1519,16 @@ compacto; en el celular, una hoja desde abajo):
   <nx-account slot="footer" id="cuenta" user='{"name":"Diego Llinás","email":"diego@crear.co"}'
     tenants='[{"id":"med","name":"Crear Colombia S.A.S.","detail":"Sede Medellín","role":"Aprobador"}]' current="med"
     session='{"expiresAt":"2026-09-26T18:00:00Z","extendEndpoint":"/api/sesion/extender"}'
-    lock-endpoint="/api/desbloquear" lock-after="15" logout-url="/salir"></nx-account>
+    logout-url="/salir" logout-csrf="{token}"></nx-account>
 </nx-sidemenu>
 <nx-command account="cuenta"></nx-command>
 ```
 
 | | |
 |---|---|
-| Propiedades / atributos | `user`, `tenants`, `current`, `status` (`online`, `away`, `dnd`), `items`, `palettes`, `locales`, `storage` (`nx-account`; `none`), `apply-locale`, `session` / `expires-at`, `warn-before` (min, 5), `view-as`, `view-as-source`, `lock`, `lock-endpoint`, `lock-after` (min), `logout-url` (mismo origen), `labels`, `locale`, `disabled` · propiedades `sync` (cola de nx-sync), `lockVerify`, `commands` (solo lectura), `open` |
-| Métodos | `show()`, `hide()`, `lock()`, `logout()` |
-| Eventos | `nx-account-switch` `{tenant}` (cancelable), `nx-account-status` `{status, until}`, `nx-account-theme` `{theme, palette}`, `nx-account-locale` `{locale}`, `nx-account-select` `{id}`, `nx-account-view-as` `{user}` (cancelable al entrar), `nx-account-extend` (cancelable), `nx-account-expired`, `nx-account-logout` `{pending}` (cancelable), `nx-open-change` `{open}` |
+| Propiedades / atributos | `user`, `tenants`, `current`, `status` (`online`, `away`, `dnd`), `items`, `palettes`, `locales`, `storage` (`nx-account`; `none`), `apply-locale`, `session` / `expires-at`, `warn-before` (min, 5), `view-as`, `view-as-source`, `logout-url` (mismo origen), `logout-method` (`post`; `get`), `logout-csrf`, `logout-csrf-field` (`_csrf`), `labels`, `locale`, `disabled` · propiedades `sync` (cola de nx-sync), `commands` (solo lectura), `open` |
+| Métodos | `show()`, `hide()`, `logout()` |
+| Eventos | `nx-account-switch` `{tenant}` (cancelable), `nx-account-status` `{status, until}`, `nx-account-theme` `{theme, palette}`, `nx-account-locale` `{locale}`, `nx-account-select` `{id}`, `nx-account-view-as` `{user}` (cancelable, al entrar y al salir), `nx-account-extend` (cancelable), `nx-account-expired`, `nx-account-logout` `{pending}` (cancelable), `nx-open-change` `{open}` |
 | Funciones | `applyAccountPrefs(storage?)`, `accountCommands()`, `accountInitials()`, `sessionRemaining()`, `sessionPhase()`, `formatSessionRemaining()` («4:59»), `normalizePalettes()`, `pickTheme()`, `revealRadius()`, `accountStatusUntil()`, `BUILTIN_PALETTES` |
 
 ## `<nx-launcher>`

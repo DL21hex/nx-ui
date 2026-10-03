@@ -5,8 +5,8 @@
  * Punto de corte de la hoja móvil: 768px (el mismo que el drawer de <nx-sidemenu>).
  */
 
-/* La pantalla de bloqueo y la franja de «Ver como» (./lock y ./view-as, que se cargan aparte). */
-@import "./lock.css";
+/* La franja de «Ver como» (./view-as, que se carga aparte). */
+@import "./view-as.css";
 
 nx-account {
   --_bg: var(--nx-account-bg, var(--nx-sidebar));
@@ -165,6 +165,11 @@ nx-account[data-session="expired"] .nx-account__card .nx-account__av {
   box-shadow:
     0 0 0 2px var(--_bg),
     0 0 0 3.5px var(--nx-danger);
+}
+/* «Ver como» sin franja (su módulo no cargó: sin red o un despliegue nuevo): la tarjeta lo dice. */
+html:not([data-nx-view-as]) nx-account[data-view-as] .nx-account__card {
+  outline: 2px solid var(--_amber);
+  outline-offset: -2px;
 }
 
 /* ---------------------------------------------------------------- franja de la sesión */

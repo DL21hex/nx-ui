@@ -118,7 +118,6 @@ export interface AccountLabels {
   viewAs: string;
   /** «Dejar de ver como {name}» */
   stopViewAs: string;
-  lock: string;
   logout: string;
   back: string;
   offline: string;
@@ -155,7 +154,7 @@ export interface AccountThemeDetail {
   palette: string;
 }
 export interface AccountViewAsDetail {
-  /** `null` al salir. */
+  /** `null` al salir (también cancelable: la franja sigue hasta que la app asigne `viewAs = null`). */
   user: AccountPerson | null;
 }
 export interface AccountLogoutDetail {

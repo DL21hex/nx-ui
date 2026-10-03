@@ -2614,8 +2614,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           <p class="lead">
             La tarjeta de quien inició sesión, al pie del menú lateral. Un clic y está todo lo suyo: en qué empresa, sede y
             rol trabaja, su estado, el tema y el color de la app (que se repinta en vivo al pasar el mouse por cada muestra),
-            el idioma de los números y las fechas, «Ver como…», bloquear la pantalla y cerrar sesión sin perder lo que falta
-            por sincronizar.
+            el idioma de los números y las fechas, «Ver como…» y cerrar sesión sin perder lo que falta por sincronizar.
           </p>
 
           <div class="demo">
@@ -2634,8 +2633,6 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                     slot="footer"
                     id="acc"
                     storage="none"
-                    lock-endpoint="/demo/account/unlock"
-                    lock-after="15"
                     view-as-source="/demo/account/people"
                     locale="es-CO"
                   ></nx-account>
@@ -2651,8 +2648,8 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <div class="stage__body">
                   <p class="stage__tip">
                     Abre la tarjeta de <strong>Diego Llinás</strong> (abajo a la izquierda). Pasa el mouse por los colores: toda
-                    la página cambia y vuelve al salir; elige uno o el tema oscuro para ver el círculo desde el clic. La clave
-                    para desbloquear es <kbd>1234</kbd>; <kbd>Ctrl</kbd> <kbd>K</kbd> y escribe «oscuro» o «bogotá».
+                    la página cambia y vuelve al salir; elige uno o el tema oscuro para ver el círculo desde el clic.
+                    En <kbd>Ctrl</kbd> <kbd>K</kbd>, escribe «oscuro» o «bogotá».
                   </p>
                   <p class="stage__loglabel">Eventos</p>
                   <ol class="stage__log" id="acc-log"></ol>
@@ -2671,9 +2668,8 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td>Estado</td><td>En línea, Ausente o No molestar (hasta dentro de 1 h, hoy o sin fin). El punto del avatar lo refleja; un anillo ámbar dice que hay cambios en cola y el punto gris, sin conexión.</td></tr>
                 <tr><td>Tema y color</td><td>Claro, Sistema u Oscuro en <code>html[data-theme]</code>; las paletas de <code>palettes.css</code> en <code>html[data-nx-palette]</code>. Vista previa al pasar el mouse o el foco; al elegir, transición circular desde el clic (sin ella con movimiento reducido). Se guarda en <code>localStorage</code>.</td></tr>
                 <tr><td>Idioma y formatos</td><td>Cada locale con su muestra: «1.234.567,50 · 26 sept 2026» o «1,234,567.50 · Sep 26, 2026». Elegir pone <code>&lt;html lang&gt;</code>: toda la librería lo sigue sola.</td></tr>
-                <tr><td>Ver como…</td><td>Busca a una persona en el servidor y muestra la franja «Estás viendo como…» (con <code>view-as-source</code>).</td></tr>
-                <tr><td>Bloquear · Ctrl L</td><td>Pantalla de bloqueo con la clave; también tras <code>lock-after</code> minutos sin actividad.</td></tr>
-                <tr><td>Cerrar sesión</td><td>Sin preguntar «¿Seguro?». Si hay cambios sin sincronizar, primero se envían (con tope de 10 s y «Salir de todos modos»).</td></tr>
+                <tr><td>Ver como…</td><td>Busca a una persona en el servidor y muestra la franja «Estás viendo como…» (con <code>view-as-source</code>). Entrar y salir son cancelables: la app confirma con su servidor.</td></tr>
+                <tr><td>Cerrar sesión</td><td>Sin preguntar «¿Seguro?». Si hay cambios sin sincronizar, primero se envían (con tope de 10 s y «Salir de todos modos»). Con <code>logout-url</code>, un <code>POST</code> (y el token CSRF de <code>logout-csrf</code>).</td></tr>
               </tbody>
             </table>
           </div>
@@ -2691,9 +2687,8 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
         current="cc-med"
         items='[{"id":"perfil","label":"Mi perfil","href":"/perfil"},{"id":"config","label":"Configuración","hint":"Ctrl ,"}]'
         session='{"expiresAt":"2026-09-26T18:00:00Z","extendEndpoint":"/api/sesion/extender"}'
-        lock-endpoint="/api/desbloquear" lock-after="15"
         view-as-source="/api/personas"
-        logout-url="/salir"&gt;&lt;/nx-account&gt;
+        logout-url="/salir" logout-csrf="{token}"&gt;&lt;/nx-account&gt;
     &lt;/nx-sidemenu&gt;
 
     &lt;!-- Sus acciones también en la paleta de comandos --&gt;
@@ -2709,8 +2704,8 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
       tenants={empresas()}
       current={empresaActual()}
       session={{ expiresAt: vence(), extendEndpoint: "/api/sesion/extender" }}
-      lockEndpoint="/api/desbloquear"
       logoutUrl="/salir"
+      logoutCsrf={token()}
       onSwitch={(e) =&gt; cambiarEmpresa(e.detail.tenant.id)}
       onTheme={(e) =&gt; guardarPreferencia(e.detail)}
     /&gt;</code></pre>
@@ -2729,13 +2724,12 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td><code>locales</code>, <code>apply-locale</code></td><td><code>[{value, label}]</code> (es-CO, es-MX, en-US, pt-BR). Con <code>apply-locale="false"</code> no toca <code>&lt;html lang&gt;</code>.</td></tr>
                 <tr><td><code>storage</code></td><td>Clave de <code>localStorage</code> para tema, paleta y recientes (<code>nx-account</code>); <code>none</code> no guarda.</td></tr>
                 <tr><td><code>session</code>, <code>expires-at</code>, <code>warn-before</code></td><td><code>{expiresAt, extendEndpoint?}</code>; aviso <code>warn-before</code> minutos antes (5) con cuenta regresiva y «Extender».</td></tr>
-                <tr><td><code>view-as</code>, <code>view-as-source</code></td><td>La persona suplantada (muestra la franja) y dónde buscar personas (<code>GET ?q=</code>).</td></tr>
-                <tr><td><code>lock</code>, <code>lock-endpoint</code>, <code>lock-after</code></td><td>Bloquear pantalla (fila y <kbd>Ctrl</kbd> <kbd>L</kbd>), dónde verificar la clave y minutos de inactividad.</td></tr>
-                <tr><td><code>logout-url</code></td><td>A dónde ir al salir (solo del mismo origen).</td></tr>
-                <tr><td><code>sync</code>, <code>lockVerify</code>, <code>commands</code></td><td>Propiedades: la cola de <code>nx-sync</code>, la verificación propia de la clave y las acciones para <code>&lt;nx-command&gt;</code>.</td></tr>
+                <tr><td><code>view-as</code>, <code>view-as-source</code></td><td>La persona suplantada (muestra la franja y marca la tarjeta con <code>data-view-as</code>) y dónde buscar personas (<code>GET ?q=</code>).</td></tr>
+                <tr><td><code>logout-url</code>, <code>logout-method</code>, <code>logout-csrf</code>, <code>logout-csrf-field</code></td><td>A dónde ir al salir (solo del mismo origen): un <code>POST</code> con el token en el campo <code>_csrf</code> (o el que digas); <code>logout-method="get"</code> navega.</td></tr>
+                <tr><td><code>sync</code>, <code>commands</code></td><td>Propiedades: la cola de <code>nx-sync</code> y las acciones para <code>&lt;nx-command&gt;</code>.</td></tr>
                 <tr><td><code>labels</code>, <code>locale</code>, <code>disabled</code></td><td>Textos, locale de los números y apagar la tarjeta.</td></tr>
-                <tr><td>Métodos</td><td><code>show()</code>, <code>hide()</code>, <code>lock()</code>, <code>logout()</code>.</td></tr>
-                <tr><td>Eventos</td><td><code>nx-account-switch</code> y <code>nx-account-view-as</code> (cancelables), <code>nx-account-status</code>, <code>nx-account-theme</code>, <code>nx-account-locale</code>, <code>nx-account-select</code>, <code>nx-account-extend</code> (cancelable), <code>nx-account-expired</code>, <code>nx-account-logout</code> (cancelable) y <code>nx-open-change</code>.</td></tr>
+                <tr><td>Métodos</td><td><code>show()</code>, <code>hide()</code>, <code>logout()</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-account-switch</code> y <code>nx-account-view-as</code> (cancelables; este al entrar y al salir), <code>nx-account-status</code>, <code>nx-account-theme</code>, <code>nx-account-locale</code>, <code>nx-account-select</code>, <code>nx-account-extend</code> (cancelable), <code>nx-account-expired</code>, <code>nx-account-logout</code> (cancelable) y <code>nx-open-change</code>.</td></tr>
               </tbody>
             </table>
           </div>

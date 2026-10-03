@@ -1,18 +1,16 @@
 // @vitest-environment happy-dom
 //
 // happy-dom no tiene la Popover API ni View Transitions: el popover se simula con los mismos eventos
-// que emite el navegador (`beforetoggle` y `toggle`) y `startViewTransition` con un doble. La pantalla
-// de bloqueo y la franja de «Ver como» (módulos de otro agente) y la cola de nx-sync van simuladas.
-// El contenido del panel es un módulo aparte (`import()`): las pruebas esperan a que se pinte.
+// que emite el navegador (`beforetoggle` y `toggle`) y `startViewTransition` con un doble. La franja
+// de «Ver como» (probada aparte) y la cola de nx-sync van simuladas. El contenido del panel es un
+// módulo aparte (`import()`): las pruebas esperan a que se pinte.
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  nxLock: vi.fn((_opts: unknown) => Promise.resolve()),
   unbanner: vi.fn(),
   showViewAsBanner: vi.fn(),
   flush: vi.fn(() => Promise.resolve()),
 }));
-vi.mock("../src/components/account/lock", () => ({ nxLock: mocks.nxLock, isLocked: () => false }));
 vi.mock("../src/components/account/view-as", () => ({ showViewAsBanner: mocks.showViewAsBanner }));
 vi.mock("../src/components/sync/logic", () => ({ nxSync: { flush: mocks.flush } }));
 
@@ -36,7 +34,6 @@ afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  mocks.nxLock.mockClear();
   mocks.showViewAsBanner.mockReset();
   mocks.unbanner.mockClear();
   mocks.flush.mockClear();
@@ -455,32 +452,60 @@ describe("<nx-account> idioma y formatos", () => {
 });
 
 describe("<nx-account> cerrar sesión", () => {
-  it("sin pendientes sale directo, sin preguntar; logout-url del mismo origen navega", async () => {
+  /** Los formularios enviados (sin navegar): `[method, action, campos]`. */
+  function spySubmit(): [string, string, Record<string, string>][] {
+    const sent: [string, string, Record<string, string>][] = [];
+    vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(function (this: HTMLFormElement) {
+      const fields = Object.fromEntries([...this.querySelectorAll("input")].map((i) => [i.name, i.value]));
+      sent.push([this.getAttribute("method")!, this.getAttribute("action")!, fields]);
+    });
+    return sent;
+  }
+
+  it("sin pendientes sale directo, sin preguntar; logout-url del mismo origen sale con POST (y el token CSRF)", async () => {
     const assign = vi.spyOn(window.location, "assign").mockImplementation(() => {});
-    const el = mount('logout-url="/salir"');
+    const sent = spySubmit();
+    const el = mount('logout-url="/salir" logout-csrf="t0k"');
     const got: unknown[] = [];
     el.addEventListener("nx-account-logout", (e) => got.push(e.detail));
     await open(el);
     byK(el, "logout").click();
     expect(got).toEqual([{ pending: 0 }]);
     expect(el.open).toBe(false);
-    expect(assign).toHaveBeenCalledWith(`${location.origin}/salir`);
+    expect(sent).toEqual([["post", `${location.origin}/salir`, { _csrf: "t0k" }]]);
+    expect(assign).not.toHaveBeenCalled();
+    // El nombre del campo, para el framework del servidor; sin token, sin campo.
+    el.setAttribute("logout-csrf-field", "authenticity_token");
+    el.logout();
+    expect(sent[1][2]).toEqual({ authenticity_token: "t0k" });
+    el.removeAttribute("logout-csrf");
+    el.logout();
+    expect(sent[2][2]).toEqual({});
   });
 
-  it("cancelable: con preventDefault no navega; un logout-url de otro origen se ignora", async () => {
+  it('logout-method="get" navega (opción explícita)', async () => {
     const assign = vi.spyOn(window.location, "assign").mockImplementation(() => {});
+    const sent = spySubmit();
+    const el = mount('logout-url="/salir" logout-method="get"');
+    el.logout();
+    expect(assign).toHaveBeenCalledWith(`${location.origin}/salir`);
+    expect(sent).toEqual([]);
+  });
+
+  it("cancelable: con preventDefault no sale; un logout-url de otro origen o con javascript: se ignora", async () => {
+    const assign = vi.spyOn(window.location, "assign").mockImplementation(() => {});
+    const sent = spySubmit();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const el = mount('logout-url="https://evil.example/salir"');
     el.logout();
-    expect(assign).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalled();
     el.setAttribute("logout-url", "/salir");
     el.addEventListener("nx-account-logout", (e) => e.preventDefault());
     el.logout();
-    expect(assign).not.toHaveBeenCalled();
     el.setAttribute("logout-url", "javascript:alert(1)");
     el.logout();
     expect(assign).not.toHaveBeenCalled();
+    expect(sent).toEqual([]);
   });
 
   it("con cambios en cola: franja ámbar, se envían y sale cuando la cola se vacía", async () => {
@@ -659,57 +684,14 @@ describe("<nx-account> ver como", () => {
   });
 });
 
-describe("<nx-account> bloquear", () => {
-  it("sin `lock` no hay fila ni atajo", async () => {
-    const el = mount();
+describe("<nx-account> sin bloqueo de pantalla", () => {
+  it("no hay fila «Bloquear», ni método lock(), ni Ctrl+L", async () => {
+    const el = mount("lock");
     await open(el);
     expect(byK(el, "lock")).toBeUndefined();
+    expect((el as unknown as { lock?: unknown }).lock).toBeUndefined();
     expect(key(document.body, "l", { ctrlKey: true })).toBe(true);
-    expect(mocks.nxLock).not.toHaveBeenCalled();
-  });
-
-  it("la fila y Ctrl+L llaman nxLock (perezoso) con el usuario y el endpoint", async () => {
-    const el = mount('lock-endpoint="/api/desbloquear"');
-    await open(el);
-    expect(byK(el, "lock").textContent).toMatch(/Bloquear pantalla(Ctrl|⌘) L/);
-    byK(el, "lock").click();
-    await until(() => mocks.nxLock.mock.calls.length === 1);
-    expect(mocks.nxLock.mock.calls[0][0]).toMatchObject({ user: USER, endpoint: "/api/desbloquear", locale: "es-CO" });
-    await flushAll();
-    expect(key(document.body, "l", { ctrlKey: true })).toBe(false);
-    await until(() => mocks.nxLock.mock.calls.length === 2);
-  });
-
-  it("si la página se recargó bloqueada (`nx-locked` en sessionStorage), vuelve a bloquear al conectar", async () => {
-    sessionStorage.setItem("nx-locked", "{}");
-    try {
-      mount("lock");
-      await until(() => mocks.nxLock.mock.calls.length === 1);
-      expect(mocks.nxLock.mock.calls[0][0]).toMatchObject({ user: USER });
-    } finally {
-      sessionStorage.removeItem("nx-locked");
-    }
-    // Sin `lock`, el marcador no bloquea nada.
-    mocks.nxLock.mockClear();
-    sessionStorage.setItem("nx-locked", "{}");
-    try {
-      mount();
-      await flushAll();
-      expect(mocks.nxLock).not.toHaveBeenCalled();
-    } finally {
-      sessionStorage.removeItem("nx-locked");
-    }
-  });
-
-  it("lock-after bloquea tras la inactividad; la actividad lo aplaza", async () => {
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
-    mount('lock lock-after="2"');
-    await vi.advanceTimersByTimeAsync(90_000);
-    document.dispatchEvent(new PointerEvent("pointermove"));
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(mocks.nxLock).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(61_000);
-    await vi.waitFor(() => expect(mocks.nxLock).toHaveBeenCalledOnce());
+    expect(el.commands.some((c) => c.data.action === "lock")).toBe(false);
   });
 });
 
@@ -739,7 +721,7 @@ describe("<nx-account> en el menú lateral", () => {
 
 describe("<nx-account> limpieza, textos y locale", () => {
   it("al sacarlo de la página no quedan temporizadores ni oídos", async () => {
-    const el = mount('lock lock-after="5"', (a) => (a.session = { expiresAt: Date.now() + 3_600_000 }));
+    const el = mount("", (a) => (a.session = { expiresAt: Date.now() + 3_600_000 }));
     await open(el);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     el.status = "dnd";
@@ -747,11 +729,9 @@ describe("<nx-account> limpieza, textos y locale", () => {
     // Nuevos temporizadores tras quitarlo: ninguno (y los viejos, cancelados).
     el.session = { expiresAt: Date.now() + 60_000 };
     expect(vi.getTimerCount()).toBe(0);
-    expect(key(document.body, "l", { ctrlKey: true })).toBe(true);
     document.dispatchEvent(new CustomEvent("nx-sync-change", { detail: { online: false, pending: 9 } }));
     await vi.advanceTimersByTimeAsync(0);
     expect(el.dataset.sync).toBeUndefined();
-    expect(mocks.nxLock).not.toHaveBeenCalled();
   });
 
   it("labels reemplaza textos (y los desconocidos se ignoran); locale formatea los números", async () => {
@@ -799,5 +779,139 @@ describe('<nx-command account="id">', () => {
     cmd.show("oscuro");
     cmd.querySelector<HTMLElement>('[role="option"]')!.click();
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+});
+
+describe("<nx-account> en su lugar y a prueba de datos que cambian", () => {
+  it("cerrar el panel desde una sub-vista y reabrir: el foco entra a la vista principal", async () => {
+    const el = mount();
+    await open(el);
+    await sub(el, "tenant");
+    key(pop(el).querySelector("input")!, "2");
+    expect(el.open).toBe(false);
+    await open(el);
+    await until(() => pop(el).contains(document.activeElement));
+    expect(document.activeElement).toBe(byK(el, "tenant"));
+  });
+
+  it("quitar un atributo JSON es `null`: sin usuario, sin franja de «Ver como», textos por defecto", async () => {
+    mocks.showViewAsBanner.mockReturnValue(mocks.unbanner);
+    document.body.innerHTML = `<nx-account user='{"name":"Ana"}' view-as='{"id":"u7","name":"Laura"}' labels='{"logout":"Salir"}'></nx-account>`;
+    const el = document.querySelector("nx-account")!;
+    await until(() => mocks.showViewAsBanner.mock.calls.length);
+    expect(el.getAttribute("data-view-as")).toBe("u7");
+    el.removeAttribute("view-as");
+    el.removeAttribute("user");
+    el.removeAttribute("labels");
+    expect(el.viewAs).toBeNull();
+    expect(el.user).toBeNull();
+    expect(el.labels.logout).toBe("Cerrar sesión");
+    expect(mocks.unbanner).toHaveBeenCalled();
+    expect(el.hasAttribute("data-view-as")).toBe(false);
+    await flushAll();
+    expect(card(el).querySelector(".nx-account__name")!.textContent).toBe("Cuenta");
+  });
+
+  it("un nx-sync-change no rehace la tarjeta ni el panel: cambia el texto en su lugar", async () => {
+    const el = mount("", (a) => (a.user = { ...USER, avatar: "https://cdn.example/d.png" }));
+    await open(el);
+    const img = card(el).querySelector("img")!;
+    const row = byK(el, "logout");
+    const vh = card(el).querySelector(".nx-account__vh")!;
+    document.dispatchEvent(new CustomEvent("nx-sync-change", { detail: { online: true, pending: 3 } }));
+    await flushAll();
+    expect(el.dataset.sync).toBe("pending");
+    expect(vh.textContent).toBe(" · 3 cambios sin sincronizar.");
+    expect(card(el).querySelector("img")).toBe(img);
+    expect(byK(el, "logout")).toBe(row);
+    // Cerrando sesión, la franja cambia su número sin rehacer el panel.
+    el.logout();
+    const strip = pop(el).querySelector(".nx-account__leaving p")!;
+    document.dispatchEvent(new CustomEvent("nx-sync-change", { detail: { online: true, pending: 2 } }));
+    expect(pop(el).querySelector(".nx-account__leaving p")).toBe(strip);
+    expect(strip.textContent).toBe("2 cambios sin sincronizar. Se envían antes de salir.");
+  });
+
+  it("una foto de avatar que no carga deja las iniciales", async () => {
+    const el = mount("", (a) => (a.user = { ...USER, avatar: "https://cdn.example/vencida.png" }));
+    await flushAll();
+    card(el).querySelector("img")!.dispatchEvent(new Event("error"));
+    expect(card(el).querySelector("img")).toBeNull();
+    expect(card(el).querySelector(".nx-account__av")!.textContent).toBe("DL");
+    expect(card(el).querySelector(".nx-account__dot")).not.toBeNull();
+  });
+
+  it("si `tenants` cambia con la sub-vista abierta, la lista se repinta y elegir no lanza", async () => {
+    const el = mount();
+    const got: string[] = [];
+    el.addEventListener("nx-account-switch", (e) => got.push(e.detail.tenant.id));
+    await open(el);
+    await sub(el, "tenant");
+    el.tenants = [TENANTS[0], TENANTS[2]];
+    expect([...pop(el).querySelectorAll(".nx-account__opt .nx-account__name")].map((n) => n.textContent)).toEqual(["Sede Medellín", "Sede Cali"]);
+    // La lista vieja tenía Bogotá en el 2; ahora el 2 es Cali, y una que ya no está no se elige.
+    key(pop(el).querySelector("input")!, "2");
+    expect(got).toEqual(["nx-cali"]);
+    el.tenants = [];
+    expect(() => key(document.body, "x")).not.toThrow();
+  });
+
+  it("un `color` de paleta con CSS de más no llega al atributo style", async () => {
+    const el = mount("", (a) => (a.palettes = [{ id: "marca", label: "Marca", color: "red;position:fixed;inset:0;background:url(https://evil.example/x)" }] as never));
+    await open(el);
+    const sw = pop(el).querySelector<HTMLElement>(".nx-account__sw")!;
+    expect(sw.hasAttribute("style")).toBe(false);
+    expect(sw.getAttribute("data-nx-palette")).toBe("marca");
+  });
+
+  it("con «Ver como» puesto, el panel no sube por detrás de la franja (--nx-view-as-offset)", async () => {
+    const root = document.documentElement;
+    Object.defineProperty(root, "clientWidth", { configurable: true, value: 1280 });
+    Object.defineProperty(root, "clientHeight", { configurable: true, value: 800 });
+    root.style.setProperty("--nx-view-as-offset", "36px");
+    try {
+      const el = mount();
+      card(el).getBoundingClientRect = () => ({ left: 8, right: 248, top: 500, bottom: 540, width: 240, height: 40 }) as DOMRect;
+      await open(el);
+      await until(() => pop(el).style.maxBlockSize);
+      // Arriba de la tarjeta (500 − 6) menos la franja (36) y el margen (8).
+      expect(pop(el).style.maxBlockSize).toBe("450px");
+    } finally {
+      root.style.removeProperty("--nx-view-as-offset");
+      delete (root as { clientWidth?: number }).clientWidth;
+      delete (root as { clientHeight?: number }).clientHeight;
+    }
+  });
+});
+
+describe("<nx-account> salir de «Ver como»", () => {
+  it("es cancelable como la entrada: la franja sigue hasta que la app asigna viewAs = null", async () => {
+    mocks.showViewAsBanner.mockReturnValue(mocks.unbanner);
+    const el = mount("", (a) => (a.viewAs = { id: "u7", name: "Laura" }));
+    await until(() => mocks.showViewAsBanner.mock.calls.length);
+    const got: unknown[] = [];
+    el.addEventListener("nx-account-view-as", (e) => {
+      got.push(e.detail.user);
+      e.preventDefault();
+    });
+    // Desde la franja y desde el panel.
+    (mocks.showViewAsBanner.mock.calls[0][1] as { onExit: () => void }).onExit();
+    await open(el);
+    byK(el, "viewas").click();
+    expect(got).toEqual([null, null]);
+    expect(el.viewAs).toMatchObject({ id: "u7" });
+    expect(mocks.unbanner).not.toHaveBeenCalled();
+    expect(el.getAttribute("data-view-as")).toBe("u7");
+    // La app lo confirmó con su servidor.
+    el.viewAs = null;
+    expect(mocks.unbanner).toHaveBeenCalledOnce();
+    expect(el.hasAttribute("data-view-as")).toBe(false);
+  });
+
+  it("la tarjeta marca la suplantación desde el primer momento (data-view-as), sin esperar la franja", () => {
+    const el = mount();
+    el.viewAs = { id: "u9", name: "Marta" };
+    expect(el.getAttribute("data-view-as")).toBe("u9");
+    expect(mocks.showViewAsBanner).not.toHaveBeenCalled();
   });
 });

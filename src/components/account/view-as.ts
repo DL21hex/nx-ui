@@ -55,7 +55,8 @@ export function showViewAsBanner(user: ViewAsUser, opts: { labels?: Partial<View
   const text = h("p", { class: "nx-viewas__text", id });
   L.banner.split("{name}").forEach((part, i) => {
     if (i) text.append(h("strong", null, name));
-    text.append(role ? part.replaceAll("{role}", role) : part.replace(/\s*\(\{role\}\)|\{role\}/g, ""));
+    // Con función: un «$&» en el rol es texto, no un patrón de reemplazo.
+    text.append(role ? part.replaceAll("{role}", () => role) : part.replace(/\s*\(\{role\}\)|\{role\}/g, ""));
   });
   const sentence = text.textContent ?? "";
   text.title = sentence;
@@ -73,10 +74,8 @@ export function showViewAsBanner(user: ViewAsUser, opts: { labels?: Partial<View
       /* sin Popover API: `position: fixed` */
     }
   };
-  // Un diálogo que se abre después queda encima: la franja vuelve a subir (salvo con la pantalla
-  // bloqueada, que la tapa a propósito).
+  // Un diálogo que se abre después queda encima: la franja vuelve a subir.
   const raise = () => {
-    if (root.hasAttribute("data-nx-locked")) return;
     try {
       bar.hidePopover?.();
     } catch {

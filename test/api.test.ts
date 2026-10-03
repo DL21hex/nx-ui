@@ -28,9 +28,7 @@ function setters(tag: string): string[] {
 }
 
 /** Atributos que no son prop a propósito, con el motivo. */
-const ATTR_ONLY: Record<string, string[]> = {
-  "nx-account": ["lock"], // `lock()` es el método que bloquea la pantalla
-};
+const ATTR_ONLY: Record<string, string[]> = {};
 /** Elementos que no se pintan desde un payload. */
 const NOT_BDUI = ["nx-dialog", "nx-toaster"];
 /** Elementos sin componente de Solid (se usan con su función: `nxToast`). */
@@ -75,10 +73,10 @@ describe("BDUI derivado de la clase", () => {
     warn.mockRestore();
   });
 
-  it("un payload no pisa un método (lock() de nx-account)", () => {
+  it("un payload no pisa un método (logout() de nx-account)", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const [el] = render({ component: "Account", props: { lock: true, logoutUrl: "/salir" } }, document.createElement("div"));
-    expect(typeof (el as unknown as { lock: unknown }).lock).toBe("function");
+    const [el] = render({ component: "Account", props: { logout: true, logoutUrl: "/salir" } }, document.createElement("div"));
+    expect(typeof (el as unknown as { logout: unknown }).logout).toBe("function");
     expect(el.getAttribute("logout-url")).toBe("/salir");
     warn.mockRestore();
   });
