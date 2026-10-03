@@ -104,6 +104,10 @@ Una paleta propia son cinco números; claro, oscuro y todos los tokens derivados
 }
 ```
 
+Los tokens y el `color-scheme: light dark` de `tokens.css` van dentro de `:where()`, sin
+especificidad: cualquier regla de la app les gana, cargue antes o después. Una app solo en claro
+pone `:root { color-scheme: light }`; una marca, `:root { --nx-primary: … }`.
+
 ## Uso
 
 **HTML plano**, sin build:

@@ -11,9 +11,12 @@
  *
  * El tema sale de `color-scheme` y `light-dark()`: sigue al sistema, y se fuerza con
  * `.dark` / `[data-theme="dark"]` o `.light` / `[data-theme="light"]` en cualquier ancestro.
+ *
+ * Todo va dentro de `:where()` (especificidad 0): cualquier regla de la app —`:root { --nx-primary:
+ * … }`, `:root { color-scheme: light }` para una app solo en claro— gana sin importar si su CSS
+ * carga antes o después que este.
  */
-:root,
-[data-nx-palette] {
+:where(:root, [data-nx-palette]) {
   --_h: var(--nx-accent-h, 262);
   --_c: var(--nx-accent-c, 0.19);
   --_l: var(--nx-accent-l, 0.54);
@@ -55,7 +58,7 @@
   --nx-backdrop: light-dark(oklch(0.2 calc(0.01 * var(--_t)) var(--_n) / 0.4), oklch(0 0 0 / 0.6));
 }
 
-:root {
+:where(:root) {
   color-scheme: light dark;
 
   --nx-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -84,12 +87,10 @@
   --nx-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.dark,
-[data-theme="dark"] {
+:where(.dark, [data-theme="dark"]) {
   color-scheme: dark;
 }
-.light,
-[data-theme="light"] {
+:where(.light, [data-theme="light"]) {
   color-scheme: light;
 }
 
@@ -102,4 +103,71 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- piezas compartidas */
+/* Las usan varios componentes (el ícono registrado o sus iniciales, el glifo, el spinner): van aquí
+   y no en la hoja de uno de ellos, así `tokens.css` + `select.css` (o command, launcher, fields…)
+   basta. Cada componente las ajusta en su hoja con un selector más específico. */
+
+.nx-icon,
+.nx-glyph {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 18px;
+  block-size: 18px;
+}
+.nx-glyph {
+  inline-size: 16px;
+  block-size: 16px;
+}
+:is(.nx-icon, .nx-glyph) svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+.nx-icon--initials {
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-hover);
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+/* El spinner toma los colores de quien lo contiene (`--_fg`, `--_accent`), o los de la marca. */
+.nx-spinner {
+  display: block;
+  inline-size: 14px;
+  block-size: 14px;
+  border: 2px solid color-mix(in oklch, var(--_fg, var(--nx-foreground)) 25%, transparent);
+  border-block-start-color: var(--_accent, var(--nx-primary));
+  border-radius: 50%;
+  animation: nx-spin 0.7s linear infinite;
+}
+.nx-spinner[hidden] {
+  display: none;
+}
+@keyframes nx-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Más lento, pero gira: es la única señal de que algo corre. */
+  .nx-spinner {
+    animation-duration: 1.4s;
+  }
+}
+@media (forced-colors: active) {
+  /* Los cuatro bordes quedarían del mismo color: un círculo quieto. */
+  .nx-spinner {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    border-block-start-color: Highlight;
+  }
 }
