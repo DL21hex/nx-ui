@@ -3,9 +3,9 @@ import { splitProps, type JSX } from "solid-js";
 import "./jsx";
 import "../components/tabs/index";
 import type { NxTabs } from "../components/tabs/tabs";
-import type { TabChangeDetail, TabItem, TabsLabels } from "../components/tabs/types";
+import type { TabChangeDetail, TabItem, TabsChangeDetail, TabsLabels } from "../components/tabs/types";
 
-export type { NxTabs, TabChangeDetail, TabItem, TabsLabels };
+export type { NxTabs, TabChangeDetail, TabItem, TabsChangeDetail, TabsLabels };
 
 export interface TabsProps extends Omit<JSX.HTMLAttributes<NxTabs>, "onChange"> {
   /** La pestaña activa (controlada si se actualiza en `onChange`). */
@@ -18,7 +18,7 @@ export interface TabsProps extends Omit<JSX.HTMLAttributes<NxTabs>, "onChange"> 
   label?: string;
   labels?: Partial<TabsLabels>;
   /** Cancelable: `e.preventDefault()` deja la pestaña donde estaba. */
-  onChange?: (e: CustomEvent<TabChangeDetail>) => void;
+  onChange?: (e: CustomEvent<TabsChangeDetail>) => void;
   children?: JSX.Element;
 }
 

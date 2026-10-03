@@ -2,6 +2,7 @@
 // de un componente de adentro también burbujean (un <nx-date-range> que cierra su calendario manda
 // `nx-open-change {open: false}`), y un <Dialog> controlado no debe cerrarse por eso.
 import { describe, expect, it, vi } from "vitest";
+import { createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
 import { Dialog } from "../src/solid/dialog";
 import { Tabs } from "../src/solid/tabs";
@@ -57,6 +58,42 @@ describe("envoltorios de la ficha: eventos que burbujean desde adentro", () => {
     const inner = root.querySelector(".adentro")!;
     expect(bubble(inner, "nx-tabs-change", { value: "y", previous: "x" })).toBe(true);
     expect(onChange).not.toHaveBeenCalled();
+    dispose();
+    root.remove();
+  });
+
+  it("Tabs: aria-owns ordena la lectura sin mover nodos, y Solid sigue poniendo y quitando paneles", async () => {
+    const root = document.body.appendChild(document.createElement("div"));
+    const [more, setMore] = createSignal(false);
+    const dispose = render(
+      () => (
+        <Tabs>
+          <section data-tab="Uno">1</section>
+          <Show when={more()}>
+            <section data-tab="Dos">2</section>
+          </Show>
+        </Tabs>
+      ),
+      root,
+    );
+    const tick = () => new Promise((r) => setTimeout(r, 0));
+    await tick();
+    const t = root.querySelector("nx-tabs")!;
+    const list = t.querySelector('[role="tablist"]')!;
+    const secs = () => [...t.querySelectorAll(":scope > section")];
+    const owns = () => t.getAttribute("aria-owns")?.split(" ");
+    // La lista va después de los hijos de Solid (y de su <template /> fijo).
+    expect(t.lastElementChild).toBe(list);
+    expect(owns()).toEqual([list.id, secs()[0].id]);
+    setMore(true);
+    await tick();
+    expect(secs()).toHaveLength(2);
+    expect(owns()).toEqual([list.id, ...secs().map((x) => x.id)]);
+    expect(t.querySelectorAll('[role="tab"]')).toHaveLength(2);
+    setMore(false);
+    await tick();
+    expect(secs()).toHaveLength(1);
+    expect(owns()).toEqual([list.id, secs()[0].id]);
     dispose();
     root.remove();
   });

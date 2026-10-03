@@ -21,7 +21,7 @@ import type { NoticeActionDetail } from "../components/notice/types";
 import type { NxFields } from "../components/fields/fields";
 import type { FieldItem, FieldsActionDetail, FieldsLabels, FieldsVariant } from "../components/fields/types";
 import type { NxTabs } from "../components/tabs/tabs";
-import type { TabChangeDetail, TabItem, TabsLabels } from "../components/tabs/types";
+import type { TabItem, TabsChangeDetail, TabsLabels } from "../components/tabs/types";
 import type { NxBreadcrumb } from "../components/breadcrumb/breadcrumb";
 import type { BreadcrumbItem, BreadcrumbLabels, BreadcrumbLoader, BreadcrumbNavigateDetail } from "../components/breadcrumb/types";
 import type { NxOrg } from "../components/org/org";
@@ -429,7 +429,7 @@ declare module "solid-js" {
       "nx-dialog-action": CustomEvent<DialogActionDetail>;
       "nx-notice-action": CustomEvent<NoticeActionDetail>;
       "nx-fields-action": CustomEvent<FieldsActionDetail>;
-      "nx-tabs-change": CustomEvent<TabChangeDetail>;
+      "nx-tabs-change": CustomEvent<TabsChangeDetail>;
       "nx-breadcrumb-navigate": CustomEvent<BreadcrumbNavigateDetail>;
       "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
       "nx-agent-tool": CustomEvent<AgentToolDetail>;
