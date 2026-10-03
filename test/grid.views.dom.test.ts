@@ -276,11 +276,16 @@ describe("<nx-grid>: el menú de vistas guarda sobre la lista de ahora", () => {
     (await open(b, "De B"))();
     fromA();
     expect(stored()).toEqual(["De B", "De A"]);
-    // Borrar desde A, que no había vuelto a leer la lista, tampoco se lleva la de B.
+    // B guarda otra después del último guardado de A: A no la tiene en su lista. Borrar desde A, que
+    // no había vuelto a leer la lista, no se la lleva.
+    (await open(b, "Otra de B"))();
+    expect(stored()).toEqual(["De B", "De A", "Otra de B"]);
+    expect(a.views.map((v) => v.name)).toEqual(["De B", "De A"]);
     viewsBtn(a).click();
+    await until(() => pops(a)[0]?.querySelector(".nx-grid__menu-item"));
     itemText(a, "Borrar").click();
     pops(a)[0].querySelector<HTMLButtonElement>(".is-danger")!.click();
-    expect(stored()).toEqual(["De B"]);
+    expect(stored()).toEqual(["De B", "Otra de B"]);
   });
 
   it("la lista abierta se repinta si otra pestaña guarda", async () => {

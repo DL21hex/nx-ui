@@ -1080,7 +1080,13 @@ nx-grid .nx-grid__chev {
   color: var(--nx-muted-foreground);
 }
 /* Una opción con «Solo»: la casilla, su texto y el conteo van en el label (toda la fila menos el
-   botón la marca); «Solo» va al lado, fuera del label. */
+   botón la marca); «Solo» va al lado, fuera del label. El relleno de la fila pasa al label: un clic
+   en el borde también marca, y lo que queda fuera del label no promete con el cursor que marcará. */
+.nx-grid__f-opts .nx-grid__opt:has(> .nx-grid__opt-main) {
+  padding-block: 0;
+  padding-inline-start: 0;
+  cursor: default;
+}
 .nx-grid__opt-main {
   display: flex;
   flex: 1;
@@ -1088,6 +1094,8 @@ nx-grid .nx-grid__chev {
   gap: 8px;
   min-inline-size: 0;
   align-self: stretch;
+  padding-block: 4px;
+  padding-inline-start: 6px;
   cursor: pointer;
 }
 .nx-grid__only {

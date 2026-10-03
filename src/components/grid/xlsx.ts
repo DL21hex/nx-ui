@@ -43,8 +43,9 @@ async function deflateRaw(data: Uint8Array[]): Promise<Blob | null> {
   }
 }
 
-/** Un archivo del zip; `data` puede ir por partes (la hoja). */
-export async function zip(files: { name: string; data: Uint8Array | Uint8Array[] }[]): Promise<Blob> {
+/** Un archivo del zip; `data` puede ir por partes (la hoja), y `crc`, ya calculado (la hoja lo calcula
+ *  mientras se arma, cediendo el hilo: aquí, con cientos de MB, congelaba la página al final). */
+export async function zip(files: { name: string; data: Uint8Array | Uint8Array[]; crc?: number }[]): Promise<Blob> {
   const parts: BlobPart[] = [];
   const central: Uint8Array[] = [];
   let offset = 0;
@@ -52,7 +53,7 @@ export async function zip(files: { name: string; data: Uint8Array | Uint8Array[]
     const name = enc.encode(f.name);
     const data = Array.isArray(f.data) ? f.data : [f.data];
     const size = data.reduce((n, p) => n + p.length, 0);
-    const crc = data.reduce((c, p) => crc32(p, c), 0);
+    const crc = f.crc ?? data.reduce((c, p) => crc32(p, c), 0);
     const packed = await deflateRaw(data);
     const method = packed && packed.size < size ? 8 : 0;
     const length = method ? packed!.size : size;
@@ -223,15 +224,19 @@ export async function buildXlsx(title: string, header: string[], rows: XlsxCell[
     ],
     ["xl/styles.xml", stylesXml(list)],
   ];
-  // La hoja, codificada por partes; entre una y otra se cede el hilo (la página sigue respondiendo).
+  // La hoja, codificada por partes y con su CRC; entre una y otra se cede el hilo (la página sigue
+  // respondiendo).
   const sheet: Uint8Array[] = [];
+  let crc = 0;
   let t = performance.now();
   for (const part of sheetParts(header, rows, types, widths, style)) {
-    sheet.push(enc.encode(part));
+    const bytes = enc.encode(part);
+    sheet.push(bytes);
+    crc = crc32(bytes, crc);
     if (performance.now() - t > 50) {
       await new Promise((r) => setTimeout(r));
       t = performance.now();
     }
   }
-  return zip([...files.map(([n, s]) => ({ name: n, data: enc.encode(s) })), { name: "xl/worksheets/sheet1.xml", data: sheet }]);
+  return zip([...files.map(([n, s]) => ({ name: n, data: enc.encode(s) })), { name: "xl/worksheets/sheet1.xml", data: sheet, crc }]);
 }

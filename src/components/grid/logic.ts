@@ -22,12 +22,13 @@ export function num(v: unknown): number | null {
 }
 
 /** «1.234.567», «1.234,5», «1234.5», «$ 12» → número. Para datos y frases en español; lo que se
- *  escribe en una celda se lee con el locale de la tabla (`NxFormat.parse`). */
+ *  escribe en una celda se lee con el locale de la tabla (`NxFormat.parse`). «0.125» no son miles
+ *  (ningún grupo de miles empieza con 0): es un decimal como lo serializa un backend. */
 export function parseNumber(text: string): number | null {
   let t = text.replace(/[^\d.,-]/g, "");
   if (!t || t === "-") return null;
   if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
-  else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
+  else if (/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }
@@ -109,10 +110,13 @@ const folded = (q: string) => (needle.raw === q ? needle.folded : (needle = { ra
 /** Cada dato se pliega (sin tildes ni mayúsculas) una sola vez: «contiene» se vuelve a evaluar en
  *  cada cambio de filtro, en cada faceta y en la muestra del panel, siempre sobre los mismos datos.
  *  Va por valor, no por fila: una celda editada es otro valor. Con más valores distintos que el
- *  tope se empieza de nuevo (la memoria no crece sin fin). */
+ *  tope se empieza de nuevo (la memoria no crece sin fin), y un texto largo (observaciones de
+ *  varios KB) no se guarda: con miles de ellos la memoria guardaba cientos de MB. */
 const FOLD_MAX = 200_000;
+const FOLD_LONG = 256;
 let foldMemo = new Map<string, string>();
 export function foldValue(s: string): string {
+  if (s.length > FOLD_LONG) return foldText(s);
   let t = foldMemo.get(s);
   if (t === undefined) {
     if (foldMemo.size >= FOLD_MAX) foldMemo = new Map();
@@ -129,6 +133,13 @@ function valueSet(values: readonly string[]): Set<string> {
   // Una lista cambiada en su lugar (otro largo) se vuelve a armar.
   if (!s || s.n !== values.length) valueSets.set(values, (s = { n: values.length, set: new Set(values) }));
   return s.set;
+}
+
+/** Al empezar una pasada por las filas, los conjuntos de sus filtros se arman de nuevo: una lista
+ *  cambiada en su lugar con el mismo largo (`fs[0].values[1] = "c"`) no deja un conjunto viejo. Es
+ *  una vez por pasada, no por fila. */
+function freshSets(filters: readonly GridFilter[]): void {
+  for (const f of filters) if (f.op === "in" || f.op === "notIn") valueSets.set(f.values, { n: f.values.length, set: new Set(f.values) });
 }
 
 export function matchFilter(row: GridRow, f: GridFilter): boolean {
@@ -156,6 +167,7 @@ function matchValue(v: unknown, f: GridFilter): boolean {
 
 export function applyFilters(rows: readonly GridRow[], filters: readonly GridFilter[]): GridRow[] {
   if (!filters.length) return rows as GridRow[];
+  freshSets(filters);
   return rows.filter((r) => filters.every((f) => matchFilter(r, f)));
 }
 
@@ -272,6 +284,7 @@ export function resolveRel(filters: readonly GridFilter[], today = todayISO()): 
 export function selection(filters: readonly GridFilter[], key: string, values: readonly string[]): Set<string> | null {
   const own = filters.filter((f) => f.key === key && (f.op === "in" || f.op === "notIn"));
   if (!own.length) return null;
+  freshSets(own);
   return new Set(values.filter((v) => own.every((f) => matchValue(v, f))));
 }
 
@@ -449,6 +462,7 @@ export function crossfilter(
   columns: readonly GridColumn[],
   order: Map<string, string[]> = facetOrder(columns, rows),
 ): { filtered: GridRow[]; facets: GridFacet[] } {
+  freshSets(filters);
   const byKey = new Map<string, GridFilter[]>();
   for (const f of filters) byKey.set(f.key, [...(byKey.get(f.key) ?? []), f]);
   const groups = [...byKey];

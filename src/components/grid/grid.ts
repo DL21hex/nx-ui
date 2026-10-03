@@ -96,6 +96,7 @@ export const GRID_LABELS: GridLabels = {
   redo: "Rehacer",
   undone: "Deshecho",
   redone: "Rehecho",
+  editLost: "La fila que se editaba ya no está: no se guardó lo escrito",
   views: "Vistas",
   columns: "Columnas",
   saveView: "Guardar como vista",
@@ -162,6 +163,8 @@ const BLOCK = 100;
 /** Bloques del servidor que se guardan: al pasar de esto se sueltan los más lejanos a la vista
  *  (recorrer una tabla de un millón de filas no las deja todas en memoria). */
 const KEEP = 50;
+/** Intentos automáticos de un bloque que falla (el primero y sus reintentos). */
+const TRIES = 5;
 /** Tope del alto del cuerpo (px): los navegadores no pintan elementos más altos (Firefox, ~17,9 M).
  *  Más allá, el cuerpo se queda en este alto y el desplazamiento se escala. */
 const MAX_H = 15_000_000;
@@ -175,9 +178,10 @@ const OPS = new Set(["in", "notIn", "range", "contains"]);
 type Item = { g: GridGroup } | { r: GridRow };
 type Pos = { r: number; c: number };
 /** Una edición en curso: la posición (para moverse al terminar) y la fila misma, por su objeto y su
- *  id: si mientras tanto cambian los datos, los filtros o el orden, lo escrito no cae sobre la fila
- *  que hoy ocupa ese lugar. `text`: lo que traía el campo al abrirlo (sin tocarlo no se guarda). */
-type Editing = { r: number; c: number; key: string; row: GridRow; id: string; text: string | null; input: HTMLInputElement; quick: boolean };
+ *  id: si mientras tanto cambian los datos, los filtros o el orden, el campo sigue a esa fila (ver
+ *  `#track`) y lo escrito no cae sobre la que hoy ocupa su lugar. `text`: lo que traía el campo al
+ *  abrirlo (sin tocarlo no se guarda); `list`: las opciones de un estado. */
+type Editing = { r: number; c: number; key: string; row: GridRow; id: string; text: string | null; input: HTMLInputElement; list?: HTMLElement; quick: boolean };
 
 let uid = 0;
 
@@ -312,6 +316,9 @@ export class NxGrid extends Base {
   #search = "";
   #q = "";
   #base: GridRow[] = [];
+  /** De qué búsqueda salió `#base`: mientras no cambien lo buscado, las filas ni su texto, se reutiliza
+   *  (el filtro de una columna guarda cálculos por esa lista, que se perdían en cada clic). */
+  #baseQ: string | null = null;
   #hay = new WeakMap<GridRow, string>();
   #texter?: (r: GridRow) => string;
   #searchWait?: ReturnType<typeof setTimeout>;
@@ -379,6 +386,8 @@ export class NxGrid extends Base {
   #tap: Pos | null = null;
   #touch = false;
   #editing: Editing | null = null;
+  /** El campo de la edición pasa de la fila vieja a la repintada (su `blur` no la termina). */
+  #moving = false;
   #win = { start: -1, end: -1 };
   #raf = 0;
   /** El pie se recalcula solo si cambió el rango o esto (datos, textos, grupos). */
@@ -428,7 +437,6 @@ export class NxGrid extends Base {
     return this.#cols;
   }
   set columns(v: GridColumn[] | null | undefined) {
-    this.#settle();
     this.#cols = Array.isArray(v) ? v.map(cleanColumn).filter((c): c is GridColumn => !!c) : [];
     this.#syncColumns();
     // Con `source`, las columnas no viajan al servidor: se rehace la cabecera sin volver a pedir.
@@ -485,8 +493,7 @@ export class NxGrid extends Base {
     // `grid.rows = grid.rows` (tras cambiar filas por fuera) recalcula sin copiar: las filas son
     // las mismas que la app ya tiene en la mano.
     // Filas nuevas: se empieza de cero (marcas de edición e historial para deshacer).
-    // Una edición abierta se guarda antes, en la fila que se estaba editando.
-    this.#settle();
+    // Una edición abierta sigue abierta en su fila, si la fila sigue (ver `#track`).
     if (v !== this.#all) {
       this.#all = Array.isArray(v) ? v.filter((r) => r && typeof r === "object").map(own) : [];
       this.#edited.clear();
@@ -674,7 +681,6 @@ export class NxGrid extends Base {
   removeColumn(key: string): void {
     const col = this.#cols.find((c) => c.key === key);
     if (!col) return;
-    this.#settle();
     this.#cols = this.#cols.filter((c) => c !== col);
     this.#syncColumns();
     // Con `source` solo se vuelve a pedir si la consulta cambia (tenía un filtro o el orden).
@@ -812,10 +818,15 @@ export class NxGrid extends Base {
       return;
     }
     // `row-key` cambia los id: también antes de conectarse (Solid asigna `rows` antes que el atributo).
-    if (name === "row-key") return void (old !== value && this.#rekey());
+    // Lo que cuenta es la clave efectiva: sin atributo es «id», así que pasar a `row-key="id"` no
+    // cambia ningún id (y no se pierden marcas ni historial).
+    if (name === "row-key") return void ((old || "id") !== (value || "id") && this.#rekey());
     if (!this.#built || old === value || this.#quiet) return;
     if (name === "source" || name === "client-max") {
       this.#settle();
+      // Lo que seguía en camino de la consulta anterior ya no sirve: un bloque que llegara después
+      // indexaría filas del servidor en el modo cliente y cambiaría el total.
+      this.#drop();
       this.#local = this.#decided = false;
       // Sin `source` las filas vuelven a ser las de `rows`.
       if (!this.#server) this.#reindex();
@@ -832,7 +843,6 @@ export class NxGrid extends Base {
       requestAnimationFrame(() => this.#follow(this.#scroll!, this.#hbar!));
     } else if (name === "locale" || name === "selectable") this.#dataChanged(name === "selectable");
     else if (name === "group-by") {
-      this.#settle();
       this.#collapsed.clear();
       this.#refilter(true, "order");
     } else this.#paintAll();
@@ -895,7 +905,6 @@ export class NxGrid extends Base {
    *  que aún no se haya pedido nada. */
   #dataChanged(columns = false, columnsOnly = false): void {
     if (!this.#built) return;
-    this.#settle();
     if (!this.#server) this.#presetN.clear();
     this.#loc = nxFormat(this.locale);
     this.#sortedAll = null;
@@ -913,7 +922,6 @@ export class NxGrid extends Base {
    *  `order`: solo cambió cómo se ordenan o agrupan las filas, no cuáles pasan. */
   #refilter(emit: boolean, stage: "filter" | "order" = "filter"): void {
     if (!this.#built) return;
-    this.#settle();
     if (this.#server) this.#reload();
     else this.#recompute(stage);
     this.#clampSel();
@@ -933,7 +941,9 @@ export class NxGrid extends Base {
     if (stage === "filter") {
       // La búsqueda va primero: las facetas y los filtros de columna cuentan sobre lo que encontró.
       const q = this.#q;
-      this.#base = q ? this.#all.filter((r) => this.#textOf(r).includes(q)) : this.#all;
+      if (!q) this.#base = this.#all;
+      else if (this.#baseQ !== q) this.#base = this.#all.filter((r) => this.#textOf(r).includes(q));
+      this.#baseQ = q;
       const x = crossfilter(this.#base, this.#filters, this.#facetCols, this.#order);
       this.#filtered = x.filtered;
       this.#facetList = x.facets;
@@ -970,6 +980,7 @@ export class NxGrid extends Base {
 
   /** Cambiaron las filas, las columnas que se ven o el locale: el texto de búsqueda se rehace. */
   #forgetText(): void {
+    this.#baseQ = null;
     this.#hay = new WeakMap();
     this.#texter = undefined;
   }
@@ -1019,6 +1030,8 @@ export class NxGrid extends Base {
   // ---------------------------------------------------------------- servidor
 
   #reload(): void {
+    // Las filas de la consulta anterior se sueltan: una edición abierta no puede seguir a la suya.
+    this.#settle();
     this.#gen++;
     // Lo que seguía en camino de la consulta anterior ya no sirve: se corta.
     this.#ac?.abort();
@@ -1063,7 +1076,7 @@ export class NxGrid extends Base {
     if (this.#blocks.has(block)) return;
     // Un bloque que falló espera su turno (no se vuelve a pedir en cada cuadro del scroll).
     const fail = this.#fails.get(block);
-    if (fail && fail.at > Date.now()) return this.#retryLater(fail.at);
+    if (fail && fail.at > Date.now()) return fail.at < Infinity ? this.#retryLater(fail.at) : undefined;
     this.#blocks.set(block, "loading");
     const gen = this.#gen;
     const signal = (this.#ac ??= new AbortController()).signal;
@@ -1137,13 +1150,28 @@ export class NxGrid extends Base {
     this.#paintPicked(false);
   }
 
+  /** Se descarta lo del servidor: lo que seguía en camino (y su reintento) y los bloques guardados. */
+  #drop(): void {
+    this.#gen++;
+    this.#ac?.abort();
+    this.#ac = undefined;
+    this.#blocks.clear();
+    this.#fails.clear();
+    clearTimeout(this.#retry);
+    this.#retry = undefined;
+    this.#loadError = false;
+  }
+
   /** Un bloque no llegó: se dice (`nx-grid-error`; sin filas, en el aviso, con «Reintentar») y se
-   *  vuelve a pedir más tarde, cada vez con más espera. */
+   *  vuelve a pedir más tarde, cada vez con más espera, hasta `TRIES` veces: con el servidor caído
+   *  del todo, la tabla no sigue pidiendo (ni emitiendo errores) para siempre. Después, o si ya no
+   *  hay a dónde pedir, solo «Reintentar» o `refresh()`. */
   #failed(block: number, error: unknown): void {
     const n = (this.#fails.get(block)?.n ?? 0) + 1;
-    const at = Date.now() + Math.min(30_000, 1000 * 2 ** (n - 1));
+    const again = n < TRIES && !!this.#url("source");
+    const at = again ? Date.now() + Math.min(30_000, 1000 * 2 ** (n - 1)) : Infinity;
     this.#fails.set(block, { n, at });
-    this.#retryLater(at);
+    if (again) this.#retryLater(at);
     if (block === 0) this.#loadError = true;
     this.#emit("nx-grid-error", { offset: block * BLOCK, limit: BLOCK, error: String((error as Error)?.message ?? error) });
     this.#paintChrome();
@@ -1192,11 +1220,7 @@ export class NxGrid extends Base {
     const rows = page.rows.filter((r) => r && typeof r === "object");
     if (rows.length > max || rows.length < (Number(page.total) || 0)) return;
     // Lo que falte por llegar del servidor se descarta.
-    this.#gen++;
-    this.#ac?.abort();
-    this.#blocks.clear();
-    this.#fails.clear();
-    this.#loadError = false;
+    this.#drop();
     clearTimeout(this.#wait);
     this.#wait = undefined;
     this.#local = true;
@@ -1406,11 +1430,15 @@ export class NxGrid extends Base {
       if (b.hasAttribute("aria-busy")) return;
       b.setAttribute("aria-busy", "true");
       this.#paintChrome();
-      // El resultado se dice: en la región viva y, si falló, también en la nota sobre la tabla.
+      // El resultado se dice: en la región viva y, si falló, también en la nota sobre la tabla. La
+      // nota es la misma del aviso de una vista: un éxito solo quita el error de una exportación
+      // anterior, no ese aviso.
       const say = (text: string, failed: boolean) => {
         if (this.#live) this.#live.textContent = text;
-        this.#note!.hidden = !failed;
-        this.#note!.textContent = failed ? text : "";
+        const note = this.#note!;
+        if (failed) note.textContent = text;
+        else if (note.textContent === this.#labels.exportError) note.textContent = "";
+        note.hidden = !note.textContent;
       };
       this.exportXlsx()
         .then(
@@ -1919,31 +1947,51 @@ export class NxGrid extends Base {
   }
 
   /** Pinta solo las filas visibles (y unas de margen). Mientras se edita, la fila de la edición se
-   *  queda en su nodo (el campo tiene el foco) y las demás siguen al desplazamiento; si esa fila sale
-   *  de la vista, o hay que rehacer todas, la edición se guarda (sin mover la celda activa). */
+   *  queda en su nodo (el campo tiene el foco) y las demás siguen al desplazamiento; si la persona la
+   *  saca de la vista, la edición se guarda (sin mover la celda activa). Si hay que rehacer todas
+   *  (cambiaron los datos), el campo sigue a su fila (ver `#track`). */
   #paintRows(force = false): void {
     if (!this.#built) return;
     const s = this.#scroll!;
     const n = this.#count();
     this.#body!.style.blockSize = `${Math.min(n * ROW_H, MAX_H)}px`;
     const vh = s.clientHeight || 420;
-    const top = s.scrollTop * this.#ratio();
-    const start = Math.max(0, Math.floor(top / ROW_H) - OVERSCAN);
-    const end = Math.min(n, Math.ceil((top + vh) / ROW_H) + OVERSCAN);
-    if (this.#server) for (let b = Math.floor(start / BLOCK); b <= Math.floor(Math.max(start, end - 1) / BLOCK); b++) void this.#load(b);
+    let top = s.scrollTop * this.#ratio();
+    let start = Math.max(0, Math.floor(top / ROW_H) - OVERSCAN);
+    let end = Math.min(n, Math.ceil((top + vh) / ROW_H) + OVERSCAN);
     const box = this.#rowsEl!;
     const old = this.#win;
     const ed = this.#editing;
-    if (ed && (force || old.start < 0 || ed.r < start || ed.r >= end)) return this.#endEdit(true, 0, 0, false);
+    const all = force || old.start < 0;
+    if (ed && all) {
+      if (!this.#track(ed)) return;
+      // La fila se movió fuera de la vista (otro orden, filas nuevas): la tabla la sigue.
+      if (ed.r < start || ed.r >= end) {
+        this.#scrollTo(ed.r);
+        top = s.scrollTop * this.#ratio();
+        start = Math.max(0, Math.floor(top / ROW_H) - OVERSCAN);
+        end = Math.min(n, Math.ceil((top + vh) / ROW_H) + OVERSCAN);
+      }
+    }
+    if (ed && (ed.r < start || ed.r >= end)) return this.#endEdit(true, 0, 0, false);
+    if (this.#server) for (let b = Math.floor(start / BLOCK); b <= Math.floor(Math.max(start, end - 1) / BLOCK); b++) void this.#load(b);
     // Con el alto escalado (ver `MAX_H`) las filas se corren en cada cuadro, no solo al cambiar la ventana.
     box.style.insetBlockStart = `${start * ROW_H - (top - s.scrollTop)}px`;
     const kids = [...box.children] as HTMLElement[];
     if (!force && start === old.start && end === old.end && !kids.some((el) => this.#stale(el))) return;
     this.#win = { start, end };
-    if (force || old.start < 0 || end <= old.start || start >= old.end) {
+    if (all || end <= old.start || start >= old.end) {
       const rows: HTMLElement[] = [];
       for (let i = start; i < end; i++) rows.push(this.#rowEl(i));
-      box.replaceChildren(...rows);
+      // El campo de la edición sale del DOM con su fila vieja: eso no es terminarla.
+      const focused = !!ed && document.activeElement === ed.input;
+      this.#moving = true;
+      try {
+        box.replaceChildren(...rows);
+      } finally {
+        this.#moving = false;
+      }
+      if (ed) this.#mountEdit(ed, focused);
     } else {
       // Al desplazarse se reutilizan las filas que siguen a la vista; solo se crean las que entran
       // (y se rehacen las que esperaban datos que ya llegaron).
@@ -2529,15 +2577,20 @@ export class NxGrid extends Base {
 
   /** Lleva la celda activa a la vista (bajo la cabecera fija). */
   #reveal(): void {
+    this.#scrollTo(this.#act.r);
+    this.#paintRows();
+    this.#cell(this.#act)?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }
+
+  /** Desplaza lo justo para que la fila `r` quede a la vista. */
+  #scrollTo(r: number): void {
     const s = this.#scroll!;
     const k = this.#ratio();
-    const top = this.#act.r * ROW_H;
+    const top = r * ROW_H;
     const at = s.scrollTop * k;
     const vh = s.clientHeight - this.#head!.offsetHeight;
     if (top < at) s.scrollTop = top / k;
     else if (vh > 0 && top + ROW_H > at + vh) s.scrollTop = (top + ROW_H - vh) / k;
-    this.#paintRows();
-    this.#cell(this.#act)?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }
 
   #cell(p: Pos): HTMLElement | null {
@@ -2558,16 +2611,16 @@ export class NxGrid extends Base {
     if (!cell) return false;
     const v = it.r[col.key];
     const input = h("input", { class: "nx-grid__input", "aria-label": col.label, autocomplete: "off", inputmode: isNumeric(col) ? "decimal" : null });
-    const text = v === null || v === undefined ? "" : colType(col) === "status" ? formatCell(v, col, this.#loc) : typeof v === "number" && isNumeric(col) ? this.#editText(v) : String(v);
+    const text = v === null || v === undefined ? "" : colType(col) === "status" ? formatCell(v, col, this.#loc) : isNumeric(col) && num(v) !== null ? this.#editText(num(v)!) : String(v);
     input.value = initial ?? text;
     const ed: Editing = { r, c, key: col.key, row: it.r, id: this.#ids.get(it.r) ?? "", text: initial === undefined ? text : null, input, quick: initial !== undefined };
     this.#editing = ed;
     cell.classList.add("is-editing");
     cell.replaceChildren(input);
     if (col.options) {
-      const dl = h("datalist", { id: `${this.#uid}-dl` }, ...col.options.map((o) => h("option", { value: o.label ?? o.value })));
-      input.setAttribute("list", dl.id);
-      cell.append(dl);
+      ed.list = h("datalist", { id: `${this.#uid}-dl` }, ...col.options.map((o) => h("option", { value: o.label ?? o.value })));
+      input.setAttribute("list", ed.list.id);
+      cell.append(ed.list);
     }
     input.addEventListener("keydown", (e) => {
       e.stopPropagation();
@@ -2580,7 +2633,8 @@ export class NxGrid extends Base {
       e.preventDefault();
     });
     input.addEventListener("blur", () => {
-      if (this.#editing === ed) this.#endEdit(true);
+      // Mientras el campo pasa a la fila repintada (ver `#mountEdit`), sacarlo del DOM no es salir.
+      if (this.#editing === ed && !this.#moving) this.#endEdit(true);
     });
     input.focus();
     if (!ed.quick) input.select();
@@ -2596,10 +2650,70 @@ export class NxGrid extends Base {
     return this.#loc.number(1.5).includes(",") ? t.replace(".", ",") : t;
   }
 
-  /** Una edición abierta se guarda antes de que cambien los datos, las columnas, los filtros o el
-   *  orden (por código: lo que hace la persona ya saca el foco del campo y la guarda). */
+  /** Una edición abierta se guarda ya: antes de lo que no puede seguirla (otra consulta al servidor,
+   *  otro `source` o `row-key`) o de una acción que la persona hace desde fuera del campo. */
   #settle(): void {
     if (this.#editing) this.#endEdit(true, 0, 0, false);
+  }
+
+  /** Cambiaron los datos con una edición abierta (filas nuevas, filtros, orden, búsqueda, columnas):
+   *  una tabla que se refresca sola no le puede guardar a la persona lo que lleva escrito a medias.
+   *  Si su fila sigue en la tabla (el mismo id real, o el mismo objeto si el id es la posición) y su
+   *  columna se ve y se edita, el campo se queda con lo escrito y pasa al lugar nuevo de la fila.
+   *  Si no se ve (quedó filtrada, en un grupo cerrado o en una columna escondida), lo escrito se
+   *  guarda en su registro; si el registro o la columna ya no están, se descarta y se anuncia
+   *  (`labels.editLost`). `false` si la edición terminó. */
+  #track(ed: Editing): boolean {
+    const cur = this.#byId.get(ed.id);
+    const row = cur && (cur === ed.row || !ed.id.startsWith("#")) ? cur : undefined;
+    const col = this.#cols.find((c) => c.key === ed.key);
+    const c = this.#columns.findIndex((x) => x.key === ed.key);
+    let r = -1;
+    if (row && col?.editable && c >= 0) {
+      const at = this.#itemAt(ed.r);
+      r = at && "r" in at && at.r === row ? ed.r : this.#indexOf(row);
+    }
+    if (r >= 0) {
+      ed.row = row!;
+      ed.r = r;
+      ed.c = c;
+      this.#act = this.#anchor = { r, c };
+      return true;
+    }
+    const keep = !!row && !!col?.editable;
+    const lost = !keep && ed.input.value !== ed.text;
+    this.#endEdit(keep, 0, 0, false);
+    // Después del conteo de filas que anuncia el mismo cambio (si no, lo taparía).
+    if (lost) queueMicrotask(() => this.#live && (this.#live.textContent = this.#labels.editLost));
+    return false;
+  }
+
+  /** Dónde está una fila en la lista que se pinta (-1 si no está, o si su bloque no se ha cargado). */
+  #indexOf(row: GridRow): number {
+    if (!this.#server) return this.#view.findIndex((it) => "r" in it && it.r === row);
+    for (const [b, rows] of this.#blocks) {
+      const i = Array.isArray(rows) ? rows.indexOf(row) : -1;
+      if (i >= 0) return b * BLOCK + i;
+    }
+    return -1;
+  }
+
+  /** Pone el campo de la edición en su celda, recién repintada, sin perder lo escrito, el cursor ni
+   *  el foco. */
+  #mountEdit(ed: Editing, focused: boolean): void {
+    const cell = this.#cell({ r: ed.r, c: ed.c });
+    if (!cell || cell.contains(ed.input)) return;
+    const { input } = ed;
+    const sel = [input.selectionStart, input.selectionEnd, input.selectionDirection] as const;
+    cell.classList.add("is-editing");
+    cell.replaceChildren(input, ...(ed.list ? [ed.list] : []));
+    if (!focused) return;
+    input.focus({ preventScroll: true });
+    try {
+      if (sel[0] !== null && sel[1] !== null) input.setSelectionRange(sel[0], sel[1], sel[2] ?? undefined);
+    } catch {
+      /* un campo sin selección */
+    }
   }
 
   /** Termina la edición. Lo escrito va a la fila que se estaba editando (por su objeto y su id), no a
@@ -2641,6 +2755,8 @@ export class NxGrid extends Base {
       if (!this.#orig.has(k)) this.#orig.set(k, ch.old);
       r[ch.key] = ch.value;
       this.#hay.delete(r);
+      // El próximo filtro vuelve a buscar: la fila editada puede haber dejado de coincidir (o empezado).
+      this.#baseQ = null;
       // La marca de «editada» se va si la celda vuelve a su valor original.
       const o = this.#orig.get(k);
       if (ch.value === o || ((ch.value === null || ch.value === undefined || ch.value === "") && (o === null || o === undefined || o === ""))) this.#edited.delete(k);
@@ -2681,9 +2797,14 @@ export class NxGrid extends Base {
   /** Deshace el último cambio (una celda, un pegado, un borrado). `false` si no había, o si la app
    *  canceló `nx-grid-change`. */
   undo(): boolean {
+    // Una edición abierta es un paso más: se guarda antes de tomar los historiales (guardarla vacía
+    // el de rehacer, y el viaje dejaría lo deshecho en la lista vieja). Sin mover la celda activa
+    // ni robar el foco del botón.
+    this.#settle();
     return this.#travel(this.#undo, this.#redo, "undo");
   }
   redo(): boolean {
+    this.#settle();
     return this.#travel(this.#redo, this.#undo, "redo");
   }
   get canUndo(): boolean {
@@ -2694,7 +2815,6 @@ export class NxGrid extends Base {
   }
 
   #travel(from: GridChange[][], to: GridChange[][], source: "undo" | "redo"): boolean {
-    if (this.#editing) this.#endEdit(true);
     const batch = from.pop();
     if (!batch) return false;
     const changes = source === "undo" ? batch.map((c) => ({ id: c.id, key: c.key, value: c.old, old: c.value })) : batch;
@@ -2736,6 +2856,7 @@ export class NxGrid extends Base {
   }
 
   #clearRange(): void {
+    this.#settle();
     const changes: GridChange[] = [];
     this.#editableCells((row, col) => {
       if (row[col.key] !== null && row[col.key] !== undefined && row[col.key] !== "") changes.push({ id: this.#ids.get(row)!, key: col.key, value: null, old: row[col.key] });
