@@ -72,6 +72,8 @@ export interface GridLabels {
   noGroup: string;
   export: string;
   exporting: string;
+  exported: string;
+  exportError: string;
   rows: string;
   of: string;
   cells: string;
@@ -89,6 +91,8 @@ export interface GridLabels {
   less: string;
   empty: string;
   loading: string;
+  loadError: string;
+  retry: string;
   presets: string;
   selected: string;
   selectedOne: string;
@@ -168,6 +172,22 @@ export interface GridPage {
   /** Cuántas filas deja cada atajo (`GridPreset.id` → conteo), sobre todos los datos, no sobre lo filtrado. */
   presets?: Record<string, number>;
   totals?: Record<string, number>;
+}
+
+/** `nx-grid-error`: un bloque del servidor no llegó (se vuelve a pedir más tarde, con más espera cada vez). */
+export interface GridErrorDetail {
+  offset: number;
+  limit: number;
+  error: string;
+}
+
+/** `nx-grid-export`: cómo terminó una exportación (botón o `exportXlsx()`). */
+export interface GridExportDetail {
+  ok: boolean;
+  /** Filas que llevó el archivo (0 si falló). */
+  count: number;
+  filename: string;
+  error?: string;
 }
 
 /** De dónde viene un cambio (en `nx-grid-change`). */

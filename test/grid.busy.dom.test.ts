@@ -25,7 +25,7 @@ describe("nx-grid trabajando", () => {
     el.columns = COLS;
     el.rows = ROWS;
     let done!: () => void;
-    const spy = vi.fn(() => new Promise<void>((r) => (done = r)));
+    const spy = vi.fn(() => new Promise<number>((r) => (done = () => r(2))));
     el.exportXlsx = spy;
     const b = exportBtn(el);
     b.click();
@@ -37,12 +37,20 @@ describe("nx-grid trabajando", () => {
     await sleep(0);
     expect(b.hasAttribute("aria-busy")).toBe(false);
     expect(b.textContent).toBe("Exportar");
-    // Si falla, también se suelta.
+    // El resultado se anuncia.
+    const live = el.querySelector<HTMLElement>('[role="status"]')!;
+    const note = el.querySelector<HTMLElement>(".nx-grid__note")!;
+    expect(live.textContent).toBe("Se exportaron 2 filas");
+    expect(note.hidden).toBe(true);
+    // Si falla, también se suelta, y se dice (no solo en la consola).
     el.exportXlsx = () => Promise.reject(new Error("caído"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     b.click();
     await sleep(0);
     expect(b.hasAttribute("aria-busy")).toBe(false);
+    expect(live.textContent).toBe("No se pudo exportar");
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toBe("No se pudo exportar");
     warn.mockRestore();
   });
 

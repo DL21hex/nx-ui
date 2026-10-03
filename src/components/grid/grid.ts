@@ -32,6 +32,7 @@ import {
   applyFilters,
   colType,
   crossfilter,
+  DATE_RELS,
   facetColumns,
   facetOrder,
   filterLabel,
@@ -56,7 +57,7 @@ import {
 } from "./logic";
 import type { FilterHost, FilterKind, FilterPanel } from "./grid-filter";
 import type { ViewsHost, ViewsUI } from "./grid-views";
-import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridHistogram, GridLabels, GridPage, GridPreset, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "./types";
+import type { GridChange, GridChangeSource, GridColumn, GridDateRel, GridFilter, GridHistogram, GridLabels, GridPage, GridPreset, GridRow, GridSavedView, GridSort, GridView, GridViewLabels } from "./types";
 
 export const GRID_LABELS: GridLabels = {
   filters: "Filtros",
@@ -64,6 +65,8 @@ export const GRID_LABELS: GridLabels = {
   noGroup: "Sin agrupar",
   export: "Exportar",
   exporting: "Exportando…",
+  exported: "Se exportaron {n} filas",
+  exportError: "No se pudo exportar",
   rows: "{n} filas",
   of: "{n} de {total} filas",
   cells: "{n} celdas",
@@ -81,6 +84,8 @@ export const GRID_LABELS: GridLabels = {
   less: "Ver menos",
   empty: "Ninguna fila coincide con los filtros",
   loading: "Cargando…",
+  loadError: "No se pudieron cargar las filas",
+  retry: "Reintentar",
   presets: "Atajos",
   selected: "{n} seleccionadas",
   selectedOne: "1 seleccionada",
@@ -153,6 +158,12 @@ const HISTORY = 100;
 const ROW_H = 32;
 const OVERSCAN = 8;
 const BLOCK = 100;
+/** Bloques del servidor que se guardan: al pasar de esto se sueltan los más lejanos a la vista
+ *  (recorrer una tabla de un millón de filas no las deja todas en memoria). */
+const KEEP = 50;
+/** Tope del alto del cuerpo (px): los navegadores no pintan elementos más altos (Firefox, ~17,9 M).
+ *  Más allá, el cuerpo se queda en este alto y el desplazamiento se escala. */
+const MAX_H = 15_000_000;
 const FACET_SHOWN = 6;
 /** Exportar pide las filas al servidor de a este tanto, hasta el tope de filas de una hoja de Excel. */
 const EXPORT_BLOCK = 5000;
@@ -162,24 +173,83 @@ const OPS = new Set(["in", "notIn", "range", "contains"]);
 
 type Item = { g: GridGroup } | { r: GridRow };
 type Pos = { r: number; c: number };
-type Editing = { r: number; c: number; input: HTMLInputElement; quick: boolean };
+/** Una edición en curso: la posición (para moverse al terminar) y la fila misma, por su objeto y su
+ *  id: si mientras tanto cambian los datos, los filtros o el orden, lo escrito no cae sobre la fila
+ *  que hoy ocupa ese lugar. `text`: lo que traía el campo al abrirlo (sin tocarlo no se guarda). */
+type Editing = { r: number; c: number; key: string; row: GridRow; id: string; text: string | null; input: HTMLInputElement; quick: boolean };
 
 let uid = 0;
 
-/** Los filtros que llegan de afuera (atributo, una vista guardada) se validan; los tramos
- *  relativos («este mes») se recalculan con la fecha de hoy. */
+/** El borde de un tramo que llega de afuera: un número, una fecha ISO o un número escrito como texto
+ *  («50000» de un JSON se compararía como texto: «9000» ≥ «50000»). Lo demás no sirve. */
+function bound(v: unknown): number | string | undefined {
+  if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+  if (typeof v !== "string" || !v.trim()) return undefined;
+  if (/^\d{4}-\d{2}(-\d{2})?/.test(v)) return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/** Los filtros que llegan de afuera (atributo, una vista guardada, BDUI) se validan y se llevan a sus
+ *  tipos: los valores de una lista como texto (las filas se comparan como texto: `[1]` no encontraba
+ *  `1`), los bordes de un tramo como arriba y `rel` solo si es uno conocido. Los tramos relativos
+ *  («este mes») se recalculan con la fecha de hoy. */
 function validFilters(v: unknown): GridFilter[] {
   if (!Array.isArray(v)) return [];
-  return resolveRel(
-    v.filter(
-      (f) =>
-        f &&
-        typeof f.key === "string" &&
-        OPS.has(f.op) &&
-        (f.op === "range" ? f.min !== undefined || f.max !== undefined || typeof f.rel === "string" : f.op === "contains" ? typeof f.value === "string" : Array.isArray(f.values)),
-    ) as GridFilter[],
-  );
+  const out: GridFilter[] = [];
+  for (const f of v as Record<string, unknown>[]) {
+    if (!f || typeof f !== "object" || typeof f.key !== "string" || !OPS.has(f.op as string)) continue;
+    const key = f.key;
+    if (f.op === "range") {
+      const min = bound(f.min);
+      const max = bound(f.max);
+      const rel = DATE_RELS.includes(f.rel as GridDateRel) ? (f.rel as GridDateRel) : undefined;
+      if (min === undefined && max === undefined && !rel) continue;
+      out.push({ key, op: "range", ...(min !== undefined ? { min } : {}), ...(max !== undefined ? { max } : {}), ...(rel ? { rel } : {}) });
+    } else if (f.op === "contains") {
+      if (typeof f.value === "string" || typeof f.value === "number") out.push({ key, op: "contains", value: String(f.value) });
+    } else if (Array.isArray(f.values)) {
+      const values = f.values.filter((x) => typeof x === "string" || typeof x === "number" || typeof x === "boolean").map(String);
+      out.push({ key, op: f.op as "in" | "notIn", values });
+    }
+  }
+  return resolveRel(out);
 }
+
+const TYPES = new Set(["text", "number", "money", "date", "status"]);
+const KINDS = new Set(["list", "range", "date", "text"]);
+
+/** Una columna que llega de afuera (BDUI: JSON). Sin `key` y `label` de texto no sirve; lo demás que
+ *  no tenga la forma correcta se arregla o se quita: unas `options` que no son lista lanzaban al
+ *  ordenar, y un `width` de texto se sumaba como texto («0200140px»). Una columna correcta queda
+ *  como llegó (el mismo objeto). */
+function cleanColumn(c: unknown): GridColumn | null {
+  if (!c || typeof c !== "object") return null;
+  const x = c as Record<string, unknown>;
+  if (typeof x.key !== "string" || typeof x.label !== "string") return null;
+  const fix: Record<string, unknown> = {};
+  if (x.type !== undefined && !TYPES.has(x.type as string)) fix.type = undefined;
+  if (x.width !== undefined && typeof x.width !== "number") fix.width = Number(x.width);
+  const w = (fix.width ?? x.width) as number | undefined;
+  if (w !== undefined && !(w > 0 && Number.isFinite(w))) fix.width = undefined;
+  if (x.options !== undefined) {
+    const list = Array.isArray(x.options) ? (x.options as Record<string, unknown>[]) : [];
+    const ok = list.filter((o) => o && typeof o === "object" && (typeof o.value === "string" || typeof o.value === "number"));
+    if (!Array.isArray(x.options) || ok.length !== list.length || ok.some((o) => typeof o.value !== "string" || (o.label != null && typeof o.label !== "string")))
+      fix.options = ok.length ? ok.map((o) => ({ ...o, value: String(o.value), ...(o.label != null ? { label: String(o.label) } : {}) })) : undefined;
+  }
+  if (x.filter !== undefined && x.filter !== false && !KINDS.has(x.filter as string)) fix.filter = undefined;
+  if (x.currency !== undefined && typeof x.currency !== "string") fix.currency = undefined;
+  for (const k of ["editable", "link", "avatar", "histogram", "facet"]) if (x[k] !== undefined && typeof x[k] !== "boolean") fix[k] = !!x[k];
+  if (!Object.keys(fix).length) return c as GridColumn;
+  const out: Record<string, unknown> = { ...x, ...fix };
+  for (const k of Object.keys(fix)) if (fix[k] === undefined) delete out[k];
+  return out as unknown as GridColumn;
+}
+
+/** La copia de una fila que guarda la tabla: sin prototipo, para que una columna «constructor» o
+ *  «toString» en una fila que no la trae lea `undefined` y no el código de una función. */
+const own = (r: GridRow): GridRow => Object.assign(Object.create(null) as GridRow, r);
 
 const clampW = (w: number) => Math.round(Math.min(MAX_W, Math.max(MIN_W, w)));
 
@@ -215,7 +285,7 @@ export class NxGrid extends Base {
     attrProps(this, ["height"]);
   }
   declare height: string | null;
-  static observedAttributes = ["columns", "rows", "filters", "labels", "presets", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable", "views-storage", "top-scrollbar"];
+  static observedAttributes = ["columns", "rows", "filters", "labels", "presets", "source", "client-max", "group-by", "facets-open", "height", "locale", "selectable", "views-storage", "top-scrollbar", "row-key"];
 
   #uid = `nx-grid${++uid}`;
   #labels: GridLabels = GRID_LABELS;
@@ -250,6 +320,9 @@ export class NxGrid extends Base {
   #order = new Map<string, string[]>();
   #filtered: GridRow[] = [];
   #sorted: GridRow[] = [];
+  /** Todas las filas ya ordenadas por `sort`: filtrar o buscar no reordena, solo recorre esto. Se
+   *  olvida si cambian las filas, las columnas, el locale o un valor de la columna del orden. */
+  #sortedAll: { sort: GridSort; rows: GridRow[] } | null = null;
   #groups: GridGroup[] | null = null;
   #groupMax: Record<string, number> = {};
   #view: Item[] = [];
@@ -278,6 +351,19 @@ export class NxGrid extends Base {
   #blocks = new Map<number, GridRow[] | "loading">();
   #gen = 0;
   #wait?: ReturnType<typeof setTimeout>;
+  /** Las peticiones de bloques de esta consulta (se cortan al cambiarla o al salir del DOM) y la de
+   *  `client-max`; `#resume`: al salir del DOM quedó algo sin pedir, que se pide al volver. */
+  #ac?: AbortController;
+  #tryAc?: AbortController;
+  #resume = false;
+  /** Bloques que fallaron: cuántas veces y desde cuándo se pueden volver a pedir (1 s, 2 s, 4 s… hasta
+   *  30 s). `#loadError`: falló el primero y no hay filas que mostrar. */
+  #fails = new Map<number, { n: number; at: number }>();
+  #retry?: ReturnType<typeof setTimeout>;
+  #retryAt = 0;
+  #loadError = false;
+  /** Los agregados de la última página pintados: un bloque que trae los mismos no repinta la barra. */
+  #pageSig = "";
   /** `client-max`: la consulta completa se trajo y se filtra aquí (`local`); ya se miró el total (`decided`). */
   #local = false;
   #decided = false;
@@ -331,6 +417,8 @@ export class NxGrid extends Base {
   #selbar?: HTMLDivElement;
   #headCheck?: HTMLInputElement;
   #ro?: ResizeObserver;
+  #copied?: ReturnType<typeof setTimeout>;
+  #groupKey = "";
   #urls = new Map<string, { raw: string | null; at: string; url: string | undefined }>();
 
   // ---------------------------------------------------------------- propiedades
@@ -339,9 +427,11 @@ export class NxGrid extends Base {
     return this.#cols;
   }
   set columns(v: GridColumn[] | null | undefined) {
-    this.#cols = Array.isArray(v) ? v.filter((c) => c && typeof c.key === "string" && typeof c.label === "string") : [];
+    this.#settle();
+    this.#cols = Array.isArray(v) ? v.map(cleanColumn).filter((c): c is GridColumn => !!c) : [];
     this.#syncColumns();
-    this.#dataChanged(true);
+    // Con `source`, las columnas no viajan al servidor: se rehace la cabecera sin volver a pedir.
+    this.#dataChanged(true, true);
   }
 
   /** El estado que se puede guardar: filtros, orden, agrupación, columnas ocultas y anchos. */
@@ -394,16 +484,18 @@ export class NxGrid extends Base {
     // `grid.rows = grid.rows` (tras cambiar filas por fuera) recalcula sin copiar: las filas son
     // las mismas que la app ya tiene en la mano.
     // Filas nuevas: se empieza de cero (marcas de edición e historial para deshacer).
+    // Una edición abierta se guarda antes, en la fila que se estaba editando.
+    this.#settle();
     if (v !== this.#all) {
-      this.#all = Array.isArray(v) ? v.filter((r) => r && typeof r === "object").map((r) => ({ ...r })) : [];
+      this.#all = Array.isArray(v) ? v.filter((r) => r && typeof r === "object").map(own) : [];
       this.#edited.clear();
       this.#orig.clear();
       this.#undo = [];
       this.#redo = [];
     }
-    this.#byId.clear();
-    this.#index(this.#all, 0);
-    for (const id of this.#picked) if (!this.#byId.has(id)) this.#picked.delete(id);
+    // Con `source`, `rows` no se usa: ni se indexa ni se vuelve a pedir nada.
+    if (this.#server) return;
+    this.#reindex();
     this.#dataChanged();
   }
   get filters(): GridFilter[] {
@@ -581,12 +673,15 @@ export class NxGrid extends Base {
   removeColumn(key: string): void {
     const col = this.#cols.find((c) => c.key === key);
     if (!col) return;
+    this.#settle();
     this.#cols = this.#cols.filter((c) => c !== col);
     this.#syncColumns();
+    // Con `source` solo se vuelve a pedir si la consulta cambia (tenía un filtro o el orden).
+    const query = this.#filters.some((f) => f.key === key) || this.#sort?.key === key;
     this.#filters = this.#filters.filter((f) => f.key !== key);
     if (this.#sort?.key === key) this.#sort = null;
     this.#act = this.#anchor = { r: this.#act.r, c: Math.min(this.#act.c, this.#columns.length - 1) };
-    this.#dataChanged(true);
+    this.#dataChanged(true, !query);
     this.#emit("nx-grid-columns", { columns: this.#cols });
   }
 
@@ -598,13 +693,25 @@ export class NxGrid extends Base {
   }
 
   /** Descarga las filas filtradas y ordenadas como .xlsx (el generador se carga solo en este
-   *  momento). En modo servidor las pide por bloques; si el servidor falla, la promesa se rechaza. */
-  async exportXlsx(filename = this.filename): Promise<void> {
+   *  momento) y resuelve con cuántas filas llevó. En modo servidor las pide por bloques; si el
+   *  servidor falla, la promesa se rechaza. Sale `nx-grid-export` con el resultado. */
+  async exportXlsx(filename = this.filename): Promise<number> {
+    try {
+      const n = await this.#export(filename);
+      this.#emit("nx-grid-export", { ok: true, count: n, filename });
+      return n;
+    } catch (err) {
+      this.#emit("nx-grid-export", { ok: false, count: 0, filename, error: String((err as Error)?.message ?? err) });
+      throw err;
+    }
+  }
+
+  async #export(filename: string): Promise<number> {
     const [{ buildXlsx, moneyFormat }, rows] = await Promise.all([import("./xlsx"), this.#server ? this.#fetchAll() : Promise.resolve(this.#sorted)]);
     const cols = this.#columns;
     const cells = rows.map((r) =>
       cols.map((c) => {
-        const v = r[c.key];
+        const v = Object.hasOwn(r, c.key) ? r[c.key] : undefined;
         if (v === null || v === undefined || v === "") return null;
         if (isNumeric(c)) return num(v);
         if (colType(c) === "date") return String(v);
@@ -629,6 +736,7 @@ export class NxGrid extends Base {
     const a = h("a", { href: URL.createObjectURL(blob), download: `${filename}.xlsx` });
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    return rows.length;
   }
 
   // ---------------------------------------------------------------- ciclo de vida
@@ -647,7 +755,13 @@ export class NxGrid extends Base {
     // Movido en el DOM (un portal, una lista que se reordena): los datos no cambiaron, no se
     // recalcula ni se vuelve a pedir nada; solo se repintan las filas visibles.
     if (first) this.#dataChanged(true);
-    else this.#paintRows(true);
+    else if (this.#resume) {
+      // Al salir del DOM quedó una petición cortada o un filtro sin pedir: se pide ahora.
+      this.#resume = false;
+      this.#refilter(true);
+    } else this.#paintRows(true);
+    // Lo escrito en la búsqueda que no alcanzó a aplicarse antes de salir del DOM.
+    if (!first && this.#searchInput!.value !== this.#search) this.search = this.#searchInput!.value;
   }
 
   /** Otra pestaña guardó vistas con la misma clave: la lista se vuelve a leer. */
@@ -666,6 +780,25 @@ export class NxGrid extends Base {
     this.#panel?.close();
     this.#viewsUI?.close();
     removeEventListener("storage", this.#onStorage);
+    // Nada sigue trabajando para una tabla fuera del DOM: las esperas se cancelan y las peticiones
+    // se cortan. Si vuelve (un portal, una lista que se reordena), lo que faltaba se pide otra vez.
+    clearTimeout(this.#searchWait);
+    clearTimeout(this.#retry);
+    this.#retry = undefined;
+    clearTimeout(this.#copied);
+    if (this.#wait !== undefined) {
+      clearTimeout(this.#wait);
+      this.#wait = undefined;
+      this.#resume = true;
+    }
+    this.#ac?.abort();
+    this.#ac = undefined;
+    if (this.#tryAc) {
+      this.#tryAc.abort();
+      this.#tryAc = undefined;
+      this.#decided = false;
+      this.#resume = true;
+    }
   }
 
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -677,9 +810,14 @@ export class NxGrid extends Base {
       }
       return;
     }
+    // `row-key` cambia los id: también antes de conectarse (Solid asigna `rows` antes que el atributo).
+    if (name === "row-key") return void (old !== value && this.#rekey());
     if (!this.#built || old === value || this.#quiet) return;
     if (name === "source" || name === "client-max") {
+      this.#settle();
       this.#local = this.#decided = false;
+      // Sin `source` las filas vuelven a ser las de `rows`.
+      if (!this.#server) this.#reindex();
       this.#dataChanged(true);
     } else if (name === "views-storage") {
       this.#viewList = null;
@@ -693,6 +831,7 @@ export class NxGrid extends Base {
       requestAnimationFrame(() => this.#follow(this.#scroll!, this.#hbar!));
     } else if (name === "locale" || name === "selectable") this.#dataChanged(name === "selectable");
     else if (name === "group-by") {
+      this.#settle();
       this.#collapsed.clear();
       this.#refilter(true, "order");
     } else this.#paintAll();
@@ -706,22 +845,62 @@ export class NxGrid extends Base {
     // orden: el id lleva la generación de la consulta, para que una selección vieja no caiga
     // sobre otra fila que hoy ocupa ese lugar.
     const pos = this.#server ? `#${this.#gen}:` : "#";
+    let dup: string | undefined;
     rows.forEach((r, i) => {
-      const v = r[key];
-      const id = v === null || v === undefined ? `${pos}${offset + i}` : String(v);
+      const v = Object.hasOwn(r, key) ? r[key] : undefined;
+      let id = v === null || v === undefined ? `${pos}${offset + i}` : String(v);
+      // Un id repetido (un join, un `row-key` que no es único) haría que editar o marcar una fila
+      // cayera sobre la otra: la segunda se identifica por su posición, y se avisa.
+      const had = this.#byId.get(id);
+      if (had && had !== r) {
+        dup ??= id;
+        id = `${pos}${offset + i}`;
+      }
       this.#ids.set(r, id);
       this.#byId.set(id, r);
     });
+    if (dup !== undefined) console.warn(`[nx-grid] el id «${dup}» (de "${key}") se repite: esas filas se identifican por su posición`);
   }
 
-  /** Cambiaron las filas o las columnas: se recalcula todo lo que depende de ellas. */
-  #dataChanged(columns = false): void {
+  /** Las filas de `rows` se vuelven a indexar (filas nuevas, otro `row-key`); las marcas de filas que
+   *  ya no están se quitan. */
+  #reindex(): void {
+    this.#byId.clear();
+    this.#index(this.#all, 0);
+    for (const id of this.#picked) if (!this.#byId.has(id)) this.#picked.delete(id);
+  }
+
+  /** Otro `row-key`: los id cambian, así que las marcas, las ediciones y el historial (que van por
+   *  id) ya no significan nada. */
+  #rekey(): void {
+    this.#settle();
+    const had = this.#picked.size > 0;
+    this.#picked.clear();
+    this.#edited.clear();
+    this.#orig.clear();
+    this.#undo = [];
+    this.#redo = [];
+    if (this.#server) {
+      if (this.#built) this.#reload();
+    } else {
+      this.#reindex();
+      this.#paintAll();
+    }
+    this.#paintPicked(had);
+  }
+
+  /** Cambiaron las filas o las columnas: se recalcula todo lo que depende de ellas. `columnsOnly`:
+   *  solo las columnas; con `source` no hace falta volver a pedir (no viajan en la consulta), salvo
+   *  que aún no se haya pedido nada. */
+  #dataChanged(columns = false, columnsOnly = false): void {
     if (!this.#built) return;
+    this.#settle();
     if (!this.#server) this.#presetN.clear();
     this.#loc = nxFormat(this.locale);
+    this.#sortedAll = null;
     this.#forgetText();
     if (columns) this.#buildHead();
-    if (this.#server) return this.#reload();
+    if (this.#server) return columnsOnly && this.#gen ? this.#paintAll() : this.#reload();
     // Las facetas salen de todas las columnas: esconder una no quita su filtro ni su lista.
     const auto = facetColumns(this.#cols, this.#all);
     this.#facetCols = this.#cols.filter((c) => (c.facet === true || (c.facet !== false && auto.includes(c))));
@@ -733,6 +912,7 @@ export class NxGrid extends Base {
    *  `order`: solo cambió cómo se ordenan o agrupan las filas, no cuáles pasan. */
   #refilter(emit: boolean, stage: "filter" | "order" = "filter"): void {
     if (!this.#built) return;
+    this.#settle();
     if (this.#server) this.#reload();
     else this.#recompute(stage);
     this.#clampSel();
@@ -758,12 +938,27 @@ export class NxGrid extends Base {
       this.#facetList = x.facets;
       this.#sumTotals();
     }
-    this.#sorted = sortRows(this.#filtered, this.#sort, cols, this.#loc);
+    this.#sorted = this.#sortOf(this.#filtered);
     const gc = this.#groupable().find((c) => c.key === this.groupBy);
     this.#groups = gc ? groupRows(this.#sorted, gc, cols, this.#loc) : null;
     this.#groupStats();
     this.#flatten();
     this.#paintAll();
+  }
+
+  /** Las filas que pasan, en orden. Filtrar no cambia el orden: se recorre el de todas las filas
+   *  (ordenado una vez por orden y datos) y quedan las que pasan; con 100.000 nombres distintos,
+   *  ordenar en cada tecla de la búsqueda costaba un cuarto de segundo. Si pasan pocas (y aún no hay
+   *  orden de todas), se ordenan solas: un clic en la cabecera no ordena las que no se ven. */
+  #sortOf(rows: GridRow[]): GridRow[] {
+    const sort = this.#sort;
+    if (!sort) return rows;
+    let all = this.#sortedAll?.sort === sort ? this.#sortedAll.rows : null;
+    if (!all && rows.length * 4 < this.#all.length) return sortRows(rows, sort, this.#cols, this.#loc);
+    if (!all) this.#sortedAll = { sort, rows: (all = sortRows(this.#all, sort, this.#cols, this.#loc)) };
+    if (rows.length === this.#all.length) return all;
+    const pass = new Set(rows);
+    return all.filter((r) => pass.has(r));
   }
 
   #textOf(r: GridRow): string {
@@ -824,7 +1019,15 @@ export class NxGrid extends Base {
 
   #reload(): void {
     this.#gen++;
+    // Lo que seguía en camino de la consulta anterior ya no sirve: se corta.
+    this.#ac?.abort();
+    this.#ac = new AbortController();
     this.#blocks.clear();
+    this.#fails.clear();
+    clearTimeout(this.#retry);
+    this.#retry = undefined;
+    this.#loadError = false;
+    this.#pageSig = "";
     // Solo quedan indexadas las filas de ESTA consulta: «Seleccionar todo», el conteo y las acciones
     // en lote nunca alcanzan filas que ya no pasan el filtro. Las marcas con id real se conservan
     // (pueden volver a aparecer); las posicionales de otra consulta ya no significan nada.
@@ -835,11 +1038,12 @@ export class NxGrid extends Base {
     this.#paintAll();
   }
 
-  async #request(
-    offset: number,
-    limit: number,
-    q: { sort: GridSort | null; filters: GridFilter[]; search?: string } = { sort: this.#sort, filters: this.#filters, ...(this.#search.trim() ? { search: this.#search.trim() } : {}) },
-  ): Promise<GridPage | null> {
+  /** La consulta de ahora (orden, filtros y búsqueda). */
+  #query(): { sort: GridSort | null; filters: GridFilter[]; search?: string } {
+    return { sort: this.#sort, filters: this.#filters, ...(this.#search.trim() ? { search: this.#search.trim() } : {}) };
+  }
+
+  async #request(offset: number, limit: number, q: { sort: GridSort | null; filters: GridFilter[]; search?: string } = this.#query(), signal?: AbortSignal): Promise<GridPage | null> {
     const url = this.#url("source");
     if (!url) return null;
     const res = await fetch(url, {
@@ -847,6 +1051,7 @@ export class NxGrid extends Base {
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       credentials: "same-origin",
       body: JSON.stringify({ offset, limit, ...q }),
+      signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as GridPage;
@@ -855,22 +1060,45 @@ export class NxGrid extends Base {
 
   async #load(block: number): Promise<void> {
     if (this.#blocks.has(block)) return;
+    // Un bloque que falló espera su turno (no se vuelve a pedir en cada cuadro del scroll).
+    const fail = this.#fails.get(block);
+    if (fail && fail.at > Date.now()) return this.#retryLater(fail.at);
     this.#blocks.set(block, "loading");
     const gen = this.#gen;
+    const signal = (this.#ac ??= new AbortController()).signal;
+    const q = this.#query();
+    const offset = block * BLOCK;
     let page: GridPage | null = null;
+    let raw: unknown[] = [];
+    let error: unknown = null;
     try {
-      page = await this.#request(block * BLOCK, BLOCK);
-    } catch {
-      /* el bloque se reintenta al volver a pasar por él */
+      page = await this.#request(offset, BLOCK, q, signal);
+      raw = page?.rows ?? [];
+      // El servidor puede tener un tope por página menor que el bloque: se pide lo que falta, desde
+      // donde quedó, hasta llenarlo o llegar al total (si no, el resto del bloque quedaba como
+      // esqueleto para siempre).
+      const total = Number(page?.total) || 0;
+      while (page && raw.length && raw.length < BLOCK && offset + raw.length < total) {
+        const more = await this.#request(offset + raw.length, BLOCK - raw.length, q, signal);
+        if (!more?.rows.length) break;
+        raw = raw.concat(more.rows);
+      }
+    } catch (err) {
+      error = err;
     }
     if (gen !== this.#gen) return;
-    if (!page) {
+    if (!page || error) {
       this.#blocks.delete(block);
-      return;
+      // Cortada porque la tabla salió del DOM: se pide otra vez al volver.
+      if (signal?.aborted) return;
+      return this.#failed(block, error ?? new Error("la respuesta no trae rows"));
     }
-    const rows = page.rows.filter((r) => r && typeof r === "object");
-    this.#index(rows, block * BLOCK);
+    const rows = raw.filter((r): r is GridRow => !!r && typeof r === "object").map(own);
+    this.#fails.delete(block);
+    if (block === 0) this.#loadError = false;
+    this.#index(rows, offset);
     this.#blocks.set(block, rows);
+    this.#evict();
     this.#total = Math.max(0, Number(page.total) || 0);
     // El conteo para el lector de pantalla, con el total nuevo (al filtrar aún no se sabía).
     if (block === 0 && this.#live) this.#live.textContent = this.#rowsText();
@@ -894,23 +1122,69 @@ export class NxGrid extends Base {
       this.#decided = true;
       if (this.#total <= max) void this.#tryLocal(max);
     }
-    // Un bloque que llega no rehace todo: los agregados, y las filas que esperaban sus datos (las
-    // que siguen a la vista se reutilizan en el próximo cuadro).
+    // Un bloque que llega no rehace todo: el pie, las filas que esperaban sus datos (las que siguen a
+    // la vista se reutilizan en el próximo cuadro) y, solo si cambiaron los agregados (o es el primer
+    // bloque), la barra, los chips y las facetas.
     this.#footDirty = true;
-    this.#paintChrome();
+    const sig = JSON.stringify([this.#total, page.facets, page.presets, page.histograms]);
+    if (block === 0 || sig !== this.#pageSig) {
+      this.#pageSig = sig;
+      this.#paintChrome();
+    }
     this.#paintFoot();
     this.#soon();
     this.#paintPicked(false);
   }
 
+  /** Un bloque no llegó: se dice (`nx-grid-error`; sin filas, en el aviso, con «Reintentar») y se
+   *  vuelve a pedir más tarde, cada vez con más espera. */
+  #failed(block: number, error: unknown): void {
+    const n = (this.#fails.get(block)?.n ?? 0) + 1;
+    const at = Date.now() + Math.min(30_000, 1000 * 2 ** (n - 1));
+    this.#fails.set(block, { n, at });
+    this.#retryLater(at);
+    if (block === 0) this.#loadError = true;
+    this.#emit("nx-grid-error", { offset: block * BLOCK, limit: BLOCK, error: String((error as Error)?.message ?? error) });
+    this.#paintChrome();
+  }
+
+  /** Vuelve a pintar (y así a pedir los bloques que faltan) en `at`, si no hay ya un intento antes. */
+  #retryLater(at: number): void {
+    if (this.#retry !== undefined && this.#retryAt <= at) return;
+    clearTimeout(this.#retry);
+    this.#retryAt = at;
+    this.#retry = setTimeout(() => {
+      this.#retry = undefined;
+      this.#soon();
+    }, Math.max(0, at - Date.now()));
+  }
+
+  /** Con más de `KEEP` bloques guardados, se sueltan los más lejanos a la vista (y sus filas del
+   *  índice: «seleccionar todo» y las acciones en lote alcanzan las filas cargadas). */
+  #evict(): void {
+    if (this.#blocks.size <= KEEP) return;
+    const mid = Math.floor(Math.max(0, this.#win.start) / BLOCK);
+    const far = [...this.#blocks.keys()].filter((b) => Array.isArray(this.#blocks.get(b))).sort((a, b) => Math.abs(b - mid) - Math.abs(a - mid));
+    for (const b of far.slice(0, this.#blocks.size - KEEP)) {
+      for (const r of this.#blocks.get(b) as GridRow[]) {
+        const id = this.#ids.get(r);
+        if (id !== undefined && this.#byId.get(id) === r) this.#byId.delete(id);
+      }
+      this.#blocks.delete(b);
+    }
+  }
+
   /** Trae la consulta completa (hasta `max` + 1 filas) y, si cabe, sigue en el cliente con ella. */
   async #tryLocal(max: number): Promise<void> {
     const src = this.getAttribute("source");
+    const ac = (this.#tryAc = new AbortController());
     let page: GridPage | null = null;
     try {
-      page = await this.#request(0, max + 1, { sort: null, filters: [] });
+      page = await this.#request(0, max + 1, { sort: null, filters: [] }, ac.signal);
     } catch {
       return; // se queda en el servidor
+    } finally {
+      if (this.#tryAc === ac) this.#tryAc = undefined;
     }
     // Mientras tanto cambió el origen o el tope: esa respuesta ya no dice nada.
     if (!page || src !== this.getAttribute("source") || !this.#server || !this.#decided) return;
@@ -918,20 +1192,26 @@ export class NxGrid extends Base {
     if (rows.length > max || rows.length < (Number(page.total) || 0)) return;
     // Lo que falte por llegar del servidor se descarta.
     this.#gen++;
+    this.#ac?.abort();
     this.#blocks.clear();
+    this.#fails.clear();
+    this.#loadError = false;
     clearTimeout(this.#wait);
+    this.#wait = undefined;
     this.#local = true;
     this.rows = rows;
   }
 
   /** Todas las filas de la consulta (para exportar), por bloques: nunca una sola respuesta con
-   *  millones de filas. Se detiene en el tope de una hoja de Excel. */
+   *  millones de filas. Se detiene en el tope de una hoja de Excel. La consulta se toma una vez, al
+   *  empezar: si la persona filtra mientras exporta, el archivo no mezcla dos consultas. */
   async #fetchAll(): Promise<GridRow[]> {
     const out: GridRow[] = [];
+    const q = this.#query();
     // El servidor puede mandar menos de lo pedido (un tope por página, p. ej. 100): se sigue desde
     // donde quedó hasta el total, no se corta en el primer bloque corto.
     for (let offset = 0, i = 0; out.length < EXPORT_MAX && i < 20_000; i++) {
-      const page = await this.#request(offset, EXPORT_BLOCK);
+      const page = await this.#request(offset, EXPORT_BLOCK, q);
       if (!page?.rows.length) break;
       for (const r of page.rows) if (r && typeof r === "object" && out.length < EXPORT_MAX) out.push(r);
       offset += page.rows.length;
@@ -993,15 +1273,24 @@ export class NxGrid extends Base {
   /** Si el menú ya está cargado, en el mismo clic; si no, al llegar. */
   #withViews(fn: (v: ViewsUI) => void): void {
     if (this.#viewsUI) fn(this.#viewsUI);
-    else void this.#loadViews().then(fn);
+    else void this.#loadViews().then(fn, (err) => console.warn("[nx-grid] no se pudo cargar el menú de vistas", err));
   }
 
+  /** Si la carga falla (un corte de red, un despliegue que borró el archivo), no se recuerda: el
+   *  siguiente clic lo vuelve a intentar. */
   #loadViews(): Promise<ViewsUI> {
-    return (this.#viewsLoad ??= import("./grid-views").then((m) => (this.#viewsUI = new m.ViewsUI(this.#viewsHost()))));
+    return (this.#viewsLoad ??= import("./grid-views").then(
+      (m) => (this.#viewsUI = new m.ViewsUI(this.#viewsHost())),
+      (err) => {
+        this.#viewsLoad = undefined;
+        throw err;
+      },
+    ));
   }
 
   /** Esconde o muestra una columna. */
   #setHidden(key: string, hidden: boolean): void {
+    this.#settle();
     if (hidden) this.#hidden.add(key);
     else this.#hidden.delete(key);
     this.#syncColumns();
@@ -1116,8 +1405,20 @@ export class NxGrid extends Base {
       if (b.hasAttribute("aria-busy")) return;
       b.setAttribute("aria-busy", "true");
       this.#paintChrome();
+      // El resultado se dice: en la región viva y, si falló, también en la nota sobre la tabla.
+      const say = (text: string, failed: boolean) => {
+        if (this.#live) this.#live.textContent = text;
+        this.#note!.hidden = !failed;
+        this.#note!.textContent = failed ? text : "";
+      };
       this.exportXlsx()
-        .catch((err) => console.warn("[nx-grid] no se pudo exportar", err))
+        .then(
+          (n) => say(this.#fmt(this.#labels.exported, { n: this.#loc.number(n) }), false),
+          (err) => {
+            console.warn("[nx-grid] no se pudo exportar", err);
+            say(this.#labels.exportError, true);
+          },
+        )
         .finally(() => {
           b.removeAttribute("aria-busy");
           this.#paintChrome();
@@ -1218,27 +1519,17 @@ export class NxGrid extends Base {
       const col = hd && this.#columns[Number(hd.dataset.resize)];
       if (col) this.#setWidth(col.key, null);
     });
-    // Alt+↓ en una cabecera abre su filtro (como el autofiltro de Excel).
-    this.#head.addEventListener("keydown", (e) => {
-      const hd = (e.target as Element).closest<HTMLElement>("[data-resize]");
-      const col = hd && this.#columns[Number(hd.dataset.resize)];
-      if (col && ["ArrowLeft", "ArrowRight", "Delete", "Backspace"].includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-        const step = (e.key === "ArrowRight" ? 1 : -1) * (e.shiftKey ? 64 : 16) * (getComputedStyle(this).direction === "rtl" ? -1 : 1);
-        return this.#setWidth(col.key, e.key.startsWith("Arrow") ? this.#widthOf(col) + step : null);
-      }
-      const th = (e.target as Element).closest<HTMLElement>("[aria-colindex]");
-      if (!th || !e.altKey || e.key !== "ArrowDown") return;
-      e.preventDefault();
-      void this.#toggleFilter(this.#columns[Number(th.getAttribute("aria-colindex")) - 1]?.key ?? "");
-    });
+    this.#head.addEventListener("keydown", (e) => this.#onHeadKey(e));
     // El panel se trae antes de que haga falta: al acercarse a la cabecera.
     for (const ev of ["pointerenter", "focusin"]) this.#head.addEventListener(ev, () => void this.#loadPanel().catch(() => {}), { once: true });
     this.#rowsEl = h("div", { class: "nx-grid__rows", role: "rowgroup" });
     this.#body = h("div", { class: "nx-grid__body", role: "presentation" }, this.#rowsEl);
     this.#empty = h("p", { class: "nx-grid__empty", hidden: true });
     this.#empty.addEventListener("click", (e) => {
+      if ((e.target as Element).closest("[data-retry]")) {
+        this.refresh();
+        return this.#scroll!.focus({ preventScroll: true });
+      }
       const b = (e.target as Element).closest<HTMLElement>("[data-relax]");
       if (!b) return;
       const k = b.dataset.relax;
@@ -1327,22 +1618,26 @@ export class NxGrid extends Base {
     this.append(this.#presetBar, bar, this.#selbar, this.#note, this.#chips, main, this.#foot, this.#live);
   }
 
+  /** La tabla es una sola parada de Tab (patrón grid de la APG): los controles de la cabecera van
+   *  con `tabindex="-1"` y se llega a ellos con las flechas (ver `#onHeadKey`). Con `selectable`, la
+   *  columna de casillas es la primera: `aria-colcount` y `aria-colindex` la cuentan. */
   #buildHead(): void {
     const cols = this.#columns;
-    this.#scroll!.setAttribute("aria-colcount", String(cols.length));
+    const off = this.selectable ? 1 : 0;
+    this.#scroll!.setAttribute("aria-colcount", String(cols.length + off));
     this.#ths = cols.map((c, ci) =>
       h(
         "div",
-        { role: "columnheader", class: `nx-grid__th${isNumeric(c) ? " is-num" : ""}`, "aria-colindex": ci + 1 },
-        h("button", { type: "button", class: "nx-grid__sort", "data-sort": ci }, h("span", { class: "nx-grid__th-label" }, c.label), glyph(ARROW, "nx-grid__sort-icon")),
-        this.#filterable(c) ? h("button", { type: "button", class: "nx-grid__funnel", "data-filter": ci, "aria-haspopup": "dialog", "aria-expanded": "false" }, glyph(FUNNEL)) : null,
-        h("span", { class: "nx-grid__resize", role: "separator", tabindex: 0, "aria-orientation": "vertical", "aria-valuemin": MIN_W, "aria-valuemax": MAX_W, "aria-label": this.#fmt(this.#labels.resize, { col: c.label }), "data-resize": ci }),
+        { role: "columnheader", class: `nx-grid__th${isNumeric(c) ? " is-num" : ""}`, "aria-colindex": ci + 1 + off },
+        h("button", { type: "button", class: "nx-grid__sort", tabindex: -1, "data-sort": ci }, h("span", { class: "nx-grid__th-label" }, c.label), glyph(ARROW, "nx-grid__sort-icon")),
+        this.#filterable(c) ? h("button", { type: "button", class: "nx-grid__funnel", tabindex: -1, "data-filter": ci, "aria-haspopup": "dialog", "aria-expanded": "false" }, glyph(FUNNEL)) : null,
+        h("span", { class: "nx-grid__resize", role: "separator", tabindex: -1, "aria-orientation": "vertical", "aria-valuemin": MIN_W, "aria-valuemax": MAX_W, "data-resize": ci }),
       ),
     );
     this.#applyWidths();
     this.#panel?.close();
-    this.#headCheck = this.selectable ? h("input", { type: "checkbox", "data-pick-all": "", "data-nx-ephemeral": "", "aria-label": this.#labels.selectAll.replace("{n}", "").trim() }) : undefined;
-    this.#head!.replaceChildren(...(this.#headCheck ? [h("div", { role: "columnheader", class: "nx-grid__th nx-grid__check" }, this.#headCheck)] : []), ...this.#ths);
+    this.#headCheck = this.selectable ? h("input", { type: "checkbox", tabindex: -1, "data-pick-all": "", "data-nx-ephemeral": "" }) : undefined;
+    this.#head!.replaceChildren(...(this.#headCheck ? [h("div", { role: "columnheader", class: "nx-grid__th nx-grid__check", "aria-colindex": 1 }, this.#headCheck)] : []), ...this.#ths);
     this.#fill!.replaceChildren(...[...this.#head!.children].map(() => h("i")));
     this.#win = { start: -1, end: -1 };
   }
@@ -1363,6 +1658,7 @@ export class NxGrid extends Base {
     const L = this.#labels;
     const height = Number(this.getAttribute("height"));
     if (height > 0) this.style.setProperty("--nx-grid-height", `${height}px`);
+    else this.style.removeProperty("--nx-grid-height");
     // Barra de herramientas.
     this.#searchInput!.placeholder = L.searchTable;
     this.#searchInput!.setAttribute("aria-label", L.searchTable);
@@ -1376,7 +1672,12 @@ export class NxGrid extends Base {
     const groupable = this.#groupable();
     this.#groupSel!.hidden = !groupable.length;
     this.#groupSel!.setAttribute("aria-label", this.#fmt(L.groupBy, { col: "" }).trim());
-    this.#groupSel!.replaceChildren(h("option", { value: "" }, L.noGroup), ...groupable.map((c) => h("option", { value: c.key }, this.#fmt(L.groupBy, { col: c.label }))));
+    // Las opciones se rehacen solo si cambian (no con cada bloque que llega del servidor).
+    const groupKey = JSON.stringify([L.noGroup, L.groupBy, groupable.map((c) => [c.key, c.label])]);
+    if (groupKey !== this.#groupKey) {
+      this.#groupKey = groupKey;
+      this.#groupSel!.replaceChildren(h("option", { value: "" }, L.noGroup), ...groupable.map((c) => h("option", { value: c.key }, this.#fmt(L.groupBy, { col: c.label }))));
+    }
     this.#groupSel!.value = groupable.some((c) => c.key === this.groupBy) ? this.groupBy : "";
     this.#exportBtn!.lastElementChild!.textContent = this.#exportBtn!.hasAttribute("aria-busy") ? L.exporting : L.export;
     this.#viewsBtn!.hidden = !this.viewsStorage;
@@ -1402,11 +1703,14 @@ export class NxGrid extends Base {
     // Sin filas todavía porque el servidor no ha respondido: «Cargando…», no una tabla en blanco
     // (parecía que no había datos). Con filas ya contadas, las que faltan se pintan como esqueleto.
     const loading = this.#server && this.#blocks.get(0) === "loading" && !this.#count() && this.#columns.length > 0;
-    this.#empty!.hidden = !loading && (this.#count() > 0 || !this.#columns.length);
+    // Si la primera página no llegó, se dice (no «Cargando…» para siempre) y se ofrece reintentar.
+    const failed = !loading && this.#server && this.#loadError && !this.#count() && this.#columns.length > 0;
+    this.#empty!.hidden = !loading && !failed && (this.#count() > 0 || !this.#columns.length);
     // Sin filas, las líneas cruzarían el aviso: solo con filas.
     this.#fill!.hidden = !this.#count();
     this.#empty!.classList.toggle("is-loading", loading);
-    this.#empty!.replaceChildren(loading ? L.loading : L.empty, ...(this.#empty!.hidden || loading ? [] : this.#relax()));
+    if (failed) this.#empty!.replaceChildren(L.loadError, h("span", { class: "nx-grid__relax" }, h("button", { type: "button", class: "nx-grid__btn", "data-retry": "" }, L.retry)));
+    else this.#empty!.replaceChildren(loading ? L.loading : L.empty, ...(this.#empty!.hidden || loading ? [] : this.#relax()));
     this.#paintFacets();
     this.#paintPresets();
     this.#paintHistory();
@@ -1516,6 +1820,7 @@ export class NxGrid extends Base {
   }
 
   #paintTh(th: HTMLElement, c: GridColumn): void {
+    th.querySelector(".nx-grid__resize")?.setAttribute("aria-label", this.#fmt(this.#labels.resize, { col: c.label }));
     const dir = this.#sort?.key === c.key ? this.#sort.dir : 0;
     th.setAttribute("aria-sort", dir === 1 ? "ascending" : dir === -1 ? "descending" : "none");
     th.dataset.sort = dir ? (dir === 1 ? "asc" : "desc") : "";
@@ -1612,22 +1917,28 @@ export class NxGrid extends Base {
     });
   }
 
-  /** Pinta solo las filas visibles (y unas de margen). */
+  /** Pinta solo las filas visibles (y unas de margen). Mientras se edita, la fila de la edición se
+   *  queda en su nodo (el campo tiene el foco) y las demás siguen al desplazamiento; si esa fila sale
+   *  de la vista, o hay que rehacer todas, la edición se guarda (sin mover la celda activa). */
   #paintRows(force = false): void {
-    if (!this.#built || this.#editing) return;
+    if (!this.#built) return;
     const s = this.#scroll!;
     const n = this.#count();
-    this.#body!.style.blockSize = `${n * ROW_H}px`;
+    this.#body!.style.blockSize = `${Math.min(n * ROW_H, MAX_H)}px`;
     const vh = s.clientHeight || 420;
-    const start = Math.max(0, Math.floor(s.scrollTop / ROW_H) - OVERSCAN);
-    const end = Math.min(n, Math.ceil((s.scrollTop + vh) / ROW_H) + OVERSCAN);
+    const top = s.scrollTop * this.#ratio();
+    const start = Math.max(0, Math.floor(top / ROW_H) - OVERSCAN);
+    const end = Math.min(n, Math.ceil((top + vh) / ROW_H) + OVERSCAN);
     if (this.#server) for (let b = Math.floor(start / BLOCK); b <= Math.floor(Math.max(start, end - 1) / BLOCK); b++) void this.#load(b);
     const box = this.#rowsEl!;
     const old = this.#win;
+    const ed = this.#editing;
+    if (ed && (force || old.start < 0 || ed.r < start || ed.r >= end)) return this.#endEdit(true, 0, 0, false);
+    // Con el alto escalado (ver `MAX_H`) las filas se corren en cada cuadro, no solo al cambiar la ventana.
+    box.style.insetBlockStart = `${start * ROW_H - (top - s.scrollTop)}px`;
     const kids = [...box.children] as HTMLElement[];
     if (!force && start === old.start && end === old.end && !kids.some((el) => this.#stale(el))) return;
     this.#win = { start, end };
-    box.style.insetBlockStart = `${start * ROW_H}px`;
     if (force || old.start < 0 || end <= old.start || start >= old.end) {
       const rows: HTMLElement[] = [];
       for (let i = start; i < end; i++) rows.push(this.#rowEl(i));
@@ -1650,6 +1961,15 @@ export class NxGrid extends Base {
     this.#paintSel();
   }
 
+  /** Píxeles de la tabla por píxel de desplazamiento: 1, salvo que todas las filas pasen de `MAX_H`;
+   *  entonces el recorrido del scroll cubre las n filas (la última se alcanza). */
+  #ratio(): number {
+    const extra = this.#count() * ROW_H - MAX_H;
+    if (extra <= 0) return 1;
+    const range = this.#scroll!.scrollHeight - this.#scroll!.clientHeight;
+    return range > 0 ? 1 + extra / range : 1;
+  }
+
   /** Una fila pintada sin sus datos (un bloque del servidor que no había llegado) que ya los tiene. */
   #stale(el: HTMLElement): boolean {
     return el.classList.contains("is-loading") && !!this.#itemAt(Number(el.dataset.r));
@@ -1663,11 +1983,12 @@ export class NxGrid extends Base {
     const rid = it && "r" in it ? (this.#ids.get(it.r) ?? "") : "";
     if (this.selectable) {
       const on = !!rid && this.#picked.has(rid);
-      row.append(h("div", { role: "gridcell", class: "nx-grid__cell nx-grid__check" }, rid ? h("input", { type: "checkbox", "data-pick": "", "data-nx-ephemeral": "", checked: on, tabindex: -1, "aria-label": this.#labels.selectRow }) : null));
+      row.append(h("div", { role: "gridcell", class: "nx-grid__cell nx-grid__check", "aria-colindex": 1 }, rid ? h("input", { type: "checkbox", "data-pick": "", "data-nx-ephemeral": "", checked: on, tabindex: -1, "aria-label": this.#labels.selectRow }) : null));
       row.classList.toggle("is-picked", on);
       row.setAttribute("aria-selected", String(on));
     }
-    const cell = (c: GridColumn, ci: number) => h("div", { role: "gridcell", class: `nx-grid__cell${isNumeric(c) ? " is-num" : ""}`, id: `${u}-${i}-${ci}`, "data-c": ci });
+    const off = this.selectable ? 1 : 0;
+    const cell = (c: GridColumn, ci: number) => h("div", { role: "gridcell", class: `nx-grid__cell${isNumeric(c) ? " is-num" : ""}`, id: `${u}-${i}-${ci}`, "aria-colindex": ci + 1 + off, "data-c": ci });
     if (!it) {
       row.classList.add("is-loading");
       row.append(...cols.map((c, ci) => cell(c, ci)));
@@ -1686,6 +2007,8 @@ export class NxGrid extends Base {
           if (k === 0) {
             el.dataset.c = "0";
             el.dataset.to = String(ci);
+            el.setAttribute("aria-colindex", String(1 + off));
+            if (span > 1) el.setAttribute("aria-colspan", String(span));
             el.style.gridColumn = `span ${span}`;
             el.append(glyph("chevron", "nx-grid__chev"), h("span", { class: "nx-grid__g-label" }, g.label), h("span", { class: "nx-grid__g-n" }, this.#loc.number(g.rows.length)));
           } else if (isNumeric(c)) {
@@ -1811,6 +2134,54 @@ export class NxGrid extends Base {
     this.#refilter(true, "order");
   }
 
+  /** Lleva el foco a la cabecera de la columna `c` (-1: la casilla de «seleccionar todo»). */
+  #focusHead(c: number): void {
+    const el = c < 0 ? this.#headCheck : this.#ths[c]?.querySelector<HTMLElement>("[data-sort]");
+    (el ?? this.#headCheck)?.focus();
+  }
+
+  /** Teclado en la fila de cabeceras (patrón grid de la APG; la tabla es una sola parada de Tab y
+   *  Tab sale de ella): ←/→, Inicio y Fin recorren las cabeceras; ↓ vuelve a las celdas; Enter o
+   *  Espacio ordenan (es un botón); Alt+↓ abre el filtro; Ctrl+←/→ cambia el ancho (con Mayús, de a
+   *  más) y Supr lo devuelve. En el borde de una cabecera (el asa del ancho), las flechas solas. */
+  #onHeadKey(e: KeyboardEvent): void {
+    const t = e.target as HTMLElement;
+    const th = t.closest<HTMLElement>(".nx-grid__th");
+    if (!th) return;
+    const ci = this.#ths.indexOf(th);
+    const col = this.#columns[ci];
+    const rtl = getComputedStyle(this).direction === "rtl";
+    const horiz = e.key === "ArrowLeft" || e.key === "ArrowRight";
+    const done = () => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    if (col && ((horiz && (e.ctrlKey || e.metaKey || t.matches("[data-resize]"))) || e.key === "Delete" || e.key === "Backspace")) {
+      done();
+      const step = (e.key === "ArrowRight" ? 1 : -1) * (e.shiftKey ? 64 : 16) * (rtl ? -1 : 1);
+      return this.#setWidth(col.key, horiz ? this.#widthOf(col) + step : null);
+    }
+    if (e.key === "ArrowDown" && e.altKey) {
+      done();
+      if (col) void this.#toggleFilter(col.key);
+      return;
+    }
+    const first = this.#headCheck ? -1 : 0;
+    const last = this.#ths.length - 1;
+    let to: number;
+    if (horiz) to = ci + ((e.key === "ArrowRight") !== rtl ? 1 : -1);
+    else if (e.key === "Home") to = first;
+    else if (e.key === "End") to = last;
+    else if (e.key === "ArrowDown" && !e.ctrlKey && !e.metaKey) {
+      done();
+      if (!this.#count()) return;
+      this.#scroll!.focus({ preventScroll: true });
+      return this.#moveTo({ r: 0, c: Math.max(0, ci) }, false);
+    } else return;
+    done();
+    this.#focusHead(Math.max(first, Math.min(last, to)));
+  }
+
   // ---------------------------------------------------------------- filtro por columna
 
   /** Si la columna lleva embudo (las de `filter: false`, no). */
@@ -1829,15 +2200,26 @@ export class NxGrid extends Base {
     return this.#facetCols.includes(c) || facetColumns([c], this.#all).length ? "list" : "text";
   }
 
+  /** Como `#loadViews`: una carga que falla no se recuerda, el siguiente intento la repite. */
   #loadPanel(): Promise<FilterPanel> {
-    return (this.#panelLoad ??= import("./grid-filter").then((m) => (this.#panel = new m.FilterPanel(this.#filterHost()))));
+    return (this.#panelLoad ??= import("./grid-filter").then(
+      (m) => (this.#panel = new m.FilterPanel(this.#filterHost())),
+      (err) => {
+        this.#panelLoad = undefined;
+        throw err;
+      },
+    ));
   }
 
   /** El embudo es un interruptor: abre el filtro de la columna, o lo cierra si ya estaba abierto. */
   async #toggleFilter(key: string, anchor?: HTMLElement): Promise<void> {
     const col = this.#cols.find((c) => c.key === key);
     if (!col || !this.#filterable(col)) return;
-    (await this.#loadPanel()).toggle(col, this.#thOf(key) ?? anchor ?? this.#chips ?? null);
+    try {
+      (await this.#loadPanel()).toggle(col, this.#thOf(key) ?? anchor ?? this.#chips ?? null);
+    } catch (err) {
+      console.warn("[nx-grid] no se pudo cargar el filtro", err);
+    }
   }
 
   /** La cabecera de una columna, si se ve. */
@@ -1862,7 +2244,10 @@ export class NxGrid extends Base {
     this.#filters = filters;
     this.#paintChrome();
     clearTimeout(this.#wait);
-    this.#wait = setTimeout(() => this.#refilter(true), SERVER_WAIT);
+    this.#wait = setTimeout(() => {
+      this.#wait = undefined;
+      this.#refilter(true);
+    }, SERVER_WAIT);
   }
 
   #filterHost(): FilterHost {
@@ -1907,7 +2292,11 @@ export class NxGrid extends Base {
     const col = this.#menuFor(p);
     const it = this.#itemAt(p.r);
     if (!col || !it || !("r" in it)) return;
-    (await this.#loadPanel()).menu(col, it.r[col.key], x, y);
+    try {
+      (await this.#loadPanel()).menu(col, it.r[col.key], x, y);
+    } catch (err) {
+      console.warn("[nx-grid] no se pudo cargar el filtro", err);
+    }
   }
 
   // ---------------------------------------------------------------- hoja de cálculo
@@ -1963,6 +2352,7 @@ export class NxGrid extends Base {
   #toggleGroup(r: number): void {
     const it = this.#itemAt(r);
     if (!it || !("g" in it)) return;
+    this.#settle();
     if (!this.#collapsed.delete(it.g.key)) this.#collapsed.add(it.g.key);
     this.#flatten();
     this.#scroll!.setAttribute("aria-rowcount", String(this.#count() + 1));
@@ -1974,9 +2364,14 @@ export class NxGrid extends Base {
     if (e.target !== this.#scroll) return;
     const n = this.#count();
     const m = this.#columns.length;
-    if (!n || !m) return;
     const mod = e.ctrlKey || e.metaKey;
     let { r, c } = this.#act;
+    // ↑ desde la primera fila (o cualquier flecha sin filas) sube a las cabeceras.
+    if (m && !e.altKey && ((e.key === "ArrowUp" && !mod && !e.shiftKey && r === 0) || (!n && e.key.startsWith("Arrow")))) {
+      e.preventDefault();
+      return this.#focusHead(Math.min(c, m - 1));
+    }
+    if (!n || !m) return;
     const it = this.#itemAt(r);
     const page = Math.max(1, Math.floor((this.#scroll!.clientHeight - this.#head!.offsetHeight) / ROW_H) - 1);
     // Ctrl+Z deshace; Ctrl+Y o Ctrl+Mayús+Z rehace. (La tabla lo atiende: los avisos de la página no.)
@@ -2104,6 +2499,7 @@ export class NxGrid extends Base {
     if (this.#headCheck) {
       this.#headCheck.checked = n > 0 && n >= pool;
       this.#headCheck.indeterminate = n > 0 && n < pool;
+      this.#headCheck.setAttribute("aria-label", this.#fmt(L.selectAll, { n: this.#loc.number(pool) }));
     }
     if (n) this.setAttribute("data-selection", String(n));
     else this.removeAttribute("data-selection");
@@ -2133,10 +2529,12 @@ export class NxGrid extends Base {
   /** Lleva la celda activa a la vista (bajo la cabecera fija). */
   #reveal(): void {
     const s = this.#scroll!;
+    const k = this.#ratio();
     const top = this.#act.r * ROW_H;
+    const at = s.scrollTop * k;
     const vh = s.clientHeight - this.#head!.offsetHeight;
-    if (top < s.scrollTop) s.scrollTop = top;
-    else if (vh > 0 && top + ROW_H > s.scrollTop + vh) s.scrollTop = top + ROW_H - vh;
+    if (top < at) s.scrollTop = top / k;
+    else if (vh > 0 && top + ROW_H > at + vh) s.scrollTop = (top + ROW_H - vh) / k;
     this.#paintRows();
     this.#cell(this.#act)?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }
@@ -2159,8 +2557,9 @@ export class NxGrid extends Base {
     if (!cell) return false;
     const v = it.r[col.key];
     const input = h("input", { class: "nx-grid__input", "aria-label": col.label, autocomplete: "off", inputmode: isNumeric(col) ? "decimal" : null });
-    input.value = initial ?? (v === null || v === undefined ? "" : colType(col) === "status" ? formatCell(v, col, this.#loc) : String(v));
-    const ed: Editing = { r, c, input, quick: initial !== undefined };
+    const text = v === null || v === undefined ? "" : colType(col) === "status" ? formatCell(v, col, this.#loc) : typeof v === "number" && isNumeric(col) ? this.#editText(v) : String(v);
+    input.value = initial ?? text;
+    const ed: Editing = { r, c, key: col.key, row: it.r, id: this.#ids.get(it.r) ?? "", text: initial === undefined ? text : null, input, quick: initial !== undefined };
     this.#editing = ed;
     cell.classList.add("is-editing");
     cell.replaceChildren(input);
@@ -2187,18 +2586,43 @@ export class NxGrid extends Base {
     return true;
   }
 
-  #endEdit(commit: boolean, dr = 0, dc = 0): void {
+  /** Un número como texto que el campo vuelve a leer igual con el locale de la tabla: sin separador
+   *  de miles y con su signo decimal («0,125» en es-CO). `String(0.125)` en es-CO se leía como miles:
+   *  abrir la celda y salir sin tocarla la dejaba en 125. */
+  #editText(n: number): string {
+    let t = String(n);
+    if (/e/i.test(t)) t = n.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 });
+    return this.#loc.number(1.5).includes(",") ? t.replace(".", ",") : t;
+  }
+
+  /** Una edición abierta se guarda antes de que cambien los datos, las columnas, los filtros o el
+   *  orden (por código: lo que hace la persona ya saca el foco del campo y la guarda). */
+  #settle(): void {
+    if (this.#editing) this.#endEdit(true, 0, 0, false);
+  }
+
+  /** Termina la edición. Lo escrito va a la fila que se estaba editando (por su objeto y su id), no a
+   *  la que hoy ocupa su lugar; si ya no está (filas nuevas sin esa fila), se descarta. Sin tocar el
+   *  campo no se guarda nada. `move`: mover la celda activa (Enter, Tab), o no (se desplazó o
+   *  cambiaron los datos). */
+  #endEdit(commit: boolean, dr = 0, dc = 0, move = true): void {
     const ed = this.#editing;
     if (!ed) return;
     this.#editing = null;
-    const it = this.#itemAt(ed.r);
-    const col = this.#columns[ed.c];
-    if (commit && it && "r" in it && col) {
+    const focused = document.activeElement === ed.input;
+    const col = this.#cols.find((c) => c.key === ed.key);
+    const cur = this.#byId.get(ed.id);
+    const row = cur === ed.row || (cur && !ed.id.startsWith("#")) ? cur : undefined;
+    if (commit && row && col && ed.input.value !== ed.text) {
       const value = parseInput(ed.input.value, col, this.#loc);
-      const old = it.r[col.key];
-      if (value !== old && !(value === "" && (old === null || old === undefined))) this.#apply([{ id: this.#ids.get(it.r)!, key: col.key, value, old }]);
+      const old = row[col.key];
+      if (value !== old && !(value === "" && (old === null || old === undefined))) this.#apply([{ id: ed.id, key: col.key, value, old }]);
     }
     this.#paintRows(true);
+    if (!move) {
+      if (focused) this.#scroll!.focus({ preventScroll: true });
+      return;
+    }
     this.#scroll!.focus({ preventScroll: true });
     const n = this.#count();
     const m = this.#columns.length;
@@ -2227,6 +2651,8 @@ export class NxGrid extends Base {
       this.#redo = [];
     }
     if (!this.#server) this.#reaggregate(new Set(changes.map((c) => c.key)));
+    // Una edición no reordena, pero el próximo filtro o búsqueda sí ve el valor nuevo.
+    if (this.#sort && changes.some((c) => c.key === this.#sort!.key)) this.#sortedAll = null;
     this.#paintAll();
     return true;
   }
@@ -2336,9 +2762,14 @@ export class NxGrid extends Base {
     }
     e.clipboardData.setData("text/plain", toTSV(out));
     e.preventDefault();
-    this.#scroll!.classList.remove("is-copied");
-    void this.#scroll!.offsetWidth;
-    this.#scroll!.classList.add("is-copied");
+    // El destello dura lo que su animación (0,6 s); la clase se quita al terminar: si se quedara, cada
+    // celda que pasa a ser activa (o cada fila recreada al desplazarse) volvería a destellar.
+    const s = this.#scroll!;
+    s.classList.remove("is-copied");
+    void s.offsetWidth;
+    s.classList.add("is-copied");
+    clearTimeout(this.#copied);
+    this.#copied = setTimeout(() => s.classList.remove("is-copied"), 600);
   }
 
   /** Pega TSV desde la celda activa; un solo valor sobre un rango lo llena entero (como Excel). */
