@@ -395,6 +395,50 @@ const bySeq = (a: SyncOp, b: SyncOp) => a.seq - b.seq;
  * primer uso: importarla en el servidor no hace nada.
  */
 export function createSync(init: SyncOptions & { events?: Pick<EventTarget, "addEventListener"> } = {}): SyncQueue {
+  const q = makeSync(init);
+  // Con nombre propio queda en el registro: un componente la encuentra por un atributo (`<nx-account
+  // sync="nx-sync:ana">`), sin recibir el objeto. «nx-sync» es siempre la de la página (`nxSync`).
+  if (init.name && init.name !== "nx-sync") registerSync(init.name, q);
+  return q;
+}
+
+// ---------------------------------------------------------------- las colas por nombre
+
+/** Las colas con nombre propio; la última que se crea con un nombre es la que vale (otra sesión). */
+const queues = new Map<string, SyncQueue>();
+/** Quien espera una cola que todavía no se crea (la app la arma al iniciar sesión, después del DOM). */
+const waiting = new Map<string, Set<(q: SyncQueue) => void>>();
+
+function registerSync(name: string, q: SyncQueue): void {
+  queues.set(name, q);
+  const w = waiting.get(name);
+  waiting.delete(name);
+  w?.forEach((fn) => fn(q));
+}
+
+/** La cola de ese nombre: `nxSync` sin nombre o con «nx-sync»; `undefined` si nadie la creó aún. */
+export function syncQueue(name?: string | null): SyncQueue | undefined {
+  return !name || name === "nx-sync" ? nxSync : queues.get(name);
+}
+
+/** Avisa con la cola de ese nombre en cuanto exista (enseguida si ya existe). Devuelve cómo dejar
+ *  de esperar: un componente que se desconecta no debe quedar retenido por una cola que no llega. */
+export function onSyncQueue(name: string | null | undefined, fn: (q: SyncQueue) => void): () => void {
+  const q = syncQueue(name);
+  if (q) {
+    fn(q);
+    return () => {};
+  }
+  let set = waiting.get(name!);
+  if (!set) waiting.set(name!, (set = new Set()));
+  set.add(fn);
+  return () => {
+    set.delete(fn);
+    if (!set.size && waiting.get(name!) === set) waiting.delete(name!);
+  };
+}
+
+function makeSync(init: SyncOptions & { events?: Pick<EventTarget, "addEventListener"> }): SyncQueue {
   const o = { base: 1000, max: 60_000, timeout: 30_000, maxAttempts: 8, maxRetryAfter: 3_600_000, name: "nx-sync", ...init };
   const subs = new Set<SyncListener>();
   let ops: SyncOp[] = [];
@@ -970,4 +1014,4 @@ export function createSync(init: SyncOptions & { events?: Pick<EventTarget, "add
 }
 
 /** La cola de la página (IndexedDB «nx-sync»). */
-export const nxSync: SyncQueue = createSync();
+export const nxSync: SyncQueue = makeSync({});

@@ -72,12 +72,6 @@ export interface AccountPrefs {
   recent?: string[];
 }
 
-/** Lo mínimo de una cola de `nx-sync` (`nxSync`) que usa el cierre de sesión. */
-export interface AccountSyncQueue {
-  subscribe(fn: (state: { online: boolean; pending: number }) => void): () => void;
-  flush(): Promise<void>;
-}
-
 /** Una entrada para `<nx-command>` (misma forma que `CommandItem`). */
 export interface AccountCommand {
   id: string;
@@ -118,6 +112,8 @@ export interface AccountLabels {
   viewAs: string;
   /** «Dejar de ver como {name}» */
   stopViewAs: string;
+  /** El texto oculto de la tarjeta cuando la franja de «Ver como» no cargó: «Viendo como {name}.» */
+  viewingAs: string;
   logout: string;
   back: string;
   offline: string;

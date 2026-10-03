@@ -67,7 +67,7 @@ import type { HandoffDoneDetail, HandoffItemDetail, HandoffKind, HandoffLabels, 
 import type { NxAward } from "../components/award/award";
 import type { AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardFilter, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier } from "../components/award/types";
 import type { NxAccount } from "../components/account/account";
-import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountSyncQueue, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
+import type { AccountItem, AccountLabels, AccountLocale, AccountLogoutDetail, AccountPalette, AccountPerson, AccountSession, AccountStatus, AccountStatusDetail, AccountSwitchDetail, AccountTenant, AccountThemeDetail, AccountUser, AccountViewAsDetail } from "../components/account/types";
 import type { NxCards } from "../components/cards/cards";
 import type { CardsAction, CardsActionDetail, CardsField, CardsLabels, CardsLayout, CardsLevel, CardsOpenDetail, CardsRow } from "../components/cards/types";
 import type { NxLauncher } from "../components/launcher/launcher";
@@ -152,7 +152,6 @@ declare module "solid-js" {
       locales: AccountLocale[] | undefined;
       session: AccountSession | null | undefined;
       viewAs: AccountPerson | null | undefined;
-      sync: AccountSyncQueue | null | undefined;
       value: string | string[] | number | DateRangeValue | SignatureValue | null | undefined;
       // Los atajos del selector de fechas y los de la tabla: la misma propiedad en dos componentes.
       presets: DateRangePresetInput[] | GridPreset[] | undefined;
@@ -280,6 +279,7 @@ declare module "solid-js" {
       "logout-method": string | undefined;
       "logout-csrf": string | undefined;
       "logout-csrf-field": string | undefined;
+      sync: string | undefined;
       agent: string | undefined;
       hotkey: string | undefined;
       limit: string | undefined;

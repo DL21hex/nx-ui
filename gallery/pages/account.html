@@ -13,7 +13,7 @@
           <label><input type="checkbox" id="acc-collapsed" /> Menú compacto</label>
           <span class="demo__sep"></span>
           <button type="button" class="dlg-plain" id="acc-expire">Simular: la sesión vence en 1 min</button>
-          <button type="button" class="dlg-plain" id="acc-pending">Simular 3 cambios sin sincronizar</button>
+          <button type="button" class="dlg-plain" id="acc-pending">Simular 3 cambios en cola</button>
           <label><input type="checkbox" id="acc-offline" /> Sin conexión</label>
         </div>
         <div class="stage acc-stage" id="acc-stage" lang="es-CO">
@@ -25,6 +25,7 @@
                 id="acc"
                 storage="none"
                 view-as-source="/demo/account/people"
+                sync="nx-sync:demo-cuenta"
                 locale="es-CO"
               ></nx-account>
             </nx-sidemenu>
@@ -117,7 +118,8 @@ cuenta.addEventListener("nx-account-logout", () =&gt; limpiarDatosLocales());</c
             <tr><td><code>session</code>, <code>expires-at</code>, <code>warn-before</code></td><td><code>{expiresAt, extendEndpoint?}</code>; aviso <code>warn-before</code> minutos antes (5) con cuenta regresiva y «Extender».</td></tr>
             <tr><td><code>view-as</code>, <code>view-as-source</code></td><td>La persona suplantada (muestra la franja y marca la tarjeta con <code>data-view-as</code>) y dónde buscar personas (<code>GET ?q=</code>).</td></tr>
             <tr><td><code>logout-url</code>, <code>logout-method</code>, <code>logout-csrf</code>, <code>logout-csrf-field</code></td><td>A dónde ir al salir (solo del mismo origen): un <code>POST</code> con el token en el campo <code>_csrf</code> (o el que digas); <code>logout-method="get"</code> navega.</td></tr>
-            <tr><td><code>sync</code>, <code>commands</code></td><td>Propiedades: la cola de <code>nx-sync</code> y las acciones para <code>&lt;nx-command&gt;</code>.</td></tr>
+            <tr><td><code>sync</code></td><td>El nombre de la cola de <code>nx-sync</code> de esta persona (<code>createSync({name})</code>): cuenta lo pendiente y la vacía antes de salir. Sin él, la del <code>&lt;nx-sync&gt;</code> de la página.</td></tr>
+            <tr><td><code>commands</code></td><td>Propiedad de solo lectura: las acciones para <code>&lt;nx-command&gt;</code>.</td></tr>
             <tr><td><code>labels</code>, <code>locale</code>, <code>disabled</code></td><td>Textos, locale de los números y apagar la tarjeta.</td></tr>
             <tr><td>Métodos</td><td><code>show()</code>, <code>hide()</code>, <code>logout()</code>.</td></tr>
             <tr><td>Eventos</td><td><code>nx-account-switch</code> y <code>nx-account-view-as</code> (cancelables; este al entrar y al salir), <code>nx-account-status</code>, <code>nx-account-theme</code>, <code>nx-account-locale</code>, <code>nx-account-select</code>, <code>nx-account-extend</code> (cancelable), <code>nx-account-expired</code>, <code>nx-account-logout</code> (cancelable) y <code>nx-open-change</code>.</td></tr>

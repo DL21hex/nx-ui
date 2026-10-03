@@ -40,6 +40,7 @@ import {
   statusUntil,
 } from "./logic";
 import type { AccountView } from "./account-panel";
+import type { SyncQueue } from "../sync/logic";
 
 /** Un módulo aparte, una sola vez por página. Si falla (sin red), se reintenta en el próximo pedido. */
 function once<T>(load: () => Promise<T>): () => Promise<T> {
@@ -65,7 +66,6 @@ import type {
   AccountPrefs,
   AccountSession,
   AccountStatus,
-  AccountSyncQueue,
   AccountTenant,
   AccountTheme,
   AccountUser,
@@ -96,6 +96,7 @@ export const ACCOUNT_LABELS: AccountLabels = {
   shortcuts: "Atajos de teclado",
   viewAs: "Ver como…",
   stopViewAs: "Dejar de ver como {name}",
+  viewingAs: "Viendo como {name}.",
   logout: "Cerrar sesión",
   back: "Volver",
   offline: "Sin conexión",
@@ -201,7 +202,7 @@ function reveal(x: number, y: number, update: () => void): void {
 
 export class NxAccount extends Base {
   static {
-    attrProps(this, ["applyLocale", "expiresAt", "viewAsSource", "logoutUrl", "logoutMethod", "logoutCsrf", "logoutCsrfField", "locale"]);
+    attrProps(this, ["applyLocale", "expiresAt", "viewAsSource", "logoutUrl", "logoutMethod", "logoutCsrf", "logoutCsrfField", "sync", "locale"]);
   }
   declare applyLocale: string | null;
   declare expiresAt: string | null;
@@ -212,6 +213,10 @@ export class NxAccount extends Base {
   /** El token CSRF que lleva el `POST` de salida, en el campo `logout-csrf-field` (`_csrf`). */
   declare logoutCsrf: string | null;
   declare logoutCsrfField: string | null;
+  /** El nombre de la cola de `nx-sync` de esta persona (`createSync({name})`): cuenta lo pendiente y
+   *  la vacía antes de salir. Sin él, se escucha `nx-sync-change` de un `<nx-sync>` de la página y se
+   *  vacía `nxSync`. */
+  declare sync: string | null;
   declare locale: string | null;
   static observedAttributes = [
     ...JSON_ATTRS,
@@ -222,6 +227,7 @@ export class NxAccount extends Base {
     "warn-before",
     "view-as-source",
     "logout-url",
+    "sync",
     "locale",
     "disabled",
   ];
@@ -239,8 +245,15 @@ export class NxAccount extends Base {
   #untilChoice = "";
   #prefs: AccountPrefs = {};
   #net = { online: true, pending: 0 };
-  #queue: AccountSyncQueue | null = null;
+  /** La cola de `sync`, cuando ya existe. */
+  #queue: SyncQueue | null = null;
   #unsub?: () => void;
+  /** Cada cambio de `sync` (o desconexión) descarta lo que llegue de antes. */
+  #syncGen = 0;
+  /** Cada franja pedida descarta los reintentos de la anterior. */
+  #bannerGen = 0;
+  /** Las acciones para `<nx-command>`, mientras no cambie lo que las arma (mismos objetos). */
+  #cmds?: { deps: unknown[]; list: AccountCommand[] };
   /** Cerrando sesión con cambios en cola: `stuck` si pasó el tope. */
   #leaving: { stuck: boolean } | null = null;
   // Panel.
@@ -347,15 +360,6 @@ export class NxAccount extends Base {
   set warnBefore(v: number | null) {
     this.#attr("warn-before", v == null ? null : String(v));
   }
-  /** Una cola de `nx-sync` (`nxSync`) para contar lo pendiente y vaciarla antes de salir. Sin ella,
-   *  se escucha `nx-sync-change` de un `<nx-sync>` de la página. */
-  get sync(): AccountSyncQueue | null {
-    return this.#queue;
-  }
-  set sync(v: AccountSyncQueue | null | undefined) {
-    this.#queue = v && typeof v.subscribe === "function" ? v : null;
-    if (this.isConnected) this.#subscribe();
-  }
   get storage(): string {
     return this.getAttribute("storage") || "nx-account";
   }
@@ -371,9 +375,15 @@ export class NxAccount extends Base {
   get open(): boolean {
     return this.#open;
   }
-  /** Las acciones de la cuenta con la forma de los `items` de `<nx-command>` (ver `account="id"`). */
+  /** Las acciones de la cuenta con la forma de los `items` de `<nx-command>` (ver `account="id"`). Es
+   *  el mismo arreglo mientras no cambien los textos, las paletas, las empresas, los idiomas ni
+   *  `view-as-source`: la paleta lo compara para saber si debe leerlo de nuevo. */
   get commands(): AccountCommand[] {
-    return accountCommands({ account: this.#uid, labels: this.#labels, palettes: this.#d.palettes, tenants: this.#d.tenants, locales: this.#d.locales, viewAs: !!this.getAttribute("view-as-source") });
+    const deps = [this.#labels, this.#d.palettes, this.#d.tenants, this.#d.locales, !!this.getAttribute("view-as-source")];
+    const c = this.#cmds;
+    if (!c || deps.some((d, i) => d !== c.deps[i]))
+      this.#cmds = { deps, list: accountCommands({ account: this.#uid, labels: this.#labels, palettes: this.#d.palettes, tenants: this.#d.tenants, locales: this.#d.locales, viewAs: !!deps[4] }) };
+    return this.#cmds!.list;
   }
 
   // ---------------------------------------------------------------- API
@@ -398,7 +408,10 @@ export class NxAccount extends Base {
     this.show();
     this.#render();
     this.#say(`${pendingText(this.#net.pending, this.#labels, (n) => this.#num(n))} ${this.#labels.pendingWait}`);
-    (this.#queue ? this.#queue.flush() : import("../sync/logic").then((m) => m.nxSync.flush())).catch(quiet);
+    // Con `sync` se vacía esa cola (si todavía no existe, no hay nada suyo que contar ni enviar);
+    // sin `sync`, la de la página.
+    const flush = this.#queue ? this.#queue.flush() : this.sync ? Promise.resolve() : import("../sync/logic").then((m) => m.nxSync.flush());
+    flush.catch(quiet);
     this.#timers.leave = setTimeout(() => {
       if (!this.#leaving) return;
       this.#leaving.stuck = true;
@@ -415,9 +428,8 @@ export class NxAccount extends Base {
     const signal = (this.#ac = new AbortController()).signal;
     // Lo guardado se aplica al conectar (si no se aplicó ya en el <head> con `applyAccountPrefs`).
     this.#prefs = applyAccountPrefs(this.storage);
-    const st = (document.querySelector("nx-sync") as (HTMLElement & { state?: { online: boolean; pending: number } }) | null)?.state;
-    if (st) this.#net = { online: st.online !== false, pending: Number(st.pending) || 0 };
-    document.addEventListener("nx-sync-change", (e) => this.#onNet((e as CustomEvent).detail), { signal });
+    this.#pageNet();
+    document.addEventListener("nx-sync-change", (e) => this.sync || this.#onNet((e as CustomEvent).detail), { signal });
     document.addEventListener("nx-command-select", this.#onCommand, { signal });
     document.addEventListener("keydown", this.#onKey, { signal });
     document.addEventListener("visibilitychange", () => this.#scheduleSession(), { signal });
@@ -435,6 +447,8 @@ export class NxAccount extends Base {
     this.#sub = undefined;
     this.#unsub?.();
     this.#unsub = undefined;
+    this.#syncGen++;
+    this.#bannerGen++;
     const t = this.#timers;
     for (const k in t) {
       clearTimeout(t[k as keyof typeof t]);
@@ -461,7 +475,14 @@ export class NxAccount extends Base {
       this.#session = { ...this.#session, expiresAt: parseExpiry(value) };
       this.#scheduleSession();
     } else if (name === "warn-before") this.#scheduleSession();
-    else if (name === "disabled" && value !== null) this.hide();
+    else if (name === "sync") {
+      // Otra cola: lo contado de la anterior ya no vale.
+      this.#net = { online: true, pending: 0 };
+      if (!this.isConnected) return;
+      this.#pageNet();
+      this.#subscribe();
+      return this.#paintNet();
+    } else if (name === "disabled" && value !== null) this.hide();
     this.#schedule();
   }
 
@@ -615,7 +636,10 @@ export class NxAccount extends Base {
     const net = this.#net;
     const sync = !net.online ? "offline" : net.pending ? "pending" : null;
     toggleAttr(this, "data-sync", sync);
-    const extra = [this.status !== "online" && L[this.status], sync === "offline" && L.offline, net.pending > 0 && pendingText(net.pending, L, (n) => this.#num(n))].filter(Boolean).join(" ");
+    // Sin la franja (su módulo no cargó), la suplantación no puede quedar solo en el color del contorno.
+    const p = this.#d.viewAs;
+    const viewing = p && !this.#unbanner && L.viewingAs.replace("{name}", () => p.name);
+    const extra = [viewing, this.status !== "online" && L[this.status], sync === "offline" && L.offline, net.pending > 0 && pendingText(net.pending, L, (n) => this.#num(n))].filter(Boolean).join(" ");
     this.#cardExtra!.textContent = extra ? ` · ${extra}` : "";
     this.#cardExtra!.hidden = !extra;
     const leaving = this.#leaving && this.#pop!.querySelector(".nx-account__leaving p");
@@ -924,29 +948,62 @@ export class NxAccount extends Base {
     this.#timers.viewas = undefined;
     const p = this.#d.viewAs;
     toggleAttr(this, "data-view-as", p ? p.id : null);
-    if (p && this.isConnected) this.#showBanner(p, 0);
+    // Una sola cadena de reintentos: la de un pedido anterior (conectar y actualizar a la vez) se descarta.
+    const gen = ++this.#bannerGen;
+    if (p && this.isConnected) this.#showBanner(p, 0, gen);
   }
 
-  #showBanner(p: AccountPerson, tries: number): void {
-    loadViewAs().then(
-      (m) => {
-        if (this.#d.viewAs !== p || !this.isConnected) return;
-        this.#unbanner?.();
+  #showBanner(p: AccountPerson, tries: number, gen: number): void {
+    const live = () => gen === this.#bannerGen && this.#d.viewAs === p && this.isConnected;
+    const retry = (err: unknown) => {
+      console.warn("[nx-account] no se pudo mostrar la franja", err);
+      if (!live()) return;
+      clearTimeout(this.#timers.viewas);
+      this.#timers.viewas = setTimeout(() => this.#showBanner(p, tries + 1, gen), Math.min(VIEW_AS_RETRY, 1000 * 2 ** tries));
+    };
+    loadViewAs().then((m) => {
+      if (!live()) return;
+      this.#unbanner?.();
+      this.#unbanner = undefined;
+      try {
         this.#unbanner = m.showViewAsBanner(p, { labels: this.#rawLabels, onExit: () => this.#exitViewAs() });
-      },
-      (err) => {
-        console.warn("[nx-account] no se pudo mostrar la franja", err);
-        if (this.#d.viewAs !== p || !this.isConnected) return;
-        this.#timers.viewas = setTimeout(() => this.#showBanner(p, tries + 1), Math.min(VIEW_AS_RETRY, 1000 * 2 ** tries));
-      },
-    );
+      } catch (err) {
+        return retry(err);
+      }
+      // Con la franja puesta, la tarjeta ya no necesita decirlo en su texto oculto.
+      this.#paintNet();
+    }, retry);
   }
 
   // ---------------------------------------------------------------- sincronización y salida
 
+  /** Un `<nx-sync>` de la página muestra `nxSync`: cuenta solo si no hay una cola propia en `sync`. */
+  #pageNet(): void {
+    const st = this.sync ? null : (document.querySelector("nx-sync") as (HTMLElement & { state?: { online: boolean; pending: number } }) | null)?.state;
+    if (st) this.#net = { online: st.online !== false, pending: Number(st.pending) || 0 };
+  }
+
+  /** La cola de `sync`, por su nombre: se busca en el registro de `nx-sync` (un `import()`) y, si la
+   *  app todavía no la creó, se espera a que la cree. */
   #subscribe(): void {
     this.#unsub?.();
-    this.#unsub = this.#queue?.subscribe((s) => this.#onNet(s));
+    this.#unsub = undefined;
+    this.#queue = null;
+    const gen = ++this.#syncGen;
+    const name = this.sync;
+    if (!name || !this.isConnected) return;
+    import("../sync/logic").then((m) => {
+      if (gen !== this.#syncGen) return;
+      let off: (() => void) | undefined;
+      const cancel = m.onSyncQueue(name, (q) => {
+        this.#queue = q;
+        off = q.subscribe((st) => this.#onNet(st));
+      });
+      this.#unsub = () => {
+        cancel();
+        off?.();
+      };
+    }, quiet);
   }
 
   #onNet(s: { online?: boolean; pending?: number } | undefined): void {
@@ -977,9 +1034,12 @@ export class NxAccount extends Base {
     // Por defecto, `POST`: un `GET` que cierra sesión lo dispara cualquier <img> de otro sitio o un
     // precargador de enlaces. El formulario lleva las cookies (SameSite=Lax) y el token CSRF.
     const csrf = this.getAttribute("logout-csrf");
-    const form = h("form", { method: "post", action: u.href, hidden: true }, csrf ? h("input", { type: "hidden", name: this.getAttribute("logout-csrf-field") || "_csrf", value: csrf }) : null);
+    // `target="_self"`: un `<base target>` de la página no lo manda a otra pestaña. El formulario no se
+    // queda en el `body` (si la navegación no ocurre, otro intento no acumula uno más).
+    const form = h("form", { method: "post", action: u.href, target: "_self", hidden: true }, csrf ? h("input", { type: "hidden", name: this.getAttribute("logout-csrf-field") || "_csrf", value: csrf }) : null);
     document.body.append(form);
     form.submit();
+    setTimeout(() => form.remove(), 1000);
   }
 
   // ---------------------------------------------------------------- sesión

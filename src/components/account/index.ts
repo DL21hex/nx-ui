@@ -29,7 +29,6 @@ export type {
   AccountStatus,
   AccountStatusDetail,
   AccountSwitchDetail,
-  AccountSyncQueue,
   AccountTenant,
   AccountTheme,
   AccountThemeDetail,

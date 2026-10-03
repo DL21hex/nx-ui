@@ -1230,8 +1230,8 @@ intermitente.
 - **Una pestaña envía:** con varias abiertas, `navigator.locks` elige una; las demás se enteran por
   `BroadcastChannel`. `enqueue()` rechaza si no se pudo guardar en el dispositivo, y
   `state.durable` dice si lo pendiente sobrevive a cerrar la página. Lo guardado va en claro: llama
-  a `nxSync.clear()` al cerrar sesión (usa una cola por usuario, `createSync({name})`), y acota con
-  `maxOps` y `ttl`.
+  a `nxSync.clear()` al cerrar sesión (usa una cola por usuario, `createSync({name})`, y pon su nombre
+  en `<nx-account sync>`), y acota con `maxOps` y `ttl`.
 - **Conexión real:** `navigator.onLine`, los eventos `online`/`offline` y un `ping` opcional; con
   red «arriba» pero sin llegar al servidor, se sigue probando sin gastar intentos.
 - **Sin duplicados:** cada envío lleva `Idempotency-Key` con el id de la operación; si la respuesta
@@ -1265,7 +1265,7 @@ intermitente.
 
 | | |
 |---|---|
-| `nxSync` | `enqueue({id?, method, url, body?, label, group?})` → la operación guardada (rechaza si no se pudo guardar) · `pending()` · `retry(id, body?)` · `resolve(id, body)` · `discard(id)` · `flush()` · `check()` · `clear()` (al cerrar sesión) · `subscribe(fn)` → dejar de escuchar (`fn(state, event)`) · `state` `{online, ops, pending, conflicts, failed, progress, durable, auth}` · `configure({ping, base, max, timeout, headers, maxAttempts, maxRetryAfter, maxOps, ttl})` · `createSync({name})` para otra cola |
+| `nxSync` | `enqueue({id?, method, url, body?, label, group?})` → la operación guardada (rechaza si no se pudo guardar) · `pending()` · `retry(id, body?)` · `resolve(id, body)` · `discard(id)` · `flush()` · `check()` · `clear()` (al cerrar sesión) · `subscribe(fn)` → dejar de escuchar (`fn(state, event)`) · `state` `{online, ops, pending, conflicts, failed, progress, durable, auth}` · `configure({ping, base, max, timeout, headers, maxAttempts, maxRetryAfter, maxOps, ttl})` · `createSync({name})` para otra cola · `syncQueue(name)` (la cola de ese nombre; `nxSync` sin nombre) · `onSyncQueue(name, fn)` (avisa cuando exista) → dejar de esperar |
 | Propiedades / atributos | `ping` (mismo origen), `fields` (`[{key, label}]`, con `*` y `{hermano}`), `labels`, `locale` · `online`, `pending`, `conflicts`, `state`, `open` |
 | Métodos | `show()`, `hide()`, `toggle()`, `resolve(id)` |
 | Eventos | `nx-sync-change` `{online, pending, conflicts}`, `nx-sync-done` `{op, data}`, `nx-sync-auth` `{op}` |
@@ -1550,8 +1550,10 @@ compacto; en el celular, una hoja desde abajo):
 - **Cerrar sesión** sin «¿Seguro?»: si hay cambios sin sincronizar, se envían antes (con tope y «Salir
   de todos modos»). Con `logout-url`, sale con un `POST` (un formulario con el token de `logout-csrf`
   en el campo `_csrf`, o el de `logout-csrf-field`); `logout-method="get"` navega. «Salir de todos
-  modos» deja lo pendiente en la cola de este equipo: usa una cola por usuario (`createSync({name})`,
-  ver `<nx-sync>`) y, en `nx-account-logout` con `pending > 0`, decide si la vacías (`clear()`).
+  modos» deja lo pendiente en la cola de este equipo: usa una cola por usuario
+  (`createSync({name: "nx-sync:" + id})`, ver `<nx-sync>`) **y pon su nombre en `sync`**: sin él, la
+  cuenta cuenta y vacía la cola de la página (`nxSync`), no la tuya. En `nx-account-logout` con
+  `pending > 0`, decide si la vacías (`clear()`).
 - **Sesión por vencer**: «Tu sesión vence en 4:59 · Extender», un solo anuncio para el lector de pantalla.
 - **Paleta de comandos**: `<nx-command account="cuenta">` suma sus acciones («Tema: Oscuro», «Color:
   Océano», cada sede…).
@@ -1561,14 +1563,14 @@ compacto; en el celular, una hoja desde abajo):
   <nx-account slot="footer" id="cuenta" user='{"name":"Diego Llinás","email":"diego@crear.co"}'
     tenants='[{"id":"med","name":"Crear Colombia S.A.S.","detail":"Sede Medellín","role":"Aprobador"}]' current="med"
     session='{"expiresAt":"2026-09-26T18:00:00Z","extendEndpoint":"/api/sesion/extender"}'
-    logout-url="/salir" logout-csrf="{token}"></nx-account>
+    logout-url="/salir" logout-csrf="{token}" sync="nx-sync:diego"></nx-account>
 </nx-sidemenu>
 <nx-command account="cuenta"></nx-command>
 ```
 
 | | |
 |---|---|
-| Propiedades / atributos | `user`, `tenants`, `current`, `status` (`online`, `away`, `dnd`), `items`, `palettes`, `locales`, `storage` (`nx-account`; `none`), `apply-locale`, `session` / `expires-at`, `warn-before` (min, 5), `view-as`, `view-as-source`, `logout-url` (mismo origen), `logout-method` (`post`; `get`), `logout-csrf`, `logout-csrf-field` (`_csrf`), `labels`, `locale`, `disabled` · propiedades `sync` (cola de nx-sync), `commands` (solo lectura), `open` |
+| Propiedades / atributos | `user`, `tenants`, `current`, `status` (`online`, `away`, `dnd`), `items`, `palettes`, `locales`, `storage` (`nx-account`; `none`), `apply-locale`, `session` / `expires-at`, `warn-before` (min, 5), `view-as`, `view-as-source`, `logout-url` (mismo origen), `logout-method` (`post`; `get`), `logout-csrf`, `logout-csrf-field` (`_csrf`), `sync` (el nombre de la cola de `createSync({name})`; sin él, la de `<nx-sync>`), `labels`, `locale`, `disabled` · propiedades `commands` (solo lectura; el mismo arreglo mientras no cambie), `open` |
 | Métodos | `show()`, `hide()`, `logout()` |
 | Eventos | `nx-account-switch` `{tenant}` (cancelable), `nx-account-status` `{status, until}`, `nx-account-theme` `{theme, palette}`, `nx-account-locale` `{locale}`, `nx-account-select` `{id}`, `nx-account-view-as` `{user}` (cancelable, al entrar y al salir), `nx-account-extend` (cancelable), `nx-account-expired`, `nx-account-logout` `{pending}` (cancelable), `nx-open-change` `{open}` |
 | Funciones | `applyAccountPrefs(storage?)`, `accountCommands()`, `accountInitials()`, `sessionRemaining()`, `sessionPhase()`, `formatSessionRemaining()` («4:59»), `normalizePalettes()`, `pickTheme()`, `revealRadius()`, `accountStatusUntil()`, `BUILTIN_PALETTES` |
