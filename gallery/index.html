@@ -497,12 +497,13 @@ cmd.addEventListener("nx-command-select", (e) =&gt; ejecutar(e.detail.item.id));
         <table>
           <thead><tr><th>Nombre</th><th>Descripción</th></tr></thead>
           <tbody>
-            <tr><td><code>items</code>, <code>menu</code>, <code>source</code>, <code>agent</code></td><td>Las fuentes (arriba).</td></tr>
-            <tr><td><code>hotkey</code></td><td>Atajo global (<code>"mod+k"</code>; <code>mod</code> es ⌘ o Ctrl). <code>"none"</code> lo quita. <code>&lt;button popovertarget&gt;</code> la abre sin JS.</td></tr>
+            <tr><td><code>items</code>, <code>menu</code>, <code>account</code>, <code>source</code>, <code>agent</code></td><td>Las fuentes (arriba; <code>account="id"</code> suma las acciones de un <code>&lt;nx-account&gt;</code>).</td></tr>
+            <tr><td><code>hotkey</code></td><td>Atajo global (<code>"mod+k"</code>; <code>mod</code> es ⌘ o Ctrl). <code>"none"</code> lo quita. Compara el carácter: <code>"/"</code> vale aunque el teclado lo escriba con Shift (Shift+7 en español). <code>&lt;button popovertarget&gt;</code> la abre sin JS.</td></tr>
             <tr><td><code>placeholder</code>, <code>limit</code>, <code>storage</code>, <code>labels</code></td><td>Texto de la caja, máximo de filas (50), clave de lo reciente y textos.</td></tr>
             <tr><td><code>show(q?)</code>, <code>hide()</code>, <code>clearHistory()</code></td><td>Abrir (con la consulta ya escrita), cerrar y olvidar lo reciente.</td></tr>
+            <tr><td><code>open</code>, <code>query</code></td><td>Solo lectura: si está abierta y lo que hay escrito.</td></tr>
             <tr><td>Teclado</td><td><kbd>↑</kbd><kbd>↓</kbd> moverse, <kbd>↵</kbd> abrir, <kbd>⌘/Ctrl</kbd>+<kbd>↵</kbd> en otra pestaña, <kbd>Esc</kbd> sale del submenú y luego cierra, <kbd>⌫</kbd> vacío vuelve.</td></tr>
-            <tr><td>Eventos</td><td><code>nx-command-select</code> <code>{item, query, newTab}</code> (cancelable), <code>nx-command-ask</code> <code>{query}</code> (cancelable), <code>nx-open-change</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-command-select</code> <code>{item, query, newTab}</code> (cancelable), <code>nx-command-ask</code> <code>{query}</code> (cancelable), <code>nx-open-change</code> <code>{open}</code>.</td></tr>
           </tbody>
         </table>
       </div>

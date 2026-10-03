@@ -43,6 +43,8 @@ export interface CommandLabels {
   empty: string;
   loading: string;
   error: string;
+  /** Lo que se anuncia al lector cuando cambian los resultados: «1 resultado|{n} resultados». */
+  results: string;
   recent: string;
   /** Grupo de las pantallas que vienen del menú (`menu`). */
   navigate: string;

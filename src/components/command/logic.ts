@@ -117,7 +117,11 @@ const wordStart = (s: string, i: number) => i === 0 || !/[\p{L}\p{N}]/u.test(s[i
  * «np» encuentra «Nuevo pedido».
  */
 export function scoreItem(item: CommandItem, query: string): number | null {
-  const toks = tokens(query);
+  return scoreTokens(item, tokens(query));
+}
+
+/** `scoreItem` con la consulta ya partida: `searchCommands` la normaliza una vez, no una por entrada. */
+function scoreTokens(item: CommandItem, toks: readonly string[]): number | null {
   if (!toks.length) return 0;
   const f = prepared(item);
   if (toks.length === 1 && toks[0].length > 1 && f.initials.startsWith(toks[0]) && !f.label.includes(toks[0])) return 4;
@@ -145,10 +149,11 @@ export interface Ranked {
  * conserva el orden original. Sin consulta, nada (la paleta muestra «Recientes» y todo).
  */
 export function searchCommands(items: readonly CommandItem[], query: string, usage: CommandUsage = {}, now = Date.now()): Ranked[] {
-  if (!tokens(query).length) return [];
+  const toks = tokens(query);
+  if (!toks.length) return [];
   const out: Ranked[] = [];
   for (const item of items) {
-    const s = scoreItem(item, query);
+    const s = scoreTokens(item, toks);
     if (s === null) continue;
     out.push({ item, score: s + Math.min(4, Math.log2(1 + frecency(usage[itemKey(item)], now)) * 1.5) });
   }
@@ -211,12 +216,23 @@ export function groupItems(items: readonly CommandItem[], fallback: string): { g
   return [...groups].map(([group, list]) => ({ group, items: list }));
 }
 
-/** `"mod+k"` → ¿esta tecla es ese atajo? `mod` es ⌘ en Mac y Ctrl en lo demás (se aceptan los dos). */
-export function matchesHotkey(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">, hotkey: string): boolean {
+/**
+ * `"mod+k"` → ¿esta tecla es ese atajo? `mod` es ⌘ en Mac y Ctrl en lo demás (se aceptan los dos).
+ * Se compara el carácter (`e.key`), no la tecla física: en un teclado español o latinoamericano «/»
+ * es Shift+7, así que en un carácter sin mayúscula («/», «?») Shift no cuenta, salvo que el atajo lo
+ * pida (`"shift+/"`). En una letra sí cuenta (`mod+k` no es `mod+shift+k`). Con una distribución no
+ * latina (cirílica, griega), Ctrl+K manda «л»: ahí vale la tecla física (`e.code`).
+ */
+export function matchesHotkey(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey"> & { code?: string }, hotkey: string): boolean {
   const parts = hotkey.toLowerCase().split("+").map((p) => p.trim());
   const key = parts.pop();
-  if (!key || key === "none") return false;
+  if (!key || key === "none" || typeof e.key !== "string") return false;
   const want = new Set(parts);
   const mod = want.has("mod") || want.has("ctrl") || want.has("meta") || want.has("cmd");
-  return typeof e.key === "string" && e.key.toLowerCase() === key && (e.ctrlKey || e.metaKey) === mod && e.altKey === want.has("alt") && e.shiftKey === want.has("shift");
+  const got = e.key.toLowerCase();
+  const latin = (k: string) => /^[a-z]$/.test(k);
+  const same = got === key || (latin(key) && !latin(got) && e.code === `Key${key.toUpperCase()}`);
+  const caseless = key.length === 1 && key.toLowerCase() === key.toUpperCase();
+  const shift = want.has("shift") ? e.shiftKey : caseless || !e.shiftKey;
+  return same && (e.ctrlKey || e.metaKey) === mod && e.altKey === want.has("alt") && shift;
 }
