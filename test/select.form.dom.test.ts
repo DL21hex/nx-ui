@@ -137,6 +137,14 @@ describe("<nx-select> en un <form>", () => {
     expect(field(el).hasAttribute("aria-invalid")).toBe(false);
   });
 
+  it("checkValidity() solo pregunta: no marca aria-invalid (reportValidity sí)", () => {
+    const el = mount('<nx-select name="e" required label="Empleado"></nx-select>');
+    expect(el.checkValidity()).toBe(false);
+    expect(field(el).hasAttribute("aria-invalid")).toBe(false);
+    el.reportValidity();
+    expect(field(el).getAttribute("aria-invalid")).toBe("true");
+  });
+
   it("setCustomValidity: un error propio, y '' lo quita", () => {
     const el = mount('<nx-select name="e"></nx-select>');
     el.setCustomValidity("Ya está asignado");
@@ -203,6 +211,19 @@ describe("<nx-select> en un <form>", () => {
     expect(el.open).toBe(false);
     el.formDisabledCallback(false);
     expect(el.querySelectorAll("[data-remove]")).toHaveLength(2);
+  });
+
+  it("apagado, focus() no enfoca el campo (disabled o <fieldset disabled>)", () => {
+    const el = mount("<nx-select disabled></nx-select>");
+    el.focus();
+    expect(document.activeElement).not.toBe(field(el));
+    el.disabled = false;
+    el.formDisabledCallback(true);
+    el.focus();
+    expect(document.activeElement).not.toBe(field(el));
+    el.formDisabledCallback(false);
+    el.focus();
+    expect(document.activeElement).toBe(field(el));
   });
 
   it("disabled con el panel abierto lo cierra: no se puede elegir", () => {
@@ -278,6 +299,16 @@ describe("<nx-select> multiple y el orden de las props", () => {
     expect(el.value).toBe("2");
     el.multiple = true;
     expect(el.value).toEqual(["2"]);
+  });
+});
+
+describe("<nx-select> multiple desde el atributo", () => {
+  it("value='[…]' del atributo: quitar multiple deja el primero (no relee el JSON como texto)", () => {
+    const el = mount(`<nx-select value='["1","2"]' multiple></nx-select>`);
+    el.removeAttribute("multiple");
+    expect(el.value).toBe("1");
+    el.setAttribute("multiple", "");
+    expect(el.value).toEqual(["1", "2"]);
   });
 });
 
