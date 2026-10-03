@@ -176,7 +176,7 @@ allowOrigins("https://api.miapp.co");
 |---|---|
 | Propiedades / atributos | `items` (JSON en el atributo), `active`, `collapsed`, `collapsible`, `auto-collapse` (compacto en tablet), `labels` |
 | Métodos | `show()`, `hide()`, `toggle()` y `open`, para el drawer (< 768 px) |
-| Eventos | `nx-select` `{item, href}` (cancelable), `nx-toggle` `{collapsed, auto}` (cancelable), `nx-open-change` `{open}` |
+| Eventos | `nx-sidemenu-select` `{item, href}` (cancelable), `nx-sidemenu-toggle` `{collapsed, auto}` (cancelable), `nx-open-change` `{open}` (también si el drawer sale del DOM abierto) |
 | Slots | `slot="header"`, `slot="footer"` (no se mueven del DOM, así que no rompen la hidratación) |
 | Variables | `--nx-sidemenu-width`, `--nx-sidemenu-width-collapsed`, `--nx-sidemenu-drawer-width`, `--nx-flyout-width` |
 
@@ -186,13 +186,17 @@ allowOrigins("https://api.miapp.co");
 - `icon` es un nombre registrado. Si falta, se pintan las iniciales.
 - `section` agrupa ítems bajo un título.
 - `description` es la segunda línea del panel.
-- `children` convierte al ítem en un padre que abre un panel flotante. El buscador solo aparece con más de 3 hijos; con menos, el teclado (flechas, Enter) sigue funcionando sobre la lista.
+- `children` convierte al ítem en un padre que abre un panel flotante. El buscador solo aparece con más de 3 hijos; con menos, el teclado (flechas, Enter) sigue funcionando sobre la lista. Al escribir queda resaltado el primero que coincide, así que Enter lo elige. Un tercer nivel no abre otro panel: sus hojas entran en el mismo, en una sección con el nombre de su padre.
 - `utility` pone el hijo como chip al pie del panel.
 - `badge` es un contador o marca (`12`, `"Nuevo"`). `0` no se pinta, más de 99 es «99+» y en compacto se reduce a un punto.
 
 `active` acepta un href (exacto o por prefijo de ruta) o un id. El id de un padre lo enciende sin
 hoja activa, útil en una ficha de detalle que no está en el menú. Los ítems sin `section` se pintan
 arriba, antes de las secciones: ahí van los accesos fijos (Inicio, Pendientes…).
+
+En compacto, el nombre de cada ítem aparece en una etiqueta junto al riel al pasar el ratón o al
+llegar con Tab. Con un panel flotante o el drill-down abiertos, un cambio de `items`, `active` o
+`labels` (un badge que llega del servidor) se pinta al cerrarlos: no se pierden la búsqueda ni el foco.
 
 ## `<nx-button>`
 

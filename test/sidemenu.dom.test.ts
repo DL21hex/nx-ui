@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 //
 // Render, ARIA y eventos. Lo que depende de la capa superior del navegador (abrir un popover,
-// el drawer, el foco al cerrar) no existe en happy-dom: eso se verifica en el navegador (galería).
+// el drawer, el foco al cerrar) no existe en happy-dom: va con un remedo de la Popover API en
+// sidemenu.popover.dom.test.ts, y en el navegador en e2e/sidemenu.spec.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "../src/bdui";
 import { renderChildPanel } from "../src/components/sidemenu/flyout";
@@ -103,6 +104,19 @@ describe("<nx-sidemenu> render", () => {
     warn.mockRestore();
   });
 
+  it("quitar el atributo items o labels vuelve al valor por defecto", async () => {
+    const el = await mount("", (m) => {
+      m.setAttribute("items", JSON.stringify(MENU));
+      m.setAttribute("labels", JSON.stringify({ nav: "Navegación" }));
+    });
+    expect(el.labels.nav).toBe("Navegación");
+    el.removeAttribute("items");
+    el.removeAttribute("labels");
+    await flush();
+    expect(el.querySelectorAll(".nx-sidemenu__item")).toHaveLength(0);
+    expect(el.labels).toEqual(DEFAULT_LABELS);
+  });
+
   it("no mueve los hijos del autor: solo añade su contenedor al final", async () => {
     const el = await mount('<div slot="header">Marca</div><div slot="footer">Perfil</div>', (m) => (m.items = MENU));
     const kids = [...el.children].map((c) => c.getAttribute("slot") ?? c.className);
@@ -121,7 +135,7 @@ describe("<nx-sidemenu> render", () => {
 });
 
 describe("<nx-sidemenu> compacto", () => {
-  it("cada fila lleva aria-label y title; collapsed=\"false\" no cuenta", async () => {
+  it("cada fila lleva aria-label (sin title, que no sale con el teclado); collapsed=\"false\" no cuenta", async () => {
     const el = await mount("", (m) => {
       m.items = MENU;
       m.setAttribute("collapsed", "false");
@@ -132,10 +146,36 @@ describe("<nx-sidemenu> compacto", () => {
     await flush();
     const first = el.querySelector(".nx-sidemenu__item")!;
     expect(first.getAttribute("aria-label")).toBe("Inicio");
-    expect(first.getAttribute("title")).toBe("Inicio");
+    expect(first.hasAttribute("title")).toBe(false);
   });
 
-  it("el botón de contraer emite nx-toggle, y cancelarlo deja el estado a la app", async () => {
+  it("con el foco del teclado, una etiqueta flotante muestra el nombre; con un toque, no", async () => {
+    const el = await mount("", (m) => {
+      m.items = MENU;
+      m.collapsed = true;
+      m.collapsible = true;
+    });
+    const tip = () => el.querySelector<HTMLElement>(".nx-sidemenu__tip");
+    const rows = el.querySelectorAll<HTMLElement>(".nx-sidemenu__item");
+    rows[2].dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(tip()?.textContent).toBe("Pedidos");
+    expect(tip()?.getAttribute("aria-hidden")).toBe("true");
+    el.querySelector<HTMLElement>("[data-nx-collapse]")!.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(tip()?.textContent).toBe(DEFAULT_LABELS.expand);
+    // Un toque enfoca, pero la etiqueta se quedaría pegada: no sale.
+    tip()!.textContent = "";
+    rows[0].dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
+    rows[0].dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(tip()!.textContent).toBe("");
+    // Expandido, no hace falta.
+    el.collapsed = false;
+    await flush();
+    rows[0].dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Tab" }));
+    el.querySelector<HTMLElement>(".nx-sidemenu__item")!.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(tip()?.textContent ?? "").toBe("");
+  });
+
+  it("el botón de contraer emite nx-sidemenu-toggle, y cancelarlo deja el estado a la app", async () => {
     const el = await mount("", (m) => {
       m.items = MENU;
       m.collapsible = true;
@@ -144,13 +184,13 @@ describe("<nx-sidemenu> compacto", () => {
     expect(btn().getAttribute("aria-label")).toBe(DEFAULT_LABELS.collapse);
 
     const seen: boolean[] = [];
-    el.addEventListener("nx-toggle", (e) => seen.push(e.detail.collapsed));
+    el.addEventListener("nx-sidemenu-toggle", (e) => seen.push(e.detail.collapsed));
     btn().click();
     expect(el.collapsed).toBe(true);
     await flush();
     expect(btn().getAttribute("aria-label")).toBe(DEFAULT_LABELS.expand);
 
-    el.addEventListener("nx-toggle", (e) => e.preventDefault(), { once: true });
+    el.addEventListener("nx-sidemenu-toggle", (e) => e.preventDefault(), { once: true });
     btn().click();
     expect(seen).toEqual([true, false]);
     expect(el.collapsed).toBe(true);
@@ -197,7 +237,7 @@ describe("<nx-sidemenu> auto-collapse", () => {
     const el = await mount("", (m) => {
       m.items = MENU;
       m.autoCollapse = true;
-      m.addEventListener("nx-toggle", (e) => seen.push(`${e.detail.collapsed}/${e.detail.auto}`));
+      m.addEventListener("nx-sidemenu-toggle", (e) => seen.push(`${e.detail.collapsed}/${e.detail.auto}`));
     });
     expect(el.collapsed).toBe(false);
     await setWidth(900);
@@ -221,6 +261,35 @@ describe("<nx-sidemenu> auto-collapse", () => {
     expect(el.collapsed).toBe(false);
   });
 
+  it("reconectar el nodo (o reasignar auto-collapse) en tablet no le hace olvidar que lo contrajo él", async () => {
+    await setWidth(1280);
+    const el = await mount("", (m) => {
+      m.items = MENU;
+      m.autoCollapse = true;
+    });
+    await setWidth(900);
+    expect(el.collapsed).toBe(true);
+    document.body.prepend(el);
+    el.autoCollapse = true;
+    await flush();
+    await setWidth(1280);
+    expect(el.collapsed).toBe(false);
+  });
+
+  it("lo que el usuario expandió en tablet no se vuelve a contraer al reconectar", async () => {
+    await setWidth(900);
+    const el = await mount("", (m) => {
+      m.items = MENU;
+      m.autoCollapse = true;
+      m.collapsible = true;
+    });
+    el.querySelector<HTMLButtonElement>("[data-nx-collapse]")!.click();
+    expect(el.collapsed).toBe(false);
+    document.body.prepend(el);
+    await flush();
+    expect(el.collapsed).toBe(false);
+  });
+
   it("sin auto-collapse, el tamaño no toca el estado", async () => {
     await setWidth(900);
     const el = await mount("", (m) => (m.items = MENU));
@@ -228,11 +297,11 @@ describe("<nx-sidemenu> auto-collapse", () => {
   });
 });
 
-describe("<nx-sidemenu> nx-select", () => {
+describe("<nx-sidemenu> nx-sidemenu-select", () => {
   it("se emite con el ítem; si no se cancela, el enlace sigue su curso", async () => {
     const el = await mount("", (m) => (m.items = MENU));
     const got: string[] = [];
-    el.addEventListener("nx-select", (e) => got.push(`${e.detail.item.id} ${e.detail.href}`));
+    el.addEventListener("nx-sidemenu-select", (e) => got.push(`${e.detail.item.id} ${e.detail.href}`));
     el.querySelector<HTMLAnchorElement>('a[href="/ventas/pedidos"]')!.click();
     expect(got).toEqual(["pedidos /ventas/pedidos"]);
     expect(bodyClicks).toEqual([false]);
@@ -240,7 +309,7 @@ describe("<nx-sidemenu> nx-select", () => {
 
   it("cancelarlo cancela el clic (un router propio decide)", async () => {
     const el = await mount("", (m) => (m.items = MENU));
-    el.addEventListener("nx-select", (e) => e.preventDefault());
+    el.addEventListener("nx-sidemenu-select", (e) => e.preventDefault());
     el.querySelector<HTMLAnchorElement>('a[href="/"]')!.click();
     expect(bodyClicks).toEqual([true]);
   });
@@ -248,7 +317,7 @@ describe("<nx-sidemenu> nx-select", () => {
   it("un clic con modificador (abrir en otra pestaña) no se anuncia", async () => {
     const el = await mount("", (m) => (m.items = MENU));
     const spy = vi.fn();
-    el.addEventListener("nx-select", spy);
+    el.addEventListener("nx-sidemenu-select", spy);
     el.querySelector('a[href="/"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }));
     expect(spy).not.toHaveBeenCalled();
   });
@@ -297,16 +366,61 @@ describe("panel de hijos", () => {
     expect(el.querySelector(".nx-panel__head")!.classList.contains("nx-panel__head--rule")).toBe(false);
   });
 
-  it("filtra sin tildes y avisa cuando no hay resultados", () => {
+  it("filtra sin tildes ocultando (no recreando) y avisa cuando no hay resultados", () => {
     const { el, input } = panel();
+    const before = [...el.querySelectorAll('[role="option"]')];
     input!.value = "porteria";
     input!.dispatchEvent(new Event("input"));
-    expect(el.querySelectorAll('[role="option"]')).toHaveLength(1);
+    expect(el.querySelectorAll('[role="option"]:not([hidden])')).toHaveLength(1);
+    expect([...el.querySelectorAll('[role="option"]')]).toEqual(before);
+    // El grupo «Registro» y los chips, sin nada que mostrar, se ocultan con su título.
+    expect(el.querySelector<HTMLElement>(".nx-panel__section")!.parentElement!.hidden).toBe(true);
+    expect(el.querySelector<HTMLElement>(".nx-panel__utils")!.hidden).toBe(true);
     expect(el.querySelector<HTMLElement>(".nx-panel__empty")!.hidden).toBe(true);
     input!.value = "zzz";
     input!.dispatchEvent(new Event("input"));
-    expect(el.querySelectorAll('[role="option"]')).toHaveLength(0);
+    expect(el.querySelectorAll('[role="option"]:not([hidden])')).toHaveLength(0);
     expect(el.querySelector<HTMLElement>(".nx-panel__empty")!.hidden).toBe(false);
+    input!.value = "";
+    input!.dispatchEvent(new Event("input"));
+    expect(el.querySelectorAll('[role="option"]:not([hidden])')).toHaveLength(4);
+  });
+
+  it("al escribir queda resaltada la primera que coincide: Enter la elige sin pasar por ↓", () => {
+    const { el, input } = panel();
+    document.body.append(el);
+    input!.value = "rond";
+    input!.dispatchEvent(new Event("input"));
+    const first = el.querySelector('[aria-selected="true"]')!;
+    expect(label(first)).toBe("Rondas");
+    expect(input!.getAttribute("aria-activedescendant")).toBe(first.id);
+    const clicked = vi.fn();
+    first.addEventListener("click", clicked);
+    keyOn(input!)("Enter");
+    expect(clicked).toHaveBeenCalledOnce();
+    // Sin consulta no se resalta nada (Enter no elige al azar).
+    input!.value = "";
+    input!.dispatchEvent(new Event("input"));
+    expect(el.querySelector('[aria-selected="true"]')).toBeNull();
+  });
+
+  it("un tercer nivel entra como sección con el nombre de su padre, y su hoja activa se marca", () => {
+    const anual: MenuItem = { id: "anual", label: "Anual", href: "/ventas/reportes/anual" };
+    const ventas: MenuItem = {
+      id: "ventas",
+      label: "Ventas",
+      children: [
+        { id: "pedidos", label: "Pedidos", href: "/ventas/pedidos" },
+        { id: "reportes", label: "Reportes", children: [{ id: "mensual", label: "Mensual", href: "/ventas/reportes/mensual" }, anual] },
+      ],
+    };
+    const { el } = renderChildPanel({ item: ventas, active: anual, labels: DEFAULT_LABELS, idPrefix: "n", keyOf: (c) => c.id, autofocus: false });
+    expect([...el.querySelectorAll('[role="option"]')].map(label)).toEqual(["Pedidos", "Mensual", "Anual"]);
+    expect(el.querySelector(".nx-panel__section")?.textContent).toBe("Reportes");
+    const current = el.querySelector('[aria-current="page"]')!;
+    expect(label(current)).toBe("Anual");
+    expect(current.getAttribute("data-nx-key")).toBe("anual");
+    expect(current.getAttribute("href")).toBe("/ventas/reportes/anual");
   });
 
   it("las flechas mueven el resaltado (aria-activedescendant) y Enter hace clic", () => {

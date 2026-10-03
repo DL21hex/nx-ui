@@ -411,8 +411,8 @@ declare module "solid-js" {
       "nx-what-if-compute": CustomEvent<WhatIfComputeDetail>;
       "nx-presence-local": CustomEvent<PresenceEvent>;
       "nx-presence-change": CustomEvent<{ users: PresenceState[] }>;
-      "nx-select": CustomEvent<SelectDetail>;
-      "nx-toggle": CustomEvent<ToggleDetail>;
+      "nx-sidemenu-select": CustomEvent<SelectDetail>;
+      "nx-sidemenu-toggle": CustomEvent<ToggleDetail>;
       "nx-open-change": CustomEvent<OpenChangeDetail>;
       "nx-done": CustomEvent<DoneDetail>;
       "nx-change": CustomEvent<SelectChangeDetail | DateRangeChangeDetail | RecurrenceChangeDetail>;

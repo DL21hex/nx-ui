@@ -4817,7 +4817,7 @@ render(node, document.querySelector("#menu-slot"));</code></pre>
             <tr><td><code>icon</code></td><td>Nombre registrado con <code>registerIcons</code>. Sin ícono: iniciales.</td></tr>
             <tr><td><code>section</code></td><td>Título del grupo (en el riel y en el panel de hijos).</td></tr>
             <tr><td><code>description</code></td><td>Segunda línea en el panel de hijos; también se busca en ella.</td></tr>
-            <tr><td><code>children</code></td><td>Lo convierte en padre: abre su panel flotante (o un drill-down en el drawer) y nunca navega. El buscador solo aparece con más de 3 hijos.</td></tr>
+            <tr><td><code>children</code></td><td>Lo convierte en padre: abre su panel flotante (o un drill-down en el drawer) y nunca navega. El buscador solo aparece con más de 3 hijos. Un tercer nivel no abre otro panel: sus hojas van en el mismo, como una sección con el nombre de su padre.</td></tr>
             <tr><td><code>utility</code></td><td>En el panel del padre va como chip al pie (configuración, reportes).</td></tr>
             <tr><td><code>badge</code></td><td>Contador o marca (<code>12</code>, <code>"Nuevo"</code>). <code>0</code> no se pinta y más de 99 es «99+». En compacto se reduce a un punto y entra en el nombre accesible.</td></tr>
           </tbody>
@@ -4828,9 +4828,9 @@ render(node, document.querySelector("#menu-slot"));</code></pre>
         <table>
           <thead><tr><th>Evento</th><th><code>detail</code></th><th>Descripción</th></tr></thead>
           <tbody>
-            <tr><td><code>nx-select</code></td><td><code>{ item, href }</code></td><td>Al elegir una hoja. Cancelable: <code>preventDefault()</code> cancela la navegación del enlace.</td></tr>
-            <tr><td><code>nx-toggle</code></td><td><code>{ collapsed, auto }</code></td><td>Botón de contraer (<code>auto: false</code>) o <code>auto-collapse</code> (<code>auto: true</code>). Cancelable: la app controla el estado.</td></tr>
-            <tr><td><code>nx-open-change</code></td><td><code>{ open }</code></td><td>El drawer móvil se abrió o cerró.</td></tr>
+            <tr><td><code>nx-sidemenu-select</code></td><td><code>{ item, href }</code></td><td>Al elegir una hoja. Cancelable: <code>preventDefault()</code> cancela la navegación del enlace.</td></tr>
+            <tr><td><code>nx-sidemenu-toggle</code></td><td><code>{ collapsed, auto }</code></td><td>Botón de contraer (<code>auto: false</code>) o <code>auto-collapse</code> (<code>auto: true</code>). Cancelable: la app controla el estado.</td></tr>
+            <tr><td><code>nx-open-change</code></td><td><code>{ open }</code></td><td>El drawer móvil se abrió o cerró (también si sale del DOM abierto).</td></tr>
           </tbody>
         </table>
       </div>

@@ -443,14 +443,14 @@ function mountSidemenuDemo(root: HTMLElement) {
   };
 
   // Los eventos burbujean hasta el contenedor, así sobreviven a cada `render`.
-  slot.addEventListener("nx-select", (e) => {
+  slot.addEventListener("nx-sidemenu-select", (e) => {
     // En la demo nada navega de verdad: la app decide (es justo para lo que sirve cancelar).
     e.preventDefault();
-    addLog(`nx-select → ${e.detail.item.label} (${e.detail.href})`);
+    addLog(`nx-sidemenu-select → ${e.detail.item.label} (${e.detail.href})`);
     setProp("active", e.detail.href);
   });
-  slot.addEventListener("nx-toggle", (e) => {
-    addLog(`nx-toggle → collapsed: ${e.detail.collapsed}${e.detail.auto ? " (auto)" : ""}`);
+  slot.addEventListener("nx-sidemenu-toggle", (e) => {
+    addLog(`nx-sidemenu-toggle → collapsed: ${e.detail.collapsed}${e.detail.auto ? " (auto)" : ""}`);
     // Sin cancelar: el elemento ya aplica el cambio; aquí solo se refleja en el payload.
     payload = { ...payload, props: { ...payload.props, collapsed: e.detail.collapsed } };
     sync();

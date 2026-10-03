@@ -4,11 +4,12 @@
  * vistas no pueden divergir. Portado de nx32 (`components/MenuFlyout.tsx`).
  *
  * El estado (consulta, resaltado) vive en este cierre y el host lo desecha al cerrar: cada
- * apertura empieza limpia sin sincronizar nada.
+ * apertura empieza limpia sin sincronizar nada. Las opciones se crean una vez; el buscador solo
+ * las muestra u oculta, con el texto sin tildes calculado una vez por hijo.
  */
 import { h, safeHref } from "../../core/dom";
 import { glyph, icon } from "../../core/icons";
-import { filterItems, flyoutKeyStep, formatBadge, groupBySection, panelHasSearch, splitUtility } from "./logic";
+import { flyoutKeyStep, foldText, formatBadge, groupBySection, panelHasSearch, splitUtility } from "./logic";
 import type { MenuItem, SidemenuLabels } from "./types";
 
 /** El badge de una fila (riel, opción o chip). En compacto el CSS lo reduce a un punto. */
@@ -43,14 +44,28 @@ export interface ChildPanel {
 }
 
 export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
-  // Los hijos vienen del backend: lo que no es un objeto se ignora (un `null` rompía el panel).
-  const children = Array.isArray(o.item.children) ? o.item.children.filter((c): c is MenuItem => !!c && typeof c === "object") : [];
+  // Los hijos vienen del backend: lo que no es un objeto se ignora (un `null` rompía el panel). Un
+  // hijo que a su vez tiene hijos (un tercer nivel) no se pierde: sus hojas entran como una sección
+  // con su nombre («Reportes»: Mensual, Anual). La copia lleva la sección; `real` vuelve al original.
+  const real = new Map<MenuItem, MenuItem>();
+  const leaves = (list: unknown, section?: string): MenuItem[] =>
+    (Array.isArray(list) ? list : []).flatMap((c: MenuItem | null): MenuItem[] => {
+      if (!c || typeof c !== "object") return [];
+      if (Array.isArray(c.children) && c.children.length > 0) return leaves(c.children, String(c.label ?? ""));
+      if (section === undefined) return [c];
+      const copy = { ...c, section };
+      real.set(copy, c);
+      return [copy];
+    });
+  const children = leaves(o.item.children);
   const title = String(o.item.label ?? "");
   const searchable = panelHasSearch(children);
   const listId = `${o.idPrefix}-list`;
-  let query = "";
   let highlighted = -1;
+  /** Las opciones visibles, en orden (las del teclado). */
   let flat: HTMLElement[] = [];
+  const all: HTMLElement[] = [];
+  const folded = new Map<HTMLElement, string>();
   let lastPointer: { x: number; y: number } | null = null;
 
   const input = searchable ? h("input", {
@@ -80,6 +95,7 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
   const empty = h("p", { class: "nx-panel__empty", hidden: true }, o.labels.empty);
 
   const option = (child: MenuItem, chip: boolean): HTMLElement => {
+    const src = real.get(child) ?? child;
     const label = String(child.label ?? "");
     const badge = formatBadge(child.badge);
     const el = h(
@@ -87,10 +103,10 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
       {
         class: chip ? "nx-panel__chip" : "nx-panel__option",
         role: "option",
-        id: `${o.idPrefix}-o${flat.length}`,
+        id: `${o.idPrefix}-o${all.length}`,
         "aria-selected": "false",
-        "aria-current": child === o.active ? "page" : null,
-        "data-nx-key": o.keyOf(child),
+        "aria-current": src === o.active ? "page" : null,
+        "data-nx-key": o.keyOf(src),
         href: safeHref(child.href),
         tabindex: "-1",
         title: chip && child.description ? String(child.description) : null,
@@ -106,7 +122,9 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
           ),
       badgeEl(badge),
     );
-    flat.push(el);
+    // Nombre y descripción separados por un salto: una consulta (una línea) no cruza de uno al otro.
+    folded.set(el, `${foldText(label)}\n${foldText(String(child.description ?? ""))}`);
+    all.push(el);
     return el;
   };
 
@@ -121,22 +139,32 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
     } else focusEl.removeAttribute("aria-activedescendant");
   };
 
-  const renderList = () => {
-    flat = [];
+  const { work, utilities } = splitUtility(children);
+  const groups = groupBySection(work).map((g, gi) => {
+    const opts = g.items.map((c) => option(c, false));
+    if (!g.label) return h("div", { role: "group" }, ...opts);
+    const hid = `${o.idPrefix}-g${gi}`;
+    return h("div", { role: "group", "aria-labelledby": hid }, h("div", { id: hid, class: "nx-panel__section" }, g.label), ...opts);
+  });
+  scroller.append(...groups);
+  utils.append(...utilities.map((c) => option(c, true)));
+
+  /** Muestra lo que coincide con la consulta y oculta el resto (no lo recrea). Con algo escrito,
+   *  la primera queda resaltada: Enter la elige sin pasar por ↓. */
+  const filter = (query: string) => {
+    flat[highlighted]?.setAttribute("aria-selected", "false");
     highlighted = -1;
     focusEl.removeAttribute("aria-activedescendant");
-    const { work, utilities } = splitUtility(filterItems(children, query));
-    scroller.replaceChildren(
-      ...groupBySection(work).map((g, gi) => {
-        const opts = g.items.map((c) => option(c, false));
-        if (!g.label) return h("div", { role: "group" }, ...opts);
-        const hid = `${o.idPrefix}-g${gi}`;
-        return h("div", { role: "group", "aria-labelledby": hid }, h("div", { id: hid, class: "nx-panel__section" }, g.label), ...opts);
-      }),
-    );
-    utils.replaceChildren(...utilities.map((c) => option(c, true)));
-    utils.hidden = utilities.length === 0;
+    const q = foldText(query);
+    flat = all.filter((el) => {
+      el.hidden = !!q && !folded.get(el)!.includes(q);
+      return !el.hidden;
+    });
+    const shown = (box: Element) => !!box.querySelector('[role="option"]:not([hidden])');
+    for (const g of groups) g.hidden = !shown(g);
+    utils.hidden = !shown(utils);
     empty.hidden = flat.length > 0;
+    if (q && flat.length) highlight(0, false);
   };
 
   const el = h(
@@ -159,10 +187,7 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
     empty,
   );
 
-  input?.addEventListener("input", () => {
-    query = input.value;
-    renderList();
-  });
+  input?.addEventListener("input", () => filter(input.value));
 
   el.addEventListener("keydown", (e) => {
     const step = flyoutKeyStep(e.key, highlighted, flat.length);
@@ -186,7 +211,7 @@ export function renderChildPanel(o: ChildPanelOptions): ChildPanel {
     if (i >= 0 && i !== highlighted) highlight(i, false);
   });
 
-  renderList();
+  filter("");
 
   return {
     el,

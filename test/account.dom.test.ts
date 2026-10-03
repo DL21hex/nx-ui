@@ -729,7 +729,7 @@ describe("<nx-account> en el menú lateral", () => {
     expect(card(el).querySelector(".nx-account__name")!.textContent).toBe("Diego Llinás");
     // Un clic dentro de la cuenta no lo toma el menú como una hoja.
     const sel = vi.fn();
-    rail.addEventListener("nx-select", sel);
+    rail.addEventListener("nx-sidemenu-select", sel);
     byK(el, "theme:dark").click();
     expect(sel).not.toHaveBeenCalled();
     delete (root as { clientWidth?: number }).clientWidth;

@@ -18,10 +18,11 @@ export interface SideMenuProps extends Omit<JSX.HTMLAttributes<NxSidemenu>, "onS
   /** Controlado: abre y cierra el drawer móvil (en escritorio no hace nada). */
   open?: boolean;
   labels?: Partial<SidemenuLabels>;
-  /** Cancelable: `e.preventDefault()` evita la navegación del enlace. */
+  /** `nx-sidemenu-select`, cancelable: `e.preventDefault()` evita la navegación del enlace. */
   onSelect?: (e: CustomEvent<SelectDetail>) => void;
-  /** Cancelable: con `preventDefault()` el estado compacto lo controla la app. */
+  /** `nx-sidemenu-toggle`, cancelable: con `preventDefault()` el estado compacto lo controla la app. */
   onToggle?: (e: CustomEvent<ToggleDetail>) => void;
+  /** El drawer. Solo el del menú: el de un popover hijo (la cuenta del pie) no llega aquí. */
   onOpenChange?: (e: CustomEvent<OpenChangeDetail>) => void;
 }
 
@@ -45,6 +46,8 @@ export function SideMenu(props: SideMenuProps): JSX.Element {
     const want = local.open;
     if (el && want !== undefined && want !== el.open) el.open = want;
   });
+  // Los eventos burbujean: cada manejador atiende solo los del propio menú (un `nx-open-change` del
+  // panel de `<nx-account>` en el pie no es el drawer).
   return (
     <nx-sidemenu
       {...rest}
@@ -55,9 +58,9 @@ export function SideMenu(props: SideMenuProps): JSX.Element {
       bool:collapsed={!!local.collapsed}
       bool:collapsible={!!local.collapsible}
       bool:auto-collapse={!!local.autoCollapse}
-      on:nx-select={(e) => local.onSelect?.(e)}
-      on:nx-toggle={(e) => local.onToggle?.(e)}
-      on:nx-open-change={(e) => local.onOpenChange?.(e)}
+      on:nx-sidemenu-select={(e) => e.target === e.currentTarget && local.onSelect?.(e)}
+      on:nx-sidemenu-toggle={(e) => e.target === e.currentTarget && local.onToggle?.(e)}
+      on:nx-open-change={(e) => e.target === e.currentTarget && local.onOpenChange?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}

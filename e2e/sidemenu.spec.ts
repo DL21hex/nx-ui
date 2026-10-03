@@ -34,7 +34,8 @@ test("móvil: la hamburguesa abre el drawer y un enlace lo cierra", async ({ pag
   await page.getByRole("button", { name: "Abrir menú" }).first().click();
   await expect(nav).toBeVisible();
   await nav.getByRole("button", { name: "Datos y tablas" }).click();
-  await nav.getByRole("link", { name: "Tabla" }).click();
+  // Dentro del drill-down los hijos son opciones de un listbox (`<a role="option" href>`), no enlaces.
+  await nav.getByRole("option", { name: "Tabla", exact: true }).click();
   await expect(nav).toBeHidden();
   await expect(page).toHaveURL(/#\/grid$/);
 });

@@ -22,7 +22,7 @@ describe("panel de hijos con datos mal formados", () => {
     // Escribir en el buscador no lanza con etiquetas numéricas o ausentes.
     input!.value = "99";
     expect(() => input!.dispatchEvent(new Event("input"))).not.toThrow();
-    expect([...el.querySelectorAll(".nx-panel__option .nx-panel__label")].map((x) => x.textContent)).toEqual(["Cuentas"]);
+    expect([...el.querySelectorAll(".nx-panel__option:not([hidden]) .nx-panel__label")].map((x) => x.textContent)).toEqual(["Cuentas"]);
     expect(input!.hasAttribute("data-nx-ephemeral")).toBe(true);
   });
 
