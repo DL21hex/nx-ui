@@ -181,10 +181,9 @@ export function mountDateRangeDemo(root: HTMLElement): void {
       chart.querySelectorAll("[data-on]").forEach((x) => x.removeAttribute("data-on"));
     };
   };
-  // `nx-change` también lo emite <nx-select> (con otro `detail`): aquí se lee como Event.
   const valueOf = (e: Event) => (e as CustomEvent<DateRangeChangeDetail>).detail.value;
-  dr.addEventListener("nx-change", (e: Event) => {
-    add(`nx-change → ${brief(valueOf(e))}`);
+  dr.addEventListener("nx-date-range-change", (e: Event) => {
+    add(`nx-date-range-change → ${brief(valueOf(e))}`);
     render();
   });
   dr.addEventListener("nx-open-change", (e) => add(`nx-open-change → ${(e as CustomEvent<{ open: boolean }>).detail.open}`));
@@ -204,7 +203,7 @@ export function mountDateRangeDemo(root: HTMLElement): void {
   const form = root.querySelector<HTMLFormElement>("#dr-form")!;
   const out = root.querySelector<HTMLElement>("#dr-form-out")!;
   const fiscal = root.querySelector<NxDateRange>("#dr-fiscal")!;
-  fiscal.addEventListener("nx-change", (e: Event) => add(`nx-change (fiscal) → ${brief(valueOf(e))}`));
+  fiscal.addEventListener("nx-date-range-change", (e: Event) => add(`nx-date-range-change (fiscal) → ${brief(valueOf(e))}`));
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const fd = new FormData(form);

@@ -9,7 +9,7 @@
  * código y un Enter: se reconoce la ráfaga aunque el foco no esté en el campo, sin robar lo que se
  * escribe en otros campos) y se puede leer desde una foto.
  *
- * `mode="single"` (por defecto): una lectura dispara `nx-scan` y la cámara se detiene. `mode="count"`:
+ * `mode="single"` (por defecto): una lectura dispara `nx-scan-read` y la cámara se detiene. `mode="count"`:
  * cada lectura suma a una lista agrupada por código, con cantidad editable, lo esperado (de `source`)
  * con faltantes y sobrantes, deshacer y totales. La cámara se apaga sola cuando no se ve.
  */
@@ -537,10 +537,10 @@ export class NxScan extends Base {
 
   // ---------------------------------------------------------------- lecturas
 
-  /** Una lectura, venga de donde venga. `nx-scan` es cancelable: cancelado, no cuenta. */
+  /** Una lectura, venga de donde venga. `nx-scan-read` es cancelable: cancelado, no cuenta. */
   #accept(code: string, format: string, via: ScanVia, qty = 1): boolean {
     const detail: ScanDetail = { code, format, via };
-    if (!this.dispatchEvent(new CustomEvent("nx-scan", { detail, bubbles: true, composed: true, cancelable: true }))) return false;
+    if (!this.dispatchEvent(new CustomEvent("nx-scan-read", { detail, bubbles: true, composed: true, cancelable: true }))) return false;
     const L = this.#labels;
     const sensed = via === "camera" || via === "photo";
     if (this.mode === "single") {

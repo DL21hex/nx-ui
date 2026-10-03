@@ -435,7 +435,7 @@ export class NxGuard extends Base {
         }
         fire("input");
         fire("change");
-        if (isNumber(el)) el.dispatchEvent(new CustomEvent("nx-change", { detail: { value: el.value, text: (el as unknown as { text: string }).text }, bubbles: true, composed: true }));
+        if (isNumber(el)) el.dispatchEvent(new CustomEvent("nx-number-change", { detail: { value: el.value, text: (el as unknown as { text: string }).text }, bubbles: true, composed: true }));
       } finally {
         this.#writing = false;
       }

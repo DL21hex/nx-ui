@@ -49,9 +49,9 @@ export function AIAnswer(props: AIAnswerProps): JSX.Element {
       prop:context={local.context}
       prop:labels={local.labels}
       bool:feedback={!!local.feedback}
-      on:nx-ai-done={(e) => local.onDone?.(e)}
-      on:nx-ai-action={(e) => local.onAction?.(e)}
-      on:nx-ai-feedback={(e) => local.onFeedback?.(e)}
+      on:nx-ai-answer-done={(e) => local.onDone?.(e)}
+      on:nx-ai-answer-action={(e) => local.onAction?.(e)}
+      on:nx-ai-answer-feedback={(e) => local.onFeedback?.(e)}
     />
   );
 }

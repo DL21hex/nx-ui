@@ -308,11 +308,11 @@ export class NxKeytips extends Base {
     this.dispatchEvent(new CustomEvent("nx-open-change", { detail: { open }, bubbles: true, composed: true }));
   }
 
-  /** Ejecuta la acción: avisa (`nx-keytip`, cancelable), cierra y hace clic o enfoca. */
+  /** Ejecuta la acción: avisa (`nx-keytips-activate`, cancelable), cierra y hace clic o enfoca. */
   #run(t: KeytipAssignment): void {
     const el = t.element;
     const detail: KeytipDetail = { key: t.key, target: el, name: t.name };
-    const ok = this.dispatchEvent(new CustomEvent("nx-keytip", { detail, bubbles: true, composed: true, cancelable: true }));
+    const ok = this.dispatchEvent(new CustomEvent("nx-keytips-activate", { detail, bubbles: true, composed: true, cancelable: true }));
     this.hide();
     // Algo que se ocultó por clase o estilo con los atajos abiertos (el observador no mira `class`
     // ni `style`) ya no se pulsa.

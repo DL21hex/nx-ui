@@ -19,7 +19,7 @@ test("se escribe el período, se ve cómo se entendió y Enter lo aplica al resu
   await expect(field).toContainText("1 mar – 30 jun 2026 · 122 días");
   await expect(page.locator("#dr-tiles")).toContainText("vs 1 nov 2025 – 28 feb 2026");
   await expect(page.locator("#dr-caption")).toContainText("Ventas por semana · 1 mar – 30 jun 2026");
-  await expect(page.locator("#date-range-log")).toContainText("nx-change → 2026-03-01/2026-06-30 vs 2025-11-01/2026-02-28 «de marzo a junio»");
+  await expect(page.locator("#date-range-log")).toContainText("nx-date-range-change → 2026-03-01/2026-06-30 vs 2025-11-01/2026-02-28 «de marzo a junio»");
 });
 
 test("el calendario se maneja con el teclado y Escape suelta y luego cierra", async ({ page }) => {

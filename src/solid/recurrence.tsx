@@ -48,7 +48,7 @@ export function Recurrence(props: RecurrenceProps): JSX.Element {
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
       bool:readonly={!!local.readonly}
-      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<RecurrenceChangeDetail>)}
+      on:nx-recurrence-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
       on:nx-recurrence-error={(e) => local.onError?.(e)}
     />
   );

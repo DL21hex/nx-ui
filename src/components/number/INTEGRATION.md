@@ -72,8 +72,7 @@ En `declare module "solid-js" { namespace JSX { … } }`:
       // `required` y `disabled` ya existen.
     }
     interface CustomEvents {
-      // `nx-change` ya está declarado con `SelectChangeDetail`; ver «Notas». No hace falta tocarlo:
-      // el envoltorio convierte el tipo.
+      "nx-number-change": CustomEvent<NumberChangeDetail>;
     }
     interface IntrinsicElements {
       "nx-number": HTMLAttributes<NxNumber> & { label?: string; placeholder?: string };
@@ -156,7 +155,7 @@ export function NumberInput(props: NumberInputProps): JSX.Element {
       bool:disabled={!!local.disabled}
       bool:readonly={!!local.readonly}
       on:input={(e) => local.onInput?.(e as unknown as Event & { currentTarget: NxNumber })}
-      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<NumberChangeDetail>)}
+      on:nx-number-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
     />
   );
 }
@@ -197,7 +196,7 @@ formateado al salir.
 <nx-number id="total" format="money" currency="COP" readonly words></nx-number>
 <script>
   precio.addEventListener("input", () => (total.value = cantidad.value * precio.value));
-  precio.addEventListener("nx-change", (e) => guardar(e.detail.value)); // {value, text}
+  precio.addEventListener("nx-number-change", (e) => guardar(e.detail.value)); // {value, text}
 </script>
 ```
 
@@ -205,7 +204,7 @@ formateado al salir.
 |---|---|
 | Propiedades / atributos | `value` (`number \| null`; en `percent`, la fracción), `format` (`number`, `money`, `percent`), `currency` (ISO o símbolo), `decimals`, `min`, `max`, `step`, `words`, `name`, `required`, `disabled`, `readonly`, `placeholder`, `align` (`end` en montos y porcentajes), `label`, `locale`, `labels` · `text` (el valor formateado) |
 | Métodos | `focus()`, `select()`, `checkValidity()`, `reportValidity()` |
-| Eventos | `input` (cada vez que cambia el número), `nx-change` `{value, text}` y `change` al confirmar |
+| Eventos | `input` (cada vez que cambia el número), `nx-number-change` `{value, text}` y `change` al confirmar |
 | Funciones | `evaluateNumber(texto, {locale, format, base})`, `numberToWords(n, {currency})`, `formatNumberText(n, {locale, format, currency, decimals})` |
 ````
 
@@ -233,13 +232,8 @@ test("número: factura con vista previa, error y aviso de recorte", async ({ pag
 - **No toqué el núcleo** (`src/core/`). La lectura de literales se apoya en
   `nxFormat(locale).parse` y le suma, en `logic.ts`, la tolerancia para lo que se pega (si aparecen
   «.» y «,», el último es el decimal; un signo repetido es de miles).
-- **`nx-change` en `HTMLElementEventMap`:** `src/components/select/index.ts` ya lo declara como
-  `CustomEvent<SelectChangeDetail>`, y TypeScript no deja declararlo otra vez con otro tipo. Por eso
-  `number/index.ts` no lo declara (hay un comentario). Si se quiere tipado en
-  `addEventListener("nx-change", …)` para los dos, cambiar la declaración de select a
-  `CustomEvent<SelectChangeDetail | import("../number/types").NumberChangeDetail>` y agregar la
-  misma línea en number; mientras tanto, se convierte (`e as Event as CustomEvent<NumberChangeDetail>`).
-  En Solid pasa igual con `CustomEvents["nx-change"]`: el envoltorio convierte el tipo.
+- **`nx-number-change`** (antes `nx-change`, compartido con select y otros) tiene su propia
+  declaración en `HTMLElementEventMap` y en `CustomEvents` de Solid, con `NumberChangeDetail`.
 - **Otros archivos a tocar** (como con survey): `src/index.ts` → `export * from "./components/number/index";`;
   `src/styles/nx32-elements.css` → `@import "../components/number/number.css";`; `vite.config.ts` (entradas
   de la librería) → `number: "src/components/number/index.ts"`; `scripts/build-css.mjs` →

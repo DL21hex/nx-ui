@@ -116,7 +116,7 @@ export function isExternal(href: string): boolean {
   }
 }
 
-/** El texto sin marcas, para `nx-ai-done` y el portapapeles. */
+/** El texto sin marcas, para `nx-ai-answer-done` y el portapapeles. */
 export function plainText(text: string): string {
   return text.replace(/\[\^[\w-]+\]/g, "").replace(/\*\*([^*\n]+)\*\*/g, "$1").replace(/`([^`\n]+)`/g, "$1");
 }

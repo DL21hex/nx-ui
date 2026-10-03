@@ -61,7 +61,7 @@ export function DateRange(props: DateRangeProps): JSX.Element {
       attr:locale={local.locale}
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
-      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<DateRangeChangeDetail>)}
+      on:nx-date-range-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
     />
   );

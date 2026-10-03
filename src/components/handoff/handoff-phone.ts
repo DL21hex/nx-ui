@@ -291,7 +291,7 @@ export function mountPhone(host: PhoneHost): { destroy(): void } {
     const count = h("p", { class: "nx-ho__msg", role: "status" });
     let n = 0;
     let chain = Promise.resolve(true);
-    reader.addEventListener("nx-scan", (e) => {
+    reader.addEventListener("nx-scan-read", (e) => {
       const { code, format } = e.detail;
       chain = chain.then(async (alive) => {
         if (!alive) return false;

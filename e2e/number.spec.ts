@@ -12,7 +12,7 @@ test("entiende cuentas, relativas y flechas; el total va en vivo y en letras", a
   await expect(inv.locator("#num-price .nx-number__hint")).toHaveText("= $ 600.000");
   await price.press("Enter");
   await expect(price).toHaveValue("600.000");
-  await expect(page.locator("#number-log li").first()).toHaveText("nx-change → #num-price = 600000 («$ 600.000»)");
+  await expect(page.locator("#number-log li").first()).toHaveText("nx-number-change → #num-price = 600000 («$ 600.000»)");
 
   // «+15%» sobre lo confirmado.
   await price.press("ControlOrMeta+a");

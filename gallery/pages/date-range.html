@@ -72,7 +72,7 @@
             <tr><td><code>&lt;form&gt;</code></td><td>Con <code>name="periodo"</code> envía <code>periodo[start]</code> y <code>periodo[end]</code> (y <code>periodo[compare][start|end]</code> al comparar): dos fechas ISO listas, sin partir nada en el servidor. <code>required</code> y <code>reset</code> nativos.</td></tr>
             <tr><td><code>compare</code></td><td><code>previous</code>: el mismo largo, justo antes (meses completos → los meses anteriores: Q3 → Q2). <code>year</code>: las mismas fechas un año antes (29 feb → 28 feb). <code>none</code>: la opción visible, sin comparar.</td></tr>
             <tr><td><code>presets</code></td><td>Frases (<code>"Últimos 30 días"</code>, se interpretan al abrir) o <code>{label, phrase}</code> / <code>{label, start, end}</code>.</td></tr>
-            <tr><td><code>nx-change</code></td><td><code>{value}</code> al aplicar una frase, un atajo, un rango del calendario o al cambiar la comparación.</td></tr>
+            <tr><td><code>nx-date-range-change</code></td><td><code>{value}</code> al aplicar una frase, un atajo, un rango del calendario o al cambiar la comparación.</td></tr>
           </tbody>
         </table>
       </div>
@@ -86,7 +86,7 @@
         <pre role="tabpanel"><code>&lt;nx-date-range id="periodo" name="periodo" phrase="últimos 30 días" compare="previous"
   min="2024-01-01" label="Período"&gt;&lt;/nx-date-range&gt;
 
-periodo.addEventListener("nx-change", (e) =&gt; {
+periodo.addEventListener("nx-date-range-change", (e) =&gt; {
   const { start, end, compare } = e.detail.value;   // "2026-08-27", "2026-09-25", {start, end}
   cargarVentas(start, end, compare);
 });</code></pre>
@@ -109,7 +109,7 @@ periodo.addEventListener("nx-change", (e) =&gt; {
             <tr><td><code>fiscal-start</code>, <code>week-start</code>, <code>today</code></td><td>Mes en que empieza el año fiscal (1–12), primer día de la semana (1 lunes … 7 domingo; por defecto el del locale) y «hoy» (ISO).</td></tr>
             <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>placeholder</code>, <code>label</code>, <code>locale</code>, <code>labels</code></td><td>Formulario, textos y formato (<code>Intl</code>).</td></tr>
             <tr><td><code>show(texto?)</code>, <code>hide()</code>, <code>open</code></td><td>Abre (con una frase ya escrita) y cierra.</td></tr>
-            <tr><td>Eventos</td><td><code>nx-change</code> <code>{value}</code>, <code>nx-open-change</code> <code>{open}</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-date-range-change</code> <code>{value}</code> y <code>change</code> (nativo), <code>nx-open-change</code> <code>{open}</code>.</td></tr>
             <tr><td>Lógica</td><td><code>parseDateRange(frase, {today, fiscalStart, weekStart, min})</code>, <code>compareRange()</code>, <code>formatDateRange()</code>: las mismas funciones, sin DOM, para el backend.</td></tr>
           </tbody>
         </table>

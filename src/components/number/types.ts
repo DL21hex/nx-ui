@@ -40,7 +40,7 @@ export type NumberReading =
     }
   | { ok: false; error: NumberErrorCode; token?: string };
 
-/** `{value, text}` de `nx-change`: el número y cómo quedó escrito («$ 1.450.000»). */
+/** `{value, text}` de `nx-number-change`: el número y cómo quedó escrito («$ 1.450.000»). */
 export interface NumberChangeDetail {
   value: number | null;
   text: string;

@@ -121,7 +121,7 @@ export class NxDocCapture extends Base {
   set endpoint(v: string | null) {
     this.#attr("endpoint", v);
   }
-  /** URL que registra lo capturado: POST JSON `{values, confirmed}`. Sin ella, solo `nx-capture-submit`. */
+  /** URL que registra lo capturado: POST JSON `{values, confirmed}`. Sin ella, solo `nx-doc-capture-submit`. */
   get action(): string | null {
     return this.getAttribute("action");
   }
@@ -175,13 +175,13 @@ export class NxDocCapture extends Base {
 
   // ---------------------------------------------------------------- API
 
-  /** Lee un archivo con `endpoint`. `nx-capture-file` (cancelable) deja a la app usar su transporte. */
+  /** Lee un archivo con `endpoint`. `nx-doc-capture-file` (cancelable) deja a la app usar su transporte. */
   async extract(file: File): Promise<void> {
     // El tipo y el tamaño se comprueban siempre: al soltar un archivo el navegador no mira `accept`.
     const bad = !acceptsFile(this.accept, file.name, file.type) ? this.#labels.badType : file.size > this.maxSize ? this.#fmt(this.#labels.tooBig, { max: formatBytes(this.maxSize, resolveLocale(this)) }) : "";
     this.#showDropError(bad);
     if (bad) return;
-    const go = this.dispatchEvent(new CustomEvent("nx-capture-file", { detail: { file }, bubbles: true, composed: true, cancelable: true }));
+    const go = this.dispatchEvent(new CustomEvent("nx-doc-capture-file", { detail: { file }, bubbles: true, composed: true, cancelable: true }));
     if (!go) return;
     const url = safeEndpoint(this.endpoint);
     if (!url) return;
@@ -223,7 +223,7 @@ export class NxDocCapture extends Base {
     this.#buildForm();
     this.#checksEl?.replaceChildren();
     this.#formEl?.scrollTo?.({ top: 0 });
-    this.dispatchEvent(new CustomEvent("nx-capture-start", { detail: { fileName }, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nx-doc-capture-start", { detail: { fileName }, bubbles: true, composed: true }));
     this.#paint();
   }
 
@@ -262,7 +262,7 @@ export class NxDocCapture extends Base {
     this.#state = "review";
     this.#elapsed = performance.now() - this.#start;
     this.#paint();
-    this.dispatchEvent(new CustomEvent("nx-capture-done", { detail: { values: this.values, pending: this.pending }, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nx-doc-capture-done", { detail: { values: this.values, pending: this.pending }, bubbles: true, composed: true }));
   }
 
   /** Agrega o reemplaza una validación (p. ej. la app recalcula tras una corrección). */
@@ -511,7 +511,7 @@ export class NxDocCapture extends Base {
     f.confirmed = true;
     this.#paintField(key);
     this.#paint();
-    this.dispatchEvent(new CustomEvent("nx-capture-change", { detail: { key, value, values: this.values }, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nx-doc-capture-change", { detail: { key, value, values: this.values }, bubbles: true, composed: true }));
   }
 
   #paintPage(n: number): void {
@@ -674,7 +674,7 @@ export class NxDocCapture extends Base {
       confirmed: [...this.#fields].filter(([, f]) => f.confirmed).map(([k]) => k),
       checks: [...this.#checks.values()].map(({ id, status, message }) => ({ id, status, message })),
     };
-    const go = this.dispatchEvent(new CustomEvent("nx-capture-submit", { detail, bubbles: true, composed: true, cancelable: true }));
+    const go = this.dispatchEvent(new CustomEvent("nx-doc-capture-submit", { detail, bubbles: true, composed: true, cancelable: true }));
     const url = safeEndpoint(this.action);
     if (!go || !url) return;
     await this.#submit!.run(async () => {

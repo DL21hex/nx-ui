@@ -114,7 +114,7 @@ export function mountScanDemo(root: HTMLElement): void {
   };
   const summary = (items: ScanItem[]) => items.map((i) => `${i.code.slice(-4)}×${i.qty}`).join(", ") || "vacío";
   for (const el of [count, single]) {
-    el.addEventListener("nx-scan", (e) => add(`nx-scan → #${el.id} ${JSON.stringify(e.detail)}`));
+    el.addEventListener("nx-scan-read", (e) => add(`nx-scan-read → #${el.id} ${JSON.stringify(e.detail)}`));
     el.addEventListener("nx-scan-error", (e) => add(`nx-scan-error → #${el.id} ${e.detail.problem}`));
   }
   count.addEventListener("nx-scan-count", (e) => add(`nx-scan-count → ${e.detail.items.length} líneas: ${summary(e.detail.items)}`));

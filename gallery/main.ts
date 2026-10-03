@@ -576,10 +576,10 @@ function mountAiDemo(root: HTMLElement) {
     log.prepend(li);
     while (log.children.length > 5) log.lastElementChild!.remove();
   };
-  ai.addEventListener("nx-ai-start", (e) => add(`nx-ai-start → «${e.detail.question}»`));
-  ai.addEventListener("nx-ai-done", (e) => add(`nx-ai-done → ${e.detail.status} · ${e.detail.sources.length} fuentes · ${e.detail.text.length} caracteres`));
-  ai.addEventListener("nx-ai-action", (e) => add(`nx-ai-action → ${e.detail.id} ${JSON.stringify(e.detail.data)}`));
-  ai.addEventListener("nx-ai-feedback", (e) => add(`nx-ai-feedback → ${e.detail.value}`));
+  ai.addEventListener("nx-ai-answer-start", (e) => add(`nx-ai-answer-start → «${e.detail.question}»`));
+  ai.addEventListener("nx-ai-answer-done", (e) => add(`nx-ai-answer-done → ${e.detail.status} · ${e.detail.sources.length} fuentes · ${e.detail.text.length} caracteres`));
+  ai.addEventListener("nx-ai-answer-action", (e) => add(`nx-ai-answer-action → ${e.detail.id} ${JSON.stringify(e.detail.data)}`));
+  ai.addEventListener("nx-ai-answer-feedback", (e) => add(`nx-ai-answer-feedback → ${e.detail.value}`));
 }
 
 /**
@@ -688,10 +688,10 @@ function mountCaptureDemo(root: HTMLElement) {
     log.prepend(li);
     while (log.children.length > 5) log.lastElementChild!.remove();
   };
-  cap.addEventListener("nx-capture-start", (e) => add(`nx-capture-start → ${e.detail.fileName}`));
-  cap.addEventListener("nx-capture-done", (e) => add(`nx-capture-done → por revisar: ${e.detail.pending.join(", ") || "nada"}`));
-  cap.addEventListener("nx-capture-change", (e) => add(`nx-capture-change → ${e.detail.key} = ${e.detail.value}`));
-  cap.addEventListener("nx-capture-submit", (e) => add(`nx-capture-submit → ${Object.keys(e.detail.values).length} campos · confirmados: ${e.detail.confirmed.join(", ")}`));
+  cap.addEventListener("nx-doc-capture-start", (e) => add(`nx-doc-capture-start → ${e.detail.fileName}`));
+  cap.addEventListener("nx-doc-capture-done", (e) => add(`nx-doc-capture-done → por revisar: ${e.detail.pending.join(", ") || "nada"}`));
+  cap.addEventListener("nx-doc-capture-change", (e) => add(`nx-doc-capture-change → ${e.detail.key} = ${e.detail.value}`));
+  cap.addEventListener("nx-doc-capture-submit", (e) => add(`nx-doc-capture-submit → ${Object.keys(e.detail.values).length} campos · confirmados: ${e.detail.confirmed.join(", ")}`));
 }
 
 // ---------------------------------------------------------------- demo de la tabla

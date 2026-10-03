@@ -110,7 +110,7 @@
           <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
           <tbody>
             <tr><td>Escribes</td><td>Se entiende en el formato del locale («1.234,5» en español, «1,234.5» en inglés). Una cuenta o un sufijo muestran el resultado a la derecha («= 1.350»); lo que no se entiende, también («no entiendo "x"»). <code>value</code> cambia mientras escribes y sale <code>input</code>.</td></tr>
-            <tr><td>Sales o <kbd>Enter</kbd></td><td>Se formatea (número, monto o porcentaje), se recorta a <code>min</code>/<code>max</code> avisándolo, y sale <code>nx-change</code> si cambió. Si no se entiende, el texto queda, el campo se marca inválido y el formulario no se envía.</td></tr>
+            <tr><td>Sales o <kbd>Enter</kbd></td><td>Se formatea (número, monto o porcentaje), se recorta a <code>min</code>/<code>max</code> avisándolo, y sale <code>nx-number-change</code> si cambió. Si no se entiende, el texto queda, el campo se marca inválido y el formulario no se envía.</td></tr>
             <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Suman o restan <code>step</code>; con <kbd>Mayús</kbd> ×10, con <kbd>Alt</kbd> ÷10. En porcentaje, de a un punto.</td></tr>
             <tr><td><kbd>Esc</kbd></td><td>Deshace lo que se escribió desde que entraste al campo. Si no hay nada que deshacer, sigue su camino (cierra el diálogo, por ejemplo).</td></tr>
             <tr><td>La rueda</td><td>No cambia nada: la página se desplaza. (Un <code>type="number"</code> cambia el monto sin que nadie lo note.)</td></tr>
@@ -127,7 +127,7 @@
             <tr><td><code>value</code></td><td><code>number | null</code>. En <code>percent</code> es la fracción (0,19 es 19 %). Acepta texto en formato de máquina («1450000.5») o del locale.</td></tr>
             <tr><td>En el <code>&lt;form&gt;</code></td><td>El valor en formato de máquina («1450000.5»), con <code>name</code>. Validez nativa: <code>valueMissing</code> (<code>required</code>), <code>badInput</code> (texto sin entender), <code>rangeUnderflow</code>/<code>rangeOverflow</code>; <code>reset</code> vuelve al atributo <code>value</code>.</td></tr>
             <tr><td><code>input</code></td><td>Evento nativo del elemento, cada vez que cambia el número (no por cada tecla).</td></tr>
-            <tr><td><code>nx-change</code></td><td><code>{value, text}</code> al confirmar: <code>{value: 1450000, text: "$ 1.450.000"}</code>. También sale un <code>change</code> nativo.</td></tr>
+            <tr><td><code>nx-number-change</code></td><td><code>{value, text}</code> al confirmar: <code>{value: 1450000, text: "$ 1.450.000"}</code>. También sale un <code>change</code> nativo.</td></tr>
             <tr><td><code>numberToWords()</code></td><td>El monto en letras, para el PDF o el backend: <code>numberToWords(1450000, {currency: "COP"})</code> → «un millón cuatrocientos cincuenta mil pesos m/cte».</td></tr>
             <tr><td><code>evaluateNumber()</code></td><td>El mismo intérprete, sin DOM: <code>evaluateNumber("=450*3")</code> → <code>{ok: true, value: 1350, calc: true}</code>.</td></tr>
           </tbody>
@@ -146,7 +146,7 @@
 &lt;nx-number id="total" format="money" currency="COP" readonly words&gt;&lt;/nx-number&gt;
 
 precio.addEventListener("input", () =&gt; (total.value = cantidad.value * precio.value));
-precio.addEventListener("nx-change", (e) =&gt; guardar(e.detail.value));   // {value, text}</code></pre>
+precio.addEventListener("nx-number-change", (e) =&gt; guardar(e.detail.value));   // {value, text}</code></pre>
         <pre role="tabpanel" hidden><code>import { NumberInput } from "nx32-elements/solid/number";
 
 &lt;NumberInput format="money" currency="COP" name="precio" step={1000} min={0} required
@@ -167,7 +167,7 @@ precio.addEventListener("nx-change", (e) =&gt; guardar(e.detail.value));   // {v
             <tr><td><code>words</code></td><td>El monto en letras debajo, en español: COP («pesos m/cte»), USD, EUR, MXN, CLP, ARS, PEN, BRL.</td></tr>
             <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>readonly</code></td><td>Participa en un <code>&lt;form&gt;</code> nativo (también dentro de un <code>&lt;fieldset disabled&gt;</code>).</td></tr>
             <tr><td><code>placeholder</code>, <code>align</code>, <code>label</code>, <code>locale</code>, <code>labels</code></td><td>Texto vacío, alineación (<code>end</code> en montos y porcentajes), nombre accesible si no hay <code>&lt;label&gt;</code>, formato y textos.</td></tr>
-            <tr><td>Eventos</td><td><code>input</code> (cambia el número), <code>nx-change</code> <code>{value, text}</code> y <code>change</code> al confirmar.</td></tr>
+            <tr><td>Eventos</td><td><code>input</code> (cambia el número), <code>nx-number-change</code> <code>{value, text}</code> y <code>change</code> al confirmar.</td></tr>
           </tbody>
         </table>
       </div>

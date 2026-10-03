@@ -38,8 +38,8 @@ export function DocCapture(props: DocCaptureProps): JSX.Element {
       attr:review-below={local.reviewBelow === undefined ? undefined : String(local.reviewBelow)}
       attr:accept={local.accept}
       attr:max-size={local.maxSize === undefined ? undefined : String(local.maxSize)}
-      on:nx-capture-done={(e) => local.onDone?.(e)}
-      on:nx-capture-submit={(e) => local.onSubmit?.(e)}
+      on:nx-doc-capture-done={(e) => local.onDone?.(e)}
+      on:nx-doc-capture-submit={(e) => local.onSubmit?.(e)}
     />
   );
 }

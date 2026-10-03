@@ -25,7 +25,7 @@ export interface ScanProps extends Omit<JSX.HTMLAttributes<NxScan>, "onError"> {
   locale?: string;
   labels?: Partial<ScanLabels>;
   /** Cada lectura: `{code, format, via}`. Cancelable (en el conteo, no se suma). */
-  onScan?: (e: CustomEvent<ScanDetail>) => void;
+  onRead?: (e: CustomEvent<ScanDetail>) => void;
   /** La lista después de cada cambio: `{items}`. */
   onCount?: (e: CustomEvent<ScanCountDetail>) => void;
   /** Sin cámara: `{problem}`. */
@@ -33,7 +33,7 @@ export interface ScanProps extends Omit<JSX.HTMLAttributes<NxScan>, "onError"> {
 }
 
 export function Scan(props: ScanProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["mode", "formats", "source", "items", "muted", "autostart", "wedge", "locale", "labels", "onScan", "onCount", "onError"]);
+  const [local, rest] = splitProps(props, ["mode", "formats", "source", "items", "muted", "autostart", "wedge", "locale", "labels", "onRead", "onCount", "onError"]);
   return (
     <nx-scan
       {...rest}
@@ -46,7 +46,7 @@ export function Scan(props: ScanProps): JSX.Element {
       attr:locale={local.locale}
       bool:muted={!!local.muted}
       bool:autostart={!!local.autostart}
-      on:nx-scan={(e) => local.onScan?.(e)}
+      on:nx-scan-read={(e) => local.onRead?.(e)}
       on:nx-scan-count={(e) => local.onCount?.(e)}
       on:nx-scan-error={(e) => local.onError?.(e)}
     />

@@ -141,7 +141,7 @@
             <tr><td><code>readonly</code>, <code>disabled</code>, <code>value</code></td><td>Mostrar una firma guardada (<code>value</code>: el JSON o el SVG); apagarla.</td></tr>
             <tr><td><code>pen-color</code>, <code>height</code>, <code>locale</code>, <code>labels</code></td><td>Tinta (casi negro azulado), alto de la zona (180 px), formato de la fecha y textos (<code>SIGNATURE_LABELS</code>).</td></tr>
             <tr><td>Métodos</td><td><code>clear()</code>, <code>undo()</code>, <code>toSVG()</code>, <code>toPNG(escala?)</code> → <code>Promise&lt;Blob | null&gt;</code>, <code>load(valor)</code>, <code>isEmpty()</code>, <code>checkValidity()</code>. Propiedad <code>strokes</code>: los puntos (x, y, t, presión).</td></tr>
-            <tr><td>Eventos</td><td><code>nx-signature-change</code> <code>{empty}</code>, <code>nx-signature-done</code> <code>{svg, meta}</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-signature-change</code> <code>{empty}</code>, <code>nx-signature-done</code> <code>{svg, meta}</code> y <code>change</code> (nativo).</td></tr>
             <tr><td><code>meta</code></td><td><code>{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}</code>.</td></tr>
             <tr><td>Funciones</td><td><code>signatureSVG</code>, <code>signaturePath</code>, <code>signatureWidth</code>, <code>smoothSignaturePoints</code>, <code>signatureBounds</code>, <code>signatureCheck</code>, <code>signatureHash</code>, <code>typedSignatureSVG</code>, <code>parseSignatureValue</code>.</td></tr>
           </tbody>

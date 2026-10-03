@@ -394,7 +394,7 @@ declare module "solid-js" {
       "nx-guard-fix": CustomEvent<{ field: string; from: number | string | null; to: number | string }>;
       "nx-guard-ack": CustomEvent<{ field: string; value: number | string | null }>;
       "nx-guard-block": CustomEvent<{ findings: GuardFinding[] }>;
-      "nx-keytip": CustomEvent<KeytipDetail>;
+      "nx-keytips-activate": CustomEvent<KeytipDetail>;
       "nx-import-parsed": CustomEvent<ImportParsedDetail>;
       "nx-import-mapped": CustomEvent<ImportMappedDetail>;
       "nx-import-done": CustomEvent<ImportDoneDetail>;
@@ -404,7 +404,7 @@ declare module "solid-js" {
       "nx-sync-auth": CustomEvent<{ op: SyncOp }>;
       "nx-scan-error": CustomEvent<{ problem: ScanProblem }>;
       "nx-scan-count": CustomEvent<ScanCountDetail>;
-      "nx-scan": CustomEvent<ScanDetail>;
+      "nx-scan-read": CustomEvent<ScanDetail>;
       "nx-trend-toggle": CustomEvent<{ id: string; visible: boolean }>;
       "nx-trend-why": CustomEvent<TrendWhyDetail>;
       "nx-what-if-change": CustomEvent<WhatIfChangeDetail>;
@@ -417,12 +417,14 @@ declare module "solid-js" {
       "nx-open-change": CustomEvent<OpenChangeDetail>;
       "nx-button-done": CustomEvent<DoneDetail>;
       "nx-select-change": CustomEvent<SelectChangeDetail>;
-      "nx-change": CustomEvent<SelectChangeDetail | DateRangeChangeDetail | RecurrenceChangeDetail>;
-      "nx-ai-done": CustomEvent<AiDoneDetail>;
-      "nx-ai-action": CustomEvent<AiActionDetail>;
-      "nx-ai-feedback": CustomEvent<AiFeedbackDetail>;
-      "nx-capture-done": CustomEvent<{ values: CaptureValues; pending: string[] }>;
-      "nx-capture-submit": CustomEvent<CaptureSubmitDetail>;
+      "nx-number-change": CustomEvent<NumberChangeDetail>;
+      "nx-date-range-change": CustomEvent<DateRangeChangeDetail>;
+      "nx-recurrence-change": CustomEvent<RecurrenceChangeDetail>;
+      "nx-ai-answer-done": CustomEvent<AiDoneDetail>;
+      "nx-ai-answer-action": CustomEvent<AiActionDetail>;
+      "nx-ai-answer-feedback": CustomEvent<AiFeedbackDetail>;
+      "nx-doc-capture-done": CustomEvent<{ values: CaptureValues; pending: string[] }>;
+      "nx-doc-capture-submit": CustomEvent<CaptureSubmitDetail>;
       "nx-grid-filter": CustomEvent<GridFilterDetail>;
       "nx-grid-change": CustomEvent<{ changes: GridChange[]; source: GridChangeSource }>;
       "nx-grid-columns": CustomEvent<{ columns: GridColumn[] }>;

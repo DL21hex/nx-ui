@@ -40,7 +40,7 @@ const enter = (el: NxRecurrence) => {
 };
 function changes(el: NxRecurrence) {
   const out: RecurrenceChangeDetail[] = [];
-  el.addEventListener("nx-change", (e) => out.push((e as Event as CustomEvent<RecurrenceChangeDetail>).detail));
+  el.addEventListener("nx-recurrence-change", (e) => out.push((e as Event as CustomEvent<RecurrenceChangeDetail>).detail));
   return out;
 }
 async function openManual(el: NxRecurrence) {
@@ -100,7 +100,7 @@ describe("<nx-recurrence>: escribir y ver cómo se entendió", () => {
     expect(nb(input(el).value)).toBe("Los martes y jueves.");
   });
 
-  it("mientras se escribe: la frase y las fechas en vivo; nx-change al confirmar, una vez", async () => {
+  it("mientras se escribe: la frase y las fechas en vivo; nx-recurrence-change al confirmar, una vez", async () => {
     const el = mount();
     const got = changes(el);
     await settle();
@@ -359,7 +359,7 @@ describe("<nx-recurrence>: formulario", () => {
     expect(JSON.parse(sent.at(-1) as string)).toEqual({ rrule: el.rule, text: el.text, holidays: null, next: ["2026-10-05", "2026-10-12", "2026-10-19", "2026-10-26", "2026-11-02"] });
   });
 
-  it("reset vuelve al atributo value; no avisa nx-change", async () => {
+  it("reset vuelve al atributo value; no avisa nx-recurrence-change", async () => {
     const el = mount('value="los lunes"');
     await settle();
     const got = changes(el);
@@ -463,7 +463,7 @@ describe("galería: Repeticiones", () => {
     expect(Object.keys(json)).toEqual(["informe", "arriendo", "mantenimiento", "prueba"]);
     expect(json.arriendo.rrule).toBe("DTSTART:20260928T000000\nRRULE:FREQ=MONTHLY;BYMONTHDAY=5;WKST=MO;X-NX-HOLIDAYS=after");
     expect(json.prueba.next[0]).toBe("2026-10-30T17:00");
-    expect(document.getElementById("recurrence-log")!.textContent).toContain("nx-change → #rec-try");
+    expect(document.getElementById("recurrence-log")!.textContent).toContain("nx-recurrence-change → #rec-try");
     chips.at(-1)!.click();
     expect(document.getElementById("recurrence-log")!.textContent).toContain('nx-recurrence-error → #rec-try: no entiendo "quincenal los"');
     // Los controles de un caso abren y reflejan su regla.

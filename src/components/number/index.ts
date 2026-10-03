@@ -11,6 +11,7 @@ declare global {
   interface HTMLElementTagNameMap {
     "nx-number": NxNumber;
   }
-  // `nx-change` ya lo declara <nx-select> con su detalle (`{value, options}`); el de <nx-number> es
-  // `NumberChangeDetail` (`{value, text}`). Ver INTEGRATION.md, «Notas».
+  interface HTMLElementEventMap {
+    "nx-number-change": CustomEvent<import("./types").NumberChangeDetail>;
+  }
 }

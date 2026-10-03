@@ -120,7 +120,7 @@ export function DateRange(props: DateRangeProps): JSX.Element {
       attr:locale={local.locale}
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
-      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<DateRangeChangeDetail>)}
+      on:nx-date-range-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
     />
   );
@@ -138,8 +138,7 @@ Declaraciones:
   `"fiscal-start"`, `"week-start"` (todos `string | undefined`; `placeholder`, `label`, `name` y
   `locale` ya están).
 - `ExplicitBoolAttributes`: nada nuevo (`required` y `disabled` ya están).
-- `CustomEvents`: `"nx-change"` pasa a `CustomEvent<SelectChangeDetail | DateRangeChangeDetail>`
-  (y en `Select`, `on:nx-change={(e) => local.onChange?.(e as CustomEvent<SelectChangeDetail>)}`);
+- `CustomEvents`: `"nx-date-range-change": CustomEvent<DateRangeChangeDetail>`;
   `"nx-open-change"` ya sirve (`OpenChangeDetail` es `{open}`).
 - `IntrinsicElements`: `"nx-date-range": HTMLAttributes<NxDateRange> & { label?: string; placeholder?: string };`
 - Agregar `<DateRange>` a la lista del comentario de cabecera.
@@ -179,7 +178,7 @@ debajo, atajos y un calendario de dos meses.
 ```html
 <nx-date-range id="periodo" name="periodo" phrase="últimos 30 días" compare="previous" min="2024-01-01" label="Período"></nx-date-range>
 <script>
-  periodo.addEventListener("nx-change", (e) => {
+  periodo.addEventListener("nx-date-range-change", (e) => {
     const { start, end, compare, label } = e.detail.value; // "2026-08-27", "2026-09-25", {start, end}, "Últimos 30 días"
   });
 </script>
@@ -189,7 +188,7 @@ debajo, atajos y un calendario de dos meses.
 |---|---|
 | Propiedades / atributos | `value` (`{start, end, compare?, label?}` o «start/end»), `start`, `end`, `phrase`, `presets`, `compare` (`previous` \| `year` \| `none`), `min`, `max`, `today`, `fiscal-start`, `week-start`, `name`, `required`, `disabled`, `placeholder`, `label`, `locale`, `labels` |
 | Métodos | `show(frase?)`, `hide()`, `open` |
-| Eventos | `nx-change` `{value}`, `nx-open-change` `{open}` |
+| Eventos | `nx-date-range-change` `{value}`, `nx-open-change` `{open}` |
 ````
 
 ## A11y
@@ -216,13 +215,9 @@ test("rango de fechas cerrado, abierto, eligiendo y con una frase que no entiend
 ## Notas
 
 - **No toqué el núcleo** (`src/core/`).
-- **`HTMLElementEventMap`:** `nx-change` ya lo declara `<nx-select>` (`CustomEvent<SelectChangeDetail>`)
-  y `nx-open-change` `<nx-sidemenu>` (`CustomEvent<OpenChangeDetail>`); una segunda declaración con
-  otro tipo no compila, así que `src/components/date-range/index.ts` solo declara el tag. Opciones
-  para quien integra: ampliar `nx-change` en `src/components/select/index.ts` a
-  `CustomEvent<SelectChangeDetail | DateRangeChangeDetail>` (obliga a estrechar en los listeners de
-  select que lean `detail.options`), o dejarlo y leer el de date-range como `Event` (así lo hacen la
-  demo y las pruebas). `nx-open-change` ya encaja: el `detail` es `{open}`.
+- **`HTMLElementEventMap`:** `nx-date-range-change` (antes `nx-change`, compartido con select) tiene
+  su propia declaración con `DateRangeChangeDetail`; al confirmar sale también un `change` nativo.
+  `nx-open-change` ya lo declara `<nx-sidemenu>` con el mismo `{open}`.
 - **`src/index.ts`:** `export * from "./components/date-range/index";` (o la lista explícita:
   `NxDateRange`, `DATE_RANGE_LABELS`, `parseDateRange`, `compareRange`, `clampRange`,
   `formatDateRange`, `rangeDays`, `DATE_RANGE_PRESETS` y los tipos `DateRange*`). Los nombres no

@@ -1,6 +1,6 @@
 /**
  * Demo de `<nx-keytips>`: la pantalla de un pedido de un ERP (barra de acciones, campos, pestañas y
- * un diálogo de anulación). Cada acción deja su rastro en el registro, junto con `nx-keytip` y
+ * un diálogo de anulación). Cada acción deja su rastro en el registro, junto con `nx-keytips-activate` y
  * `nx-open-change`; «Ver la hoja de atajos» pinta `assignments`.
  */
 import "../src/components/keytips/index";
@@ -19,9 +19,9 @@ export function mountKeytipsDemo(root: HTMLElement): void {
     while (log.children.length > 6) log.lastElementChild!.remove();
   };
 
-  kt.addEventListener("nx-keytip", (e) => {
+  kt.addEventListener("nx-keytips-activate", (e) => {
     const d = (e as CustomEvent<KeytipDetail>).detail;
-    add(`nx-keytip → ${d.key} «${d.name}»`);
+    add(`nx-keytips-activate → ${d.key} «${d.name}»`);
   });
   kt.addEventListener("nx-open-change", (e) => add(`nx-open-change → ${(e as CustomEvent<{ open: boolean }>).detail.open ? "abiertos" : "cerrados"}`));
 

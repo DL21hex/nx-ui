@@ -137,3 +137,50 @@ describe("empaquetado: lo que se construye se puede importar", () => {
     expect(readFileSync("src/core/index.ts", "utf8")).not.toMatch(/components\//);
   });
 });
+
+describe("convención de eventos: nx-<componente>-<acción>", () => {
+  /** Eventos nativos que los componentes reemiten (el `change` de un control, el `input` de un campo). */
+  const NATIVE = ["change", "input"];
+  /** Excepciones justificadas: `[directorio, evento, motivo]`. */
+  const EXCEPTIONS: [string, string, string][] = [["guard", "nx-number-change", "«Corregir» en un <nx-number> emite sus eventos, como si se hubiera escrito"]];
+  const found: string[] = [];
+  const bad: string[] = [];
+  for (const d of readdirSync("src/components")) {
+    let index = "";
+    try {
+      index = readFileSync(`src/components/${d}/index.ts`, "utf8");
+    } catch {
+      continue;
+    }
+    const prefixes = [...index.matchAll(/define\("nx-([\w-]+)"/g)].map((m) => `nx-${m[1]}-`);
+    const ok = (name: string) => name === "nx-open-change" || NATIVE.includes(name) || prefixes.some((p) => name.startsWith(p)) || EXCEPTIONS.some(([x, n]) => x === d && n === name);
+    for (const f of readdirSync(`src/components/${d}`).filter((x) => x.endsWith(".ts"))) {
+      const src = readFileSync(`src/components/${d}/${f}`, "utf8");
+      const where = `${d}/${f}`;
+      // Un prefijo con plantilla (`nx-kanban-${type}`): lo que se pasa al ayudante es la acción.
+      const templates = [...src.matchAll(/new (?:Custom)?Event(?:<[^>]*>)?\(\s*`([^`$]*)\$\{/g)].map((m) => m[1]);
+      for (const t of templates) {
+        found.push(`${t}*`);
+        if (!prefixes.includes(t)) bad.push(`${where}: \`${t}\${…}\``);
+      }
+      const names = [
+        ...[...src.matchAll(/new (?:Custom)?Event(?:<[^>]*>)?\(\s*["'`]([\w-]+)["'`]/g)].map((m) => m[1]),
+        ...[...src.matchAll(/(?:#emit|#fire|(?<![\w.])emit|(?<![\w.])fire)(?:<[^>]*>)?\(\s*["']([\w-]+)["']/g)].map((m) => m[1]).filter((n) => n.startsWith("nx-") || !templates.length),
+      ];
+      for (const n of names) {
+        found.push(n);
+        if (!ok(n)) bad.push(`${where}: ${n}`);
+      }
+    }
+  }
+
+  it("se encontraron los eventos de la librería", () => {
+    expect(found.length).toBeGreaterThan(120);
+    expect(found).toContain("nx-kanban-*");
+    expect(found).toContain("nx-scan-read");
+  });
+
+  it("cada evento empieza por nx-<etiqueta sin nx>- (salvo nx-open-change y los nativos)", () => {
+    expect(bad).toEqual([]);
+  });
+});

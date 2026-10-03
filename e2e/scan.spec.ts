@@ -47,8 +47,8 @@ const FAKE_DETECTOR = () => {
 const count = (page: Page) => page.locator("#scan-count");
 const row = (page: Page, code: string) => count(page).locator(`.nx-scan__item[data-code="${code}"]`);
 const log = (page: Page) => page.locator("#scan-log li");
-/** Solo las líneas de `nx-scan` (las de `nx-scan-count` llegan también cuando responde `source`). */
-const scanLog = (page: Page) => log(page).filter({ hasText: "nx-scan →" });
+/** Solo las líneas de `nx-scan-read` (las de `nx-scan-count` llegan también cuando responde `source`). */
+const scanLog = (page: Page) => log(page).filter({ hasText: "nx-scan-read →" });
 /**
  * Una pistola lectora: las teclas del código y un Enter, a velocidad de máquina, sobre el foco. Se
  * despachan en la página porque `keyboard.type` de Playwright va y vuelve por el protocolo en cada
@@ -114,7 +114,7 @@ test.describe("sin cámara", () => {
     // La pistola es del último escáner que se tocó: el de la recepción.
     await count(page).locator(".nx-scan__title").click();
     expect(await gun(page, "7707123450028")).toBe(true);
-    await expect(scanLog(page).first()).toContainText('nx-scan → #scan-count {"code":"7707123450028","format":"ean_13","via":"wedge"}');
+    await expect(scanLog(page).first()).toContainText('nx-scan-read → #scan-count {"code":"7707123450028","format":"ean_13","via":"wedge"}');
     await expect(row(page, "7707123450028").locator(".nx-scan__name")).toHaveText('Tubo estructural 2" × 6 m');
     // Una persona escribiendo (teclas de verdad, 120 ms entre una y otra) no dispara nada.
     await page.keyboard.type("7707123450035", { delay: 120 });

@@ -358,7 +358,10 @@ export class NxSignature extends Base {
     }
     this.#meta = cleanSignatureMeta(meta);
     this.#paint();
-    if (emit) this.#emit("nx-signature-done", { svg: this.toSVG(), meta: this.#meta });
+    if (!emit) return;
+    this.#emit("nx-signature-done", { svg: this.toSVG(), meta: this.#meta });
+    // El valor del formulario cambió: el `change` de cualquier control (marcar «sin guardar»…).
+    this.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   #say(text: string): void {

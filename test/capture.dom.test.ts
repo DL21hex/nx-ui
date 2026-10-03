@@ -72,11 +72,11 @@ describe("<nx-doc-capture>", () => {
     expect(submitDisabled(el)).toBe(false);
   });
 
-  it("corregir a mano confirma y emite nx-capture-change", () => {
+  it("corregir a mano confirma y emite nx-doc-capture-change", () => {
     const el = mount();
     read(el);
     const seen: string[] = [];
-    el.addEventListener("nx-capture-change", (e) => seen.push(`${e.detail.key}=${e.detail.value}`));
+    el.addEventListener("nx-doc-capture-change", (e) => seen.push(`${e.detail.key}=${e.detail.value}`));
     const input = el.querySelector<HTMLInputElement>('.nx-cap__field[data-key="vence"] input')!;
     input.value = "11/10/2026";
     input.dispatchEvent(new Event("change"));
@@ -132,7 +132,7 @@ describe("<nx-doc-capture>", () => {
     const fetchMock = vi.fn(async (url: string) => (url === "/leer" ? new Response(lines) : new Response("{}")));
     vi.stubGlobal("fetch", fetchMock);
     const el = mount('endpoint="/leer" action="/registrar"');
-    const done = new Promise((r) => el.addEventListener("nx-capture-done", r, { once: true }));
+    const done = new Promise((r) => el.addEventListener("nx-doc-capture-done", r, { once: true }));
     await el.extract(new File(["x"], "f.pdf", { type: "application/pdf" }));
     await done;
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
@@ -141,7 +141,7 @@ describe("<nx-doc-capture>", () => {
     expect(el.state).toBe("review");
     expect(el.querySelectorAll(".nx-cap__check")).toHaveLength(1);
 
-    const submitted = new Promise<CustomEvent>((r) => el.addEventListener("nx-capture-submit", (e) => r(e), { once: true }));
+    const submitted = new Promise<CustomEvent>((r) => el.addEventListener("nx-doc-capture-submit", (e) => r(e), { once: true }));
     el.querySelector<HTMLButtonElement>("nx-button .nx-button__btn")!.click();
     // Una tabla del schema sin filas viaja como arreglo vacío: el backend recibe siempre la misma forma.
     expect((await submitted).detail.values).toEqual({ nit: "900", items: [] });
@@ -151,11 +151,11 @@ describe("<nx-doc-capture>", () => {
     expect(JSON.parse(init2.body as string)).toEqual({ values: { nit: "900", items: [] }, confirmed: [] });
   });
 
-  it("nx-capture-file cancelado: la app usa su propio transporte y no se pide nada", async () => {
+  it("nx-doc-capture-file cancelado: la app usa su propio transporte y no se pide nada", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     const el = mount('endpoint="/leer"');
-    el.addEventListener("nx-capture-file", (e) => e.preventDefault());
+    el.addEventListener("nx-doc-capture-file", (e) => e.preventDefault());
     await el.extract(new File(["x"], "f.pdf"));
     expect(fetchMock).not.toHaveBeenCalled();
     expect(el.state).toBe("idle");

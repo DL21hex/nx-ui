@@ -196,7 +196,8 @@ export class NxReview extends Base {
   constructor() {
     super();
     this.addEventListener("submit", this.#onSubmit, true);
-    for (const t of ["input", "change", "nx-change"]) this.addEventListener(t, this.#touch);
+    // Los controles de la librería emiten también el `change` nativo: no hace falta conocer sus eventos.
+    for (const t of ["input", "change"]) this.addEventListener(t, this.#touch);
   }
 
   connectedCallback(): void {

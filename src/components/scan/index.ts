@@ -25,7 +25,7 @@ declare global {
     "nx-scan": NxScan;
   }
   interface HTMLElementEventMap {
-    "nx-scan": CustomEvent<import("./types").ScanDetail>;
+    "nx-scan-read": CustomEvent<import("./types").ScanDetail>;
     "nx-scan-count": CustomEvent<import("./types").ScanCountDetail>;
     "nx-scan-error": CustomEvent<{ problem: import("./types").ScanProblem }>;
   }

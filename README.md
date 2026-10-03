@@ -50,7 +50,11 @@ que todo funcione, después se optimiza (`NX_SIZE_STRICT=1 npm run size` vuelve 
 ## Principios
 
 1. **Primero una librería normal.** Atributos para lo simple, propiedades para los datos
-   (`items`), eventos para las acciones y slots para tu contenido.
+   (`items`), eventos para las acciones y slots para tu contenido. Cada evento se llama
+   `nx-<componente>-<acción>`, con la etiqueta sin «nx-» (`nx-sidemenu-select`, `nx-number-change`,
+   `nx-scan-read`); `nx-open-change` `{open}` es el único compartido. Los controles de formulario
+   (`nx-select`, `nx-number`, `nx-date-range`, `nx-recurrence`, `nx-signature`) emiten además el
+   `change` nativo, que burbujea: el código genérico no tiene que conocer el evento propio.
 2. **BDUI sin costo.** Ninguna prop es una función: todo lo que acepta un componente puede venir
    del backend. `nx32-elements/bdui` es un adaptador opcional que convierte `{component, props}` en elementos.
 3. **El navegador hace el trabajo pesado.** Los flotantes y el drawer usan la Popover API: capa
@@ -302,7 +306,7 @@ puede emitir:
 {"type":"source","id":"mayor","title":"Libro mayor · agosto","href":"/…"}
 {"type":"text","delta":"El costo subió **11,4 %**[^mayor] por…"}           ← [^id] cita una fuente
 {"type":"note","label":"cifras verificadas","tone":"success"}
-{"type":"action","label":"Ver órdenes","href":"/…"}                          (o "id" + "data": nx-ai-action)
+{"type":"action","label":"Ver órdenes","href":"/…"}                          (o "id" + "data": nx-ai-answer-action)
 {"type":"done"}                                                              (o {"type":"error","message":"…"})
 ```
 
@@ -313,7 +317,7 @@ entrega los eventos: `begin(q)`, `push(evento)`, `end()`.
 Lo que manda el modelo no es de fiar. `endpoint` solo puede ser del mismo origen (u otro permitido
 con `allowOrigins`). Con `method="GET"`, la pregunta va en `?q=` y el contexto en `?context=`
 (JSON). El enlace de una **acción** solo se pinta si es del mismo origen; si no, la acción queda
-como botón que emite `nx-ai-action`. Una **fuente** puede ser de otro sitio y lleva
+como botón que emite `nx-ai-answer-action`. Una **fuente** puede ser de otro sitio y lleva
 `rel="noopener noreferrer"`. Al llegar `done` o `error` se deja de leer y se suelta la conexión:
 lo que el servidor siga mandando no entra en la respuesta siguiente. La respuesta se escribe en
 su lugar (un bloque nuevo o el último que cambia), con `aria-busy` mientras llega y un solo aviso
@@ -323,7 +327,7 @@ al lector de pantalla al terminar.
 |---|---|
 | Propiedades / atributos | `endpoint`, `method`, `question`, `placeholder`, `suggestions`, `context`, `feedback`, `labels` |
 | Métodos | `ask(q)`, `stop()`, `begin(q)`, `push(evento)`, `end()`, `state`, `busy`, `text` |
-| Eventos | `nx-ai-start`, `nx-ai-done` `{question, text, sources, status}`, `nx-ai-action` `{id, label, data}`, `nx-ai-feedback` `{value, question, text}` |
+| Eventos | `nx-ai-answer-start`, `nx-ai-answer-done` `{question, text, sources, status}`, `nx-ai-answer-action` `{id, label, data}`, `nx-ai-answer-feedback` `{value, question, text}` |
 
 ## `<nx-doc-capture>`
 
@@ -352,7 +356,7 @@ cap.schema = [
     columns: [{ key: "desc", label: "Descripción" }, { key: "cantidad", label: "Cant.", type: "number" }] },
   { key: "total", label: "Total", type: "money", section: "Totales" },
 ];
-cap.addEventListener("nx-capture-submit", (e) => guardar(e.detail.values)); // o action="/url"
+cap.addEventListener("nx-doc-capture-submit", (e) => guardar(e.detail.values)); // o action="/url"
 ```
 
 El archivo se valida antes de enviarlo, también al soltarlo: tipo según `accept` y tamaño según
@@ -365,7 +369,7 @@ que tiene dónde verse (un campo o una celda del `schema`). `endpoint` y `action
 |---|---|
 | Propiedades / atributos | `schema`, `endpoint`, `action`, `review-below`, `accept`, `max-size` (bytes, 20 MB), `labels` |
 | Métodos | `extract(file)`, `begin()`, `push(evento)`, `end()`, `setCheck()`, `reset()`, `values`, `pending`, `state` |
-| Eventos | `nx-capture-file` (cancelable), `nx-capture-start`, `nx-capture-done`, `nx-capture-change`, `nx-capture-submit` (cancelable) |
+| Eventos | `nx-doc-capture-file` (cancelable), `nx-doc-capture-start`, `nx-doc-capture-done`, `nx-doc-capture-change`, `nx-doc-capture-submit` (cancelable) |
 
 La referencia completa y la demo en vivo están en la galería.
 
@@ -828,7 +832,7 @@ formateado al salir.
 <nx-number id="total" format="money" currency="COP" readonly words></nx-number>
 <script>
   precio.addEventListener("input", () => (total.value = cantidad.value * precio.value));
-  precio.addEventListener("nx-change", (e) => guardar(e.detail.value)); // {value, text}
+  precio.addEventListener("nx-number-change", (e) => guardar(e.detail.value)); // {value, text}
 </script>
 ```
 
@@ -836,7 +840,7 @@ formateado al salir.
 |---|---|
 | Propiedades / atributos | `value` (`number \| null`; en `percent`, la fracción), `format` (`number`, `money`, `percent`), `currency` (ISO o símbolo), `decimals`, `min`, `max`, `step`, `words`, `name`, `required`, `disabled`, `readonly`, `placeholder`, `align` (`end` en montos y porcentajes), `label`, `locale`, `labels` · `text` (el valor formateado) |
 | Métodos | `focus()`, `select()`, `checkValidity()`, `reportValidity()` |
-| Eventos | `input` (cada vez que cambia el número), `nx-change` `{value, text}` y `change` al confirmar |
+| Eventos | `input` (cada vez que cambia el número), `nx-number-change` `{value, text}` y `change` al confirmar |
 | Funciones | `evaluateNumber(texto, {locale, format, base})`, `numberToWords(n, {currency})`, `formatNumberText(n, {locale, format, currency, decimals})` |
 
 ## `<nx-kanban>`
@@ -962,7 +966,7 @@ debajo, atajos y un calendario de dos meses.
 ```html
 <nx-date-range id="periodo" name="periodo" phrase="últimos 30 días" compare="previous" min="2024-01-01" label="Período"></nx-date-range>
 <script>
-  periodo.addEventListener("nx-change", (e) => {
+  periodo.addEventListener("nx-date-range-change", (e) => {
     const { start, end, compare, label } = e.detail.value; // "2026-08-27", "2026-09-25", {start, end}, "Últimos 30 días"
   });
 </script>
@@ -972,7 +976,7 @@ debajo, atajos y un calendario de dos meses.
 |---|---|
 | Propiedades / atributos | `value` (`{start, end, compare?, label?}` o «start/end»), `start`, `end`, `phrase`, `presets`, `compare` (`previous` \| `year` \| `none`), `min`, `max`, `today`, `fiscal-start`, `week-start`, `name`, `required`, `disabled`, `placeholder`, `label`, `locale`, `labels` |
 | Métodos | `show(frase?)`, `hide()`, `open` |
-| Eventos | `nx-change` `{value}`, `nx-open-change` `{open}` |
+| Eventos | `nx-date-range-change` `{value}` y `change` (nativo), `nx-open-change` `{open}` |
 
 ## `<nx-paste-fill>`
 
@@ -1206,7 +1210,7 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
   editable (−/+ o escribiéndola), la última lectura resaltada, deshacer (el aviso o `Ctrl`+`Z`) y
   totales. Con `source` (del mismo origen), cada código nuevo trae su descripción: «Lámina HR 3 mm · esperadas 40 ·
   contadas 38», con faltantes (rojo), completas (verde) y sobrantes (ámbar).
-- **Modo único** (por defecto): una lectura dispara `nx-scan` y la cámara se apaga.
+- **Modo único** (por defecto): una lectura dispara `nx-scan-read` y la cámara se apaga.
 - **Sin cámara prendida de más:** se apaga al salir de la página, al ocultarse la pestaña o si el
   componente queda fuera de la pantalla, y vuelve sola.
 - Todo se usa sin cámara y con teclado; cada lectura se anuncia (`aria-live`).
@@ -1221,7 +1225,7 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
 
 <nx-scan id="buscar"></nx-scan>
 <script>
-  buscar.addEventListener("nx-scan", (e) => abrirProducto(e.detail.code)); // {code, format, via}
+  buscar.addEventListener("nx-scan-read", (e) => abrirProducto(e.detail.code)); // {code, format, via}
 </script>
 ```
 
@@ -1229,7 +1233,7 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
 |---|---|
 | Propiedades / atributos | `mode` (`single`, `count`), `formats` (lista con comas o JSON; `ean_13`, `ean_8`, `upc_a`, `upc_e`, `code_128`, `code_39`, `code_93`, `codabar`, `itf`, `qr_code`, `data_matrix`, `pdf417`, `aztec`), `source` (URL + código, o con `{code}`), `items` (`{code, qty, name?, unit?, expected?, format?}`), `muted`, `autostart`, `wedge` (`page`, `field`, `off`), `locale`, `labels` · `state`, `problem` (solo lectura) |
 | Métodos | `start()`, `stop()`, `add(código, cantidad?)`, `undo()`, `clear()`, `focus()` |
-| Eventos | `nx-scan` `{code, format, via}` (cancelable; `via`: `camera`, `photo`, `manual`, `wedge`, `api`), `nx-scan-count` `{items}`, `nx-scan-error` `{problem}` (`nodetector`, `nocamera`, `insecure`, `denied`, `busy`, `failed`) |
+| Eventos | `nx-scan-read` `{code, format, via}` (cancelable; `via`: `camera`, `photo`, `manual`, `wedge`, `api`), `nx-scan-count` `{items}`, `nx-scan-error` `{problem}` (`nodetector`, `nocamera`, `insecure`, `denied`, `busy`, `failed`) |
 | `source` | `GET` → `{code, name, unit?, expected?}`; 404 si no existe («Código sin registrar»). Una vez por código |
 | Funciones | `wedgeKey(estado, tecla, ms)` (la detección de la pistola, sin DOM), `gtinValid(código)`, `scanTotals(items)`, `scanItemStatus(item)`, `parseScanEntry(texto)` |
 
@@ -1367,7 +1371,7 @@ Mantener Alt ~400 ms también los muestra (y Alt+letra sin soltar ejecuta).
   aperturas mientras siga en pantalla. Con más de 30 acciones, dos letras (como Vimium): la primera
   atenúa las que no empiezan por ella. `assignKeytips()` es la misma asignación, pura.
 - **Qué hace:** un clic (botones, enlaces, pestañas, casillas; en `<nx-button>`, su botón) o el
-  foco con el texto seleccionado (campos). Antes sale `nx-keytip`, cancelable.
+  foco con el texto seleccionado (campos). Antes sale `nx-keytips-activate`, cancelable.
 - **No estorba:** funciona mientras se escribe en un campo (la letra no se escribe); Alt+Tab, AltGr
   para «@» y Ctrl+Alt no lo activan; Tab y los atajos con Ctrl/⌘ (la paleta con Ctrl+K) cierran los
   atajos y siguen su camino. Cerrado, solo escucha `keydown`/`keyup`.
@@ -1383,7 +1387,7 @@ Mantener Alt ~400 ms también los muestra (y Alt+letra sin soltar ejecuta).
 |---|---|
 | Propiedades / atributos | `scope` (selector), `key` (`Alt`, `Control`, `Shift`, `Meta` o `none`), `disabled`, `labels` · `open`, `assignments` (`[{key, name, element}]`) |
 | Métodos | `show()`, `hide()` |
-| Eventos | `nx-keytip` `{key, target, name}` (cancelable), `nx-open-change` `{open}` |
+| Eventos | `nx-keytips-activate` `{key, target, name}` (cancelable), `nx-open-change` `{open}` |
 | Funciones | `assignKeytips([{name, forced?, prev?}])` → códigos, `keytipLetters(nombre)` |
 
 ## `<nx-guard>`
@@ -1955,7 +1959,7 @@ pantalla con mouse, lápiz o dedo, o en el celular de quien recibe.
 |---|---|
 | Propiedades / atributos | `name`, `required`, `readonly`, `disabled`, `ask-name`, `ask-id`, `document`, `geo`, `value-format` (`json`, `svg`, `png`), `auto`, `handoff`, `pen-color`, `height` (px, 180), `locale`, `labels` · `value` (`{svg, meta}`, su JSON o el SVG) · `strokes` (solo lectura) |
 | Métodos | `clear()`, `undo()` (también Ctrl/⌘+Z), `toSVG()`, `toPNG(escala?)` → `Promise<Blob \| null>`, `load(valor)` → `boolean`, `isEmpty()`, `checkValidity()` |
-| Eventos | `nx-signature-change` `{empty}`, `nx-signature-done` `{svg, meta}` |
+| Eventos | `nx-signature-change` `{empty}`, `nx-signature-done` `{svg, meta}` y `change` (nativo) |
 | `meta` | `{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}` |
 | Funciones | `signatureSVG(trazos, tinta?)`, `signaturePath(puntos, anchos)`, `signatureWidth(velocidad, presión, lápiz)`, `signatureStrokeWidths(trazo)`, `smoothSignaturePoints(puntos)`, `signatureBounds(trazos, margen)`, `signatureCheck(trazos, mínimo?)`, `signatureHash(texto, fecha)`, `typedSignatureSVG(nombre)`, `parseSignatureValue(valor)`, `cleanSignatureMeta(meta)`, `signatureDate(iso, locale)`, `normalizeSignedText(texto)`, `SIGNATURE_LABELS`, `SIGNATURE_MIN`, `SIGNATURE_PEN`, `SIGNATURE_INK`, `SIGNATURE_FONT` |
 
@@ -2219,7 +2223,7 @@ mantenimiento preventivo, un recordatorio de cierre.
 | | |
 |---|---|
 | Propiedades / atributos | `value` (frase o RRULE; al leer, la RRULE), `name`, `required`, `disabled`, `readonly`, `start` (ISO, hoy), `holidays` (JSON), `holidays-mode` (`add`, `replace`), `count` (5), `value-format` (`rrule`, `json`), `locale`, `label`, `labels` · solo lectura: `rule`, `text`, `next` (`Date[]`); `toJSON()` → `{rrule, text, holidays, next}` |
-| Eventos | `nx-change` `{value, rrule, text, next}` (al confirmar lo escrito o cambiar un control), `nx-recurrence-error` `{message}` |
+| Eventos | `nx-recurrence-change` `{value, rrule, text, next}` (al confirmar lo escrito o cambiar un control) y `change` (nativo), `nx-recurrence-error` `{message}` |
 | Funciones | `parseRecurrence(frase, {start, locale})`, `describeRecurrence(regla)`, `toRRule()`, `parseRRule()`, `nextOccurrences(regla, desde, n, festivos)`, `recurrenceOccurrences()` (con `movedFrom`), `colombiaHolidays(año)`, `fillRecurrenceRule()`, `RECURRENCE_LABELS` |
 
 **`X-NX-HOLIDAYS`** (la RRULE no tiene festivos): `skip` quita los festivos del conjunto de cada

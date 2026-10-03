@@ -197,12 +197,12 @@ describe("<nx-keytips>", () => {
     expect(el.open).toBe(false);
   });
 
-  it("nx-keytip avisa {key, target, name} antes; cancelarlo no ejecuta (y cierra igual)", () => {
+  it("nx-keytips-activate avisa {key, target, name} antes; cancelarlo no ejecuta (y cierra igual)", () => {
     const el = mount();
     const save = vi.fn();
     document.getElementById("save")!.addEventListener("click", save);
     const got: KeytipDetail[] = [];
-    el.addEventListener("nx-keytip", (e) => {
+    el.addEventListener("nx-keytips-activate", (e) => {
       got.push(e.detail);
       e.preventDefault();
     });

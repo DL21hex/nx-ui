@@ -12,7 +12,7 @@ export interface DateRange {
 /** Contra qué se compara: el período anterior del mismo largo, o el mismo del año anterior. */
 export type DateRangeCompare = "previous" | "year";
 
-/** El valor del campo (y el `detail.value` de `nx-change`). */
+/** El valor del campo (y el `detail.value` de `nx-date-range-change`). */
 export interface DateRangeValue extends DateRange {
   /** El rango de comparación, si `compare` está activo. */
   compare?: DateRange;

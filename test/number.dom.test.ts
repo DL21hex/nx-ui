@@ -29,7 +29,7 @@ const key = (el: NxNumber, k: string, mods: KeyboardEventInit = {}) => {
 };
 function changes(el: NxNumber) {
   const out: NumberChangeDetail[] = [];
-  el.addEventListener("nx-change", (e) => out.push((e as Event as CustomEvent<NumberChangeDetail>).detail));
+  el.addEventListener("nx-number-change", (e) => out.push((e as Event as CustomEvent<NumberChangeDetail>).detail));
   return out;
 }
 
@@ -63,7 +63,7 @@ describe("<nx-number>", () => {
     expect(mount('value="basura"').value).toBeNull();
   });
 
-  it("mientras se escribe una cuenta muestra el resultado; al salir formatea y emite nx-change", () => {
+  it("mientras se escribe una cuenta muestra el resultado; al salir formatea y emite nx-number-change", () => {
     const el = mount('locale="es-CO"');
     const got = changes(el);
     const inputs: (number | null)[] = [];

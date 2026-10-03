@@ -80,7 +80,7 @@ export function NumberInput(props: NumberInputProps): JSX.Element {
       bool:disabled={!!local.disabled}
       bool:readonly={!!local.readonly}
       on:input={(e) => local.onInput?.(e as unknown as Event & { currentTarget: NxNumber })}
-      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<NumberChangeDetail>)}
+      on:nx-number-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
     />
   );
 }

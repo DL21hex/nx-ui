@@ -32,13 +32,12 @@ export type {
   RecurrenceWeekday,
 } from "./types";
 
-// `nx-change` ya está en `HTMLElementEventMap` (lo declaran <nx-select> y otros con su propio
-// `detail`): el de <nx-recurrence> es `RecurrenceChangeDetail` (ver INTEGRATION.md).
 declare global {
   interface HTMLElementTagNameMap {
     "nx-recurrence": NxRecurrence;
   }
   interface HTMLElementEventMap {
+    "nx-recurrence-change": CustomEvent<import("./types").RecurrenceChangeDetail>;
     "nx-recurrence-error": CustomEvent<import("./types").RecurrenceErrorDetail>;
   }
 }

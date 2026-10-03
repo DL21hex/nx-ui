@@ -363,7 +363,10 @@ export class NxDateRange extends Base {
   }
 
   #emit(): void {
-    this.dispatchEvent(new CustomEvent("nx-change", { detail: { value: this.value }, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nx-date-range-change", { detail: { value: this.value }, bubbles: true, composed: true }));
+    // Y el `change` de cualquier control: el código genérico (marcar «sin guardar», un framework)
+    // no tiene que conocer el evento propio.
+    this.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   #build(): void {
