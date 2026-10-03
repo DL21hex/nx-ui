@@ -203,13 +203,14 @@ describe("convención de eventos: nx-<componente>-<acción>", () => {
       const src = readFileSync(`src/components/${d}/${f}`, "utf8");
       const where = `${d}/${f}`;
       // Un prefijo con plantilla (`nx-kanban-${type}`): lo que se pasa al ayudante es la acción.
-      const templates = [...src.matchAll(/new (?:Custom)?Event(?:<[^>]*>)?\(\s*`([^`$]*)\$\{/g)].map((m) => m[1]);
+      // También con el ayudante del núcleo: `emit(this, `nx-kanban-${type}`, …)`.
+      const templates = [...src.matchAll(/(?:new (?:Custom)?Event(?:<[^>]*>)?\(|(?<![\w.#])emit\(\s*[\w.]+,)\s*`([^`$]*)\$\{/g)].map((m) => m[1]);
       for (const t of templates) {
         found.push(`${t}*`);
         if (!prefixes.includes(t)) bad.push(`${where}: \`${t}\${…}\``);
       }
       const names = [
-        ...[...src.matchAll(/new (?:Custom)?Event(?:<[^>]*>)?\(\s*["'`]([\w-]+)["'`]/g)].map((m) => m[1]),
+        ...[...src.matchAll(/(?:new (?:Custom)?Event(?:<[^>]*>)?\(|(?<![\w.#])emit\(\s*[\w.]+,)\s*["'`]([\w-]+)["'`]/g)].map((m) => m[1]),
         ...[...src.matchAll(/(?:#emit|#fire|(?<![\w.])emit|(?<![\w.])fire)(?:<[^>]*>)?\(\s*["']([\w-]+)["']/g)].map((m) => m[1]).filter((n) => n.startsWith("nx-") || !templates.length),
       ];
       for (const n of names) {

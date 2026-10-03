@@ -13,7 +13,7 @@
  * repintar por evento reiniciaría sus animaciones y robaría el foco a quien está corrigiendo.
  */
 import { Base, upgrade } from "../../core/define";
-import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { formatElapsed } from "../../core/format";
 import { resolveLocale } from "../../core/locale";
@@ -306,8 +306,7 @@ export class NxDocCapture extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   /** Si una clave tiene dónde verse: un campo del schema o una celda de una de sus tablas. */
   #shown(key: string): boolean {

@@ -18,7 +18,7 @@
  * Light DOM: los textos del backend van siempre como texto; los estilos, en `org.css`.
  */
 import { Base, attrProps, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
+import { h, safeEndpoint, safeHref, safeImageSrc, reducedMotion as reduced } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -106,7 +106,6 @@ const BRANCH = [255, 160, 40, 320, 200, 95, 10, 285, 130, 65];
 
 let uid = 0;
 
-const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const isField = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 const fill = (tpl: string, vars: Record<string, string | number>) => tpl.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
 /** Un tono estable por persona: el mismo `id`, el mismo color en cada vista. */

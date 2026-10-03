@@ -18,7 +18,7 @@
  * El envío es optimista, con `clientId` para que un reintento no duplique.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
+import { h, safeEndpoint, safeHref, safeImageSrc, emit } from "../../core/dom";
 import { initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
@@ -494,7 +494,7 @@ export class NxThread extends Base {
     return new Map(this.#comments.map((c) => [c.id, c]));
   }
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(`nx-thread-${type}`, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, `nx-thread-${type}`, detail, cancelable);
   }
   #error(action: ThreadErrorDetail["action"], e: unknown, id?: string): void {
     this.#emit("error", { action, message: errText(e), ...(id ? { id } : null) } satisfies ThreadErrorDetail);

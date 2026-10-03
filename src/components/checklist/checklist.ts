@@ -17,7 +17,7 @@
  * Los nodos del autor nunca se mueven (hidratación de Solid): lo propio va en un contenedor al final.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint, safeHref, safeImageSrc } from "../../core/dom";
+import { h, safeEndpoint, safeHref, safeImageSrc, emit, setAttr } from "../../core/dom";
 import { initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
@@ -564,12 +564,11 @@ export class NxChecklist extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v == null || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
 
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(`nx-checklist-${type}`, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, `nx-checklist-${type}`, detail, cancelable);
   }
 
   #setSteps(v: unknown): void {

@@ -10,7 +10,7 @@
  * `number` o `null`.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, setAttr } from "../../core/dom";
 import { resolveLocale } from "../../core/locale";
 import {
   affixes,
@@ -301,8 +301,7 @@ export class NxNumber extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #bool(name: string, v: boolean): void {
     if (v) this.setAttribute(name, "");

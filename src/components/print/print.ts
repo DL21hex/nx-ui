@@ -17,7 +17,7 @@
  *   al imprimir y se quita después.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, emit, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale, type NxFormat } from "../../core/locale";
 import { fillPageText, paginatePrint, parsePrintMargin, parsePrintSize, parseZoom, PX_PER_MM, stepZoom } from "./logic";
@@ -387,12 +387,11 @@ export class NxPrint extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, value: string | null | undefined): void {
-    if (value === null || value === undefined || value === "") this.removeAttribute(name);
-    else this.setAttribute(name, value);
+    setAttr(this, name, value);
   }
 
   #emit<T>(type: string, detail: T, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, type, detail, cancelable);
   }
 
   /** ¿Este cambio afecta el documento? Lo que pasa en las hojas (nuestro) o en los atributos propios, no. */

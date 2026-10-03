@@ -8,7 +8,7 @@
  * anterior) y lo incluye en el valor. Participa en un <form> nativo: `name[start]` y `name[end]`.
  */
 import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, setAttr } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
@@ -292,8 +292,7 @@ export class NxDateRange extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #bool(name: string, v: boolean): void {
     if (v) this.setAttribute(name, "");

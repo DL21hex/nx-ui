@@ -9,7 +9,7 @@
  * otro (WebSocket, SDK propio).
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref, setAttr } from "../../core/dom";
 import { formatElapsed } from "../../core/format";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
@@ -319,8 +319,7 @@ export class NxAiAnswer extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
 
   #finish(status: "done" | "error" | "stopped"): void {

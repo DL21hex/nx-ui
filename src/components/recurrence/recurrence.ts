@@ -15,6 +15,7 @@ import { resolveLocale } from "../../core/locale";
 import { colombiaHolidays, describeRecurrence, formatClock, occurrences, parseRRule, RRULE_RX, shortDate, toRRule } from "./logic";
 import type { Manual } from "./recurrence-edit";
 import type { RecurrenceLabels, RecurrenceOccurrence, RecurrenceRule, RecurrenceValue, RecurrenceValueFormat } from "./types";
+import { setAttr } from "../../core/dom";
 
 type Edit = typeof import("./recurrence-edit");
 let edit: Edit | undefined;
@@ -290,8 +291,7 @@ export class NxRecurrence extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #bool(name: string, v: boolean): void {
     this.toggleAttribute(name, !!v);

@@ -27,6 +27,7 @@ import {
   typedSignatureSVG,
 } from "./logic";
 import type { SignatureDevice, SignatureFormat, SignatureGeo, SignatureLabels, SignatureMeta, SignatureStroke, SignatureValue } from "./types";
+import { emit, setAttr } from "../../core/dom";
 
 export const SIGNATURE_LABELS: SignatureLabels = {
   here: "Firme aquí",
@@ -277,12 +278,11 @@ export class NxSignature extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: unknown): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, String(v));
+    setAttr(this, name, v);
   }
 
   #emit(type: string, detail: unknown): void {
-    this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
+    emit(this, type, detail);
   }
 
   /** Algo cambió en la firma: los metadatos confirmados ya no valen, se repinta, se avisa. */

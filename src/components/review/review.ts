@@ -13,7 +13,7 @@
  * inserta antes de la fila del botón y se quita al cerrar.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, emit } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { REVIEW_LABELS, countChanges, countReview, describeReview, diffReview, flattenReview, groupReview, humanizeName, reviewName, reviewRowName, reviewShouldOpen, reviewText, reviewValue, sameReviewValue } from "./logic";
@@ -534,7 +534,7 @@ export class NxReview extends Base {
   }
 
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(`nx-review-${type}`, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, `nx-review-${type}`, detail, cancelable);
   }
 
   /** Donde va el panel: justo antes de la fila del botón de enviar (o del botón que llamó `review()`). */

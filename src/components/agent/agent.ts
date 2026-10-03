@@ -14,7 +14,7 @@
  */
 import { URL_PROPS, hasComponent, render, type BduiNode } from "../../bdui";
 import { Base, upgrade, attrProps } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
 import { lineData, readLines } from "../../core/stream";
@@ -650,8 +650,7 @@ export class NxAgent extends Base {
   // ---------------------------------------------------------------- pintar
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
 
   #build(): void {

@@ -92,3 +92,21 @@ export function safeImageSrc(src: unknown): string | undefined {
   }
   return undefined;
 }
+
+// ---------------------------------------------------------------- ayudantes de los componentes
+
+/** El sistema pide menos movimiento. Seguro para SSR (sin `matchMedia`, `false`). */
+export function reducedMotion(): boolean {
+  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Emite un evento de la librería: burbujea y cruza sombras; devuelve `false` si se canceló. */
+export function emit(el: EventTarget, type: string, detail: unknown, cancelable = false): boolean {
+  return el.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true, cancelable }));
+}
+
+/** Refleja una prop de texto en su atributo: `null`, `undefined` o `""` lo quitan. */
+export function setAttr(el: Element, name: string, v: unknown): void {
+  if (v === null || v === undefined || v === "") el.removeAttribute(name);
+  else el.setAttribute(name, String(v));
+}
