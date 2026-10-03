@@ -114,6 +114,22 @@ describe("<nx-breadcrumb>", () => {
     expect(document.activeElement).toBe(v);
   });
 
+  it("tabindex itinerante: una sola entrada con 0 (la actual o la enfocada); el filtro no la deja escondida", async () => {
+    const b = await withItems(PATH);
+    await open(b, '[data-sep="1"]');
+    const zero = () => menuItems(b).filter((m) => m.tabIndex === 0).map((m) => m.textContent);
+    // El foco está en el buscador; la lista igual tiene una entrada enfocable (axe: scrollable-region-focusable).
+    expect(zero()).toEqual(["Laura Gómez"]);
+    key(menu(b).querySelector("input")!, "ArrowDown");
+    expect(document.activeElement).toBe(menuItems(b)[0]);
+    key(menuItems(b)[0], "ArrowDown");
+    expect(zero()).toEqual(["Andrés Pardo"]);
+    const input = menu(b).querySelector("input")!;
+    input.value = "oscar";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(zero()).toEqual(["Óscar Bedoya"]);
+  });
+
   it("Esc cierra y devuelve el foco; un segundo clic también cierra", async () => {
     const b = await withItems(PATH);
     const sep = await open(b, '[data-sep="0"]');
