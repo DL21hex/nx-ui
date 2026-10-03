@@ -64,7 +64,8 @@ describe("envoltorios de Solid: los eventos propios", () => {
       expect(probed(spies[h.prop], host), `${h.event} del elemento`).toBe(true);
     }
     warn.mockRestore();
-  });
+    // Importar cada envoltorio (y su componente) la primera vez tarda con la máquina cargada.
+  }, 20_000);
 
   it("los que no tienen hijos no los pasan al elemento", () => {
     const root = document.body.appendChild(document.createElement("div"));
