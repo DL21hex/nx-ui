@@ -1,6 +1,6 @@
 {
   "name": "nx32-elements",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Componentes web ultraligeros, sin dependencias, compatibles con BDUI. Funcionan en HTML plano y en SolidJS.",
   "type": "module",
   "private": true,
