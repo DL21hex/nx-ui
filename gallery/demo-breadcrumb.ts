@@ -3,12 +3,12 @@
  * Medellín: Personas › Empleados › una persona › sus secciones › contratos › otrosíes.
  *
  * Funciona como una SPA: cancela `nx-breadcrumb-navigate` y repinta la ruta y la página. Los hijos
- * de cada nivel los da la app al abrir el separador, respondiendo a `nx-breadcrumb-children` (con
+ * de cada nivel los da la app al abrir el separador, respondiendo a `nx-breadcrumb-expand` (con
  * una espera corta, para ver «Cargando…»). Al elegir otra persona desde el separador se conserva la
  * sección: de Laura › Contratos a Andrés › Contratos.
  */
 import "../src/components/breadcrumb/index";
-import type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbNavigateDetail, NxBreadcrumb } from "../src/components/breadcrumb/index";
+import type { BreadcrumbExpandDetail, BreadcrumbItem, BreadcrumbNavigateDetail, NxBreadcrumb } from "../src/components/breadcrumb/index";
 
 interface Node {
   id: string;
@@ -147,8 +147,8 @@ export function mountBreadcrumbDemo(root: HTMLElement): void {
     return out;
   };
 
-  bc.addEventListener("nx-breadcrumb-children", (e) => {
-    const { item, respond } = (e as CustomEvent<BreadcrumbChildrenDetail>).detail;
+  bc.addEventListener("nx-breadcrumb-expand", (e) => {
+    const { item, respond } = (e as CustomEvent<BreadcrumbExpandDetail>).detail;
     respond(sleep(250).then(() => (byId.get(item.id!)?.children ?? []).map(toItem)));
   });
 

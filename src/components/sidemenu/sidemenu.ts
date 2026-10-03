@@ -13,7 +13,9 @@
  *   navegan. `nx-sidemenu-select` (cancelable) es la puerta para quien quiera decidir otra cosa.
  * - **Lo abierto no se repinta.** Con un flotante o el drill-down abiertos, un cambio de `items`,
  *   `active` o `labels` espera a que se cierren: repintar los sacaría del DOM (el popover se cierra
- *   sin aviso) y se perderían la consulta y el foco.
+ *   sin aviso) y se perderían la consulta y el foco. Las claves internas también esperan (lo abierto
+ *   resuelve sus clics contra lo que muestra); un cambio de `collapsed` solo pone al día los
+ *   nombres accesibles del riel.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
 import { h, safeHref } from "../../core/dom";
@@ -62,6 +64,9 @@ export class NxSidemenu extends Base {
   #isOpen = false;
   /** Hubo cambios mientras algo estaba abierto: se pintan al cerrarlo. */
   #stale = false;
+  /** `items` cambió y las claves (`#byKey`/`#keyOf`) todavía son las de lo pintado: se rehacen al
+   *  repintar, para que un flotante o drill-down abiertos resuelvan sus clics contra lo que muestran. */
+  #reindex = false;
   /** En qué lado del límite de tablet se aplicó `auto-collapse` por última vez. */
   #inTablet?: boolean;
   #tip?: HTMLElement;
@@ -78,7 +83,7 @@ export class NxSidemenu extends Base {
   }
   set items(value: MenuItem[] | null | undefined) {
     this.#items = Array.isArray(value) ? value : [];
-    this.#index();
+    this.#reindex = true;
     this.#schedule();
   }
 
@@ -296,9 +301,15 @@ export class NxSidemenu extends Base {
   #render(force = false): void {
     if (!force && (this.#fly || this.#drill)) {
       this.#stale = true;
+      // El riel compacto cambia ya (lo dice el CSS): sus filas necesitan su nombre accesible.
+      this.#relabel();
       return;
     }
     this.#stale = false;
+    if (this.#reindex) {
+      this.#reindex = false;
+      this.#index();
+    }
     // Un flotante abierto sale del DOM con el riel viejo (y se cierra sin `toggle`).
     this.#fly = null;
     this.#hideTip();
@@ -329,6 +340,27 @@ export class NxSidemenu extends Base {
       );
     }
     if (focusKey) (body.querySelector(`[data-nx-key="${focusKey}"]`) as HTMLElement | null)?.focus();
+  }
+
+  /** Con algo abierto, el riel no se repinta: solo se ponen al día los `aria-label` de sus filas y
+   *  el botón de contraer (cambió `collapsed`). Las claves siguen siendo las de lo pintado. */
+  #relabel(): void {
+    const compact = this.collapsed && !this.#mobile;
+    for (const row of this.#body?.querySelectorAll<HTMLElement>(".nx-sidemenu__nav .nx-sidemenu__item[data-nx-key]") ?? []) {
+      const it = this.#byKey.get(row.dataset.nxKey!);
+      if (!it) continue;
+      const label = String(it.label ?? "");
+      const badge = formatBadge(it.badge);
+      if (compact) row.setAttribute("aria-label", badge ? `${label} (${badge})` : label);
+      else row.removeAttribute("aria-label");
+    }
+    const btn = this.#tools?.querySelector<HTMLElement>("[data-nx-collapse]");
+    if (btn) {
+      const label = compact ? this.#labels.expand : this.#labels.collapse;
+      btn.setAttribute("aria-expanded", String(!compact));
+      btn.setAttribute("aria-label", label);
+      btn.querySelector(".nx-sidemenu__label")!.textContent = label;
+    }
   }
 
   #renderRail(compact: boolean): HTMLElement {
@@ -399,6 +431,7 @@ export class NxSidemenu extends Base {
     const open = (e as ToggleEvent).newState === "open";
     if (fly === this) {
       this.#isOpen = open;
+      if (open) this.#confirm(fly);
       return;
     }
     const key = fly.dataset?.nxFlyout;
@@ -411,6 +444,7 @@ export class NxSidemenu extends Base {
     const trigger = this.querySelector<HTMLElement>(`[popovertarget="${fly.id}"]`);
     if (!item || !trigger) return;
     this.#fly = fly;
+    this.#confirm(fly);
     this.#hideTip();
     const panel = renderChildPanel({
       item,
@@ -432,6 +466,25 @@ export class NxSidemenu extends Base {
       panel.revealActive();
     });
   };
+
+  /** `beforetoggle` «open» es cancelable: si alguien lo canceló, no llega `toggle`. Se comprueba en
+   *  la tarea siguiente (no en una microtarea: tras un clic en `popovertarget`, esa corre al salir de
+   *  este oyente, antes de que el navegador abra el popover) y, si no se abrió, se deshace lo
+   *  anotado (y se pinta lo pendiente). */
+  #confirm(pop: HTMLElement): void {
+    setTimeout(() => {
+      if (pop.matches(":popover-open")) return;
+      if (pop === this) {
+        if (this.#isOpen) this.#isOpen = false;
+        return;
+      }
+      if (this.#fly !== pop) return;
+      this.#fly = null;
+      if (this.#tracking?.fly === pop) this.#tracking.stop();
+      pop.replaceChildren();
+      if (this.#stale) this.#render();
+    });
+  }
 
   #onToggle = (e: Event): void => {
     const t = e.target as HTMLElement;
@@ -525,9 +578,10 @@ export class NxSidemenu extends Base {
 
     if (t.closest("[data-nx-back]")) {
       const from = this.#drill;
+      // La clave antes de repintar: si `items` cambió mientras tanto, el índice nuevo ya no conoce `from`.
+      const key = from && this.#keyOf.get(from);
       this.#drill = null;
       this.#render();
-      const key = from && this.#keyOf.get(from);
       if (key) this.#body!.querySelector<HTMLElement>(`[data-nx-key="${key}"]`)?.focus();
       return;
     }

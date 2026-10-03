@@ -254,7 +254,9 @@ sel.options = [{ value: "17", nombre: "Ana María Rincón", cedula: "52341987", 
 - Resalta lo que coincidió y dice en qué columna («Cargo»).
 - `multiple` deja lo elegido como chips; elegir no cierra y Backspace quita el último.
 - Es un control de `<form>` nativo: `name` (con `multiple`, una entrada por valor), `required` con
-  el aviso del navegador sobre el campo (y `aria-invalid` tras un envío fallido), `reset` vuelve al
+  el aviso del navegador sobre el campo (y `aria-invalid` tras un envío fallido o un
+  `reportValidity()`; el `checkValidity()` del elemento solo pregunta, el del `<form>` sí marca
+  porque no se distingue de un envío), `reset` vuelve al
   valor inicial (el atributo `value`, o lo que llegó antes de que la persona lo tocara),
   `<fieldset disabled>` lo apaga, y un `<label for>` lo nombra y lo enfoca.
 - `value` de varios con `multiple`: da igual si `multiple` llega antes o después. En atributo, JSON
@@ -1863,7 +1865,7 @@ lista.
 - **Nombres:** suben a ese nivel. El último es la página actual (`aria-current="page"`) y no es un
   enlace. Los largos se cortan y muestran el nombre completo al pasar el ratón.
 - **Separadores:** abren los hijos del nivel, con el actual marcado. Llegan en `children` o se
-  piden al abrir, una vez por camino: primero se emite `nx-breadcrumb-children` `{item, level,
+  piden al abrir, una vez por camino: primero se emite `nx-breadcrumb-expand` `{item, level,
   respond}`, donde la app puede dar los hijos con `respond(hijos)` (ya, o después de
   `preventDefault()`); si nadie responde, se piden a `children-endpoint` (`GET`, del mismo origen;
   `{id}` es la clave del nivel y `{level}` su número). Sin `children-endpoint`, un nivel sin
@@ -1893,15 +1895,17 @@ lista.
 ```tsx
 import { Breadcrumb } from "nx32-elements/solid/breadcrumb";
 
+// Sin children-endpoint, los niveles de ruta() que se abren llevan `expandable: true`
+// (o sus `children`): si no, el › no se abre y onExpand no llega.
 <Breadcrumb items={ruta()}
-  onChildren={(e) => e.detail.respond(hermanos(e.detail.item))}
+  onExpand={(e) => e.detail.respond(hermanos(e.detail.item))}
   onNavigate={(e) => { e.preventDefault(); navigate(e.detail.item.href!); }} />
 ```
 
 | | |
 |---|---|
 | Propiedades / atributos | hijos (`<a href>` con `data-icon`, `data-id`, `data-expandable`; el último, un `<span>`) o `items` (`[{id?, label, href?, icon?, children?, expandable?}]`), `children-endpoint` / `childrenEndpoint`, `label`, `labels` · `path` (solo lectura) |
-| Eventos | `nx-breadcrumb-navigate` `{item, level, via}` (cancelable; `via`: `link`, `menu`, `back`, `key`), `nx-breadcrumb-children` `{item, level, respond}` (cancelable) |
+| Eventos | `nx-breadcrumb-navigate` `{item, level, via}` (cancelable; `via`: `link`, `menu`, `back`, `key`), `nx-breadcrumb-expand` `{item, level, respond}` (cancelable) |
 | Funciones | `cleanBreadcrumbItems()`, `collapseCount()` |
 
 ## `<nx-signature>`

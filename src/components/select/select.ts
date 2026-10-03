@@ -64,6 +64,8 @@ export class NxSelect extends Base {
   #formDisabled = false;
   /** Ya hubo un intento de envío inválido: desde ahí el campo se marca `aria-invalid`. */
   #tried = false;
+  /** Dentro de `checkValidity()`: su `invalid` no es un intento de envío. */
+  #asking = false;
   /** El mensaje de `setCustomValidity()`. */
   #custom = "";
   #uid = `nx-sel${++uid}`;
@@ -229,7 +231,13 @@ export class NxSelect extends Base {
     return this.#internals?.willValidate ?? false;
   }
   checkValidity(): boolean {
-    return this.#internals?.checkValidity() ?? (this.#isOff() || !this.#problem());
+    // Preguntar no es intentar enviar: el `invalid` que dispara no marca el campo (sí `reportValidity()`).
+    this.#asking = true;
+    try {
+      return this.#internals?.checkValidity() ?? (this.#isOff() || !this.#problem());
+    } finally {
+      this.#asking = false;
+    }
   }
   reportValidity(): boolean {
     return this.#internals?.reportValidity() ?? (this.#isOff() || !this.#problem());
@@ -242,7 +250,8 @@ export class NxSelect extends Base {
 
   /** Enfoca el campo (un `<label>` o `el.focus()` llegan aquí). */
   focus(options?: FocusOptions): void {
-    this.#field?.focus(options);
+    // Apagado no recibe el foco, como un control nativo deshabilitado.
+    if (!this.#isOff()) this.#field?.focus(options);
   }
   show(): void {
     // Fuera del documento `showPopover` lanza: no hay nada que abrir.
@@ -299,9 +308,10 @@ export class NxSelect extends Base {
       return;
     }
     if (name === "multiple" && (old === null) !== (value === null)) {
-      // Sin `multiple` queda uno solo; con él, un `value="[…]"` que se leyó como texto se relee.
+      // Sin `multiple` queda el primero (sin releer el atributo: su JSON se leería como texto); con
+      // él, un `value="[…]"` que se leyó como texto se relee.
       if (value === null) this.#selected = this.#selected.slice(0, 1);
-      if (this.#fromAttr) this.#valueAttr(this.getAttribute("value"));
+      else if (this.#fromAttr) this.#valueAttr(this.getAttribute("value"));
     }
     if (name === "disabled" && value !== null) this.hide();
     if (name === "label") this.#name();
@@ -518,6 +528,7 @@ export class NxSelect extends Base {
     });
     // Un envío que falló por este campo: desde ahí se marca inválido hasta que se corrija.
     this.addEventListener("invalid", () => {
+      if (this.#asking) return;
       this.#tried = true;
       this.#sync();
     });

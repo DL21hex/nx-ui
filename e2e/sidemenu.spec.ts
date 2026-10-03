@@ -1,5 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { open } from "./helpers";
+
+/** Dos frames: lo que tarda en repintarse lo que cambió (para comprobar que algo no pasó). */
+const frames = (page: Page) => page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
 
 test("el flotante de un padre: buscador con foco, filtra sin tildes, Escape lo cierra y devuelve el foco", async ({ page }) => {
   await open(page, "#/sidemenu");
@@ -38,4 +41,111 @@ test("móvil: la hamburguesa abre el drawer y un enlace lo cierra", async ({ pag
   await nav.getByRole("option", { name: "Tabla", exact: true }).click();
   await expect(nav).toBeHidden();
   await expect(page).toHaveURL(/#\/grid$/);
+});
+
+test("compacto: la etiqueta flotante sale junto al riel con el teclado (también en RTL), se va al abrir un flotante", async ({ page }) => {
+  await open(page, "#/sidemenu");
+  await page.getByLabel("Compacto", { exact: true }).check();
+  const menu = page.locator("#stage-menu nx-sidemenu");
+  await expect(menu).toHaveAttribute("collapsed", "");
+  // El riel se angosta con una transición: se mide cuando termina.
+  await menu.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+  const tip = menu.locator(".nx-sidemenu__tip");
+  const row = menu.getByRole("link", { name: "Tablero" });
+  const check = async (rtl: boolean) => {
+    // Con el teclado (no con un clic): Tab desde la fila de arriba.
+    await menu.getByRole("link", { name: "Inicio" }).focus();
+    await page.keyboard.press("Tab");
+    await expect(row).toBeFocused();
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveText("Tablero");
+    const t = (await tip.boundingBox())!;
+    const r = (await row.boundingBox())!;
+    const rail = (await menu.boundingBox())!;
+    expect(Math.abs(t.y + t.height / 2 - (r.y + r.height / 2))).toBeLessThanOrEqual(2);
+    if (rtl) expect(Math.abs(t.x + t.width - (rail.x - 6))).toBeLessThanOrEqual(2);
+    else expect(Math.abs(t.x - (rail.x + rail.width + 6))).toBeLessThanOrEqual(2);
+  };
+  await check(false);
+  // Abrir un flotante la esconde.
+  const parent = menu.getByRole("button", { name: "Ventas" });
+  await parent.focus();
+  await expect(tip).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Ventas" })).toBeVisible();
+  await expect(tip).toBeHidden();
+  await page.keyboard.press("Escape");
+  await page.getByLabel("RTL").check();
+  await menu.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+  await check(true);
+});
+
+test.describe("táctil", () => {
+  test.use({ hasTouch: true, viewport: { width: 1280, height: 800 } });
+  test("compacto: un toque no deja la etiqueta flotante pegada", async ({ page }) => {
+    await open(page, "#/sidemenu");
+    // Todo con toques: el ratón virtual de Playwright, quieto sobre el riel, la mostraría al repintar.
+    await page.getByLabel("Compacto", { exact: true }).tap();
+    const menu = page.locator("#stage-menu nx-sidemenu");
+    await expect(menu).toHaveAttribute("collapsed", "");
+    await menu.getByRole("link", { name: "Tablero" }).tap();
+    await frames(page);
+    await expect(menu.locator(".nx-sidemenu__tip")).toBeHidden();
+  });
+});
+
+test("con el flotante abierto y una consulta, un cambio de items no lo cierra; Esc repinta y deja el foco en el padre", async ({ page }) => {
+  await open(page, "#/sidemenu");
+  const menu = page.locator("#stage-menu nx-sidemenu");
+  await menu.getByRole("button", { name: "Seguridad Física" }).click();
+  const search = page.getByRole("combobox");
+  await search.fill("ron");
+  await menu.evaluate((el) => {
+    const m = el as unknown as { items: { id: string; badge?: number }[] };
+    m.items = m.items.map((it) => (it.id === "tablero" ? { ...it, badge: 7 } : it));
+  });
+  await frames(page);
+  await expect(search).toBeVisible();
+  await expect(search).toHaveValue("ron");
+  await expect(search).toBeFocused();
+  await expect(menu.getByRole("link", { name: /Tablero/ }).locator(".nx-badge")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(search).toBeHidden();
+  await expect(menu.getByRole("link", { name: /Tablero/ }).locator(".nx-badge")).toHaveText("7");
+  await expect(menu.getByRole("button", { name: "Seguridad Física" })).toBeFocused();
+});
+
+test("si otro oyente cancela la apertura, el menú no queda esperando; contraer con uno abierto nombra las filas", async ({ page }) => {
+  await open(page, "#/sidemenu");
+  const menu = page.locator("#stage-menu nx-sidemenu");
+  const parent = menu.getByRole("button", { name: "Ventas" });
+  // El flotante de «Ventas» (el de su `popovertarget`), no el primero que haya en el menú.
+  const fly = await parent.getAttribute("popovertarget");
+  await menu.evaluate((el, id) => el.querySelector(`[id="${id}"]`)!.addEventListener("beforetoggle", (e) => e.preventDefault(), { once: true }), fly);
+  await parent.click();
+  // El menú lo comprueba en la tarea siguiente al clic.
+  await frames(page);
+  await expect(page.getByRole("dialog", { name: "Ventas" })).toBeHidden();
+  // Un cambio de items se pinta en el acto (no queda pendiente de un flotante que nunca abrió).
+  await menu.evaluate((el) => {
+    const m = el as unknown as { items: { id: string; badge?: number }[] };
+    m.items = m.items.map((it) => (it.id === "tablero" ? { ...it, badge: 7 } : it));
+  });
+  await expect(menu.getByRole("link", { name: /Tablero/ }).locator(".nx-badge")).toHaveText("7");
+  await menu.getByRole("button", { name: "Ventas" }).click();
+  await expect(page.getByRole("dialog", { name: "Ventas" })).toBeVisible();
+  await menu.evaluate((el) => ((el as unknown as { collapsed: boolean }).collapsed = true));
+  await expect(menu.getByRole("link", { name: "Tablero (7)" })).toHaveAttribute("aria-label", "Tablero (7)");
+  await expect(page.getByRole("dialog", { name: "Ventas" })).toBeVisible();
+});
+
+test("Tab desde el buscador del flotante lo cierra y sigue desde su padre", async ({ page }) => {
+  await open(page, "#/sidemenu");
+  const menu = page.locator("#stage-menu nx-sidemenu");
+  await menu.getByRole("button", { name: "Ventas" }).click();
+  const search = page.getByRole("combobox");
+  await expect(search).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(search).toBeHidden();
+  await expect(menu.getByRole("button", { name: "Inventario" })).toBeFocused();
 });

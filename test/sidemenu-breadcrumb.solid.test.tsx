@@ -43,10 +43,10 @@ describe("envoltorios de Solid: eventos propios", () => {
   it("Breadcrumb: solo los de su propia ruta; childrenEndpoint va como atributo", () => {
     const root = document.body.appendChild(document.createElement("div"));
     const onNavigate = vi.fn();
-    const onChildren = vi.fn();
+    const onExpand = vi.fn();
     const dispose = render(
       () => (
-        <Breadcrumb items={[{ label: "Inicio", href: "/" }, { label: "Aquí" }]} childrenEndpoint="/api/hijos/{id}" onNavigate={onNavigate} onChildren={onChildren}>
+        <Breadcrumb items={[{ label: "Inicio", href: "/" }, { label: "Aquí" }]} childrenEndpoint="/api/hijos/{id}" onNavigate={onNavigate} onExpand={onExpand}>
           <span class="otra" />
         </Breadcrumb>
       ),
@@ -56,13 +56,13 @@ describe("envoltorios de Solid: eventos propios", () => {
     expect(host.getAttribute("children-endpoint")).toBe("/api/hijos/{id}");
     const kid = root.querySelector(".otra")!;
     fire(kid, "nx-breadcrumb-navigate", { item: { label: "X" }, level: 0, via: "link" });
-    fire(kid, "nx-breadcrumb-children", { item: { label: "X" }, level: 0, respond() {} });
+    fire(kid, "nx-breadcrumb-expand", { item: { label: "X" }, level: 0, respond() {} });
     expect(onNavigate).not.toHaveBeenCalled();
-    expect(onChildren).not.toHaveBeenCalled();
+    expect(onExpand).not.toHaveBeenCalled();
     fire(host, "nx-breadcrumb-navigate", { item: { label: "Inicio" }, level: 0, via: "link" });
-    fire(host, "nx-breadcrumb-children", { item: { label: "Inicio" }, level: 0, respond() {} });
+    fire(host, "nx-breadcrumb-expand", { item: { label: "Inicio" }, level: 0, respond() {} });
     expect(onNavigate).toHaveBeenCalledOnce();
-    expect(onChildren).toHaveBeenCalledOnce();
+    expect(onExpand).toHaveBeenCalledOnce();
     dispose();
     root.remove();
   });

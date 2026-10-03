@@ -9,7 +9,7 @@ export interface BreadcrumbItem {
   /** Un ícono registrado (`registerIcons`). Lo normal es que solo lo lleve el primero: el módulo. */
   icon?: string;
   /** Los hijos de este nivel (los hermanos del siguiente), si llegan con la ruta. Si no, se piden al
-   *  abrir su separador (`nx-breadcrumb-children` o `children-endpoint`). */
+   *  abrir su separador (`nx-breadcrumb-expand` o `children-endpoint`). */
   children?: BreadcrumbItem[];
   /** `true`: su separador se abre sin `children` (los hijos se piden al abrir). `false`: no se abre
    *  aunque haya `children-endpoint`. */
@@ -27,11 +27,11 @@ export interface BreadcrumbNavigateDetail {
 }
 
 /**
- * Detalle de `nx-breadcrumb-children` (cancelable): se abrió el separador de `item` (nivel `level`)
+ * Detalle de `nx-breadcrumb-expand` (cancelable): se abrió el separador de `item` (nivel `level`)
  * y sus hijos no llegaron con la ruta. La app los da con `respond(hijos)`: ya, o después de
  * `preventDefault()` si los pide a su manera. Si nadie responde, se piden a `children-endpoint`.
  */
-export interface BreadcrumbChildrenDetail {
+export interface BreadcrumbExpandDetail {
   item: BreadcrumbItem;
   level: number;
   respond(children: BreadcrumbItem[] | Promise<BreadcrumbItem[]>): void;

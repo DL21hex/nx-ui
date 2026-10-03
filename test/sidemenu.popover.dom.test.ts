@@ -17,7 +17,8 @@ const { matches, closest } = Element.prototype;
 beforeAll(() => {
   proto.showPopover = function (this: HTMLElement) {
     if (shown.has(this)) return;
-    fire(this, "beforetoggle", "open");
+    // Como el navegador: si alguien cancela `beforetoggle`, no se abre (y no llega `toggle`).
+    if (!fire(this, "beforetoggle", "open")) return;
     shown.add(this);
     setTimeout(() => fire(this, "toggle", "open"));
   };
@@ -133,6 +134,73 @@ describe("<nx-sidemenu> con el flotante abierto", () => {
     fly.querySelector<HTMLElement>('[data-nx-key="1.1"]')!.click();
     expect((got.mock.calls[0][0] as CustomEvent).detail.item.id).toBe("visitas");
     expect(fly.matches(":popover-open")).toBe(false);
+  });
+});
+
+describe("<nx-sidemenu> cambios con algo abierto", () => {
+  it("items cambia con el flotante abierto: sus opciones siguen resolviendo a lo que muestran", async () => {
+    const el = await mount();
+    const got = vi.fn((e: Event) => e.preventDefault());
+    el.addEventListener("nx-sidemenu-select", got);
+    const fly = el.querySelector<HTMLElement>(".nx-flyout")!;
+    fly.showPopover();
+    // El servidor quita «Portería»: por posición, «1.1» pasaría a ser «Reportes».
+    el.items = MENU.map((it) => (it.id === "seg" ? { ...it, children: it.children!.slice(1) } : it));
+    await flush();
+    const opt = fly.querySelector<HTMLElement>('[data-nx-key="1.1"]')!;
+    expect(opt.textContent).toContain("Visitas");
+    opt.click();
+    expect((got.mock.calls[0][0] as CustomEvent).detail).toMatchObject({ item: { id: "visitas" }, href: "/seg/visitas" });
+  });
+
+  it("Volver del drill-down, tras un cambio de items, devuelve el foco a su padre", async () => {
+    setWidth(500);
+    const el = await mount();
+    el.show();
+    el.querySelector<HTMLButtonElement>("[data-nx-drill]")!.click();
+    el.items = withBadge().map((it) => ({ ...it }));
+    await flush();
+    el.querySelector<HTMLButtonElement>("[data-nx-back]")!.click();
+    expect(document.activeElement).toBe(el.querySelector("[data-nx-drill]"));
+  });
+
+  it("si alguien cancela la apertura del flotante, no queda «abierto»: lo pendiente se pinta", async () => {
+    const el = await mount();
+    const fly = el.querySelector<HTMLElement>(".nx-flyout")!;
+    fly.addEventListener("beforetoggle", (e) => e.preventDefault(), { once: true });
+    fly.showPopover();
+    await flush();
+    el.items = withBadge();
+    await flush();
+    expect(el.querySelector(".nx-sidemenu__body .nx-badge")?.textContent).toBe("3");
+  });
+
+  it("si alguien cancela la apertura del drawer, open sigue en false", async () => {
+    setWidth(500);
+    const el = await mount();
+    el.addEventListener("beforetoggle", (e) => e.target === el && e.preventDefault(), { once: true });
+    el.show();
+    await flush();
+    expect(el.open).toBe(false);
+    el.show();
+    expect(el.open).toBe(true);
+  });
+
+  it("contraer con el flotante abierto da nombre accesible a las filas del riel", async () => {
+    const el = await mount();
+    el.collapsible = true;
+    await flush();
+    const fly = el.querySelector<HTMLElement>(".nx-flyout")!;
+    fly.showPopover();
+    el.collapsed = true;
+    await flush();
+    expect(fly.isConnected).toBe(true);
+    const rows = [...el.querySelectorAll<HTMLElement>(".nx-sidemenu__nav .nx-sidemenu__item")];
+    expect(rows.map((r) => r.getAttribute("aria-label"))).toEqual(["Inicio", "Seguridad Física", "Pedidos"]);
+    expect(el.querySelector("[data-nx-collapse]")!.getAttribute("aria-label")).toBe("Expandir menú");
+    el.collapsed = false;
+    await flush();
+    expect(rows.every((r) => !r.hasAttribute("aria-label"))).toBe(true);
   });
 });
 

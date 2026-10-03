@@ -284,6 +284,8 @@ export class NxReview extends Base {
       // Ocultos: solo la clave de una fila (`items[0].id`) o uno con `data-label`.
       if (el.type === "hidden" && !/(^|[.[])id\]?$/.test(el.getAttribute("name")!) && !el.dataset.label) return false;
     } else if (tag !== "select" && tag !== "textarea" && !(custom(el) && ("value" in el || el.hasAttribute("value")))) return false;
+    // Un botón componente (<nx-button name value>, o uno con `type` de botón) no es un campo, como un <button> nativo.
+    else if (custom(el) && (tag === "nx-button" || /^(submit|button|reset)$/.test(String(el.type ?? el.getAttribute("type") ?? "")))) return false;
     const host = el.parentElement?.closest("[name]");
     return !(host && custom(host) && this.contains(host));
   }

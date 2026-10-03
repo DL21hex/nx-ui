@@ -4,6 +4,7 @@ import "../src/components/review/index";
 import "../src/components/number/index";
 import "../src/components/guard/index";
 import "../src/components/select/index";
+import "../src/components/button/index";
 import { NxReview } from "../src/components/review/index";
 import type { ReviewChange } from "../src/components/review/index";
 import type { NxNumber } from "../src/components/number/index";
@@ -437,6 +438,17 @@ describe("<nx-review>: componentes reales", () => {
     el.snapshot();
     sel.value = "ok";
     expect(el.changes.map((c) => [c.label, c.kind, c.fromText, c.toText, c.reason])).toEqual([["Estado", "choice", "Por aprobar", "Aprobada", "status"]]);
+  });
+
+  it("<nx-button name value> no es un campo (como un <button> nativo): cambiar su value no marca cambios", () => {
+    const { el } = mount(
+      "",
+      `<form><input name="qty" value="1"><nx-button id="b" type="submit" name="accion" value="aprobar">Aprobar</nx-button></form>`,
+    );
+    expect(el.dirty).toBe(false);
+    ($("#b") as unknown as { value: string }).value = "rechazar";
+    expect(el.changes).toEqual([]);
+    expect(el.dirty).toBe(false);
   });
 
   it("<nx-guard> alrededor también cuenta", () => {

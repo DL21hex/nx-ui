@@ -7,7 +7,7 @@
  * final y el CSS esconde los originales. Sin JavaScript se ven como una ruta de enlaces.
  *
  * - **Separadores:** se abren si el nivel tiene `children` con alternativas, o si se pueden pedir
- *   (`expandable: true` o `children-endpoint`): al abrir se emite `nx-breadcrumb-children`, donde la
+ *   (`expandable: true` o `children-endpoint`): al abrir se emite `nx-breadcrumb-expand`, donde la
  *   app puede responder; si no, se piden a `children-endpoint`. Se guardan por camino. Más de 7
  *   traen buscador (sin tildes).
  * - **Colapso:** si no cabe, los niveles del medio pasan a un «…» que se abre como menú; el primero
@@ -21,7 +21,7 @@ import { glyph, hasIcon, icon } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import type { BreadcrumbMenu } from "./breadcrumb-menu";
 import { cleanItems, collapseCount, itemKey } from "./logic";
-import type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
+import type { BreadcrumbExpandDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
 
 export const BREADCRUMB_LABELS: BreadcrumbLabels = {
   label: "Ruta",
@@ -322,9 +322,15 @@ export class NxBreadcrumb extends Base {
     try {
       ({ BreadcrumbMenu: Menu } = await import("./breadcrumb-menu"));
     } catch (err) {
-      // Sin el menú (un despliegue nuevo borró el archivo, o se cayó la red) el separador no abre
-      // nada, pero tampoco deja una promesa rechazada sin atender. El próximo clic lo reintenta.
+      // Sin el menú (un despliegue nuevo borró el archivo, o se cayó la red) no queda una promesa
+      // rechazada sin atender. Un separador lleva a la página de su nivel, que lista lo mismo que
+      // el menú (y una página nueva trae los archivos del despliegue nuevo); avisa con
+      // `nx-breadcrumb-navigate` («link»), cancelable. El «…» no abre nada: el próximo clic lo reintenta.
       console.warn("[nx-breadcrumb] no se pudo cargar el menú", err);
+      const sep = trigger.dataset.sep;
+      const parent = sep === undefined ? undefined : this.#path[+sep];
+      const href = safeHref(parent?.href);
+      if (parent && href && trigger.isConnected && this.#go(parent, +sep!, "link")) location.assign(href);
       return;
     }
     const m = (this.#m ??= new Menu(this.#menu!, { labels: () => this.#labels, go: (it, level, via) => this.#go(it, level, via) }));
@@ -361,7 +367,7 @@ export class NxBreadcrumb extends Base {
   }
 
   /**
-   * Los hijos de un nivel: los da la app (`nx-breadcrumb-children`, ya o tras `preventDefault()`)
+   * Los hijos de un nivel: los da la app (`nx-breadcrumb-expand`, ya o tras `preventDefault()`)
    * o `children-endpoint`. `null` si no hay quién (se ve «Sin resultados» y no se guarda).
    */
   #children(item: BreadcrumbItem, level: number): Promise<unknown> {
@@ -372,8 +378,8 @@ export class NxBreadcrumb extends Base {
         answered = true;
         Promise.resolve(v).then(resolve, reject);
       };
-      const detail: BreadcrumbChildrenDetail = { item, level, respond };
-      const free = this.dispatchEvent(new CustomEvent("nx-breadcrumb-children", { detail, bubbles: true, composed: true, cancelable: true }));
+      const detail: BreadcrumbExpandDetail = { item, level, respond };
+      const free = this.dispatchEvent(new CustomEvent("nx-breadcrumb-expand", { detail, bubbles: true, composed: true, cancelable: true }));
       if (answered || !free) return;
       const tpl = this.childrenEndpoint;
       if (!tpl) return resolve(null);

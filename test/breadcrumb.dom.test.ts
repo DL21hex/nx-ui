@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/components/breadcrumb/index";
-import type { BreadcrumbChildrenDetail, BreadcrumbItem, NxBreadcrumb } from "../src/components/breadcrumb/index";
+import type { BreadcrumbExpandDetail, BreadcrumbItem, NxBreadcrumb } from "../src/components/breadcrumb/index";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -114,6 +114,22 @@ describe("<nx-breadcrumb>", () => {
     expect(document.activeElement).toBe(v);
   });
 
+  it("tabindex itinerante: una sola entrada con 0 (la actual o la enfocada); el filtro no la deja escondida", async () => {
+    const b = await withItems(PATH);
+    await open(b, '[data-sep="1"]');
+    const zero = () => menuItems(b).filter((m) => m.tabIndex === 0).map((m) => m.textContent);
+    // El foco está en el buscador; la lista igual tiene una entrada enfocable (axe: scrollable-region-focusable).
+    expect(zero()).toEqual(["Laura Gómez"]);
+    key(menu(b).querySelector("input")!, "ArrowDown");
+    expect(document.activeElement).toBe(menuItems(b)[0]);
+    key(menuItems(b)[0], "ArrowDown");
+    expect(zero()).toEqual(["Andrés Pardo"]);
+    const input = menu(b).querySelector("input")!;
+    input.value = "oscar";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(zero()).toEqual(["Óscar Bedoya"]);
+  });
+
   it("Esc cierra y devuelve el foco; un segundo clic también cierra", async () => {
     const b = await withItems(PATH);
     const sep = await open(b, '[data-sep="0"]');
@@ -163,14 +179,14 @@ describe("<nx-breadcrumb>", () => {
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ level: 1, via: "link" }));
   });
 
-  it("nx-breadcrumb-children se emite al abrir, una vez por camino; la app responde después de cancelarlo; si falla, lo dice", async () => {
+  it("nx-breadcrumb-expand se emite al abrir, una vez por camino; la app responde después de cancelarlo; si falla, lo dice", async () => {
     const b = await mount(`<nx-breadcrumb><a href="/a" data-expandable="true">A</a><a href="/b" data-expandable="false">B</a><span>C</span></nx-breadcrumb>`);
     let respond!: (v: BreadcrumbItem[] | Promise<BreadcrumbItem[]>) => void;
-    const asked = vi.fn((e: CustomEvent<BreadcrumbChildrenDetail>) => {
+    const asked = vi.fn((e: CustomEvent<BreadcrumbExpandDetail>) => {
       e.preventDefault();
       respond = e.detail.respond;
     });
-    b.addEventListener("nx-breadcrumb-children", asked);
+    b.addEventListener("nx-breadcrumb-expand", asked);
     expect(b.querySelectorAll("button.nx-breadcrumb__sep")).toHaveLength(1);
     const sep = await open(b, '[data-sep="0"]');
     expect(menu(b).textContent).toBe("Cargando…");
@@ -197,7 +213,7 @@ describe("<nx-breadcrumb>", () => {
 
   it("si la app responde en el momento, no hace falta cancelar; si nadie responde, «Sin resultados»", async () => {
     const b = await withItems([{ label: "A", expandable: true }, { label: "B", expandable: true }, { label: "C" }]);
-    b.addEventListener("nx-breadcrumb-children", (e) => {
+    b.addEventListener("nx-breadcrumb-expand", (e) => {
       if (e.detail.level === 0) e.detail.respond([{ label: "B" }, { label: "Otra" }]);
     });
     await open(b, '[data-sep="0"]');
@@ -347,7 +363,7 @@ describe("<nx-breadcrumb> hijos pedidos, foco y lugar del menú", () => {
   it("lo guardado es por camino: dos «General» sin id ni href, en ramas distintas, no comparten hijos", async () => {
     const asked: string[] = [];
     const b = await withItems([{ label: "Raíz" }, { label: "General", expandable: true }, { label: "X" }]);
-    b.addEventListener("nx-breadcrumb-children", (e) => {
+    b.addEventListener("nx-breadcrumb-expand", (e) => {
       const root = b.path[0].label;
       asked.push(root);
       e.detail.respond([{ label: `hijo de ${root}` }, { label: "X" }]);
@@ -380,7 +396,7 @@ describe("<nx-breadcrumb> hijos pedidos, foco y lugar del menú", () => {
     const b = await withItems([{ label: "A", expandable: true }, { label: "B" }, { label: "C" }]);
     const other = document.body.appendChild(document.createElement("input"));
     let respond!: (v: BreadcrumbItem[]) => void;
-    b.addEventListener("nx-breadcrumb-children", (e) => {
+    b.addEventListener("nx-breadcrumb-expand", (e) => {
       e.preventDefault();
       respond = e.detail.respond;
     });
@@ -439,6 +455,31 @@ describe("<nx-breadcrumb> hijos pedidos, foco y lugar del menú", () => {
       await open(b, '[data-sep="1"]');
       expect(menu(b).querySelector("input")).not.toBeNull();
       expect(document.activeElement).toBe(menuItems(b)[0]);
+    } finally {
+      mm.mockRestore();
+    }
+  });
+
+  it("desplazar con el foco en el buscador: con puntero fino cierra; en táctil recoloca, salvo que el botón ya no se vea", async () => {
+    const b = await withItems(PATH);
+    await open(b, '[data-sep="1"]');
+    expect(document.activeElement).toBe(menu(b).querySelector("input"));
+    window.dispatchEvent(new Event("scroll"));
+    expect(menu(b).hidden).toBe(true);
+
+    const mm = vi.spyOn(window, "matchMedia").mockImplementation((q: string) => ({ matches: !q.includes("pointer: fine"), media: q, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList);
+    try {
+      const sep = await open(b, '[data-sep="1"]');
+      menu(b).querySelector("input")!.focus();
+      let top = 100;
+      sep.getBoundingClientRect = () => ({ top, bottom: top + 20, left: 100, right: 120, width: 20, height: 20, x: 100, y: top }) as DOMRect;
+      window.dispatchEvent(new Event("scroll"));
+      await new Promise((r) => requestAnimationFrame(r));
+      expect(menu(b).hidden).toBe(false);
+      expect(menu(b).style.top).toBe("126px");
+      top = -50;
+      window.dispatchEvent(new Event("scroll"));
+      expect(menu(b).hidden).toBe(true);
     } finally {
       mm.mockRestore();
     }
