@@ -526,10 +526,10 @@ function mountButtonDemo(root: HTMLElement) {
   fail.addEventListener("change", syncStream);
   syncStream();
 
-  root.addEventListener("nx-done", (e) => {
+  root.addEventListener("nx-button-done", (e) => {
     const li = document.createElement("li");
     const { ok, ms, lines } = e.detail;
-    li.textContent = `nx-done → #${(e.target as HTMLElement).id} ok: ${ok} · ${Math.round(ms)} ms · ${lines.length} líneas`;
+    li.textContent = `nx-button-done → #${(e.target as HTMLElement).id} ok: ${ok} · ${Math.round(ms)} ms · ${lines.length} líneas`;
     events.prepend(li);
     while (events.children.length > 5) events.lastElementChild!.remove();
   });
@@ -548,10 +548,10 @@ function mountSelectDemo(root: HTMLElement) {
   root.querySelector<NxSelect>("#sel-remote")!.fields = EMPLOYEE_FIELDS;
 
   const log = root.querySelector<HTMLOListElement>("#sel-log")!;
-  root.addEventListener("nx-change", (e) => {
+  root.addEventListener("nx-select-change", (e) => {
     const li = document.createElement("li");
     const names = e.detail.options.map((o) => o.nombre).join(", ") || "—";
-    li.textContent = `nx-change → #${(e.target as HTMLElement).id} value: ${JSON.stringify(e.detail.value)} · ${names}`;
+    li.textContent = `nx-select-change → #${(e.target as HTMLElement).id} value: ${JSON.stringify(e.detail.value)} · ${names}`;
     log.prepend(li);
     while (log.children.length > 5) log.lastElementChild!.remove();
   });

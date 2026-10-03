@@ -286,8 +286,12 @@ describe("<nx-agent>", () => {
     expect(inputs[1].messages.at(-1)).toMatchObject({ toolCallId: "c1", content: '{"declined":true}' });
     await until(() => a.querySelectorAll(".nx-agent__card nx-button").length === 2);
     const yes = [...a.querySelectorAll(".nx-agent__card:not(.is-done) nx-button")][1] as HTMLElement & { hold?: number };
+    // Es peligrosa (`hold`): se aprueba manteniendo pulsado; un clic suelto no llega.
     yes.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await until(() => inputs.length === 3 && !a.running);
+    await sleep(20);
+    expect(inputs.length).toBe(2);
+    yes.querySelector("button")!.dispatchEvent(new PointerEvent("pointerdown", { button: 0, bubbles: true }));
+    await until(() => inputs.length === 3 && !a.running, 3000);
     expect(ran).toEqual([5]);
     expect(inputs[2].messages.at(-1)).toMatchObject({ toolCallId: "c2", content: '{"ok":true}' });
   });

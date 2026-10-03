@@ -11,6 +11,6 @@ declare global {
     "nx-button": NxButton;
   }
   interface HTMLElementEventMap {
-    "nx-done": CustomEvent<import("./types").DoneDetail>;
+    "nx-button-done": CustomEvent<import("./types").DoneDetail>;
   }
 }

@@ -108,10 +108,10 @@ describe("<nx-select> abierto", () => {
     expect(input(el).value).toBe("h");
   });
 
-  it("flechas + Enter eligen, cierra y queda compacto; nx-change con el registro", () => {
+  it("flechas + Enter eligen, cierra y queda compacto; nx-select-change con el registro", () => {
     const el = mount();
     const seen: unknown[] = [];
-    el.addEventListener("nx-change", (e) => seen.push(e.detail.value));
+    el.addEventListener("nx-select-change", (e) => seen.push(e.detail.value));
     field(el).click();
     key(input(el), "ArrowDown");
     key(input(el), "ArrowDown");

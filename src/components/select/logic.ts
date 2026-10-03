@@ -42,22 +42,29 @@ export function matchOption(option: SelectOption, fields: readonly SelectField[]
   return matchPrepared(option, fields, prepare(fields, query));
 }
 
-type Prepared = { fields: SelectField[]; toks: string[] };
+/** `toks[j]`: las palabras de la consulta como se comparan en la columna `j` (solo dígitos en las
+ *  `digits`); `ids[j]`: la clave de su texto plegado. */
+type Prepared = { fields: SelectField[]; ids: string[]; toks: string[][]; count: number };
 
-/** La consulta se analiza una vez por búsqueda, no una vez por opción. */
+/** La consulta se analiza una vez por búsqueda, no una vez por opción (ni por columna). */
 function prepare(fields: readonly SelectField[], query: string): Prepared {
   const scope = searchScope(fields, query);
-  return { fields: scope.fields, toks: scope.digitsOnly ? [onlyDigits(query)] : tokens(query) };
+  const toks = scope.digitsOnly ? [onlyDigits(query)] : tokens(query);
+  return {
+    fields: scope.fields,
+    ids: scope.fields.map((f) => `${f.kind ?? ""}:${f.key}`),
+    toks: scope.fields.map((f) => (f.kind === "digits" ? toks.map(onlyDigits) : toks)),
+    count: toks.length,
+  };
 }
 
 // El texto normalizado de cada columna se calcula una vez por opción (quitar tildes es lo caro) y
 // se reutiliza en cada tecla. Se recalcula si cambia el valor.
 const folded = new WeakMap<SelectOption, Map<string, [string, string]>>();
-function searchable(option: SelectOption, f: SelectField): string {
+function searchable(option: SelectOption, f: SelectField, id: string): string {
   const raw = fieldText(option, f.key);
   let byKey = folded.get(option);
   if (!byKey) folded.set(option, (byKey = new Map()));
-  const id = `${f.kind ?? ""}:${f.key}`;
   const hit = byKey.get(id);
   if (hit && hit[0] === raw) return hit[1];
   const v = f.kind === "digits" ? onlyDigits(raw) : foldText(raw);
@@ -66,34 +73,69 @@ function searchable(option: SelectOption, f: SelectField): string {
 }
 
 function matchPrepared(option: SelectOption, fields: readonly SelectField[], p: Prepared): Match | null {
-  if (!p.toks.length) return { option, fields: [], score: 0 };
-  const matched = new Set<string>();
+  if (!p.count) return { option, fields: [], score: 0 };
+  const matched: string[] = [];
   let score = 0;
-  for (const tok of p.toks) {
+  for (let k = 0; k < p.count; k++) {
     let hit = false;
-    for (const f of p.fields) {
-      const t = f.kind === "digits" ? onlyDigits(tok) : tok;
+    for (let j = 0; j < p.fields.length; j++) {
+      const t = p.toks[j][k];
       if (!t) continue;
-      const v = searchable(option, f);
+      const f = p.fields[j];
+      const v = searchable(option, f, p.ids[j]);
       const i = v.indexOf(t);
       if (i < 0) continue;
       hit = true;
-      matched.add(f.key);
+      if (!matched.includes(f.key)) matched.push(f.key);
       score += (i === 0 || v[i - 1] === " " ? 3 : 1) + (f === fields[0] ? 1 : 0) + (v === t ? 5 : 0);
     }
     if (!hit) return null;
   }
-  return { option, fields: [...matched], score };
+  return { option, fields: matched, score };
 }
 
-export function searchOptions(options: readonly SelectOption[], fields: readonly SelectField[], query: string): Match[] {
+/**
+ * Las que coinciden, de mayor a menor puntaje (a igual puntaje, en su orden), hasta `limit`. Los
+ * puntajes son enteros chicos: se reparten en cubetas en vez de ordenar los 10.000 resultados para
+ * pintar 50.
+ */
+export function searchOptions(options: readonly SelectOption[], fields: readonly SelectField[], query: string, limit = Infinity): Match[] {
   const p = prepare(fields, query);
-  const out: Match[] = [];
+  if (!p.count) return options.slice(0, limit).map((option) => ({ option, fields: [], score: 0 }));
+  const buckets: Match[][] = [];
   for (const o of options) {
     const m = matchPrepared(o, fields, p);
-    if (m) out.push(m);
+    if (m) (buckets[m.score] ??= []).push(m);
   }
-  return out.sort((a, b) => b.score - a.score);
+  const out: Match[] = [];
+  for (let s = buckets.length - 1; s >= 0 && out.length < limit; s--) {
+    for (const m of buckets[s] ?? []) {
+      out.push(m);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+/**
+ * Los registros con `value` (como texto) y sin repetirlo: dos con el mismo `value` se marcarían y se
+ * quitarían juntos. Se queda el primero; `duplicated` avisa que había repetidos.
+ */
+export function uniqueOptions(list: unknown): { options: SelectOption[]; duplicated: boolean } {
+  const seen = new Set<string>();
+  const options: SelectOption[] = [];
+  let duplicated = false;
+  for (const o of Array.isArray(list) ? (list as SelectOption[]) : []) {
+    if (!o || typeof o !== "object" || o.value === undefined) continue;
+    const value = String(o.value);
+    if (seen.has(value)) {
+      duplicated = true;
+      continue;
+    }
+    seen.add(value);
+    options.push({ ...o, value });
+  }
+  return { options, duplicated };
 }
 
 /** Los tramos `[inicio, fin)` de `text` que coinciden con la consulta (para `<mark>`). */
