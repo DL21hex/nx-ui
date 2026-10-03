@@ -32,7 +32,8 @@ const ATTR_ONLY: Record<string, string[]> = {};
 /** Elementos que no se pintan desde un payload. */
 const NOT_BDUI = ["nx-dialog", "nx-toaster"];
 /** Props vivas que otro frente está convirtiendo a algo serializable (no se declaran aquí en la
- *  clase para no pisar ese cambio). `nx-account.sync` recibe la cola de `nxSync`. */
+ *  clase para no pisar ese cambio). `nx-account.sync` recibe la cola de `nxSync`. Una entrada que
+ *  ya no es viva hace fallar la prueba: al integrar, se quita de aquí (o se declara en `localProps`). */
 const PENDING_LOCAL: Record<string, string[]> = { "nx-account": ["sync"] };
 /** Elementos sin componente de Solid (se usan con su función: `nxToast`). */
 const NOT_SOLID = ["nx-toaster"];
@@ -68,6 +69,7 @@ describe("API de los componentes", () => {
     }
     const declared = [...localProps(customElements.get(tag)), ...(PENDING_LOCAL[tag] ?? [])];
     expect(live.filter((k) => !declared.includes(k))).toEqual([]);
+    expect((PENDING_LOCAL[tag] ?? []).filter((k) => !live.includes(k)), "ya no es viva: quítala de PENDING_LOCAL").toEqual([]);
   });
 
   it.each(tags.filter((t) => !NOT_SOLID.includes(t)))("%s: el componente de Solid pasa todos los setters", (tag) => {

@@ -155,7 +155,9 @@ El CSS también va por pieza: `nx32-elements/<componente>.css` (`grid.css`, `tab
 (`nx32-elements/solid/grid`, `nx32-elements/solid/sidemenu`…). Así la app carga solo lo que usa. `nx32-elements/solid` los
 reexporta todos, pero importa la librería entera: sirve para prototipos, no para producción. Se
 publica como JSX sin compilar bajo la condición de export `"solid"`, así que vite-plugin-solid lo
-compila para SSR o navegador.
+compila para SSR o navegador. La condición `"import"` entrega el mismo JSX y no hay `"default"`: un
+bundler sin la condición `"solid"` (Rollup, esbuild o webpack sin el plugin de Solid) tiene que
+compilar `nx32-elements/solid/*` con babel-preset-solid; no se publica una versión compilada.
 
 ```tsx
 import { SideMenu } from "nx32-elements/solid/sidemenu";
