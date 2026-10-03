@@ -387,10 +387,16 @@ Una tabla de datos que se explora sola:
   pegar con Excel (TSV) y edición en línea (`nx-grid-change`, cancelable). Deshacer y rehacer
   (Ctrl+Z, Ctrl+Y o Ctrl+Mayús+Z, y botones): cada edición, pegado o borrado es un paso; lo
   deshecho queda seleccionado, y la marca de «editada» se va si la celda vuelve a su valor original.
+  Una edición abierta va a la fila que se estaba editando aunque los datos, los filtros o el orden
+  cambien mientras tanto (se guarda antes), y abrir una celda y salir sin tocarla no cambia nada.
+- **Teclado.** La tabla es una sola parada de Tab (el patrón grid de la APG): flechas entre celdas,
+  ↑ desde la primera fila sube a las cabeceras y ←/→ (Inicio, Fin) las recorren; ahí Enter ordena,
+  Alt+↓ abre el filtro, Ctrl+←/→ cambia el ancho (Mayús, de a más), Supr lo devuelve y ↓ vuelve a
+  las celdas.
 - **Agrupación con subtotales** por cualquier columna de categorías o por mes.
 - **Columnas a la medida.** «Columnas» muestra y esconde columnas (la última no se esconde, y el
   filtro de una columna oculta sigue puesto). El borde de cada cabecera cambia su ancho: arrastrar,
-  flechas con el foco en él, y doble clic o Supr para el original.
+  Ctrl+←/→ con el foco en la cabecera, y doble clic o Supr para el original.
 - **Vistas guardadas.** Con `views-storage="compras:ana"`, «Vistas» guarda el estado de la tabla
   con un nombre en `localStorage` (filtros, orden, agrupación, columnas ocultas y anchos) y lo
   aplica con un clic. Si después se cambia algo, el botón dice «modificada» y el menú ofrece
@@ -410,7 +416,10 @@ Una tabla de datos que se explora sola:
   delante (Excel lo pega como texto, no como fórmula); al pegarlo de vuelta en la tabla se quita.
 - **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques
   al desplazarse, y el backend devuelve los agregados. En el servidor, el filtro de una columna
-  espera 250 ms tras el último cambio antes de pedir.
+  espera 250 ms tras el último cambio antes de pedir. Si un bloque no llega, sale `nx-grid-error` y
+  se vuelve a pedir más tarde (1 s, 2 s, 4 s… hasta 30 s); si es el primero, la tabla lo dice con
+  «Reintentar». Se guardan hasta 50 bloques: los más lejanos a la vista se sueltan. Cambiar la
+  consulta o sacar la tabla del DOM corta lo que estaba en camino.
 - **O que la tabla elija.** Con `source` y `client-max="20000"`, la primera página dice el total:
   si pasa del tope, sigue en el servidor sin pedir nada más; si cabe, trae la consulta completa una
   vez (`{offset: 0, limit: 20001, sort: null, filters: []}`) y sigue en el cliente, con conteos
@@ -431,7 +440,10 @@ Una tabla de datos que se explora sola:
   vacía de 1 px, y en una pantalla táctil no se muestra (la tabla se desplaza con el dedo). Va con
   `aria-hidden` y fuera del orden del teclado (lo que se recorre es la tabla).
 - **Filas virtualizadas.** Solo existen en el DOM las filas visibles, y al desplazarse se reutilizan.
-  En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo; más allá, `source`.
+  En el cliente, 100.000 filas se filtran y ordenan en décimas de segundo (se ordenan una vez:
+  filtrar o buscar no vuelve a ordenar); más allá, `source`. Con cientos de miles de filas del
+  servidor, el alto de la tabla tiene un tope (el navegador no pinta más) y el desplazamiento se
+  escala para que la última fila se alcance.
   Con pocas filas, las líneas de las columnas siguen hasta el fondo de la tabla (solo las
   verticales: no se dibujan filas vacías), sin agregar scroll; sin filas, el aviso queda limpio.
 - **Selección y detalle.** `selectable` agrega casillas (Mayús para un tramo, Espacio con teclado,
@@ -465,18 +477,22 @@ source       POST {offset, limit, sort, filters, search?} → {rows, total, hist
 filtro       {key, op:"in"|"notIn", values} · {key, op:"range", min?, max?, rel?} · {key, op:"contains", value}
 ```
 
-Si el servidor tiene un tope por página menor que `limit`, puede mandar menos filas: al exportar, la
-tabla sigue pidiendo desde donde quedó hasta `total`.
+Si el servidor tiene un tope por página menor que `limit`, puede mandar menos filas: al desplazarse y
+al exportar, la tabla sigue pidiendo desde donde quedó hasta `total`. La exportación toma la consulta
+al empezar (filtrar mientras exporta no mezcla dos consultas) y se dice al terminar, también si falla.
 
 `source` solo se usa si es del mismo origen (o de uno permitido con `allowOrigins`): las filas no salen hacia un tercero. En modo servidor, «seleccionar las n» y las
 acciones en lote alcanzan solo las filas de la consulta actual; sin `row-key`, una marca por
-posición se pierde al cambiar de filtro u orden.
+posición se pierde al cambiar de filtro u orden. `row-key` se puede cambiar en cualquier momento (los
+id se rehacen, y se pierden las marcas y el historial); si un id se repite, esa fila se identifica por
+su posición y se avisa en la consola. Las filas se guardan sin prototipo: una columna `constructor`
+lee lo que trae la fila, no `Object`.
 
 | | |
 |---|---|
 | Propiedades / atributos | `columns`, `rows`, `source`, `client-max`, `filters`, `sort`, `search`, `view`, `views-storage`, `views`, `group-by`, `facets-open`, `top-scrollbar`, `height`, `row-key`, `filename`, `locale`, `selectable`, `selected`, `labels` |
 | Métodos | `clearFilters()`, `openFilter(key)`, `applyView(id)`, `activeView`, `exportXlsx()`, `removeColumn(key)`, `refresh()`, `undo()`, `redo()`, `canUndo`, `canRedo` |
-| Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open`, `nx-grid-views` |
+| Eventos | `nx-grid-filter`, `nx-grid-change` (cancelable), `nx-grid-columns`, `nx-grid-selection`, `nx-grid-open`, `nx-grid-views`, `nx-grid-export` (`{ok, count, filename, error?}`), `nx-grid-error` (`{offset, limit, error}`, con `source`) |
 
 ## `<nx-dialog>`, `nxToast()` y `nxConfirm()`
 

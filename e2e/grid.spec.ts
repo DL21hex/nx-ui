@@ -16,6 +16,24 @@ test("teclado: mover, seleccionar un rango y ver la suma en el pie", async ({ pa
   await expect(foot).toContainText("Suma");
 });
 
+test("teclado: la tabla es una sola parada de Tab; ↑ sube a las cabeceras y ↓ vuelve", async ({ page }) => {
+  await open(page, "#/grid");
+  await cell(page, 0, 0).click();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowUp");
+  const sorts = grid(page).locator(".nx-grid__sort");
+  await expect(sorts.nth(1)).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(sorts.nth(2)).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  const scroller = grid(page).locator(".nx-grid__scroll");
+  await expect(scroller).toBeFocused();
+  await expect(grid(page).locator('.nx-grid__row[data-r="0"] > [data-c="2"]')).toHaveClass(/is-active/);
+  // Tab sale de la tabla: no recorre las cabeceras.
+  await page.keyboard.press("Tab");
+  expect(await scroller.evaluate((s) => s.contains(document.activeElement))).toBe(false);
+});
+
 test("editar escribiendo, deshacer y rehacer (también con los botones)", async ({ page }) => {
   await open(page, "#/grid");
   await cell(page, 0, 0).click();

@@ -12,7 +12,7 @@ import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels 
 import type { NxDocCapture } from "../components/capture/doc-capture";
 import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues } from "../components/capture/types";
 import type { NxGrid } from "../components/grid/grid";
-import type { GridChange, GridChangeSource, GridColumn, GridFilter, GridLabels, GridPreset, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
+import type { GridChange, GridChangeSource, GridColumn, GridErrorDetail, GridExportDetail, GridFilter, GridLabels, GridPreset, GridRow, GridSavedView, GridSort, GridView } from "../components/grid/types";
 import type { NxDialog } from "../components/dialog/dialog";
 import type { CloseReason, DialogAction, DialogActionDetail, DialogCloseDetail, DialogLabels, DialogMode, DialogNavDetail, DialogSize } from "../components/dialog/types";
 import type { NxBadge } from "../components/badge/badge";
@@ -440,6 +440,8 @@ declare module "solid-js" {
       "nx-agent-event": CustomEvent<AguiEvent>;
       "nx-grid-open": CustomEvent<{ id: string; row: GridRow; key: string; origin: HTMLElement | null }>;
       "nx-grid-views": CustomEvent<{ views: GridSavedView[] }>;
+      "nx-grid-error": CustomEvent<GridErrorDetail>;
+      "nx-grid-export": CustomEvent<GridExportDetail>;
       "nx-command-select": CustomEvent<CommandSelectDetail>;
       "nx-command-ask": CustomEvent<{ query: string }>;
       "nx-inbox-decide": CustomEvent<InboxDecisionDetail>;

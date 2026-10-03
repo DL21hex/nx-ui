@@ -11,6 +11,8 @@ export type {
   GridColumn,
   GridColumnType,
   GridDateRel,
+  GridErrorDetail,
+  GridExportDetail,
   GridFacetData,
   GridFilter,
   GridHistogram,
@@ -37,5 +39,7 @@ declare global {
     "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
     "nx-grid-views": CustomEvent<{ views: import("./types").GridSavedView[] }>;
     "nx-grid-open": CustomEvent<{ id: string; row: import("./types").GridRow; key: string; origin: HTMLElement | null }>;
+    "nx-grid-error": CustomEvent<import("./types").GridErrorDetail>;
+    "nx-grid-export": CustomEvent<import("./types").GridExportDetail>;
   }
 }

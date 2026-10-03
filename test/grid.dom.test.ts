@@ -480,7 +480,10 @@ describe("<nx-grid>", () => {
   });
 
   it("client-max: si la consulta pasa del tope, se queda en el servidor sin pedir de más", async () => {
-    const fetch = vi.fn(async () => new Response(JSON.stringify({ rows: [{ id: "1", oc: "OC-1" }], total: 5000 })));
+    const fetch = vi.fn(async (_u: string, init: RequestInit) => {
+      const q = JSON.parse(init.body as string);
+      return new Response(JSON.stringify({ rows: Array.from({ length: Math.min(q.limit, 100) }, (_, i) => ({ id: String(q.offset + i), oc: `OC-${q.offset + i}` })), total: 5000 }));
+    });
     vi.stubGlobal("fetch", fetch);
     const el = mount('source="/datos" client-max="1000"');
     await new Promise((r) => setTimeout(r, 30));
