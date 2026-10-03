@@ -17,7 +17,7 @@
  * dentro del formulario del autor (solo `data-nx-fill` y la descripción accesible del campo).
  */
 import { Base, upgrade, attrProps } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -359,8 +359,7 @@ export class NxPasteFill extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #top(): Session | undefined {
     return this.#stack[this.#stack.length - 1];

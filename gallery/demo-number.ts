@@ -37,11 +37,11 @@ export function mountNumberDemo(root: HTMLElement): void {
     log.prepend(li);
     while (log.children.length > 5) log.lastElementChild!.remove();
   };
-  root.addEventListener("nx-change", (e) => {
+  root.addEventListener("nx-number-change", (e) => {
     const el = e.target as HTMLElement;
     if (el.localName !== "nx-number") return;
     const d = (e as Event as CustomEvent<NumberChangeDetail>).detail;
-    add(`nx-change → #${el.id} = ${JSON.stringify(d.value)} («${d.text}»)`);
+    add(`nx-number-change → #${el.id} = ${JSON.stringify(d.value)} («${d.text}»)`);
   });
 
   // ---------------------------------------------------------------- la línea de factura

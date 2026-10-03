@@ -92,7 +92,7 @@ export interface ScanTotals {
   overLines: number;
 }
 
-/** `nx-scan`: una lectura (cancelable: en el conteo, no se suma). */
+/** `nx-scan-read`: una lectura (cancelable: en el conteo, no se suma). */
 export interface ScanDetail {
   code: string;
   /** `ean_13`, `code_128`, `qr_code`… (el de `BarcodeDetector`), o el que se deduce del texto; `""` si no se sabe. */

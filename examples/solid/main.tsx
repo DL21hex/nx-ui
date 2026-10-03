@@ -2,7 +2,7 @@ import { Route, Router, useLocation, type RouteSectionProps } from "@solidjs/rou
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import "nx32-elements/nx32-elements.css";
-import { registerIcons } from "nx32-elements";
+import { registerIcons } from "nx32-elements/core";
 import { lucide } from "nx32-elements/icons";
 import { SideMenu, type MenuItem } from "nx32-elements/solid/sidemenu";
 import "./app.css";

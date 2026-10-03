@@ -11,7 +11,7 @@
  * cuántas tarjetas tiene y cuánto suman.
  */
 import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeHref, reducedMotion as reduced, emit } from "../../core/dom";
 import { glyph, initials } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -62,7 +62,6 @@ type Drag = { id: string; el: HTMLElement; pid: number; x0: number; y0: number; 
 type Pending = { detail: KanbanMoveDetail; done: boolean; close: () => void };
 
 let uid = 0;
-const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 /** El aviso con deshacer y cómo cerrarlo desde aquí (se resuelve con `"dismiss"`, que vale
  *  como «hazlo»). */
 function undoToast(opts: Parameters<typeof nxToast>[0] & object): { result: ReturnType<typeof nxToast>; close: () => void } {
@@ -212,7 +211,7 @@ export class NxKanban extends Base {
     return this.#cards.find((c) => c.id === id);
   }
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(`nx-kanban-${type}`, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, `nx-kanban-${type}`, detail, cancelable);
   }
   /** Al lector de pantalla (región `aria-live`). */
   #say(text: string): void {

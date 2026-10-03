@@ -24,10 +24,10 @@ declare global {
     "nx-doc-capture": NxDocCapture;
   }
   interface HTMLElementEventMap {
-    "nx-capture-file": CustomEvent<{ file: File }>;
-    "nx-capture-start": CustomEvent<{ fileName: string }>;
-    "nx-capture-done": CustomEvent<{ values: import("./types").CaptureValues; pending: string[] }>;
-    "nx-capture-change": CustomEvent<{ key: string; value: string; values: import("./types").CaptureValues }>;
-    "nx-capture-submit": CustomEvent<import("./types").CaptureSubmitDetail>;
+    "nx-doc-capture-file": CustomEvent<{ file: File }>;
+    "nx-doc-capture-start": CustomEvent<{ fileName: string }>;
+    "nx-doc-capture-done": CustomEvent<{ values: import("./types").CaptureValues; pending: string[] }>;
+    "nx-doc-capture-change": CustomEvent<{ key: string; value: string; values: import("./types").CaptureValues }>;
+    "nx-doc-capture-submit": CustomEvent<import("./types").CaptureSubmitDetail>;
   }
 }

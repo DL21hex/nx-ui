@@ -53,7 +53,7 @@
       <div class="scan-single" lang="es-CO">
         <nx-scan id="scan-single" source="/demo/scan/producto?code=" formats="ean_13,qr_code"></nx-scan>
         <p class="btn-demo__desc">
-          <code>mode="single"</code> (por defecto): una lectura dispara <code>nx-scan</code> y la cámara se apaga. Útil para
+          <code>mode="single"</code> (por defecto): una lectura dispara <code>nx-scan-read</code> y la cámara se apaga. Útil para
           buscar un producto o una orden. Prueba escribir <kbd>7707123450042</kbd> y <kbd>Enter</kbd>.
         </p>
       </div>
@@ -81,7 +81,7 @@
           <tbody>
             <tr><td><code>source</code></td><td><code>GET {source}{código}</code> (o reemplaza <code>{code}</code>) → <code>{"code":"7707123450011","name":"Lámina HR 3 mm","unit":"und","expected":40}</code>. <code>expected</code> y <code>unit</code> son opcionales; 404 si no existe. Una vez por código.</td></tr>
             <tr><td><code>items</code></td><td><code>[{code, qty, name?, unit?, expected?, format?}]</code>. Se pueden precargar las líneas de una orden con <code>qty: 0</code>: así lo que falta se ve desde el comienzo.</td></tr>
-            <tr><td><code>nx-scan</code></td><td><code>{code, format, via}</code> en cada lectura (<code>via</code>: <code>camera</code>, <code>photo</code>, <code>manual</code>, <code>wedge</code>, <code>api</code>). Cancelable: con <code>preventDefault()</code> no se cuenta.</td></tr>
+            <tr><td><code>nx-scan-read</code></td><td><code>{code, format, via}</code> en cada lectura (<code>via</code>: <code>camera</code>, <code>photo</code>, <code>manual</code>, <code>wedge</code>, <code>api</code>). Cancelable: con <code>preventDefault()</code> no se cuenta.</td></tr>
             <tr><td><code>nx-scan-count</code></td><td><code>{items}</code> después de cada cambio: lectura, edición, deshacer, vaciar o la descripción que llegó.</td></tr>
             <tr><td><code>nx-scan-error</code></td><td><code>{problem}</code>: <code>nodetector</code>, <code>nocamera</code>, <code>insecure</code>, <code>denied</code>, <code>busy</code> o <code>failed</code>.</td></tr>
           </tbody>
@@ -102,13 +102,13 @@ recepcion.items = oc.lineas.map((l) =&gt; ({ code: l.ean, name: l.nombre, expect
 recepcion.addEventListener("nx-scan-count", (e) =&gt; guardarBorrador(e.detail.items));
 
 &lt;nx-scan id="buscar"&gt;&lt;/nx-scan&gt;
-buscar.addEventListener("nx-scan", (e) =&gt; abrirProducto(e.detail.code));   // {code, format, via}</code></pre>
+buscar.addEventListener("nx-scan-read", (e) =&gt; abrirProducto(e.detail.code));   // {code, format, via}</code></pre>
         <pre role="tabpanel" hidden><code>import { Scan } from "nx32-elements/solid/scan";
 
 &lt;Scan mode="count" source="/inventario/producto?code=" formats={["ean_13", "code_128"]}
   items={lineas()} onCount={(e) =&gt; setLineas(e.detail.items)} /&gt;
 
-&lt;Scan onScan={(e) =&gt; navigate(`/productos/${e.detail.code}`)} /&gt;</code></pre>
+&lt;Scan onRead={(e) =&gt; navigate(`/productos/${e.detail.code}`)} /&gt;</code></pre>
       </div>
 
       <h2>API</h2>
@@ -123,7 +123,7 @@ buscar.addEventListener("nx-scan", (e) =&gt; abrirProducto(e.detail.code));   //
             <tr><td><code>locale</code>, <code>labels</code></td><td>Formato de las cantidades y los textos (<code>SCAN_LABELS</code>).</td></tr>
             <tr><td><code>state</code>, <code>problem</code></td><td>Solo lectura: <code>idle</code>, <code>starting</code>, <code>live</code>, <code>paused</code>, <code>done</code> o <code>unavailable</code>, y por qué.</td></tr>
             <tr><td>Métodos</td><td><code>start()</code>, <code>stop()</code>, <code>add(código, cantidad?)</code>, <code>undo()</code>, <code>clear()</code>, <code>focus()</code>.</td></tr>
-            <tr><td>Eventos</td><td><code>nx-scan</code> <code>{code, format, via}</code> (cancelable), <code>nx-scan-count</code> <code>{items}</code>, <code>nx-scan-error</code> <code>{problem}</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-scan-read</code> <code>{code, format, via}</code> (cancelable), <code>nx-scan-count</code> <code>{items}</code>, <code>nx-scan-error</code> <code>{problem}</code>.</td></tr>
           </tbody>
         </table>
       </div>

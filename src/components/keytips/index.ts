@@ -12,7 +12,7 @@ declare global {
     "nx-keytips": NxKeytips;
   }
   interface HTMLElementEventMap {
-    "nx-keytip": CustomEvent<import("./types").KeytipDetail>;
+    "nx-keytips-activate": CustomEvent<import("./types").KeytipDetail>;
   }
   // `nx-open-change` ({open}) ya lo declara <nx-sidemenu> con el mismo detalle.
 }

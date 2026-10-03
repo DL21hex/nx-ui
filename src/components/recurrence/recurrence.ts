@@ -15,6 +15,7 @@ import { resolveLocale } from "../../core/locale";
 import { colombiaHolidays, describeRecurrence, formatClock, occurrences, parseRRule, RRULE_RX, shortDate, toRRule } from "./logic";
 import type { Manual } from "./recurrence-edit";
 import type { RecurrenceLabels, RecurrenceOccurrence, RecurrenceRule, RecurrenceValue, RecurrenceValueFormat } from "./types";
+import { setAttr } from "../../core/dom";
 
 type Edit = typeof import("./recurrence-edit");
 let edit: Edit | undefined;
@@ -85,7 +86,7 @@ export class NxRecurrence extends Base {
   /** Lo que no se entendió (las palabras), o `""`. */
   #bad = "";
   #next: RecurrenceOccurrence[] = [];
-  /** La RRULE de la última vez que se avisó (`nx-change` sale solo si cambia). */
+  /** La RRULE de la última vez que se avisó (`nx-recurrence-change` sale solo si cambia). */
   #sent = "";
   /** El valor del atributo: al que vuelve un <form reset>. */
   #default = "";
@@ -290,8 +291,7 @@ export class NxRecurrence extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #bool(name: string, v: boolean): void {
     this.toggleAttribute(name, !!v);
@@ -409,7 +409,7 @@ export class NxRecurrence extends Base {
     this.#rule = rule;
     this.#bad = bad;
     if (rule) this.#ctl?.sync(rule);
-    // Lo que llega de afuera no se avisa: `nx-change` es para lo que cambia quien usa el campo.
+    // Lo que llega de afuera no se avisa: `nx-recurrence-change` es para lo que cambia quien usa el campo.
     if (!typed) this.#sent = this.rule;
     this.#refresh(typed);
   }
@@ -427,7 +427,7 @@ export class NxRecurrence extends Base {
     if (rrule === this.#sent) return;
     this.#sent = rrule;
     this.dispatchEvent(new Event("change", { bubbles: true }));
-    this.dispatchEvent(new CustomEvent("nx-change", { detail: { value: rrule, rrule, text: this.text, next: this.next }, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nx-recurrence-change", { detail: { value: rrule, rrule, text: this.text, next: this.next }, bubbles: true, composed: true }));
   }
 
   #message(): string {

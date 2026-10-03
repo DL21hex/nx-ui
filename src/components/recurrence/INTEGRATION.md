@@ -104,7 +104,7 @@ En `declare module "solid-js" { namespace JSX { … } }`:
       // `required`, `disabled`, `readonly` ya existen.
     }
     interface CustomEvents {
-      // `"nx-change"`: ampliar a `CustomEvent<SelectChangeDetail | DateRangeChangeDetail | RecurrenceChangeDetail>`.
+      "nx-recurrence-change": CustomEvent<RecurrenceChangeDetail>;
       "nx-recurrence-error": CustomEvent<RecurrenceErrorDetail>;
     }
     interface IntrinsicElements {
@@ -156,7 +156,7 @@ export function Recurrence(props: RecurrenceProps): JSX.Element {
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
       bool:readonly={!!local.readonly}
-      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<RecurrenceChangeDetail>)}
+      on:nx-recurrence-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
       on:nx-recurrence-error={(e) => local.onError?.(e)}
     />
   );
@@ -197,7 +197,7 @@ mantenimiento preventivo, un recordatorio de cierre.
 | | |
 |---|---|
 | Propiedades / atributos | `value` (frase o RRULE; al leer, la RRULE), `name`, `required`, `disabled`, `readonly`, `start` (ISO, hoy), `holidays` (JSON), `holidays-mode` (`add`, `replace`), `count` (5), `value-format` (`rrule`, `json`), `locale`, `label`, `labels` · solo lectura: `rule`, `text`, `next` (`Date[]`); `toJSON()` → `{rrule, text, holidays, next}` |
-| Eventos | `nx-change` `{value, rrule, text, next}` (al confirmar lo escrito o cambiar un control), `nx-recurrence-error` `{message}` |
+| Eventos | `nx-recurrence-change` `{value, rrule, text, next}` (al confirmar lo escrito o cambiar un control), `nx-recurrence-error` `{message}` |
 | Funciones | `parseRecurrence(frase, {start, locale})`, `describeRecurrence(regla)`, `toRRule()`, `parseRRule()`, `nextOccurrences(regla, desde, n, festivos)`, `recurrenceOccurrences()` (con `movedFrom`), `colombiaHolidays(año)`, `fillRecurrenceRule()`, `RECURRENCE_LABELS` |
 
 **`X-NX-HOLIDAYS`** (la RRULE no tiene festivos): `skip` quita los festivos del conjunto de cada
@@ -243,7 +243,7 @@ ni correr festivos.
 - **Generador**: período por período desde `DTSTART` (salta cerca de `from` si no hay `COUNT`), con tope
   de 500 000 períodos y un corte si pasan 400 años (10 en `HOURLY`) sin una fecha. Las corridas por
   festivo se insertan en orden y sin repetir.
-- **`nx-change`** sale al confirmar (salir del campo o Enter) si la RRULE cambió, y en cada cambio de
+- **`nx-recurrence-change`** sale al confirmar (salir del campo o Enter) si la RRULE cambió, y en cada cambio de
   un control. El anuncio para lectores de pantalla es un `role="status"` aparte que se llena 800 ms
   después de dejar de escribir; la frase visible cambia al instante y es la `aria-describedby`.
 - **`toJSON().holidays`** es el modo (`skip`, `before`, `after` o `null`), no la lista de festivos.

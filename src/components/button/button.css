@@ -122,15 +122,7 @@ nx-button[disabled] .nx-button__btn {
   inline-size: 16px;
   block-size: 16px;
 }
-.nx-spinner {
-  display: block;
-  inline-size: 14px;
-  block-size: 14px;
-  border: 2px solid color-mix(in oklch, var(--_fg) 25%, transparent);
-  border-block-start-color: var(--_accent);
-  border-radius: 50%;
-  animation: nx-spin 0.7s linear infinite;
-}
+/* `.nx-spinner` y `@keyframes nx-spin` son compartidos: viven en tokens.css. */
 
 /* El ticker: cada mensaje nuevo entra desde abajo. */
 .nx-button__text {
@@ -299,11 +291,6 @@ nx-button[disabled] .nx-button__btn {
   animation: nx-blink 1s steps(1) infinite;
 }
 
-@keyframes nx-spin {
-  to {
-    rotate: 360deg;
-  }
-}
 @keyframes nx-ticker-in {
   from {
     opacity: 0;
@@ -355,13 +342,7 @@ nx-button[disabled] .nx-button__btn {
     forced-color-adjust: none;
     background: Highlight;
   }
-  /* Los cuatro bordes del spinner quedarían del mismo color (un círculo quieto), y el relleno de
-     «mantén pulsado» se perdería sobre el fondo. */
-  .nx-spinner {
-    forced-color-adjust: none;
-    border-color: CanvasText;
-    border-block-start-color: Highlight;
-  }
+  /* El relleno de «mantén pulsado» se perdería sobre el fondo (el spinner, en tokens.css). */
   .nx-button__hold {
     forced-color-adjust: none;
     background: Highlight;

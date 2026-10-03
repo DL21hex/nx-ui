@@ -76,7 +76,7 @@ En `declare module "solid-js" { namespace JSX { … } }`:
       // `disabled` ya existe.
     }
     interface CustomEvents {
-      "nx-keytip": CustomEvent<KeytipDetail>;
+      "nx-keytips-activate": CustomEvent<KeytipDetail>;
       // `nx-open-change` ya existe con `OpenChangeDetail` ({open}): es el mismo detalle.
     }
     interface IntrinsicElements {
@@ -95,12 +95,12 @@ export interface KeytipsProps extends JSX.HTMLAttributes<NxKeytips> {
   disabled?: boolean;
   labels?: Partial<KeytipsLabels>;
   /** Antes de ejecutar una acción: `{key, target, name}`. Cancelable. */
-  onKeytip?: (e: CustomEvent<KeytipDetail>) => void;
+  onActivate?: (e: CustomEvent<KeytipDetail>) => void;
   onOpenChange?: (e: CustomEvent<OpenChangeDetail>) => void;
 }
 
 export function Keytips(props: KeytipsProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["scope", "key", "disabled", "labels", "onKeytip", "onOpenChange"]);
+  const [local, rest] = splitProps(props, ["scope", "key", "disabled", "labels", "onActivate", "onOpenChange"]);
   return (
     <nx-keytips
       {...rest}
@@ -108,7 +108,7 @@ export function Keytips(props: KeytipsProps): JSX.Element {
       attr:scope={local.scope}
       attr:key={local.key}
       bool:disabled={!!local.disabled}
-      on:nx-keytip={(e) => local.onKeytip?.(e)}
+      on:nx-keytips-activate={(e) => local.onActivate?.(e)}
       on:nx-open-change={(e) => local.onOpenChange?.(e)}
     />
   );
@@ -139,7 +139,7 @@ Mantener Alt ~400 ms también los muestra (y Alt+letra sin soltar ejecuta).
   aperturas mientras siga en pantalla. Con más de 30 acciones, dos letras (como Vimium): la primera
   atenúa las que no empiezan por ella. `assignKeytips()` es la misma asignación, pura.
 - **Qué hace:** un clic (botones, enlaces, pestañas, casillas; en `<nx-button>`, su botón) o el
-  foco con el texto seleccionado (campos). Antes sale `nx-keytip`, cancelable.
+  foco con el texto seleccionado (campos). Antes sale `nx-keytips-activate`, cancelable.
 - **No estorba:** funciona mientras se escribe en un campo (la letra no se escribe); Alt+Tab, AltGr
   para «@» y Ctrl+Alt no lo activan; Tab y los atajos con Ctrl/⌘ (la paleta con Ctrl+K) cierran los
   atajos y siguen su camino. Cerrado, solo escucha `keydown`/`keyup`.
@@ -155,7 +155,7 @@ Mantener Alt ~400 ms también los muestra (y Alt+letra sin soltar ejecuta).
 |---|---|
 | Propiedades / atributos | `scope` (selector), `key` (`Alt`, `Control`, `Shift`, `Meta` o `none`), `disabled`, `labels` · `open`, `assignments` (`[{key, name, element}]`) |
 | Métodos | `show()`, `hide()` |
-| Eventos | `nx-keytip` `{key, target, name}` (cancelable), `nx-open-change` `{open}` |
+| Eventos | `nx-keytips-activate` `{key, target, name}` (cancelable), `nx-open-change` `{open}` |
 | Funciones | `assignKeytips([{name, forced?, prev?}])` → códigos, `keytipLetters(nombre)` |
 ````
 

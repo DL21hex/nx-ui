@@ -122,7 +122,7 @@
         <table>
           <thead><tr><th>En</th><th>Pasa</th></tr></thead>
           <tbody>
-            <tr><td>Botones, enlaces, pestañas, <code>summary</code>, casillas</td><td>Un clic (en <code>&lt;nx-button&gt;</code>, en su botón). Antes sale <code>nx-keytip</code>, cancelable.</td></tr>
+            <tr><td>Botones, enlaces, pestañas, <code>summary</code>, casillas</td><td>Un clic (en <code>&lt;nx-button&gt;</code>, en su botón). Antes sale <code>nx-keytips-activate</code>, cancelable.</td></tr>
             <tr><td>Campos, listas, áreas de texto, <code>contenteditable</code></td><td>Reciben el foco, con el texto seleccionado para reemplazarlo.</td></tr>
             <tr><td>Mientras están a la vista</td><td>Toda tecla es de los atajos (no se escribe en el campo ni cierra el diálogo de abajo), salvo <kbd>Tab</kbd> y los atajos con <kbd>Ctrl</kbd>/<kbd>⌘</kbd> (<kbd>Ctrl</kbd>+<kbd>K</kbd> abre la paleta), que los cierran y siguen su camino.</td></tr>
             <tr><td>Si la acción abre algo</td><td>Los atajos no se vuelven a mostrar solos: otro toque de <kbd>Alt</kbd> los muestra dentro del diálogo.</td></tr>
@@ -142,10 +142,10 @@
 &lt;button data-keytip="X"&gt;Exportar a Excel&lt;/button&gt;   &lt;!-- letra fija --&gt;
 &lt;button data-keytip="off"&gt;Eliminar&lt;/button&gt;          &lt;!-- sin atajo --&gt;
 
-keytips.addEventListener("nx-keytip", (e) =&gt; console.log(e.detail.key, e.detail.name));</code></pre>
+keytips.addEventListener("nx-keytips-activate", (e) =&gt; console.log(e.detail.key, e.detail.name));</code></pre>
         <pre role="tabpanel" hidden><code>import { Keytips } from "nx32-elements/solid/keytips";
 
-&lt;Keytips scope="#contenido" onKeytip={(e) =&gt; track(e.detail.key)} /&gt;</code></pre>
+&lt;Keytips scope="#contenido" onActivate={(e) =&gt; track(e.detail.key)} /&gt;</code></pre>
       </div>
 
       <h2>API</h2>
@@ -160,7 +160,7 @@ keytips.addEventListener("nx-keytip", (e) =&gt; console.log(e.detail.key, e.deta
             <tr><td><code>show()</code>, <code>hide()</code>, <code>open</code></td><td>Mostrarlos u ocultarlos desde código (<code>show()</code> no abre si no hay ninguna acción visible).</td></tr>
             <tr><td><code>assignments</code></td><td><code>[{key, name, element}]</code> de lo visible: para una hoja de ayuda o para las pruebas.</td></tr>
             <tr><td><code>data-keytip</code></td><td>En cualquier elemento: <code>"G"</code> fija la letra (o <code>"GU"</code>), <code>""</code> le da letra a algo que no es un control, <code>"off"</code> lo excluye (con todo lo de adentro).</td></tr>
-            <tr><td>Eventos</td><td><code>nx-keytip</code> <code>{key, target, name}</code> (cancelable: no se ejecuta) y <code>nx-open-change</code> <code>{open}</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-keytips-activate</code> <code>{key, target, name}</code> (cancelable: no se ejecuta) y <code>nx-open-change</code> <code>{open}</code>.</td></tr>
             <tr><td><code>assignKeytips()</code></td><td>La asignación, pura y sin DOM: <code>assignKeytips([{name: "Guardar"}, {name: "Generar"}])</code> → <code>["G", "E"]</code>.</td></tr>
           </tbody>
         </table>

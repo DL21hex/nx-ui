@@ -7,7 +7,7 @@ import type { AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels 
 
 export type { NxAiAnswer, AiActionDetail, AiDoneDetail, AiEvent, AiFeedbackDetail, AiLabels };
 
-export interface AIAnswerProps extends JSX.HTMLAttributes<NxAiAnswer> {
+export interface AIAnswerProps extends Omit<JSX.HTMLAttributes<NxAiAnswer>, "children"> {
   /** URL que responde con el protocolo de streaming de nx32-elements (POST `{question, context}`). */
   endpoint?: string;
   method?: string;
@@ -22,6 +22,8 @@ export interface AIAnswerProps extends JSX.HTMLAttributes<NxAiAnswer> {
   onDone?: (e: CustomEvent<AiDoneDetail>) => void;
   onAction?: (e: CustomEvent<AiActionDetail>) => void;
   onFeedback?: (e: CustomEvent<AiFeedbackDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function AIAnswer(props: AIAnswerProps): JSX.Element {
@@ -37,6 +39,7 @@ export function AIAnswer(props: AIAnswerProps): JSX.Element {
     "onDone",
     "onAction",
     "onFeedback",
+    "children",
   ]);
   return (
     <nx-ai-answer
@@ -49,9 +52,9 @@ export function AIAnswer(props: AIAnswerProps): JSX.Element {
       prop:context={local.context}
       prop:labels={local.labels}
       bool:feedback={!!local.feedback}
-      on:nx-ai-done={(e) => local.onDone?.(e)}
-      on:nx-ai-action={(e) => local.onAction?.(e)}
-      on:nx-ai-feedback={(e) => local.onFeedback?.(e)}
+      on:nx-ai-answer-done={(e) => e.target === e.currentTarget && local.onDone?.(e)}
+      on:nx-ai-answer-action={(e) => e.target === e.currentTarget && local.onAction?.(e)}
+      on:nx-ai-answer-feedback={(e) => e.target === e.currentTarget && local.onFeedback?.(e)}
     />
   );
 }

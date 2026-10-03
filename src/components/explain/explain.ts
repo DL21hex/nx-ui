@@ -14,7 +14,7 @@
  * La tarjeta es un popover (capa superior) que se crea al abrirse la primera vez.
  */
 import { Base, upgrade } from "../../core/define";
-import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -164,8 +164,7 @@ export class NxExplain extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
 
   #build(): void {

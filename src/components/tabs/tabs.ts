@@ -20,7 +20,7 @@
 import { Base, boolAttr, upgrade } from "../../core/define";
 import { h } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
-import { nxFormat, resolveLocale } from "../../core/locale";
+import { nxFormat, resolveLocale, unwatchLang, watchLang } from "../../core/locale";
 import { focusFrom, hasStops, readingFlow, stepTab, tabOrder, tabThrough } from "../../core/order";
 import type { TabItem, TabsChangeDetail, TabsLabels } from "./types";
 
@@ -117,12 +117,15 @@ export class NxTabs extends Base {
     if (!this.#list) this.#build();
     // Con el script en el <head>, los hijos todavía no existen: se repinta cuando llegan.
     this.#watch();
+    // Los contadores van con el formato del locale: si cambia el `lang` de la página, se repintan.
+    watchLang(this, () => this.#paint());
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => this.#paint(), { once: true });
     this.#paint();
   }
 
   disconnectedCallback(): void {
     this.#mo?.disconnect();
+    unwatchLang(this);
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {

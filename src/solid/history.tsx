@@ -7,7 +7,7 @@ import type { HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, His
 
 export type { NxHistory, HistoryActor, HistoryCommitDetail, HistoryEvent, HistoryField, HistoryLabels, HistoryRevertDetail };
 
-export interface HistoryProps extends JSX.HTMLAttributes<NxHistory> {
+export interface HistoryProps extends Omit<JSX.HTMLAttributes<NxHistory>, "children"> {
   /** El registro como está hoy. */
   record?: Record<string, unknown>;
   fields?: HistoryField[];
@@ -28,10 +28,12 @@ export interface HistoryProps extends JSX.HTMLAttributes<NxHistory> {
   /** Cancelable: la nota no se agrega. */
   onComment?: (e: CustomEvent<{ text: string }>) => void;
   onTravel?: (e: CustomEvent<{ id: string | null; record: Record<string, HistoryValue> }>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function History(props: HistoryProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["record", "fields", "events", "source", "user", "undo", "heading", "locale", "labels", "onRevert", "onCommit", "onComment", "onTravel"]);
+  const [local, rest] = splitProps(props, ["record", "fields", "events", "source", "user", "undo", "heading", "locale", "labels", "onRevert", "onCommit", "onComment", "onTravel", "children"]);
   return (
     <nx-history
       {...rest}
@@ -44,10 +46,10 @@ export function History(props: HistoryProps): JSX.Element {
       attr:heading={local.heading}
       attr:undo={local.undo === undefined ? undefined : String(local.undo)}
       attr:locale={local.locale}
-      on:nx-history-revert={(e) => local.onRevert?.(e)}
-      on:nx-history-commit={(e) => local.onCommit?.(e)}
-      on:nx-history-comment={(e) => local.onComment?.(e)}
-      on:nx-history-travel={(e) => local.onTravel?.(e)}
+      on:nx-history-revert={(e) => e.target === e.currentTarget && local.onRevert?.(e)}
+      on:nx-history-commit={(e) => e.target === e.currentTarget && local.onCommit?.(e)}
+      on:nx-history-comment={(e) => e.target === e.currentTarget && local.onComment?.(e)}
+      on:nx-history-travel={(e) => e.target === e.currentTarget && local.onTravel?.(e)}
     />
   );
 }

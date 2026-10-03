@@ -36,9 +36,9 @@ export function PasteFill(props: PasteFillProps): JSX.Element {
       attr:review-below={local.reviewBelow === undefined ? undefined : String(local.reviewBelow)}
       attr:for={local.for}
       attr:locale={local.locale}
-      on:nx-paste-fill-start={(e) => local.onStart?.(e)}
-      on:nx-paste-fill-done={(e) => local.onDone?.(e)}
-      on:nx-paste-fill-undo={(e) => local.onUndo?.(e)}
+      on:nx-paste-fill-start={(e) => e.target === e.currentTarget && local.onStart?.(e)}
+      on:nx-paste-fill-done={(e) => e.target === e.currentTarget && local.onDone?.(e)}
+      on:nx-paste-fill-undo={(e) => e.target === e.currentTarget && local.onUndo?.(e)}
     >
       {local.children}
       {/* Tope de los hijos: ver «Hijos» en ./index.tsx. */}

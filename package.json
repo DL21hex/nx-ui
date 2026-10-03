@@ -16,207 +16,263 @@
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./sidemenu": {
       "types": "./dist/types/components/sidemenu/index.d.ts",
-      "import": "./dist/sidemenu.js"
+      "import": "./dist/sidemenu.js",
+      "default": "./dist/sidemenu.js"
     },
     "./button": {
       "types": "./dist/types/components/button/index.d.ts",
-      "import": "./dist/button.js"
+      "import": "./dist/button.js",
+      "default": "./dist/button.js"
     },
     "./select": {
       "types": "./dist/types/components/select/index.d.ts",
-      "import": "./dist/select.js"
+      "import": "./dist/select.js",
+      "default": "./dist/select.js"
     },
     "./ai": {
       "types": "./dist/types/components/ai/index.d.ts",
-      "import": "./dist/ai.js"
+      "import": "./dist/ai.js",
+      "default": "./dist/ai.js"
     },
     "./capture": {
       "types": "./dist/types/components/capture/index.d.ts",
-      "import": "./dist/capture.js"
+      "import": "./dist/capture.js",
+      "default": "./dist/capture.js"
     },
     "./grid": {
       "types": "./dist/types/components/grid/index.d.ts",
-      "import": "./dist/grid.js"
+      "import": "./dist/grid.js",
+      "default": "./dist/grid.js"
     },
     "./dialog": {
       "types": "./dist/types/components/dialog/index.d.ts",
-      "import": "./dist/dialog.js"
+      "import": "./dist/dialog.js",
+      "default": "./dist/dialog.js"
     },
     "./confirm": {
       "types": "./dist/types/components/confirm/index.d.ts",
-      "import": "./dist/confirm.js"
+      "import": "./dist/confirm.js",
+      "default": "./dist/confirm.js"
     },
     "./toast": {
       "types": "./dist/types/components/toast/index.d.ts",
-      "import": "./dist/toast.js"
+      "import": "./dist/toast.js",
+      "default": "./dist/toast.js"
     },
     "./agent": {
       "types": "./dist/types/components/agent/index.d.ts",
-      "import": "./dist/agent.js"
+      "import": "./dist/agent.js",
+      "default": "./dist/agent.js"
     },
     "./command": {
       "types": "./dist/types/components/command/index.d.ts",
-      "import": "./dist/command.js"
+      "import": "./dist/command.js",
+      "default": "./dist/command.js"
     },
     "./explain": {
       "types": "./dist/types/components/explain/index.d.ts",
-      "import": "./dist/explain.js"
+      "import": "./dist/explain.js",
+      "default": "./dist/explain.js"
     },
     "./inbox": {
       "types": "./dist/types/components/inbox/index.d.ts",
-      "import": "./dist/inbox.js"
+      "import": "./dist/inbox.js",
+      "default": "./dist/inbox.js"
     },
     "./survey": {
       "types": "./dist/types/components/survey/index.d.ts",
-      "import": "./dist/survey.js"
+      "import": "./dist/survey.js",
+      "default": "./dist/survey.js"
     },
     "./tour": {
       "types": "./dist/types/components/tour/index.d.ts",
-      "import": "./dist/tour.js"
+      "import": "./dist/tour.js",
+      "default": "./dist/tour.js"
     },
     "./number": {
       "types": "./dist/types/components/number/index.d.ts",
-      "import": "./dist/number.js"
+      "import": "./dist/number.js",
+      "default": "./dist/number.js"
     },
     "./kanban": {
       "types": "./dist/types/components/kanban/index.d.ts",
-      "import": "./dist/kanban.js"
+      "import": "./dist/kanban.js",
+      "default": "./dist/kanban.js"
     },
     "./history": {
       "types": "./dist/types/components/history/index.d.ts",
-      "import": "./dist/history.js"
+      "import": "./dist/history.js",
+      "default": "./dist/history.js"
     },
     "./date-range": {
       "types": "./dist/types/components/date-range/index.d.ts",
-      "import": "./dist/date-range.js"
+      "import": "./dist/date-range.js",
+      "default": "./dist/date-range.js"
     },
     "./paste-fill": {
       "types": "./dist/types/components/paste-fill/index.d.ts",
-      "import": "./dist/paste-fill.js"
+      "import": "./dist/paste-fill.js",
+      "default": "./dist/paste-fill.js"
     },
     "./presence": {
       "types": "./dist/types/components/presence/index.d.ts",
-      "import": "./dist/presence.js"
+      "import": "./dist/presence.js",
+      "default": "./dist/presence.js"
     },
     "./what-if": {
       "types": "./dist/types/components/what-if/index.d.ts",
-      "import": "./dist/what-if.js"
+      "import": "./dist/what-if.js",
+      "default": "./dist/what-if.js"
     },
     "./trend": {
       "types": "./dist/types/components/trend/index.d.ts",
-      "import": "./dist/trend.js"
+      "import": "./dist/trend.js",
+      "default": "./dist/trend.js"
     },
     "./scan": {
       "types": "./dist/types/components/scan/index.d.ts",
-      "import": "./dist/scan.js"
+      "import": "./dist/scan.js",
+      "default": "./dist/scan.js"
     },
     "./sync": {
       "types": "./dist/types/components/sync/index.d.ts",
-      "import": "./dist/sync.js"
+      "import": "./dist/sync.js",
+      "default": "./dist/sync.js"
     },
     "./keytips": {
       "types": "./dist/types/components/keytips/index.d.ts",
-      "import": "./dist/keytips.js"
+      "import": "./dist/keytips.js",
+      "default": "./dist/keytips.js"
     },
     "./import": {
       "types": "./dist/types/components/import/index.d.ts",
-      "import": "./dist/import.js"
+      "import": "./dist/import.js",
+      "default": "./dist/import.js"
     },
     "./guard": {
       "types": "./dist/types/components/guard/index.d.ts",
-      "import": "./dist/guard.js"
+      "import": "./dist/guard.js",
+      "default": "./dist/guard.js"
     },
     "./handoff": {
       "types": "./dist/types/components/handoff/index.d.ts",
-      "import": "./dist/handoff.js"
+      "import": "./dist/handoff.js",
+      "default": "./dist/handoff.js"
     },
     "./award": {
       "types": "./dist/types/components/award/index.d.ts",
-      "import": "./dist/award.js"
+      "import": "./dist/award.js",
+      "default": "./dist/award.js"
     },
     "./account": {
       "types": "./dist/types/components/account/index.d.ts",
-      "import": "./dist/account.js"
+      "import": "./dist/account.js",
+      "default": "./dist/account.js"
     },
     "./cards": {
       "types": "./dist/types/components/cards/index.d.ts",
-      "import": "./dist/cards.js"
+      "import": "./dist/cards.js",
+      "default": "./dist/cards.js"
     },
     "./launcher": {
       "types": "./dist/types/components/launcher/index.d.ts",
-      "import": "./dist/launcher.js"
+      "import": "./dist/launcher.js",
+      "default": "./dist/launcher.js"
     },
     "./print": {
       "types": "./dist/types/components/print/index.d.ts",
-      "import": "./dist/print.js"
+      "import": "./dist/print.js",
+      "default": "./dist/print.js"
     },
     "./badge": {
       "types": "./dist/types/components/badge/index.d.ts",
-      "import": "./dist/badge.js"
+      "import": "./dist/badge.js",
+      "default": "./dist/badge.js"
     },
     "./notice": {
       "types": "./dist/types/components/notice/index.d.ts",
-      "import": "./dist/notice.js"
+      "import": "./dist/notice.js",
+      "default": "./dist/notice.js"
     },
     "./fields": {
       "types": "./dist/types/components/fields/index.d.ts",
-      "import": "./dist/fields.js"
+      "import": "./dist/fields.js",
+      "default": "./dist/fields.js"
     },
     "./tabs": {
       "types": "./dist/types/components/tabs/index.d.ts",
-      "import": "./dist/tabs.js"
+      "import": "./dist/tabs.js",
+      "default": "./dist/tabs.js"
     },
     "./breadcrumb": {
       "types": "./dist/types/components/breadcrumb/index.d.ts",
-      "import": "./dist/breadcrumb.js"
+      "import": "./dist/breadcrumb.js",
+      "default": "./dist/breadcrumb.js"
     },
     "./org": {
       "types": "./dist/types/components/org/index.d.ts",
-      "import": "./dist/org.js"
+      "import": "./dist/org.js",
+      "default": "./dist/org.js"
     },
     "./signature": {
       "types": "./dist/types/components/signature/index.d.ts",
-      "import": "./dist/signature.js"
+      "import": "./dist/signature.js",
+      "default": "./dist/signature.js"
     },
     "./planner": {
       "types": "./dist/types/components/planner/index.d.ts",
-      "import": "./dist/planner.js"
+      "import": "./dist/planner.js",
+      "default": "./dist/planner.js"
     },
     "./review": {
       "types": "./dist/types/components/review/index.d.ts",
-      "import": "./dist/review.js"
+      "import": "./dist/review.js",
+      "default": "./dist/review.js"
     },
     "./voice": {
       "types": "./dist/types/components/voice/index.d.ts",
-      "import": "./dist/voice.js"
+      "import": "./dist/voice.js",
+      "default": "./dist/voice.js"
     },
     "./thread": {
       "types": "./dist/types/components/thread/index.d.ts",
-      "import": "./dist/thread.js"
+      "import": "./dist/thread.js",
+      "default": "./dist/thread.js"
     },
     "./checklist": {
       "types": "./dist/types/components/checklist/index.d.ts",
-      "import": "./dist/checklist.js"
+      "import": "./dist/checklist.js",
+      "default": "./dist/checklist.js"
     },
     "./recurrence": {
       "types": "./dist/types/components/recurrence/index.d.ts",
-      "import": "./dist/recurrence.js"
+      "import": "./dist/recurrence.js",
+      "default": "./dist/recurrence.js"
     },
     "./jobs": {
       "types": "./dist/types/components/jobs/index.d.ts",
-      "import": "./dist/jobs.js"
+      "import": "./dist/jobs.js",
+      "default": "./dist/jobs.js"
     },
     "./icons": {
       "types": "./dist/types/icons/index.d.ts",
-      "import": "./dist/icons.js"
+      "import": "./dist/icons.js",
+      "default": "./dist/icons.js"
     },
     "./bdui": {
       "types": "./dist/types/bdui.d.ts",
-      "import": "./dist/bdui.js"
+      "import": "./dist/bdui.js",
+      "default": "./dist/bdui.js"
+    },
+    "./core": {
+      "types": "./dist/types/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
     },
     "./solid": {
       "types": "./dist/types/solid/index.d.ts",
@@ -228,49 +284,8 @@
       "solid": "./dist/solid/*.jsx",
       "import": "./dist/solid/*.jsx"
     },
-    "./nx32-elements.css": "./dist/nx32-elements.css",
-    "./tokens.css": "./dist/tokens.css",
-    "./palettes.css": "./dist/palettes.css",
-    "./sidemenu.css": "./dist/sidemenu.css",
-    "./button.css": "./dist/button.css",
-    "./select.css": "./dist/select.css",
-    "./ai.css": "./dist/ai.css",
-    "./capture.css": "./dist/capture.css",
-    "./grid.css": "./dist/grid.css",
-    "./dialog.css": "./dist/dialog.css",
-    "./confirm.css": "./dist/confirm.css",
-    "./toast.css": "./dist/toast.css",
-    "./agent.css": "./dist/agent.css",
-    "./command.css": "./dist/command.css",
-    "./explain.css": "./dist/explain.css",
-    "./inbox.css": "./dist/inbox.css",
-    "./survey.css": "./dist/survey.css",
-    "./tour.css": "./dist/tour.css",
-    "./sync.css": "./dist/sync.css",
-    "./scan.css": "./dist/scan.css",
-    "./trend.css": "./dist/trend.css",
-    "./what-if.css": "./dist/what-if.css",
-    "./presence.css": "./dist/presence.css",
-    "./paste-fill.css": "./dist/paste-fill.css",
-    "./date-range.css": "./dist/date-range.css",
-    "./history.css": "./dist/history.css",
-    "./kanban.css": "./dist/kanban.css",
-    "./number.css": "./dist/number.css",
-    "./jobs.css": "./dist/jobs.css",
-    "./recurrence.css": "./dist/recurrence.css",
-    "./checklist.css": "./dist/checklist.css",
-    "./thread.css": "./dist/thread.css",
-    "./voice.css": "./dist/voice.css",
-    "./review.css": "./dist/review.css",
-    "./planner.css": "./dist/planner.css",
-    "./signature.css": "./dist/signature.css",
-    "./print.css": "./dist/print.css",
-    "./keytips.css": "./dist/keytips.css",
-    "./award.css": "./dist/award.css",
-    "./account.css": "./dist/account.css",
-    "./launcher.css": "./dist/launcher.css",
-    "./cards.css": "./dist/cards.css",
-    "./org.css": "./dist/org.css"
+    "./*.css": "./dist/*.css",
+    "./package.json": "./package.json"
   },
   "sideEffects": [
     "*.css",

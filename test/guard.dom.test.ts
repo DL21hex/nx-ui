@@ -220,7 +220,7 @@ describe("<nx-guard>: corregir y reconocer", () => {
     expect(el.findings).toEqual([]);
   });
 
-  it("«Corregir» en un <nx-number>: por su `value`, con `input`, `change` y `nx-change`", () => {
+  it("«Corregir» en un <nx-number>: por su `value`, con `input`, `change` y `nx-number-change`", () => {
     const el = mount();
     const host = typeNumber("monto", "12.000.000");
     expect(host.value).toBe(12_000_000);
@@ -231,12 +231,12 @@ describe("<nx-guard>: corregir y reconocer", () => {
     expect(inner.getAttribute("aria-describedby")!.split(" ")).toContain(noteOf("monto")!.id);
     expect(inner.getAttribute("aria-describedby")!.split(" ").length).toBe(4);
     const events: string[] = [];
-    for (const t of ["input", "change", "nx-change"]) host.addEventListener(t, () => events.push(t));
+    for (const t of ["input", "change", "nx-number-change"]) host.addEventListener(t, () => events.push(t));
     const fix = vi.fn();
     el.addEventListener("nx-guard-fix", (e) => fix(e.detail));
     btn("monto", "fix").click();
     expect(host.value).toBe(1_200_000);
-    expect(events).toEqual(["input", "change", "nx-change"]);
+    expect(events).toEqual(["input", "change", "nx-number-change"]);
     expect(fix).toHaveBeenCalledWith({ field: "monto", from: 12_000_000, to: 1_200_000 });
     expect(noteOf("monto")).toBeNull();
     expect(inner.getAttribute("aria-describedby")!.split(" ")).toHaveLength(3);

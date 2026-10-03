@@ -271,7 +271,7 @@ test("detector de dedazos: avisos, confirmación y corrección", async ({ page }
 - **Remoto:** todos los campos configurados se mandan (salvo `remote: false`); el mismo valor no
   se vuelve a preguntar. Lo del servidor va primero en el aviso (es más específico). Solo con
   `endpoint` del mismo origen (o de `allowOrigins()`).
-- **«Corregir» en `<nx-number>`** pone `value` y emite `input`, `change` y `nx-change` `{value,
+- **«Corregir» en `<nx-number>`** pone `value` y emite `input`, `change` y `nx-number-change` `{value,
   text}` (lo mismo que emite él al confirmar), para que un framework que escucha cualquiera se
   entere. En un input nativo escribe con el setter nativo (React) y emite `input` y `change`; el
   número va formateado en el locale («1.200.000»), salvo `type="number"`.

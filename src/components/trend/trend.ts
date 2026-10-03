@@ -11,7 +11,7 @@
  * `<nx-ai-answer>` se carga con `import()` la primera vez que se pregunta.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, reducedMotion as reduced, emit, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { extent } from "../../core/time";
@@ -64,7 +64,6 @@ const barPath = (x: number, w: number, y0: number, y1: number) => {
   const d = y1 < y0 ? 1 : -1;
   return `M${r1(x)} ${r1(y0)}V${r1(y1 + d * r)}Q${r1(x)} ${r1(y1)} ${r1(x + r)} ${r1(y1)}H${r1(x + w - r)}Q${r1(x + w)} ${r1(y1)} ${r1(x + w)} ${r1(y1 + d * r)}V${r1(y0)}Z`;
 };
-const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 let uid = 0;
 
 /** Lo que se dibujó: dónde está cada punto, para el puntero, el teclado y el popover. */
@@ -263,11 +262,10 @@ export class NxTrend extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(`nx-trend-${type}`, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, `nx-trend-${type}`, detail, cancelable);
   }
   #visible(): TrendSeries[] {
     return this.#series.filter((x) => !this.#hidden.has(x.id));

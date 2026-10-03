@@ -13,7 +13,7 @@
  * (`aria-hidden`) y va en la capa superior (`popover="manual"`), sobre los diálogos.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { assignKeytips, keytipChar } from "./logic";
 import type { KeytipAssignment, KeytipDetail, KeytipsLabels } from "./types";
@@ -291,8 +291,7 @@ export class NxKeytips extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
 
   #popover(show: boolean): void {
@@ -308,11 +307,11 @@ export class NxKeytips extends Base {
     this.dispatchEvent(new CustomEvent("nx-open-change", { detail: { open }, bubbles: true, composed: true }));
   }
 
-  /** Ejecuta la acción: avisa (`nx-keytip`, cancelable), cierra y hace clic o enfoca. */
+  /** Ejecuta la acción: avisa (`nx-keytips-activate`, cancelable), cierra y hace clic o enfoca. */
   #run(t: KeytipAssignment): void {
     const el = t.element;
     const detail: KeytipDetail = { key: t.key, target: el, name: t.name };
-    const ok = this.dispatchEvent(new CustomEvent("nx-keytip", { detail, bubbles: true, composed: true, cancelable: true }));
+    const ok = this.dispatchEvent(new CustomEvent("nx-keytips-activate", { detail, bubbles: true, composed: true, cancelable: true }));
     this.hide();
     // Algo que se ocultó por clase o estilo con los atajos abiertos (el observador no mira `class`
     // ni `style`) ya no se pulsa.

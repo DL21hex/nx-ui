@@ -14,7 +14,7 @@
  * tope de `max-seconds`, con todas las pistas detenidas y el `AudioContext` cerrado.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { safeEndpoint } from "../../core/dom";
+import { safeEndpoint, emit, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
 import { clampVoice, cleanVoiceEngine, parseVoiceHotkey, speechTranscript, voiceErrorCode, voiceHotkeyMatches, voiceHotkeyText, voiceLevel } from "./logic";
@@ -637,12 +637,11 @@ export class NxVoice extends Base {
   }
 
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, type, detail, cancelable);
   }
 
   #attr(name: string, v: unknown): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, String(v));
+    setAttr(this, name, v);
   }
 }
 

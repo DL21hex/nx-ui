@@ -79,7 +79,7 @@ En `declare module "solid-js" { namespace JSX { … } }`:
       autostart: boolean;
     }
     interface CustomEvents {
-      "nx-scan": CustomEvent<ScanDetail>;
+      "nx-scan-read": CustomEvent<ScanDetail>;
       "nx-scan-count": CustomEvent<ScanCountDetail>;
       "nx-scan-error": CustomEvent<{ problem: ScanProblem }>;
     }
@@ -109,7 +109,7 @@ export interface ScanProps extends JSX.HTMLAttributes<NxScan> {
   locale?: string;
   labels?: Partial<ScanLabels>;
   /** Cada lectura: `{code, format, via}`. Cancelable (en el conteo, no se suma). */
-  onScan?: (e: CustomEvent<ScanDetail>) => void;
+  onRead?: (e: CustomEvent<ScanDetail>) => void;
   /** La lista después de cada cambio: `{items}`. */
   onCount?: (e: CustomEvent<ScanCountDetail>) => void;
   /** Sin cámara: `{problem}`. */
@@ -117,7 +117,7 @@ export interface ScanProps extends JSX.HTMLAttributes<NxScan> {
 }
 
 export function Scan(props: ScanProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["mode", "formats", "source", "items", "muted", "autostart", "wedge", "locale", "labels", "onScan", "onCount", "onError"]);
+  const [local, rest] = splitProps(props, ["mode", "formats", "source", "items", "muted", "autostart", "wedge", "locale", "labels", "onRead", "onCount", "onError"]);
   return (
     <nx-scan
       {...rest}
@@ -130,7 +130,7 @@ export function Scan(props: ScanProps): JSX.Element {
       attr:locale={local.locale}
       bool:muted={!!local.muted}
       bool:autostart={!!local.autostart}
-      on:nx-scan={(e) => local.onScan?.(e)}
+      on:nx-scan-read={(e) => local.onRead?.(e)}
       on:nx-scan-count={(e) => local.onCount?.(e)}
       on:nx-scan-error={(e) => local.onError?.(e)}
     />
@@ -164,7 +164,7 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
   editable (−/+ o escribiéndola), la última lectura resaltada, deshacer (el aviso o `Ctrl`+`Z`) y
   totales. Con `source`, cada código nuevo trae su descripción: «Lámina HR 3 mm · esperadas 40 ·
   contadas 38», con faltantes (rojo), completas (verde) y sobrantes (ámbar).
-- **Modo único** (por defecto): una lectura dispara `nx-scan` y la cámara se apaga.
+- **Modo único** (por defecto): una lectura dispara `nx-scan-read` y la cámara se apaga.
 - **Sin cámara prendida de más:** se apaga al salir de la página, al ocultarse la pestaña o si el
   componente queda fuera de la pantalla, y vuelve sola.
 - Todo se usa sin cámara y con teclado; cada lectura se anuncia (`aria-live`).
@@ -179,7 +179,7 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
 
 <nx-scan id="buscar"></nx-scan>
 <script>
-  buscar.addEventListener("nx-scan", (e) => abrirProducto(e.detail.code)); // {code, format, via}
+  buscar.addEventListener("nx-scan-read", (e) => abrirProducto(e.detail.code)); // {code, format, via}
 </script>
 ```
 
@@ -187,7 +187,7 @@ contar antes de 1,5 s, ni mientras siga quieto frente a la cámara.
 |---|---|
 | Propiedades / atributos | `mode` (`single`, `count`), `formats` (lista con comas o JSON; `ean_13`, `ean_8`, `upc_a`, `upc_e`, `code_128`, `code_39`, `code_93`, `codabar`, `itf`, `qr_code`, `data_matrix`, `pdf417`, `aztec`), `source` (URL + código, o con `{code}`), `items` (`{code, qty, name?, unit?, expected?, format?}`), `muted`, `autostart`, `wedge` (`page`, `field`, `off`), `locale`, `labels` · `state`, `problem` (solo lectura) |
 | Métodos | `start()`, `stop()`, `add(código, cantidad?)`, `undo()`, `clear()`, `focus()` |
-| Eventos | `nx-scan` `{code, format, via}` (cancelable; `via`: `camera`, `photo`, `manual`, `wedge`, `api`), `nx-scan-count` `{items}`, `nx-scan-error` `{problem}` (`nodetector`, `nocamera`, `insecure`, `denied`, `busy`, `failed`) |
+| Eventos | `nx-scan-read` `{code, format, via}` (cancelable; `via`: `camera`, `photo`, `manual`, `wedge`, `api`), `nx-scan-count` `{items}`, `nx-scan-error` `{problem}` (`nodetector`, `nocamera`, `insecure`, `denied`, `busy`, `failed`) |
 | `source` | `GET` → `{code, name, unit?, expected?}`; 404 si no existe («Código sin registrar»). Una vez por código |
 | Funciones | `wedgeKey(estado, tecla, ms)` (la detección de la pistola, sin DOM), `gtinValid(código)`, `scanTotals(items)`, `scanItemStatus(item)`, `parseScanEntry(texto)` |
 ````

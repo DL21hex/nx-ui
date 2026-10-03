@@ -7,7 +7,7 @@ import type { OrgContact, OrgFocusDetail, OrgLabels, OrgMetric, OrgPerson, OrgUn
 
 export type { NxOrg, OrgContact, OrgFocusDetail, OrgLabels, OrgMetric, OrgPerson, OrgUnit, OrgView };
 
-export interface OrgProps extends JSX.HTMLAttributes<NxOrg> {
+export interface OrgProps extends Omit<JSX.HTMLAttributes<NxOrg>, "children"> {
   /** Las unidades `{id, name, parent?, kind?, count?, direct?, leader?, metrics?}`. Sin ellas, solo «Yo». */
   units?: OrgUnit[];
   /** Las personas `{id, name, title?, unit?, boss?, avatar?, href?, reports?, team?, locked?}`. */
@@ -28,10 +28,12 @@ export interface OrgProps extends JSX.HTMLAttributes<NxOrg> {
   locale?: string;
   labels?: Partial<OrgLabels>;
   onFocusChange?: (e: CustomEvent<OrgFocusDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Org(props: OrgProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["units", "people", "me", "view", "contacts", "metrics", "metric", "source", "searchable", "locale", "labels", "onFocusChange"]);
+  const [local, rest] = splitProps(props, ["units", "people", "me", "view", "contacts", "metrics", "metric", "source", "searchable", "locale", "labels", "onFocusChange", "children"]);
   return (
     <nx-org
       {...rest}
@@ -46,7 +48,7 @@ export function Org(props: OrgProps): JSX.Element {
       attr:source={local.source}
       attr:locale={local.locale}
       bool:searchable={!!local.searchable}
-      on:nx-org-focus={(e) => local.onFocusChange?.(e)}
+      on:nx-org-focus={(e) => e.target === e.currentTarget && local.onFocusChange?.(e)}
     />
   );
 }

@@ -7,7 +7,7 @@ import type { AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool } f
 
 export type { NxAgent, AgentLabels, AgentToolDetail, AguiContext, AguiEvent, AguiTool };
 
-export interface AgentProps extends JSX.HTMLAttributes<NxAgent> {
+export interface AgentProps extends Omit<JSX.HTMLAttributes<NxAgent>, "children"> {
   /** URL del agente AG-UI (POST de un `RunAgentInput`, eventos en streaming). */
   endpoint: string;
   /** Id de un `<nx-grid>` que el agente puede filtrar y seleccionar. */
@@ -26,10 +26,12 @@ export interface AgentProps extends JSX.HTMLAttributes<NxAgent> {
   onTool?: (e: CustomEvent<AgentToolDetail>) => void;
   onState?: (e: CustomEvent<{ state: unknown }>) => void;
   onEvent?: (e: CustomEvent<AguiEvent>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Agent(props: AgentProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["endpoint", "for", "heading", "placeholder", "suggestions", "tools", "context", "show", "state", "labels", "onTool", "onState", "onEvent"]);
+  const [local, rest] = splitProps(props, ["endpoint", "for", "heading", "placeholder", "suggestions", "tools", "context", "show", "state", "labels", "onTool", "onState", "onEvent", "children"]);
   return (
     <nx-agent
       {...rest}
@@ -45,13 +47,13 @@ export function Agent(props: AgentProps): JSX.Element {
       prop:labels={local.labels}
       on:nx-agent-tool={(e) => {
         // Quien pasa `onTool` atiende la herramienta: se marca para que no responda «no disponible».
-        if (local.onTool) {
+        if (e.target === e.currentTarget && local.onTool) {
           e.preventDefault();
           local.onTool(e);
         }
       }}
-      on:nx-agent-state={(e) => local.onState?.(e)}
-      on:nx-agent-event={(e) => local.onEvent?.(e)}
+      on:nx-agent-state={(e) => e.target === e.currentTarget && local.onState?.(e)}
+      on:nx-agent-event={(e) => e.target === e.currentTarget && local.onEvent?.(e)}
     />
   );
 }

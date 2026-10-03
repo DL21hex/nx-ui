@@ -76,7 +76,7 @@
         <pre role="tabpanel"><code>&lt;label for="regla"&gt;Cuándo se envía&lt;/label&gt;
 &lt;nx-recurrence id="regla" name="regla" value="el último viernes de cada mes a las 5 pm"&gt;&lt;/nx-recurrence&gt;
 
-regla.addEventListener("nx-change", (e) =&gt; {
+regla.addEventListener("nx-recurrence-change", (e) =&gt; {
   const { rrule, text, next } = e.detail;   // "DTSTART:…\nRRULE:FREQ=MONTHLY;BYDAY=-1FR;BYHOUR=17;…"
   guardar(rrule);
 });</code></pre>
@@ -98,7 +98,7 @@ regla.addEventListener("nx-change", (e) =&gt; {
             <tr><td><code>count</code></td><td>Cuántas próximas fechas mostrar (5).</td></tr>
             <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>readonly</code>, <code>value-format</code></td><td>Formulario: envía la RRULE (o el JSON con <code>value-format="json"</code>); validez nativa y <code>reset</code>.</td></tr>
             <tr><td><code>locale</code>, <code>labels</code>, <code>label</code></td><td>Idioma de la frase (<code>en-US</code>: inglés básico) y de las fechas; textos de la interfaz; nombre accesible.</td></tr>
-            <tr><td>Eventos</td><td><code>nx-change</code> <code>{value, rrule, text, next}</code> al confirmar lo escrito o cambiar un control; <code>nx-recurrence-error</code> <code>{message}</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-recurrence-change</code> <code>{value, rrule, text, next}</code> al confirmar lo escrito o cambiar un control (y <code>change</code> nativo); <code>nx-recurrence-error</code> <code>{message}</code>.</td></tr>
             <tr><td>Lógica</td><td><code>parseRecurrence()</code>, <code>describeRecurrence()</code>, <code>toRRule()</code>, <code>parseRRule()</code>, <code>nextOccurrences()</code>, <code>colombiaHolidays(año)</code>: sin DOM, también para el backend en Node.</td></tr>
           </tbody>
         </table>

@@ -9,7 +9,7 @@
  * otro (WebSocket, SDK propio).
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint, safeHref } from "../../core/dom";
+import { h, safeEndpoint, safeHref, setAttr } from "../../core/dom";
 import { formatElapsed } from "../../core/format";
 import { mergeLabels } from "../../core/labels";
 import { resolveLocale } from "../../core/locale";
@@ -139,7 +139,7 @@ export class NxAiAnswer extends Base {
     this.#labels = mergeLabels(AI_LABELS, v);
     this.#paint();
   }
-  /** Muestra 👍/👎 al terminar (emite `nx-ai-feedback`). */
+  /** Muestra 👍/👎 al terminar (emite `nx-ai-answer-feedback`). */
   get feedback(): boolean {
     return boolAttr(this, "feedback");
   }
@@ -232,7 +232,7 @@ export class NxAiAnswer extends Base {
     this.#paintedSources = -1;
     this.#paintedActions = false;
     if (this.#input) this.#input.value = question;
-    this.dispatchEvent(new CustomEvent("nx-ai-start", { detail: { question }, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent("nx-ai-answer-start", { detail: { question }, bubbles: true, composed: true }));
     this.#paint();
   }
 
@@ -319,8 +319,7 @@ export class NxAiAnswer extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
 
   #finish(status: "done" | "error" | "stopped"): void {
@@ -341,7 +340,7 @@ export class NxAiAnswer extends Base {
     if (this.#status) this.#status.textContent = status === "done" ? this.#labels.ready : status === "error" ? this.#labels.error : this.#labels.stopped;
     this.#paint();
     this.dispatchEvent(
-      new CustomEvent("nx-ai-done", { detail: { question: this.#question, text: this.text, sources: [...this.#sources], status }, bubbles: true, composed: true }),
+      new CustomEvent("nx-ai-answer-done", { detail: { question: this.#question, text: this.text, sources: [...this.#sources], status }, bubbles: true, composed: true }),
     );
   }
 
@@ -422,13 +421,13 @@ export class NxAiAnswer extends Base {
     if (vote) {
       // Sin repintar: el botón conserva el foco.
       for (const b of this.#actionsEl!.querySelectorAll<HTMLElement>("[data-vote]")) b.setAttribute("aria-pressed", String(b.dataset.vote === vote));
-      this.dispatchEvent(new CustomEvent("nx-ai-feedback", { detail: { value: vote, question: this.#question, text: this.text }, bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("nx-ai-answer-feedback", { detail: { value: vote, question: this.#question, text: this.text }, bubbles: true, composed: true }));
       return;
     }
     const act = t.closest<HTMLElement>("[data-action]");
     if (act) {
       const a = this.#actions[Number(act.dataset.action)];
-      if (a) this.dispatchEvent(new CustomEvent("nx-ai-action", { detail: { id: a.id ?? "", label: a.label, data: a.data ?? null }, bubbles: true, composed: true }));
+      if (a) this.dispatchEvent(new CustomEvent("nx-ai-answer-action", { detail: { id: a.id ?? "", label: a.label, data: a.data ?? null }, bubbles: true, composed: true }));
       return;
     }
     const cite = t.closest<HTMLElement>(".nx-ai__cite");
@@ -521,7 +520,7 @@ export class NxAiAnswer extends Base {
       this.#actionsEl!.replaceChildren(
         ...this.#actions.map((a, i) => {
           // Una acción es un botón de la app: su enlace solo si es del mismo origen. Uno de afuera
-          // (o `javascript:`) queda como botón que emite `nx-ai-action`, sin llevar a ningún lado.
+          // (o `javascript:`) queda como botón que emite `nx-ai-answer-action`, sin llevar a ningún lado.
           const href = sameOriginHref(a.href);
           return href ? h("a", { class: "nx-ai__action", href }, a.label) : h("button", { type: "button", class: "nx-ai__action", "data-action": i }, a.label);
         }),

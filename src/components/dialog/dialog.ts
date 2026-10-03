@@ -576,14 +576,15 @@ export class NxDialog extends Base {
     // Cambios sin guardar: lo que se escribe en los campos del autor.
     // No cuentan los controles de consulta de los componentes de adentro (`data-nx-ephemeral`: el
     // buscador de un <nx-select>, las facetas o las casillas de una <nx-grid>): buscar o
-    // filtrar no es cambiar datos. Sí cuentan sus cambios de valor (`nx-change`, `nx-grid-change`).
+    // filtrar no es cambiar datos. Sí cuentan sus cambios de valor: los controles de la librería
+    // (nx-select, nx-number, nx-date-range…) emiten también el `change` nativo; la tabla, `nx-grid-change`.
     const touch = (e: Event) => {
       const t = e.target as Element;
       if (this.#head!.contains(t) || this.#guard!.contains(t) || t.closest?.("[data-nx-ephemeral]")) return;
       if (e.type === "nx-grid-change" && e.defaultPrevented) return;
       this.#dirty = true;
     };
-    for (const type of ["input", "change", "nx-change", "nx-grid-change"]) this.addEventListener(type, touch);
+    for (const type of ["input", "change", "nx-grid-change"]) this.addEventListener(type, touch);
     this.addEventListener("reset", () => (this.dirty = false));
     // `<form method="dialog">`: cierra con el valor del botón que lo envió.
     this.addEventListener("submit", (e) => {

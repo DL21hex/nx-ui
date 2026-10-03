@@ -13,7 +13,7 @@
  * inserta antes de la fila del botón y se quita al cerrar.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, emit } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { REVIEW_LABELS, countChanges, countReview, describeReview, diffReview, flattenReview, groupReview, humanizeName, reviewName, reviewRowName, reviewShouldOpen, reviewText, reviewValue, sameReviewValue } from "./logic";
@@ -47,7 +47,7 @@ const numAttr = (el: Element, name: string, def: number): number => {
 };
 
 export class NxReview extends Base {
-  static observedAttributes = ["labels", "initial", "disabled"];
+  static observedAttributes = ["labels", "initial", "disabled", "locale"];
 
   #uid = `nx-review${++uid}-`;
   #labels: ReviewLabels = REVIEW_LABELS;
@@ -196,7 +196,8 @@ export class NxReview extends Base {
   constructor() {
     super();
     this.addEventListener("submit", this.#onSubmit, true);
-    for (const t of ["input", "change", "nx-change"]) this.addEventListener(t, this.#touch);
+    // Los controles de la librería emiten también el `change` nativo: no hace falta conocer sus eventos.
+    for (const t of ["input", "change"]) this.addEventListener(t, this.#touch);
   }
 
   connectedCallback(): void {
@@ -233,6 +234,11 @@ export class NxReview extends Base {
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
     if (name === "disabled") {
       if (this.disabled) this.#close();
+      return;
+    }
+    if (name === "locale") {
+      // Montos y porcentajes del resumen abierto, en el locale nuevo (también al cambiar `<html lang>`).
+      if (this.#pending && this.#panel?.isConnected) this.#check();
       return;
     }
     let v: unknown = null;
@@ -535,7 +541,7 @@ export class NxReview extends Base {
   }
 
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(`nx-review-${type}`, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, `nx-review-${type}`, detail, cancelable);
   }
 
   /** Donde va el panel: justo antes de la fila del botón de enviar (o del botón que llamó `review()`). */

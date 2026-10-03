@@ -8,7 +8,7 @@ import type { OpenChangeDetail } from "../components/sidemenu/types";
 
 export type { NxKeytips, KeytipAssignment, KeytipDetail, KeytipsLabels };
 
-export interface KeytipsProps extends JSX.HTMLAttributes<NxKeytips> {
+export interface KeytipsProps extends Omit<JSX.HTMLAttributes<NxKeytips>, "children"> {
   /** Selector de la región con atajos (por defecto, toda la página). */
   scope?: string;
   /** La tecla que los muestra: `Alt` (por defecto), `Control`, `Shift` o `Meta`; `none`: solo con `show()`. */
@@ -18,13 +18,15 @@ export interface KeytipsProps extends JSX.HTMLAttributes<NxKeytips> {
   disabled?: boolean;
   labels?: Partial<KeytipsLabels>;
   /** Antes de ejecutar una acción: `{key, target, name}`. Cancelable. */
-  onKeytip?: (e: CustomEvent<KeytipDetail>) => void;
+  onActivate?: (e: CustomEvent<KeytipDetail>) => void;
   onOpenChange?: (e: CustomEvent<OpenChangeDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 /** `<nx-keytips>`: la tecla va como `trigger` (en JSX, `key` es de otros). */
 export function Keytips(props: KeytipsProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["scope", "trigger", "key", "disabled", "labels", "onKeytip", "onOpenChange"]);
+  const [local, rest] = splitProps(props, ["scope", "trigger", "key", "disabled", "labels", "onActivate", "onOpenChange", "children"]);
   return (
     <nx-keytips
       {...rest}
@@ -32,8 +34,8 @@ export function Keytips(props: KeytipsProps): JSX.Element {
       attr:scope={local.scope}
       attr:key={local.key ?? local.trigger}
       bool:disabled={!!local.disabled}
-      on:nx-keytip={(e) => local.onKeytip?.(e)}
-      on:nx-open-change={(e) => local.onOpenChange?.(e)}
+      on:nx-keytips-activate={(e) => e.target === e.currentTarget && local.onActivate?.(e)}
+      on:nx-open-change={(e) => e.target === e.currentTarget && local.onOpenChange?.(e)}
     />
   );
 }

@@ -7,7 +7,7 @@ import type { WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels
 
 export type { NxWhatIf, WhatIfChangeDetail, WhatIfComputeDetail, WhatIfInput, WhatIfLabels, WhatIfMetric, WhatIfSaveDetail, WhatIfScenario, WhatIfSeries, WhatIfValues };
 
-export interface WhatIfProps extends Omit<JSX.HTMLAttributes<NxWhatIf>, "onChange"> {
+export interface WhatIfProps extends Omit<JSX.HTMLAttributes<NxWhatIf>, "onChange" | "children"> {
   /** Los supuestos: `value` es la base; en `percent`, la fracción. */
   inputs: WhatIfInput[];
   /** Las métricas (`better: "up" | "down"` colorea la diferencia). */
@@ -30,10 +30,12 @@ export interface WhatIfProps extends Omit<JSX.HTMLAttributes<NxWhatIf>, "onChang
   /** Cancelable: guardar, renombrar o borrar; `e.detail.scenarios` es la lista nueva. */
   onSave?: (e: CustomEvent<WhatIfSaveDetail>) => void;
   onChange?: (e: CustomEvent<WhatIfChangeDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function WhatIf(props: WhatIfProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["inputs", "outputs", "series", "scenarios", "values", "endpoint", "debounce", "heading", "locale", "labels", "onCompute", "onSave", "onChange"]);
+  const [local, rest] = splitProps(props, ["inputs", "outputs", "series", "scenarios", "values", "endpoint", "debounce", "heading", "locale", "labels", "onCompute", "onSave", "onChange", "children"]);
   return (
     <nx-what-if
       {...rest}
@@ -47,9 +49,9 @@ export function WhatIf(props: WhatIfProps): JSX.Element {
       attr:debounce={local.debounce === undefined ? undefined : String(local.debounce)}
       attr:heading={local.heading}
       attr:locale={local.locale}
-      on:nx-what-if-compute={(e) => local.onCompute?.(e)}
-      on:nx-what-if-save={(e) => local.onSave?.(e)}
-      on:nx-what-if-change={(e) => local.onChange?.(e)}
+      on:nx-what-if-compute={(e) => e.target === e.currentTarget && local.onCompute?.(e)}
+      on:nx-what-if-save={(e) => e.target === e.currentTarget && local.onSave?.(e)}
+      on:nx-what-if-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
     />
   );
 }

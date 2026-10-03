@@ -186,6 +186,7 @@ function readLiteral(raw: string, locale: string): number | null {
 }
 
 function tokenize(s: string, locale: string): Tok[] {
+  s = s.replace(/\u2212/g, "-"); // el menos tipográfico (el que escribe Intl en sv, fi, nb)
   const out: Tok[] = [];
   let i = 0;
   while (i < s.length) {

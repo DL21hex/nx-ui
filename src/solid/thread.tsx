@@ -7,7 +7,7 @@ import type { ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetai
 
 export type { NxThread, ThreadComment, ThreadErrorDetail, ThreadLabels, ThreadMentionDetail, ThreadPostDetail, ThreadRef, ThreadUser };
 
-export interface ThreadProps extends Omit<JSX.HTMLAttributes<NxThread>, "onChange" | "onError"> {
+export interface ThreadProps extends Omit<JSX.HTMLAttributes<NxThread>, "onChange" | "onError" | "children"> {
   /** El registro («OC-2291»): de él cuelgan los comentarios, el borrador y lo leído. */
   record: string;
   /** `GET ?record=`, `POST`, `PATCH /{id}`, `DELETE /{id}`. Sin él, todo es local (`comments`). */
@@ -33,10 +33,12 @@ export interface ThreadProps extends Omit<JSX.HTMLAttributes<NxThread>, "onChang
   onChange?: (e: CustomEvent<{ comments: ThreadComment[] }>) => void;
   onMention?: (e: CustomEvent<ThreadMentionDetail>) => void;
   onError?: (e: CustomEvent<ThreadErrorDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Thread(props: ThreadProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "comments", "readonly", "disabled", "locale", "labels", "onPost", "onChange", "onMention", "onError"]);
+  const [local, rest] = splitProps(props, ["record", "endpoint", "stream", "poll", "peopleSource", "refsSource", "refPatterns", "me", "anchors", "presence", "comments", "readonly", "disabled", "locale", "labels", "onPost", "onChange", "onMention", "onError", "children"]);
   return (
     <nx-thread
       {...rest}
@@ -55,10 +57,10 @@ export function Thread(props: ThreadProps): JSX.Element {
       attr:locale={local.locale}
       bool:readonly={!!local.readonly}
       bool:disabled={!!local.disabled}
-      on:nx-thread-post={(e) => local.onPost?.(e)}
-      on:nx-thread-change={(e) => local.onChange?.(e)}
-      on:nx-thread-mention={(e) => local.onMention?.(e)}
-      on:nx-thread-error={(e) => local.onError?.(e)}
+      on:nx-thread-post={(e) => e.target === e.currentTarget && local.onPost?.(e)}
+      on:nx-thread-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-thread-mention={(e) => e.target === e.currentTarget && local.onMention?.(e)}
+      on:nx-thread-error={(e) => e.target === e.currentTarget && local.onError?.(e)}
     />
   );
 }

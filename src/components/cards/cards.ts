@@ -19,7 +19,7 @@
  * - **Light DOM.** Los textos del backend van siempre como texto; los estilos, en `cards.css`.
  */
 import { Base, upgrade, attrProps } from "../../core/define";
-import { h, safeHref } from "../../core/dom";
+import { h, safeHref, reducedMotion as reduced, emit } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale, type NxFormat } from "../../core/locale";
@@ -75,7 +75,6 @@ interface Card {
   body?: HTMLElement;
 }
 
-const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const isField = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 const sig = (row: CardsRow) => {
   try {
@@ -307,7 +306,7 @@ export class NxCards extends Base {
   }
 
   #emit<T>(type: string, detail: T, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, type, detail, cancelable);
   }
 
   /** Algo que cambia cómo se pinta cada tarjeta: se rehacen todas. */

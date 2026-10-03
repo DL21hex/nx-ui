@@ -16,7 +16,7 @@
  * `aria-describedby` y `data-nx-guard`; nada de `aria-invalid`, porque no es un error.
  */
 import { Base, boolAttr, upgrade, attrProps } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, emit } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { GUARD_LABELS, fillText, guardCheck, readAmount, showValue } from "./logic";
@@ -227,7 +227,7 @@ export class NxGuard extends Base {
     this.#jobs.delete(name);
   }
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(`nx-guard-${type}`, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, `nx-guard-${type}`, detail, cancelable);
   }
 
   #region(): HTMLSpanElement {
@@ -435,7 +435,7 @@ export class NxGuard extends Base {
         }
         fire("input");
         fire("change");
-        if (isNumber(el)) el.dispatchEvent(new CustomEvent("nx-change", { detail: { value: el.value, text: (el as unknown as { text: string }).text }, bubbles: true, composed: true }));
+        if (isNumber(el)) el.dispatchEvent(new CustomEvent("nx-number-change", { detail: { value: el.value, text: (el as unknown as { text: string }).text }, bubbles: true, composed: true }));
       } finally {
         this.#writing = false;
       }

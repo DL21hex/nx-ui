@@ -54,7 +54,7 @@ describe("<nx-ai-answer>", () => {
   it("al terminar: los pasos se pliegan en un resumen, citas numeradas y fuentes enlazadas", async () => {
     const el = mount("feedback");
     const done: string[] = [];
-    el.addEventListener("nx-ai-done", (e) => done.push(`${e.detail.status}|${e.detail.text}`));
+    el.addEventListener("nx-ai-answer-done", (e) => done.push(`${e.detail.status}|${e.detail.text}`));
     el.begin("q");
     el.push({ type: "step", id: "s1", label: "Consultando", status: "run" });
     el.push({ type: "source", id: "oc", title: "OC-2291", href: "/compras/oc/2291" });
@@ -76,10 +76,10 @@ describe("<nx-ai-answer>", () => {
     expect(el.querySelectorAll(".nx-ai__vote button")).toHaveLength(2);
   });
 
-  it("acciones: href es un enlace; id emite nx-ai-action con sus datos", () => {
+  it("acciones: href es un enlace; id emite nx-ai-answer-action con sus datos", () => {
     const el = mount();
     const seen: unknown[] = [];
-    el.addEventListener("nx-ai-action", (e) => seen.push(e.detail));
+    el.addEventListener("nx-ai-answer-action", (e) => seen.push(e.detail));
     el.begin("q");
     el.push({ type: "action", label: "Ver órdenes", href: "/compras/oc" });
     el.push({ type: "action", label: "Redactar reclamo", id: "reclamo", data: { proveedor: 12 } });
@@ -95,7 +95,7 @@ describe("<nx-ai-answer>", () => {
   it("feedback emite el voto y lo marca", () => {
     const el = mount("feedback");
     const votes: string[] = [];
-    el.addEventListener("nx-ai-feedback", (e) => votes.push(e.detail.value));
+    el.addEventListener("nx-ai-answer-feedback", (e) => votes.push(e.detail.value));
     el.begin("q");
     el.push({ type: "text", delta: "ok" });
     el.end();
@@ -127,7 +127,7 @@ describe("<nx-ai-answer>", () => {
     vi.stubGlobal("fetch", fetchMock);
     const el = mount('endpoint="/ai/preguntar"');
     el.context = { registro: 7 };
-    const done = new Promise<CustomEvent>((r) => el.addEventListener("nx-ai-done", (e) => r(e), { once: true }));
+    const done = new Promise<CustomEvent>((r) => el.addEventListener("nx-ai-answer-done", (e) => r(e), { once: true }));
     await el.ask("¿Qué pasó?");
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("/ai/preguntar");

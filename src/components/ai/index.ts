@@ -12,9 +12,9 @@ declare global {
     "nx-ai-answer": NxAiAnswer;
   }
   interface HTMLElementEventMap {
-    "nx-ai-start": CustomEvent<{ question: string }>;
-    "nx-ai-done": CustomEvent<import("./types").AiDoneDetail>;
-    "nx-ai-action": CustomEvent<import("./types").AiActionDetail>;
-    "nx-ai-feedback": CustomEvent<import("./types").AiFeedbackDetail>;
+    "nx-ai-answer-start": CustomEvent<{ question: string }>;
+    "nx-ai-answer-done": CustomEvent<import("./types").AiDoneDetail>;
+    "nx-ai-answer-action": CustomEvent<import("./types").AiActionDetail>;
+    "nx-ai-answer-feedback": CustomEvent<import("./types").AiFeedbackDetail>;
   }
 }

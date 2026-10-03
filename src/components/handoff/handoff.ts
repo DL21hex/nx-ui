@@ -13,7 +13,7 @@
  * elemento de la página (un `AbortController` por escucha y otro por las descargas).
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, emit, setAttr } from "../../core/dom";
 import { mergeLabels } from "../../core/labels";
 import { lineData, readLines } from "../../core/stream";
 import { cleanKind, countText, countdown, fill, isFinal, parseHandoffEvent, parsePollEvents, parseSession, remaining, retryDelay, sessionUrl } from "./logic";
@@ -306,12 +306,11 @@ export class NxHandoff extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
 
   #emit(type: string, detail: unknown, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, type, detail, cancelable);
   }
 
   #set(state: HandoffState): void {

@@ -13,7 +13,7 @@
  *    cancelable, y lo que el servidor rechaza vuelve a la revisión.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, emit, setAttr } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -327,8 +327,7 @@ export class NxImport extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #fmt() {
     return nxFormat(resolveLocale(this));
@@ -342,7 +341,7 @@ export class NxImport extends Base {
     return fmtLabel(t, { n: this.#fmt().number(n) });
   }
   #emit<T>(type: string, detail: T): void {
-    this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
+    emit(this, type, detail);
   }
   #setStatus(text: string, progress: [number, number] | null = null): void {
     this.#status = text;

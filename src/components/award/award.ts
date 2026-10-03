@@ -16,7 +16,7 @@
  * `nx-award-advise`). Mover los pesos o excluir a un proveedor la vuelve a pedir.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, emit, setAttr } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import { nxFormat, resolveLocale } from "../../core/locale";
@@ -483,14 +483,13 @@ export class NxAward extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   get #fmt() {
     return nxFormat(resolveLocale(this));
   }
   #emit<T>(name: string, detail: T, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, name, detail, cancelable);
   }
   /** Un monto: completo, o con `short` compacto desde el millón («$4,42 M»). */
   #money(n: number, short = false): string {

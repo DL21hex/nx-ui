@@ -11,7 +11,7 @@
  * se comparan lado a lado con la base, con la mejor celda de cada métrica resaltada.
  */
 import { Base, upgrade } from "../../core/define";
-import { h, safeEndpoint } from "../../core/dom";
+import { h, safeEndpoint, reducedMotion as reduced, emit, setAttr } from "../../core/dom";
 import { glyph } from "../../core/icons";
 import { nxFormat, resolveLocale } from "../../core/locale";
 import { lineData, readLines } from "../../core/stream";
@@ -86,7 +86,6 @@ type Chart = { el: HTMLElement; cap: HTMLElement; hi: HTMLElement; lo: HTMLEleme
 type Run = { seq: number; atBase: boolean; notes: WhatIfNote[]; done?: boolean; failed?: boolean };
 
 let uid = 0;
-const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const svg = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string> = {}): SVGElementTagNameMap[K] => {
   const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
@@ -271,14 +270,13 @@ export class NxWhatIf extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   get #fmt() {
     return nxFormat(resolveLocale(this));
   }
   #emit<T>(name: string, detail: T, cancelable = false): boolean {
-    return this.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true, cancelable }));
+    return emit(this, name, detail, cancelable);
   }
 
   #build(): void {

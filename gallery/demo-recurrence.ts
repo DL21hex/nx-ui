@@ -45,11 +45,11 @@ export function mountRecurrenceDemo(root: HTMLElement): void {
     for (const el of [...cases, tryEl]) body[el.name] = el.toJSON();
     out.textContent = JSON.stringify(body, null, 2);
   };
-  root.addEventListener("nx-change", (e) => {
+  root.addEventListener("nx-recurrence-change", (e) => {
     const el = e.target as NxRecurrence;
     if (el.localName !== "nx-recurrence") return;
     const d = (e as Event as CustomEvent<RecurrenceChangeDetail>).detail;
-    add(`nx-change → #${el.id}: ${d.rrule.split("\n")[1]} · «${d.text}»`);
+    add(`nx-recurrence-change → #${el.id}: ${d.rrule.split("\n")[1]} · «${d.text}»`);
     paint();
   });
   root.addEventListener("nx-recurrence-error", (e) => {

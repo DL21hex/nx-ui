@@ -15,6 +15,7 @@ export default defineConfig({
       { find: /^nx32-elements\/solid\/([\w-]+)$/, replacement: dist("solid/$1.jsx") },
       { find: /^nx32-elements\/solid$/, replacement: dist("solid/index.jsx") },
       { find: "nx32-elements/icons", replacement: dist("icons.js") },
+      { find: "nx32-elements/core", replacement: dist("core/index.js") },
       { find: "nx32-elements/nx32-elements.css", replacement: dist("nx32-elements.css") },
       { find: /^nx32-elements$/, replacement: dist("index.js") },
     ],

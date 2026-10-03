@@ -164,36 +164,7 @@ nx-sidemenu:dir(rtl) :is(.nx-sidemenu__chev, .nx-sidemenu__back) svg {
   margin-inline-start: 0;
 }
 
-/* ---------------------------------------------------------------- íconos */
-
-.nx-icon,
-.nx-glyph {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  inline-size: 18px;
-  block-size: 18px;
-}
-.nx-glyph {
-  inline-size: 16px;
-  block-size: 16px;
-}
-:is(.nx-icon, .nx-glyph) svg {
-  display: block;
-  inline-size: 100%;
-  block-size: 100%;
-}
-.nx-icon--initials {
-  inline-size: 20px;
-  block-size: 20px;
-  border-radius: var(--nx-radius-sm);
-  background: var(--nx-hover);
-  font-size: 9.5px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  line-height: 1;
-}
+/* La base de `.nx-icon`, `.nx-glyph` y las iniciales es compartida: vive en tokens.css. */
 
 /* ---------------------------------------------------------------- compacto */
 

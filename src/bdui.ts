@@ -4,7 +4,7 @@
  * tienen setter. No hay una segunda lista que mantener, y una clave sin setter (`innerHTML`,
  * `__proto__`, un error de tipeo) se ignora y se avisa por consola.
  */
-import { setterOf } from "./core/define";
+import { localProps, setterOf } from "./core/define";
 
 export interface BduiNode {
   component: string;
@@ -92,10 +92,14 @@ export function hasComponent(name: string): boolean {
   return registry.has(name);
 }
 
+/** Una prop que la clase declara solo por código (`static localProps`): una función o un objeto
+ *  vivo que ningún JSON puede dar. */
+const local = (ctor: CustomElementConstructor | undefined, key: string) => localProps(ctor).includes(key);
+
 /** Acepta `key`: está en la lista explícita o la clase tiene un setter propio (no uno de
- *  `HTMLElement`: `textContent` o `id` no vienen de un payload). */
+ *  `HTMLElement`: `textContent` o `id` no vienen de un payload), y no es solo por código. */
 function accepts(entry: Entry, ctor: CustomElementConstructor | undefined, key: string): boolean {
-  if (forbidden(key)) return false;
+  if (forbidden(key) || local(ctor, key)) return false;
   if (entry.props) return entry.props.includes(key);
   return !!ctor && !!setterOf(ctor.prototype, key, HTMLElement.prototype);
 }
@@ -104,9 +108,9 @@ function accepts(entry: Entry, ctor: CustomElementConstructor | undefined, key: 
 export function propsOf(name: string): string[] {
   const entry = registry.get(name);
   if (!entry) return [];
-  if (entry.props) return entry.props.filter((k) => !forbidden(k));
-  const out = new Set<string>();
   const ctor = typeof customElements !== "undefined" ? customElements.get(entry.tag) : undefined;
+  if (entry.props) return entry.props.filter((k) => !forbidden(k) && !local(ctor, k));
+  const out = new Set<string>();
   for (let p = ctor?.prototype; p && p !== HTMLElement.prototype; p = Object.getPrototypeOf(p)) {
     for (const k of Object.getOwnPropertyNames(p)) if (accepts(entry, ctor, k)) out.add(k);
   }
@@ -127,6 +131,7 @@ export function render(node: BduiNode | BduiNode[], target: Element): Element[] 
       const ctor = customElements.get(entry.tag);
       for (const [k, v] of Object.entries(n.props ?? {})) {
         if (accepts(entry, ctor, k)) el[k] = v;
+        else if (local(ctor, k)) console.warn(`[nx32-elements] ${n.component}: prop ignorada "${k}" (no es serializable: solo se asigna por código)`);
         else console.warn(`[nx32-elements] ${n.component}: prop ignorada "${k}"`);
       }
     };

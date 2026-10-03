@@ -7,7 +7,7 @@ import type { AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion,
 
 export type { NxAward, AwardAdviseDetail, AwardChangeDetail, AwardChoice, AwardCriterion, AwardEvent, AwardFilter, AwardItem, AwardLabels, AwardLens, AwardQuote, AwardSubmitDetail, AwardSupplier };
 
-export interface AwardProps extends Omit<JSX.HTMLAttributes<NxAward>, "onChange" | "onSubmit"> {
+export interface AwardProps extends Omit<JSX.HTMLAttributes<NxAward>, "onChange" | "onSubmit" | "children"> {
   /** Los proveedores `{id, name, detail?, alert?}`, en el orden de las columnas. */
   suppliers: AwardSupplier[];
   /** Los artículos `{id, name, qty, unit?, code?, group?}`. */
@@ -45,10 +45,12 @@ export interface AwardProps extends Omit<JSX.HTMLAttributes<NxAward>, "onChange"
   onChange?: (e: CustomEvent<AwardChangeDetail>) => void;
   /** Las órdenes por proveedor, con los cambios frente a la IA y su motivo. */
   onSubmit?: (e: CustomEvent<AwardSubmitDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Award(props: AwardProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "scenario", "weights", "filter", "lens", "endpoint", "heading", "currency", "readonly", "requireReason", "requireReview", "locale", "labels", "onAdvise", "onChange", "onSubmit"]);
+  const [local, rest] = splitProps(props, ["suppliers", "items", "quotes", "criteria", "advice", "choices", "excluded", "reasons", "scenario", "weights", "filter", "lens", "endpoint", "heading", "currency", "readonly", "requireReason", "requireReview", "locale", "labels", "onAdvise", "onChange", "onSubmit", "children"]);
   return (
     <nx-award
       {...rest}
@@ -72,9 +74,9 @@ export function Award(props: AwardProps): JSX.Element {
       bool:readonly={!!local.readonly}
       bool:require-reason={!!local.requireReason}
       bool:require-review={!!local.requireReview}
-      on:nx-award-advise={(e) => local.onAdvise?.(e)}
-      on:nx-award-change={(e) => local.onChange?.(e)}
-      on:nx-award-submit={(e) => local.onSubmit?.(e)}
+      on:nx-award-advise={(e) => e.target === e.currentTarget && local.onAdvise?.(e)}
+      on:nx-award-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-award-submit={(e) => e.target === e.currentTarget && local.onSubmit?.(e)}
     />
   );
 }

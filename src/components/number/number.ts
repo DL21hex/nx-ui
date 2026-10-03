@@ -10,7 +10,7 @@
  * `number` o `null`.
  */
 import { Base, boolAttr, upgrade } from "../../core/define";
-import { h } from "../../core/dom";
+import { h, setAttr } from "../../core/dom";
 import { resolveLocale } from "../../core/locale";
 import {
   affixes,
@@ -65,7 +65,7 @@ export class NxNumber extends Base {
   #value: number | null = null;
   /** El valor del atributo `value`: al que vuelve un <form reset>. */
   #default: number | null = null;
-  /** El valor confirmado (al enfocar o con Enter): base de «+15%» y de `nx-change`. */
+  /** El valor confirmado (al enfocar o con Enter): base de «+15%» y de `nx-number-change`. */
   #committed: number | null = null;
   /** El texto al enfocar: Escape vuelve a él. */
   #focusText = "";
@@ -301,8 +301,7 @@ export class NxNumber extends Base {
   // ---------------------------------------------------------------- interno
 
   #attr(name: string, v: string | null | undefined): void {
-    if (v === null || v === undefined || v === "") this.removeAttribute(name);
-    else this.setAttribute(name, v);
+    setAttr(this, name, v);
   }
   #bool(name: string, v: boolean): void {
     if (v) this.setAttribute(name, "");
@@ -446,7 +445,7 @@ export class NxNumber extends Base {
     this.#paintValue();
   }
 
-  /** Confirma (al salir o con Enter): formatea, recorta a `min`/`max` y emite `nx-change` si cambió. */
+  /** Confirma (al salir o con Enter): formatea, recorta a `min`/`max` y emite `nx-number-change` si cambió. */
   #commit(enter: boolean): void {
     if (!this.#built) return;
     const input = this.#input!;
@@ -477,7 +476,7 @@ export class NxNumber extends Base {
     if (v !== this.#committed) {
       this.#committed = v;
       this.dispatchEvent(new Event("change", { bubbles: true }));
-      this.dispatchEvent(new CustomEvent("nx-change", { detail: { value: v, text: this.text }, bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("nx-number-change", { detail: { value: v, text: this.text }, bubbles: true, composed: true }));
     }
   }
 

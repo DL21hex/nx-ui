@@ -7,7 +7,7 @@ import type { CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetai
 
 export type { NxDocCapture, CaptureEvent, CaptureLabels, CaptureSchemaItem, CaptureSubmitDetail, CaptureValues };
 
-export interface DocCaptureProps extends Omit<JSX.HTMLAttributes<NxDocCapture>, "onSubmit"> {
+export interface DocCaptureProps extends Omit<JSX.HTMLAttributes<NxDocCapture>, "onSubmit" | "children"> {
   /** Qué se captura: campos y tablas. */
   schema: CaptureSchemaItem[];
   /** URL que lee el documento (POST multipart `file`, responde en streaming). */
@@ -24,10 +24,12 @@ export interface DocCaptureProps extends Omit<JSX.HTMLAttributes<NxDocCapture>, 
   onDone?: (e: CustomEvent<{ values: CaptureValues; pending: string[] }>) => void;
   /** Cancelable: con `preventDefault()` la app registra por su cuenta. */
   onSubmit?: (e: CustomEvent<CaptureSubmitDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function DocCapture(props: DocCaptureProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["schema", "endpoint", "action", "reviewBelow", "accept", "maxSize", "labels", "onDone", "onSubmit"]);
+  const [local, rest] = splitProps(props, ["schema", "endpoint", "action", "reviewBelow", "accept", "maxSize", "labels", "onDone", "onSubmit", "children"]);
   return (
     <nx-doc-capture
       {...rest}
@@ -38,8 +40,8 @@ export function DocCapture(props: DocCaptureProps): JSX.Element {
       attr:review-below={local.reviewBelow === undefined ? undefined : String(local.reviewBelow)}
       attr:accept={local.accept}
       attr:max-size={local.maxSize === undefined ? undefined : String(local.maxSize)}
-      on:nx-capture-done={(e) => local.onDone?.(e)}
-      on:nx-capture-submit={(e) => local.onSubmit?.(e)}
+      on:nx-doc-capture-done={(e) => e.target === e.currentTarget && local.onDone?.(e)}
+      on:nx-doc-capture-submit={(e) => e.target === e.currentTarget && local.onSubmit?.(e)}
     />
   );
 }

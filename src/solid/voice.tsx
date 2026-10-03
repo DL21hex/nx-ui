@@ -7,7 +7,7 @@ import type { VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceL
 
 export type { NxVoice, VoiceEndDetail, VoiceEngine, VoiceErrorDetail, VoiceLabels, VoiceLayout, VoiceTextDetail };
 
-export interface VoiceProps extends Omit<JSX.HTMLAttributes<NxVoice>, "onError"> {
+export interface VoiceProps extends Omit<JSX.HTMLAttributes<NxVoice>, "onError" | "children"> {
   /** El `id` de un `<nx-paste-fill>`, un `<input>` o un `<textarea>` que recibe lo dictado. */
   for?: string;
   /** Recibe `POST` con el audio (`FormData`: `audio`, `lang`) y responde el texto. */
@@ -35,10 +35,12 @@ export interface VoiceProps extends Omit<JSX.HTMLAttributes<NxVoice>, "onError">
   onEnd?: (e: CustomEvent<VoiceEndDetail>) => void;
   onError?: (e: CustomEvent<VoiceErrorDetail>) => void;
   onUnavailable?: (e: CustomEvent<Record<string, never>>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Voice(props: VoiceProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["for", "endpoint", "engine", "hold", "hotkey", "maxSeconds", "silence", "commands", "layout", "locale", "labels", "disabled", "onStart", "onPartial", "onText", "onEnd", "onError", "onUnavailable"]);
+  const [local, rest] = splitProps(props, ["for", "endpoint", "engine", "hold", "hotkey", "maxSeconds", "silence", "commands", "layout", "locale", "labels", "disabled", "onStart", "onPartial", "onText", "onEnd", "onError", "onUnavailable", "children"]);
   return (
     <nx-voice
       {...rest}
@@ -54,12 +56,12 @@ export function Voice(props: VoiceProps): JSX.Element {
       attr:locale={local.locale}
       bool:hold={!!local.hold}
       bool:disabled={!!local.disabled}
-      on:nx-voice-start={(e) => local.onStart?.(e)}
-      on:nx-voice-partial={(e) => local.onPartial?.(e)}
-      on:nx-voice-text={(e) => local.onText?.(e)}
-      on:nx-voice-end={(e) => local.onEnd?.(e)}
-      on:nx-voice-error={(e) => local.onError?.(e)}
-      on:nx-voice-unavailable={(e) => local.onUnavailable?.(e)}
+      on:nx-voice-start={(e) => e.target === e.currentTarget && local.onStart?.(e)}
+      on:nx-voice-partial={(e) => e.target === e.currentTarget && local.onPartial?.(e)}
+      on:nx-voice-text={(e) => e.target === e.currentTarget && local.onText?.(e)}
+      on:nx-voice-end={(e) => e.target === e.currentTarget && local.onEnd?.(e)}
+      on:nx-voice-error={(e) => e.target === e.currentTarget && local.onError?.(e)}
+      on:nx-voice-unavailable={(e) => e.target === e.currentTarget && local.onUnavailable?.(e)}
     />
   );
 }

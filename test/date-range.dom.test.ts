@@ -35,10 +35,10 @@ const type = (el: NxDateRange, q: string) => {
   input(el).dispatchEvent(new Event("input"));
 };
 const key = (target: Element, k: string, o: KeyboardEventInit = {}) => target.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true, ...o }));
-/** Los `nx-change` que emite (el `detail.value`). */
+/** Los `nx-date-range-change` que emite (el `detail.value`). */
 const changes = (el: NxDateRange) => {
   const out: (DateRangeValue | null)[] = [];
-  el.addEventListener("nx-change", (e: Event) => out.push((e as CustomEvent<{ value: DateRangeValue | null }>).detail.value));
+  el.addEventListener("nx-date-range-change", (e: Event) => out.push((e as CustomEvent<{ value: DateRangeValue | null }>).detail.value));
   return out;
 };
 

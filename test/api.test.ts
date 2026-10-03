@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import "../src/index";
 import { propsOf, registerComponent, render } from "../src/bdui";
-import { setterOf } from "../src/core/define";
+import { localProps, setterOf } from "../src/core/define";
 
 const tags = readdirSync("src/components").flatMap((d) => {
   try {
@@ -31,6 +31,9 @@ function setters(tag: string): string[] {
 const ATTR_ONLY: Record<string, string[]> = {};
 /** Elementos que no se pintan desde un payload. */
 const NOT_BDUI = ["nx-dialog", "nx-toaster"];
+/** Props vivas que se están convirtiendo a algo serializable y todavía no se declaran en la clase
+ *  (`localProps`). Una entrada que ya no es viva hace fallar la prueba: se quita de aquí. */
+const PENDING_LOCAL: Record<string, string[]> = {};
 /** Elementos sin componente de Solid (se usan con su función: `nxToast`). */
 const NOT_SOLID = ["nx-toaster"];
 
@@ -49,7 +52,23 @@ describe("API de los componentes", () => {
   it.each(tags.filter((t) => !NOT_BDUI.includes(t)))("%s: está en el registro BDUI y acepta todos sus setters", (tag) => {
     const name = bdui.get(tag);
     expect(name, "falta en el registro de src/bdui.ts").toBeTruthy();
-    expect(propsOf(name!).sort()).toEqual(setters(tag).sort());
+    expect(propsOf(name!).sort()).toEqual(setters(tag).filter((k) => !localProps(customElements.get(tag)).includes(k)).sort());
+  });
+
+  // Principio 2: ninguna prop es una función ni un objeto vivo. Un setter que mira si el valor es
+  // una función (o tiene métodos) o una instancia de algo no recibe JSON: o se convierte (atributo +
+  // evento) o se declara en `static localProps` y BDUI lo rechaza con aviso.
+  it.each(tags)("%s: ningún setter espera una función u objeto vivo sin declararlo en localProps", (tag) => {
+    const live: string[] = [];
+    for (let p = customElements.get(tag)!.prototype; p && p !== HTMLElement.prototype; p = Object.getPrototypeOf(p)) {
+      for (const k of Object.getOwnPropertyNames(p)) {
+        const set = Object.getOwnPropertyDescriptor(p, k)!.set;
+        if (set && /typeof [\w.?]+ === "function"|instanceof (?!Array\b)/.test(set.toString())) live.push(k);
+      }
+    }
+    const declared = [...localProps(customElements.get(tag)), ...(PENDING_LOCAL[tag] ?? [])];
+    expect(live.filter((k) => !declared.includes(k))).toEqual([]);
+    expect((PENDING_LOCAL[tag] ?? []).filter((k) => !live.includes(k)), "ya no es viva: quítala de PENDING_LOCAL").toEqual([]);
   });
 
   it.each(tags.filter((t) => !NOT_SOLID.includes(t)))("%s: el componente de Solid pasa todos los setters", (tag) => {
@@ -81,6 +100,33 @@ describe("BDUI derivado de la clase", () => {
     warn.mockRestore();
   });
 
+  it("una prop declarada solo por código (`static localProps`) se rechaza con aviso y no sale en propsOf", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    customElements.define(
+      "x-vivo",
+      class extends HTMLElement {
+        static readonly localProps = ["queue"];
+        queueSeen: unknown = null;
+        set queue(v: unknown) {
+          this.queueSeen = v;
+        }
+        set heading(v: string) {
+          this.setAttribute("heading", v);
+        }
+      },
+    );
+    registerComponent("Vivo", "x-vivo");
+    expect(propsOf("Vivo")).toEqual(["heading"]);
+    const [el] = render({ component: "Vivo", props: { heading: "Hola", queue: { subscribe: "x" } } }, document.createElement("div"));
+    expect(el.getAttribute("heading")).toBe("Hola");
+    expect((el as unknown as { queueSeen: unknown }).queueSeen).toBeNull();
+    expect(warn.mock.calls.map((c) => String(c[0])).some((m) => m.includes('"queue"') && m.includes("no es serializable"))).toBe(true);
+    // Con la lista explícita de registerComponent pasa igual.
+    registerComponent("VivoLista", "x-vivo", ["heading", "queue"]);
+    expect(propsOf("VivoLista")).toEqual(["heading"]);
+    warn.mockRestore();
+  });
+
   it("si el elemento aún no está definido, las props esperan a su clase", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     registerComponent("Tardio", "x-tardio");
@@ -101,5 +147,87 @@ describe("BDUI derivado de la clase", () => {
     expect((el as unknown as Record<string, unknown>).otra).toBeUndefined();
     host.remove();
     warn.mockRestore();
+  });
+});
+
+describe("empaquetado: lo que se construye se puede importar", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown>; sideEffects: string[] };
+  /** Resuelve una subruta como Node: la clave exacta o un patrón con «*». */
+  const resolve = (sub: string): unknown => {
+    if (sub in pkg.exports) return pkg.exports[sub];
+    for (const [k, v] of Object.entries(pkg.exports)) {
+      const [pre, post] = k.split("*");
+      if (post !== undefined && sub.startsWith(pre) && sub.endsWith(post) && typeof v === "string") return v.replace("*", sub.slice(pre.length, sub.length - post.length));
+    }
+    return undefined;
+  };
+
+  it("cada hoja de scripts/build-css.mjs tiene su export (nx32-elements/<pieza>.css)", () => {
+    const css = [...readFileSync("scripts/build-css.mjs", "utf8").matchAll(/^ {2}"?([\w-]+)"?: "src\/[^"]+\.css",$/gm)].map((m) => m[1]);
+    expect(css.length).toBeGreaterThan(40);
+    expect(css.filter((k) => resolve(`./${k}.css`) !== `./dist/${k}.css`)).toEqual([]);
+  });
+
+  it("cada entrada de vite.config.ts tiene su subruta, con tipos", () => {
+    const js = [...readFileSync("vite.config.ts", "utf8").matchAll(/^ {10}"?([\w/-]+)"?: "src\/[^"]+\.ts",$/gm)].map((m) => m[1]);
+    expect(js.length).toBeGreaterThan(40);
+    const targets = Object.values(pkg.exports).map((v) => JSON.stringify(v));
+    expect(js.filter((k) => !targets.some((t) => t.includes(`"./dist/${k}.js"`)))).toEqual([]);
+    expect(resolve("./package.json")).toBe("./package.json");
+  });
+
+  it("nx32-elements/core queda fuera de sideEffects (no registra componentes)", () => {
+    // Los patrones de sideEffects con «*» no cruzan carpetas: dist/core/index.js no es «./dist/*.js».
+    const glob = (p: string) => new RegExp(`^${p.replace(/[.]/g, "\\.").replace(/\*/g, "[^/]*")}$`);
+    expect(pkg.sideEffects.some((p) => glob(p).test("./dist/core/index.js"))).toBe(false);
+    expect(readFileSync("src/core/index.ts", "utf8")).not.toMatch(/components\//);
+  });
+});
+
+describe("convención de eventos: nx-<componente>-<acción>", () => {
+  /** Eventos nativos que los componentes reemiten (el `change` de un control, el `input` de un campo). */
+  const NATIVE = ["change", "input"];
+  /** Excepciones justificadas: `[directorio, evento, motivo]`. */
+  const EXCEPTIONS: [string, string, string][] = [["guard", "nx-number-change", "«Corregir» en un <nx-number> emite sus eventos, como si se hubiera escrito"]];
+  const found: string[] = [];
+  const bad: string[] = [];
+  for (const d of readdirSync("src/components")) {
+    let index = "";
+    try {
+      index = readFileSync(`src/components/${d}/index.ts`, "utf8");
+    } catch {
+      continue;
+    }
+    const prefixes = [...index.matchAll(/define\("nx-([\w-]+)"/g)].map((m) => `nx-${m[1]}-`);
+    const ok = (name: string) => name === "nx-open-change" || NATIVE.includes(name) || prefixes.some((p) => name.startsWith(p)) || EXCEPTIONS.some(([x, n]) => x === d && n === name);
+    for (const f of readdirSync(`src/components/${d}`).filter((x) => x.endsWith(".ts"))) {
+      const src = readFileSync(`src/components/${d}/${f}`, "utf8");
+      const where = `${d}/${f}`;
+      // Un prefijo con plantilla (`nx-kanban-${type}`): lo que se pasa al ayudante es la acción.
+      // También con el ayudante del núcleo: `emit(this, `nx-kanban-${type}`, …)`.
+      const templates = [...src.matchAll(/(?:new (?:Custom)?Event(?:<[^>]*>)?\(|(?<![\w.#])emit\(\s*[\w.]+,)\s*`([^`$]*)\$\{/g)].map((m) => m[1]);
+      for (const t of templates) {
+        found.push(`${t}*`);
+        if (!prefixes.includes(t)) bad.push(`${where}: \`${t}\${…}\``);
+      }
+      const names = [
+        ...[...src.matchAll(/(?:new (?:Custom)?Event(?:<[^>]*>)?\(|(?<![\w.#])emit\(\s*[\w.]+,)\s*["'`]([\w-]+)["'`]/g)].map((m) => m[1]),
+        ...[...src.matchAll(/(?:#emit|#fire|(?<![\w.])emit|(?<![\w.])fire)(?:<[^>]*>)?\(\s*["']([\w-]+)["']/g)].map((m) => m[1]).filter((n) => n.startsWith("nx-") || !templates.length),
+      ];
+      for (const n of names) {
+        found.push(n);
+        if (!ok(n)) bad.push(`${where}: ${n}`);
+      }
+    }
+  }
+
+  it("se encontraron los eventos de la librería", () => {
+    expect(found.length).toBeGreaterThan(120);
+    expect(found).toContain("nx-kanban-*");
+    expect(found).toContain("nx-scan-read");
+  });
+
+  it("cada evento empieza por nx-<etiqueta sin nx>- (salvo nx-open-change y los nativos)", () => {
+    expect(bad).toEqual([]);
   });
 });

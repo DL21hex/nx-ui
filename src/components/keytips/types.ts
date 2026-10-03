@@ -18,7 +18,7 @@ export interface KeytipAssignment {
   element: HTMLElement;
 }
 
-/** `nx-keytip`: se pulsó el código de una acción (cancelable: no se ejecuta). */
+/** `nx-keytips-activate`: se pulsó el código de una acción (cancelable: no se ejecuta). */
 export interface KeytipDetail {
   key: string;
   /** El elemento que tenía la letra. */

@@ -68,6 +68,7 @@ describe("evaluate: lo que se pega desde Excel, un PDF o un extracto", () => {
     ["−1.200", -1200], // signo menos tipográfico
     ["\t1.450.000\n", 1450000],
     ["1,450,000.00", 1450000], // formato inglés en un campo en español: el último signo es el decimal
+    ["\u22121.200", -1200], // el menos tipográfico (U+2212) que escribe Intl en sv, fi o nb
   ])("«%s» → %s", (text, n) => expect(val(text)).toBe(n));
 
   it("el negativo contable se marca como cálculo (la vista previa muestra el signo)", () => {

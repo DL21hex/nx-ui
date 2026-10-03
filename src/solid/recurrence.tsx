@@ -7,7 +7,7 @@ import type { RecurrenceChangeDetail, RecurrenceErrorDetail, RecurrenceHolidayMo
 
 export type { NxRecurrence, RecurrenceChangeDetail, RecurrenceErrorDetail, RecurrenceHolidayMode, RecurrenceLabels, RecurrenceRule, RecurrenceValue, RecurrenceValueFormat };
 
-export interface RecurrenceProps extends Omit<JSX.HTMLAttributes<NxRecurrence>, "onChange" | "onError"> {
+export interface RecurrenceProps extends Omit<JSX.HTMLAttributes<NxRecurrence>, "onChange" | "onError" | "children"> {
   /** Una frase («los lunes a las 8») o una RRULE. */
   value?: string;
   name?: string;
@@ -28,10 +28,12 @@ export interface RecurrenceProps extends Omit<JSX.HTMLAttributes<NxRecurrence>, 
   /** Al confirmar lo escrito o cambiar un control: `{value, rrule, text, next}`. */
   onChange?: (e: CustomEvent<RecurrenceChangeDetail>) => void;
   onError?: (e: CustomEvent<RecurrenceErrorDetail>) => void;
+  /** Sin hijos: el componente pinta todo su contenido. */
+  children?: never;
 }
 
 export function Recurrence(props: RecurrenceProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["value", "name", "required", "disabled", "readonly", "start", "holidays", "holidaysMode", "count", "valueFormat", "label", "locale", "labels", "onChange", "onError"]);
+  const [local, rest] = splitProps(props, ["value", "name", "required", "disabled", "readonly", "start", "holidays", "holidaysMode", "count", "valueFormat", "label", "locale", "labels", "onChange", "onError", "children"]);
   return (
     <nx-recurrence
       {...rest}
@@ -48,8 +50,8 @@ export function Recurrence(props: RecurrenceProps): JSX.Element {
       bool:required={!!local.required}
       bool:disabled={!!local.disabled}
       bool:readonly={!!local.readonly}
-      on:nx-change={(e) => local.onChange?.(e as unknown as CustomEvent<RecurrenceChangeDetail>)}
-      on:nx-recurrence-error={(e) => local.onError?.(e)}
+      on:nx-recurrence-change={(e) => e.target === e.currentTarget && local.onChange?.(e)}
+      on:nx-recurrence-error={(e) => e.target === e.currentTarget && local.onError?.(e)}
     />
   );
 }

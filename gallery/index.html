@@ -70,7 +70,8 @@
         <pre role="tabpanel"><code>&lt;link rel="stylesheet" href="nx32-elements.css"&gt;
 &lt;script src="nx32-elements.iife.js"&gt;&lt;/script&gt;   &lt;!-- trae los íconos Lucide ya registrados --&gt;</code></pre>
         <pre role="tabpanel" hidden><code>import "nx32-elements/nx32-elements.css";
-import { registerIcons } from "nx32-elements";   // registra &lt;nx-sidemenu&gt;
+import "nx32-elements/sidemenu";                 // registra &lt;nx-sidemenu&gt;
+import { registerIcons } from "nx32-elements/core"; // sin efectos
 import { lucide } from "nx32-elements/icons";     // opcional
 registerIcons(lucide);</code></pre>
         <pre role="tabpanel" hidden><code>import "nx32-elements/nx32-elements.css";
@@ -175,7 +176,7 @@ cap.schema = [
     columns: [{ key: "desc", label: "Descripción" }, { key: "cantidad", label: "Cant.", type: "number" }] },
   { key: "total", label: "Total", type: "money", section: "Totales" },
 ];
-cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values, e.detail.confirmed));</code></pre>
+cap.addEventListener("nx-doc-capture-submit", (e) =&gt; console.log(e.detail.values, e.detail.confirmed));</code></pre>
         <pre role="tabpanel" hidden><code>import { DocCapture } from "nx32-elements/solid/capture";
 
 &lt;DocCapture schema={SCHEMA} endpoint="/compras/facturas/leer" reviewBelow={0.85}
@@ -197,10 +198,10 @@ cap.addEventListener("nx-capture-submit", (e) =&gt; console.log(e.detail.values,
             <tr><td><code>action</code></td><td>Registra: <code>POST</code> JSON <code>{values, confirmed}</code>, con el botón ocupado mientras tanto. Sin ella, solo el evento.</td></tr>
             <tr><td><code>review-below</code></td><td>Confianza bajo la cual un campo exige revisión (0–1, por defecto 0,8).</td></tr>
             <tr><td><code>accept</code>, <code>labels</code></td><td>Tipos de archivo del selector y textos de la interfaz.</td></tr>
-            <tr><td><code>extract(file)</code></td><td>Leer un archivo desde código (<code>nx-capture-file</code>, cancelable, deja usar otro transporte).</td></tr>
+            <tr><td><code>extract(file)</code></td><td>Leer un archivo desde código (<code>nx-doc-capture-file</code>, cancelable, deja usar otro transporte).</td></tr>
             <tr><td><code>begin()</code>, <code>push(evento)</code>, <code>end()</code>, <code>setCheck()</code>, <code>reset()</code></td><td>Transporte propio; recalcular una validación tras una corrección; volver a la zona de soltar.</td></tr>
             <tr><td><code>values</code>, <code>pending</code>, <code>state</code></td><td>Lo capturado (tablas como arreglos de filas), los campos por revisar y el estado.</td></tr>
-            <tr><td>Eventos</td><td><code>nx-capture-start</code>, <code>nx-capture-done</code> <code>{values, pending}</code>, <code>nx-capture-change</code> <code>{key, value, values}</code>, <code>nx-capture-submit</code> <code>{values, confirmed, checks}</code> (cancelable).</td></tr>
+            <tr><td>Eventos</td><td><code>nx-doc-capture-start</code>, <code>nx-doc-capture-done</code> <code>{values, pending}</code>, <code>nx-doc-capture-change</code> <code>{key, value, values}</code>, <code>nx-doc-capture-submit</code> <code>{values, confirmed, checks}</code> (cancelable).</td></tr>
           </tbody>
         </table>
       </div>
@@ -867,7 +868,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
               <thead><tr><th>Haces</th><th>Pasa</th></tr></thead>
               <tbody>
                 <tr><td>Escribes</td><td>Se entiende en el formato del locale («1.234,5» en español, «1,234.5» en inglés). Una cuenta o un sufijo muestran el resultado a la derecha («= 1.350»); lo que no se entiende, también («no entiendo "x"»). <code>value</code> cambia mientras escribes y sale <code>input</code>.</td></tr>
-                <tr><td>Sales o <kbd>Enter</kbd></td><td>Se formatea (número, monto o porcentaje), se recorta a <code>min</code>/<code>max</code> avisándolo, y sale <code>nx-change</code> si cambió. Si no se entiende, el texto queda, el campo se marca inválido y el formulario no se envía.</td></tr>
+                <tr><td>Sales o <kbd>Enter</kbd></td><td>Se formatea (número, monto o porcentaje), se recorta a <code>min</code>/<code>max</code> avisándolo, y sale <code>nx-number-change</code> si cambió. Si no se entiende, el texto queda, el campo se marca inválido y el formulario no se envía.</td></tr>
                 <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Suman o restan <code>step</code>; con <kbd>Mayús</kbd> ×10, con <kbd>Alt</kbd> ÷10. En porcentaje, de a un punto.</td></tr>
                 <tr><td><kbd>Esc</kbd></td><td>Deshace lo que se escribió desde que entraste al campo. Si no hay nada que deshacer, sigue su camino (cierra el diálogo, por ejemplo).</td></tr>
                 <tr><td>La rueda</td><td>No cambia nada: la página se desplaza. (Un <code>type="number"</code> cambia el monto sin que nadie lo note.)</td></tr>
@@ -884,7 +885,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td><code>value</code></td><td><code>number | null</code>. En <code>percent</code> es la fracción (0,19 es 19 %). Acepta texto en formato de máquina («1450000.5») o del locale.</td></tr>
                 <tr><td>En el <code>&lt;form&gt;</code></td><td>El valor en formato de máquina («1450000.5»), con <code>name</code>. Validez nativa: <code>valueMissing</code> (<code>required</code>), <code>badInput</code> (texto sin entender), <code>rangeUnderflow</code>/<code>rangeOverflow</code>; <code>reset</code> vuelve al atributo <code>value</code>.</td></tr>
                 <tr><td><code>input</code></td><td>Evento nativo del elemento, cada vez que cambia el número (no por cada tecla).</td></tr>
-                <tr><td><code>nx-change</code></td><td><code>{value, text}</code> al confirmar: <code>{value: 1450000, text: "$ 1.450.000"}</code>. También sale un <code>change</code> nativo.</td></tr>
+                <tr><td><code>nx-number-change</code></td><td><code>{value, text}</code> al confirmar: <code>{value: 1450000, text: "$ 1.450.000"}</code>. También sale un <code>change</code> nativo.</td></tr>
                 <tr><td><code>numberToWords()</code></td><td>El monto en letras, para el PDF o el backend: <code>numberToWords(1450000, {currency: "COP"})</code> → «un millón cuatrocientos cincuenta mil pesos m/cte».</td></tr>
                 <tr><td><code>evaluateNumber()</code></td><td>El mismo intérprete, sin DOM: <code>evaluateNumber("=450*3")</code> → <code>{ok: true, value: 1350, calc: true}</code>.</td></tr>
               </tbody>
@@ -903,7 +904,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     &lt;nx-number id="total" format="money" currency="COP" readonly words&gt;&lt;/nx-number&gt;
 
     precio.addEventListener("input", () =&gt; (total.value = cantidad.value * precio.value));
-    precio.addEventListener("nx-change", (e) =&gt; guardar(e.detail.value));   // {value, text}</code></pre>
+    precio.addEventListener("nx-number-change", (e) =&gt; guardar(e.detail.value));   // {value, text}</code></pre>
             <pre role="tabpanel" hidden><code>import { NumberInput } from "nx32-elements/solid/number";
 
     &lt;NumberInput format="money" currency="COP" name="precio" step={1000} min={0} required
@@ -924,7 +925,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td><code>words</code></td><td>El monto en letras debajo, en español: COP («pesos m/cte»), USD, EUR, MXN, CLP, ARS, PEN, BRL.</td></tr>
                 <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>readonly</code></td><td>Participa en un <code>&lt;form&gt;</code> nativo (también dentro de un <code>&lt;fieldset disabled&gt;</code>).</td></tr>
                 <tr><td><code>placeholder</code>, <code>align</code>, <code>label</code>, <code>locale</code>, <code>labels</code></td><td>Texto vacío, alineación (<code>end</code> en montos y porcentajes), nombre accesible si no hay <code>&lt;label&gt;</code>, formato y textos.</td></tr>
-                <tr><td>Eventos</td><td><code>input</code> (cambia el número), <code>nx-change</code> <code>{value, text}</code> y <code>change</code> al confirmar.</td></tr>
+                <tr><td>Eventos</td><td><code>input</code> (cambia el número), <code>nx-number-change</code> <code>{value, text}</code> y <code>change</code> al confirmar.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1180,7 +1181,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td><code>&lt;form&gt;</code></td><td>Con <code>name="periodo"</code> envía <code>periodo[start]</code> y <code>periodo[end]</code> (y <code>periodo[compare][start|end]</code> al comparar): dos fechas ISO listas, sin partir nada en el servidor. <code>required</code> y <code>reset</code> nativos.</td></tr>
                 <tr><td><code>compare</code></td><td><code>previous</code>: el mismo largo, justo antes (meses completos → los meses anteriores: Q3 → Q2). <code>year</code>: las mismas fechas un año antes (29 feb → 28 feb). <code>none</code>: la opción visible, sin comparar.</td></tr>
                 <tr><td><code>presets</code></td><td>Frases (<code>"Últimos 30 días"</code>, se interpretan al abrir) o <code>{label, phrase}</code> / <code>{label, start, end}</code>.</td></tr>
-                <tr><td><code>nx-change</code></td><td><code>{value}</code> al aplicar una frase, un atajo, un rango del calendario o al cambiar la comparación.</td></tr>
+                <tr><td><code>nx-date-range-change</code></td><td><code>{value}</code> al aplicar una frase, un atajo, un rango del calendario o al cambiar la comparación.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1194,7 +1195,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
             <pre role="tabpanel"><code>&lt;nx-date-range id="periodo" name="periodo" phrase="últimos 30 días" compare="previous"
       min="2024-01-01" label="Período"&gt;&lt;/nx-date-range&gt;
 
-    periodo.addEventListener("nx-change", (e) =&gt; {
+    periodo.addEventListener("nx-date-range-change", (e) =&gt; {
       const { start, end, compare } = e.detail.value;   // "2026-08-27", "2026-09-25", {start, end}
       cargarVentas(start, end, compare);
     });</code></pre>
@@ -1217,7 +1218,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td><code>fiscal-start</code>, <code>week-start</code>, <code>today</code></td><td>Mes en que empieza el año fiscal (1–12), primer día de la semana (1 lunes … 7 domingo; por defecto el del locale) y «hoy» (ISO).</td></tr>
                 <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>placeholder</code>, <code>label</code>, <code>locale</code>, <code>labels</code></td><td>Formulario, textos y formato (<code>Intl</code>).</td></tr>
                 <tr><td><code>show(texto?)</code>, <code>hide()</code>, <code>open</code></td><td>Abre (con una frase ya escrita) y cierra.</td></tr>
-                <tr><td>Eventos</td><td><code>nx-change</code> <code>{value}</code>, <code>nx-open-change</code> <code>{open}</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-date-range-change</code> <code>{value}</code> y <code>change</code> (nativo), <code>nx-open-change</code> <code>{open}</code>.</td></tr>
                 <tr><td>Lógica</td><td><code>parseDateRange(frase, {today, fiscalStart, weekStart, min})</code>, <code>compareRange()</code>, <code>formatDateRange()</code>: las mismas funciones, sin DOM, para el backend.</td></tr>
               </tbody>
             </table>
@@ -1735,7 +1736,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
           <div class="scan-single" lang="es-CO">
             <nx-scan id="scan-single" source="/demo/scan/producto?code=" formats="ean_13,qr_code"></nx-scan>
             <p class="btn-demo__desc">
-              <code>mode="single"</code> (por defecto): una lectura dispara <code>nx-scan</code> y la cámara se apaga. Útil para
+              <code>mode="single"</code> (por defecto): una lectura dispara <code>nx-scan-read</code> y la cámara se apaga. Útil para
               buscar un producto o una orden. Prueba escribir <kbd>7707123450042</kbd> y <kbd>Enter</kbd>.
             </p>
           </div>
@@ -1763,7 +1764,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
               <tbody>
                 <tr><td><code>source</code></td><td><code>GET {source}{código}</code> (o reemplaza <code>{code}</code>) → <code>{"code":"7707123450011","name":"Lámina HR 3 mm","unit":"und","expected":40}</code>. <code>expected</code> y <code>unit</code> son opcionales; 404 si no existe. Una vez por código.</td></tr>
                 <tr><td><code>items</code></td><td><code>[{code, qty, name?, unit?, expected?, format?}]</code>. Se pueden precargar las líneas de una orden con <code>qty: 0</code>: así lo que falta se ve desde el comienzo.</td></tr>
-                <tr><td><code>nx-scan</code></td><td><code>{code, format, via}</code> en cada lectura (<code>via</code>: <code>camera</code>, <code>photo</code>, <code>manual</code>, <code>wedge</code>, <code>api</code>). Cancelable: con <code>preventDefault()</code> no se cuenta.</td></tr>
+                <tr><td><code>nx-scan-read</code></td><td><code>{code, format, via}</code> en cada lectura (<code>via</code>: <code>camera</code>, <code>photo</code>, <code>manual</code>, <code>wedge</code>, <code>api</code>). Cancelable: con <code>preventDefault()</code> no se cuenta.</td></tr>
                 <tr><td><code>nx-scan-count</code></td><td><code>{items}</code> después de cada cambio: lectura, edición, deshacer, vaciar o la descripción que llegó.</td></tr>
                 <tr><td><code>nx-scan-error</code></td><td><code>{problem}</code>: <code>nodetector</code>, <code>nocamera</code>, <code>insecure</code>, <code>denied</code>, <code>busy</code> o <code>failed</code>.</td></tr>
               </tbody>
@@ -1784,13 +1785,13 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     recepcion.addEventListener("nx-scan-count", (e) =&gt; guardarBorrador(e.detail.items));
 
     &lt;nx-scan id="buscar"&gt;&lt;/nx-scan&gt;
-    buscar.addEventListener("nx-scan", (e) =&gt; abrirProducto(e.detail.code));   // {code, format, via}</code></pre>
+    buscar.addEventListener("nx-scan-read", (e) =&gt; abrirProducto(e.detail.code));   // {code, format, via}</code></pre>
             <pre role="tabpanel" hidden><code>import { Scan } from "nx32-elements/solid/scan";
 
     &lt;Scan mode="count" source="/inventario/producto?code=" formats={["ean_13", "code_128"]}
       items={lineas()} onCount={(e) =&gt; setLineas(e.detail.items)} /&gt;
 
-    &lt;Scan onScan={(e) =&gt; navigate(`/productos/${e.detail.code}`)} /&gt;</code></pre>
+    &lt;Scan onRead={(e) =&gt; navigate(`/productos/${e.detail.code}`)} /&gt;</code></pre>
           </div>
 
           <h2>API</h2>
@@ -1805,7 +1806,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td><code>locale</code>, <code>labels</code></td><td>Formato de las cantidades y los textos (<code>SCAN_LABELS</code>).</td></tr>
                 <tr><td><code>state</code>, <code>problem</code></td><td>Solo lectura: <code>idle</code>, <code>starting</code>, <code>live</code>, <code>paused</code>, <code>done</code> o <code>unavailable</code>, y por qué.</td></tr>
                 <tr><td>Métodos</td><td><code>start()</code>, <code>stop()</code>, <code>add(código, cantidad?)</code>, <code>undo()</code>, <code>clear()</code>, <code>focus()</code>.</td></tr>
-                <tr><td>Eventos</td><td><code>nx-scan</code> <code>{code, format, via}</code> (cancelable), <code>nx-scan-count</code> <code>{items}</code>, <code>nx-scan-error</code> <code>{problem}</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-scan-read</code> <code>{code, format, via}</code> (cancelable), <code>nx-scan-count</code> <code>{items}</code>, <code>nx-scan-error</code> <code>{problem}</code>.</td></tr>
               </tbody>
             </table>
           </div>
@@ -2082,7 +2083,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
             <table>
               <thead><tr><th>En</th><th>Pasa</th></tr></thead>
               <tbody>
-                <tr><td>Botones, enlaces, pestañas, <code>summary</code>, casillas</td><td>Un clic (en <code>&lt;nx-button&gt;</code>, en su botón). Antes sale <code>nx-keytip</code>, cancelable.</td></tr>
+                <tr><td>Botones, enlaces, pestañas, <code>summary</code>, casillas</td><td>Un clic (en <code>&lt;nx-button&gt;</code>, en su botón). Antes sale <code>nx-keytips-activate</code>, cancelable.</td></tr>
                 <tr><td>Campos, listas, áreas de texto, <code>contenteditable</code></td><td>Reciben el foco, con el texto seleccionado para reemplazarlo.</td></tr>
                 <tr><td>Mientras están a la vista</td><td>Toda tecla es de los atajos (no se escribe en el campo ni cierra el diálogo de abajo), salvo <kbd>Tab</kbd> y los atajos con <kbd>Ctrl</kbd>/<kbd>⌘</kbd> (<kbd>Ctrl</kbd>+<kbd>K</kbd> abre la paleta), que los cierran y siguen su camino.</td></tr>
                 <tr><td>Si la acción abre algo</td><td>Los atajos no se vuelven a mostrar solos: otro toque de <kbd>Alt</kbd> los muestra dentro del diálogo.</td></tr>
@@ -2102,10 +2103,10 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
     &lt;button data-keytip="X"&gt;Exportar a Excel&lt;/button&gt;   &lt;!-- letra fija --&gt;
     &lt;button data-keytip="off"&gt;Eliminar&lt;/button&gt;          &lt;!-- sin atajo --&gt;
 
-    keytips.addEventListener("nx-keytip", (e) =&gt; console.log(e.detail.key, e.detail.name));</code></pre>
+    keytips.addEventListener("nx-keytips-activate", (e) =&gt; console.log(e.detail.key, e.detail.name));</code></pre>
             <pre role="tabpanel" hidden><code>import { Keytips } from "nx32-elements/solid/keytips";
 
-    &lt;Keytips scope="#contenido" onKeytip={(e) =&gt; track(e.detail.key)} /&gt;</code></pre>
+    &lt;Keytips scope="#contenido" onActivate={(e) =&gt; track(e.detail.key)} /&gt;</code></pre>
           </div>
 
           <h2>API</h2>
@@ -2120,7 +2121,7 @@ app.post("/encuestas/clima", async (req, res) =&gt; {
                 <tr><td><code>show()</code>, <code>hide()</code>, <code>open</code></td><td>Mostrarlos u ocultarlos desde código (<code>show()</code> no abre si no hay ninguna acción visible).</td></tr>
                 <tr><td><code>assignments</code></td><td><code>[{key, name, element}]</code> de lo visible: para una hoja de ayuda o para las pruebas.</td></tr>
                 <tr><td><code>data-keytip</code></td><td>En cualquier elemento: <code>"G"</code> fija la letra (o <code>"GU"</code>), <code>""</code> le da letra a algo que no es un control, <code>"off"</code> lo excluye (con todo lo de adentro).</td></tr>
-                <tr><td>Eventos</td><td><code>nx-keytip</code> <code>{key, target, name}</code> (cancelable: no se ejecuta) y <code>nx-open-change</code> <code>{open}</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-keytips-activate</code> <code>{key, target, name}</code> (cancelable: no se ejecuta) y <code>nx-open-change</code> <code>{open}</code>.</td></tr>
                 <tr><td><code>assignKeytips()</code></td><td>La asignación, pura y sin DOM: <code>assignKeytips([{name: "Guardar"}, {name: "Generar"}])</code> → <code>["G", "E"]</code>.</td></tr>
               </tbody>
             </table>
@@ -3413,7 +3414,7 @@ import { Tabs } from "nx32-elements/solid/tabs";
                 <tr><td><code>readonly</code>, <code>disabled</code>, <code>value</code></td><td>Mostrar una firma guardada (<code>value</code>: el JSON o el SVG); apagarla.</td></tr>
                 <tr><td><code>pen-color</code>, <code>height</code>, <code>locale</code>, <code>labels</code></td><td>Tinta (casi negro azulado), alto de la zona (180 px), formato de la fecha y textos (<code>SIGNATURE_LABELS</code>).</td></tr>
                 <tr><td>Métodos</td><td><code>clear()</code>, <code>undo()</code>, <code>toSVG()</code>, <code>toPNG(escala?)</code> → <code>Promise&lt;Blob | null&gt;</code>, <code>load(valor)</code>, <code>isEmpty()</code>, <code>checkValidity()</code>. Propiedad <code>strokes</code>: los puntos (x, y, t, presión).</td></tr>
-                <tr><td>Eventos</td><td><code>nx-signature-change</code> <code>{empty}</code>, <code>nx-signature-done</code> <code>{svg, meta}</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-signature-change</code> <code>{empty}</code>, <code>nx-signature-done</code> <code>{svg, meta}</code> y <code>change</code> (nativo).</td></tr>
                 <tr><td><code>meta</code></td><td><code>{signedAt, name?, id?, typed, strokes, points, width, height, device, hash?, geo?}</code>.</td></tr>
                 <tr><td>Funciones</td><td><code>signatureSVG</code>, <code>signaturePath</code>, <code>signatureWidth</code>, <code>smoothSignaturePoints</code>, <code>signatureBounds</code>, <code>signatureCheck</code>, <code>signatureHash</code>, <code>typedSignatureSVG</code>, <code>parseSignatureValue</code>.</td></tr>
               </tbody>
@@ -4163,7 +4164,7 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
             <pre role="tabpanel"><code>&lt;label for="regla"&gt;Cuándo se envía&lt;/label&gt;
     &lt;nx-recurrence id="regla" name="regla" value="el último viernes de cada mes a las 5 pm"&gt;&lt;/nx-recurrence&gt;
 
-    regla.addEventListener("nx-change", (e) =&gt; {
+    regla.addEventListener("nx-recurrence-change", (e) =&gt; {
       const { rrule, text, next } = e.detail;   // "DTSTART:…\nRRULE:FREQ=MONTHLY;BYDAY=-1FR;BYHOUR=17;…"
       guardar(rrule);
     });</code></pre>
@@ -4185,7 +4186,7 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
                 <tr><td><code>count</code></td><td>Cuántas próximas fechas mostrar (5).</td></tr>
                 <tr><td><code>name</code>, <code>required</code>, <code>disabled</code>, <code>readonly</code>, <code>value-format</code></td><td>Formulario: envía la RRULE (o el JSON con <code>value-format="json"</code>); validez nativa y <code>reset</code>.</td></tr>
                 <tr><td><code>locale</code>, <code>labels</code>, <code>label</code></td><td>Idioma de la frase (<code>en-US</code>: inglés básico) y de las fechas; textos de la interfaz; nombre accesible.</td></tr>
-                <tr><td>Eventos</td><td><code>nx-change</code> <code>{value, rrule, text, next}</code> al confirmar lo escrito o cambiar un control; <code>nx-recurrence-error</code> <code>{message}</code>.</td></tr>
+                <tr><td>Eventos</td><td><code>nx-recurrence-change</code> <code>{value, rrule, text, next}</code> al confirmar lo escrito o cambiar un control (y <code>change</code> nativo); <code>nx-recurrence-error</code> <code>{message}</code>.</td></tr>
                 <tr><td>Lógica</td><td><code>parseRecurrence()</code>, <code>describeRecurrence()</code>, <code>toRRule()</code>, <code>parseRRule()</code>, <code>nextOccurrences()</code>, <code>colombiaHolidays(año)</code>: sin DOM, también para el backend en Node.</td></tr>
               </tbody>
             </table>
@@ -4445,7 +4446,7 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
             <tr><td><code>step</code></td><td><code>{"type":"step","id":"s1","label":"Consultando costos","status":"run"}</code> → luego <code>"status":"done"</code> (o <code>"error"</code>) con <code>"detail"</code> opcional.</td></tr>
             <tr><td><code>text</code></td><td><code>{"type":"text","delta":"El costo subió **11,4 %**[^mayor]"}</code>. Markdown mínimo: <code>**negrita**</code>, <code>`código`</code>, listas con <code>- </code>, párrafos. <code>[^id]</code> cita una fuente. Nunca HTML.</td></tr>
             <tr><td><code>source</code></td><td><code>{"type":"source","id":"mayor","title":"Libro mayor · agosto","detail":"…","href":"/…"}</code></td></tr>
-            <tr><td><code>action</code></td><td><code>{"type":"action","label":"Ver órdenes","href":"/…"}</code> (enlace) o <code>{"type":"action","label":"Redactar reclamo","id":"reclamo","data":{…}}</code> (emite <code>nx-ai-action</code>).</td></tr>
+            <tr><td><code>action</code></td><td><code>{"type":"action","label":"Ver órdenes","href":"/…"}</code> (enlace) o <code>{"type":"action","label":"Redactar reclamo","id":"reclamo","data":{…}}</code> (emite <code>nx-ai-answer-action</code>).</td></tr>
             <tr><td><code>note</code></td><td><code>{"type":"note","label":"cifras verificadas","tone":"success"}</code>: chip junto al resumen (<code>neutral</code>, <code>success</code>, <code>warning</code>, <code>danger</code>).</td></tr>
             <tr><td><code>error</code>, <code>done</code></td><td><code>{"type":"error","message":"…"}</code> termina con el mensaje; <code>{"type":"done"}</code> (o <code>[DONE]</code>, o cerrar el stream) termina bien.</td></tr>
           </tbody>
@@ -4464,8 +4465,8 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
 
 ai.suggestions = ["¿Qué proveedores se retrasaron este mes?"];
 ai.context = { registro: 2291 };            // viaja con cada pregunta
-ai.addEventListener("nx-ai-action", (e) =&gt; abrirReclamo(e.detail.data));
-ai.addEventListener("nx-ai-feedback", (e) =&gt; guardarVoto(e.detail));</code></pre>
+ai.addEventListener("nx-ai-answer-action", (e) =&gt; abrirReclamo(e.detail.data));
+ai.addEventListener("nx-ai-answer-feedback", (e) =&gt; guardarVoto(e.detail));</code></pre>
         <pre role="tabpanel" hidden><code>import { AIAnswer } from "nx32-elements/solid/ai";
 
 &lt;AIAnswer endpoint="/ai/preguntar" feedback context={{ registro: id() }}
@@ -4497,11 +4498,11 @@ socket.onclose = () =&gt; ai.end();</code></pre>
             <tr><td><code>question</code></td><td>Pregunta inicial; con <code>endpoint</code> se pregunta al conectar.</td></tr>
             <tr><td><code>suggestions</code>, <code>placeholder</code></td><td>Preguntas sugeridas antes de la primera, y el texto de la caja.</td></tr>
             <tr><td><code>context</code></td><td>Datos (JSON) que viajan con cada pregunta: el registro que se está viendo, los filtros…</td></tr>
-            <tr><td><code>feedback</code></td><td>👍/👎 al terminar (<code>nx-ai-feedback</code>).</td></tr>
+            <tr><td><code>feedback</code></td><td>👍/👎 al terminar (<code>nx-ai-answer-feedback</code>).</td></tr>
             <tr><td><code>ask(q)</code>, <code>stop()</code></td><td>Preguntar y detener (lo recibido se queda).</td></tr>
             <tr><td><code>begin(q)</code>, <code>push(evento)</code>, <code>end()</code></td><td>Transporte propio: la app entrega los eventos.</td></tr>
             <tr><td><code>state</code>, <code>text</code></td><td><code>idle</code>, <code>working</code>, <code>streaming</code>, <code>done</code>, <code>error</code>, <code>stopped</code>; y el texto sin marcas.</td></tr>
-            <tr><td>Eventos</td><td><code>nx-ai-start</code>, <code>nx-ai-done</code> <code>{question, text, sources, status}</code>, <code>nx-ai-action</code> <code>{id, label, data}</code>, <code>nx-ai-feedback</code> <code>{value, question, text}</code>.</td></tr>
+            <tr><td>Eventos</td><td><code>nx-ai-answer-start</code>, <code>nx-ai-answer-done</code> <code>{question, text, sources, status}</code>, <code>nx-ai-answer-action</code> <code>{id, label, data}</code>, <code>nx-ai-answer-feedback</code> <code>{value, question, text}</code>.</td></tr>
           </tbody>
         </table>
       </div>

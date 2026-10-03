@@ -37,7 +37,7 @@ function typeCode(el: NxScan, text: string) {
 function events(el: NxScan) {
   const scans: ScanDetail[] = [];
   const counts: ScanItem[][] = [];
-  el.addEventListener("nx-scan", (e) => scans.push(e.detail));
+  el.addEventListener("nx-scan-read", (e) => scans.push(e.detail));
   el.addEventListener("nx-scan-count", (e) => counts.push((e as CustomEvent<ScanCountDetail>).detail.items));
   return { scans, counts };
 }
@@ -84,7 +84,7 @@ describe("<nx-scan> sin cámara", () => {
     expect($(el, ".nx-scan__count").hidden).toBe(true);
   });
 
-  it("modo único, a mano: nx-scan con el formato deducido y el resultado a la vista", () => {
+  it("modo único, a mano: nx-scan-read con el formato deducido y el resultado a la vista", () => {
     const el = mount();
     const { scans } = events(el);
     typeCode(el, " 7707123450011 ");
@@ -156,9 +156,9 @@ describe("<nx-scan mode=count>", () => {
     expect(scans.map((s) => s.via)).toEqual(["manual", "api"]);
   });
 
-  it("nx-scan cancelado no cuenta", () => {
+  it("nx-scan-read cancelado no cuenta", () => {
     const el = mount('mode="count"');
-    el.addEventListener("nx-scan", (e) => e.detail.code.startsWith("X") && e.preventDefault());
+    el.addEventListener("nx-scan-read", (e) => e.detail.code.startsWith("X") && e.preventDefault());
     typeCode(el, "X-1");
     typeCode(el, "OK-1");
     expect(el.items.map((i) => i.code)).toEqual(["OK-1"]);
