@@ -341,4 +341,20 @@ test("ruta navegable, en reposo y con el menú de un separador abierto", async (
   await page.locator("#bc-demo").getByRole("button", { name: "Otros en Empleados" }).click();
   await expect(page.locator("#bc-demo").getByRole("menuitemradio").first()).toBeVisible();
   await audit(page, ["#bc-demo"]);
+  // El «…» (niveles escondidos, `menuitem`), con la ruta angosta.
+  await page.keyboard.press("Escape");
+  await page.locator("#bc-width").evaluate((el) => {
+    (el as HTMLInputElement).value = "520";
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.locator("#bc-demo .nx-breadcrumb__more").click();
+  await expect(page.locator("#bc-demo").getByRole("menuitem").first()).toBeVisible();
+  await audit(page, ["#bc-demo"]);
+});
+
+test("select en un formulario tras un envío fallido", async ({ page }) => {
+  await open(page, "#/select");
+  await page.locator("#sel-form").getByRole("button", { name: "Enviar" }).click();
+  await expect(page.locator("#sel-form-field .nx-select__field")).toHaveAttribute("aria-invalid", "true");
+  await audit(page, ["#sel-form"]);
 });
