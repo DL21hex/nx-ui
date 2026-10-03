@@ -1,5 +1,15 @@
 # Registro de cambios
 
+## 0.2.1 — 2026-10-03
+
+### `<nx-grid>`
+
+- **Panel de filtros:** las opciones sin filas ya no aparecen deshabilitadas: se ocultan. Una
+  opción marcada que queda en 0 sigue a la vista, para poder desmarcarla. Una faceta sin ninguna
+  opción desaparece, y «Ver N más» y la búsqueda de la faceta cuentan solo las que se ven.
+- **«Columnas» y «Vistas»:** volver a pulsar el botón con el menú abierto lo cierra (antes lo
+  volvía a abrir).
+
 ## 0.2.0 — 2026-10-03
 
 Revisión de calidad multiagente de `<nx-button>`, `<nx-select>`, `<nx-dialog>`, `<nx-tabs>`,
