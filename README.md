@@ -181,7 +181,10 @@ segunda lista que mantener: una prop nueva del componente llega sola a BDUI, y u
 devuelve la lista. `registerComponent(nombre, etiqueta)` hace lo mismo con un componente propio (o
 se le pasa la lista explícita); solo acepta elementos personalizados (con guion) y nunca props como
 `innerHTML`, `srcdoc` u `on*`. Si el módulo del componente aún no está cargado, las props esperan a
-que se defina.
+que se defina. Una prop que solo se puede asignar por código (una función, un objeto vivo) se
+declara en la clase con `static localProps = ["…"]`: BDUI la rechaza con un aviso y `propsOf` no la
+lista. Los componentes de la librería no tienen ninguna: lo que necesita control de la app va por un
+evento.
 
 **Orígenes permitidos.** Todo `endpoint`, `source`, `action` o canal que llega en un payload se usa
 solo si es del mismo origen que la página. Así un payload no puede mandar filas, textos pegados ni

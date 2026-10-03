@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import "../src/index";
 import { propsOf, registerComponent, render } from "../src/bdui";
-import { setterOf } from "../src/core/define";
+import { localProps, setterOf } from "../src/core/define";
 
 const tags = readdirSync("src/components").flatMap((d) => {
   try {
@@ -31,6 +31,9 @@ function setters(tag: string): string[] {
 const ATTR_ONLY: Record<string, string[]> = {};
 /** Elementos que no se pintan desde un payload. */
 const NOT_BDUI = ["nx-dialog", "nx-toaster"];
+/** Props vivas que otro frente está convirtiendo a algo serializable (no se declaran aquí en la
+ *  clase para no pisar ese cambio). `nx-account.sync` recibe la cola de `nxSync`. */
+const PENDING_LOCAL: Record<string, string[]> = { "nx-account": ["sync"] };
 /** Elementos sin componente de Solid (se usan con su función: `nxToast`). */
 const NOT_SOLID = ["nx-toaster"];
 
@@ -49,7 +52,22 @@ describe("API de los componentes", () => {
   it.each(tags.filter((t) => !NOT_BDUI.includes(t)))("%s: está en el registro BDUI y acepta todos sus setters", (tag) => {
     const name = bdui.get(tag);
     expect(name, "falta en el registro de src/bdui.ts").toBeTruthy();
-    expect(propsOf(name!).sort()).toEqual(setters(tag).sort());
+    expect(propsOf(name!).sort()).toEqual(setters(tag).filter((k) => !localProps(customElements.get(tag)).includes(k)).sort());
+  });
+
+  // Principio 2: ninguna prop es una función ni un objeto vivo. Un setter que mira si el valor es
+  // una función (o tiene métodos) o una instancia de algo no recibe JSON: o se convierte (atributo +
+  // evento) o se declara en `static localProps` y BDUI lo rechaza con aviso.
+  it.each(tags)("%s: ningún setter espera una función u objeto vivo sin declararlo en localProps", (tag) => {
+    const live: string[] = [];
+    for (let p = customElements.get(tag)!.prototype; p && p !== HTMLElement.prototype; p = Object.getPrototypeOf(p)) {
+      for (const k of Object.getOwnPropertyNames(p)) {
+        const set = Object.getOwnPropertyDescriptor(p, k)!.set;
+        if (set && /typeof [\w.?]+ === "function"|instanceof (?!Array\b)/.test(set.toString())) live.push(k);
+      }
+    }
+    const declared = [...localProps(customElements.get(tag)), ...(PENDING_LOCAL[tag] ?? [])];
+    expect(live.filter((k) => !declared.includes(k))).toEqual([]);
   });
 
   it.each(tags.filter((t) => !NOT_SOLID.includes(t)))("%s: el componente de Solid pasa todos los setters", (tag) => {
@@ -78,6 +96,33 @@ describe("BDUI derivado de la clase", () => {
     const [el] = render({ component: "Account", props: { logout: true, logoutUrl: "/salir" } }, document.createElement("div"));
     expect(typeof (el as unknown as { logout: unknown }).logout).toBe("function");
     expect(el.getAttribute("logout-url")).toBe("/salir");
+    warn.mockRestore();
+  });
+
+  it("una prop declarada solo por código (`static localProps`) se rechaza con aviso y no sale en propsOf", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    customElements.define(
+      "x-vivo",
+      class extends HTMLElement {
+        static readonly localProps = ["queue"];
+        queueSeen: unknown = null;
+        set queue(v: unknown) {
+          this.queueSeen = v;
+        }
+        set heading(v: string) {
+          this.setAttribute("heading", v);
+        }
+      },
+    );
+    registerComponent("Vivo", "x-vivo");
+    expect(propsOf("Vivo")).toEqual(["heading"]);
+    const [el] = render({ component: "Vivo", props: { heading: "Hola", queue: { subscribe: "x" } } }, document.createElement("div"));
+    expect(el.getAttribute("heading")).toBe("Hola");
+    expect((el as unknown as { queueSeen: unknown }).queueSeen).toBeNull();
+    expect(warn.mock.calls.map((c) => String(c[0])).some((m) => m.includes('"queue"') && m.includes("no es serializable"))).toBe(true);
+    // Con la lista explícita de registerComponent pasa igual.
+    registerComponent("VivoLista", "x-vivo", ["heading", "queue"]);
+    expect(propsOf("VivoLista")).toEqual(["heading"]);
     warn.mockRestore();
   });
 

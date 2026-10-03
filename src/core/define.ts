@@ -54,6 +54,18 @@ export function setterOf(proto: object | null, key: string, stop: object = Objec
 }
 
 /**
+ * Props que solo se asignan por código: una función, un objeto vivo (una cola, un `AbortSignal`).
+ * Un payload JSON nunca las puede dar, así que BDUI las rechaza con un aviso y `propsOf` no las
+ * lista. Se declaran en la clase: `static readonly localProps = ["queue"]`. La regla de la librería
+ * es que no haya ninguna (principio 2: lo que necesita control va por un evento); esto es la red
+ * para un componente propio o para una que todavía no se ha convertido.
+ */
+export function localProps(ctor: unknown): readonly string[] {
+  const v = (ctor as { localProps?: unknown } | undefined)?.localProps;
+  return Array.isArray(v) ? v : [];
+}
+
+/**
  * Lo que el autor asignó antes de que el elemento se definiera (`el.rows = …` con el módulo aún
  * sin cargar, un framework que hidrata primero) quedó como propiedad propia y tapa el setter: se
  * vuelve a asignar para que pase por él. Mira los setters de la clase, así no depende de una lista
