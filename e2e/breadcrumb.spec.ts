@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { open } from "./helpers";
 
 // La demo «Ruta navegable»: Personas › Empleados › Laura Gómez Restrepo › Contratos › Contrato
-// indefinido 2024. Los hijos llegan al abrir cada separador (respondiendo a nx-breadcrumb-children,
+// indefinido 2024. Los hijos llegan al abrir cada separador (respondiendo a nx-breadcrumb-expand,
 // con 250 ms de espera).
 
 /** Espera a que el menú termine de entrar (anima escala y desplazamiento) antes de medirlo. */

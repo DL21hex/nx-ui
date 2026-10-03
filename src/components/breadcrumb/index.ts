@@ -5,7 +5,7 @@ define("nx-breadcrumb", NxBreadcrumb);
 
 export { NxBreadcrumb, BREADCRUMB_LABELS } from "./breadcrumb";
 export { cleanItems as cleanBreadcrumbItems, collapseCount } from "./logic";
-export type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
+export type { BreadcrumbExpandDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -13,6 +13,6 @@ declare global {
   }
   interface HTMLElementEventMap {
     "nx-breadcrumb-navigate": CustomEvent<import("./types").BreadcrumbNavigateDetail>;
-    "nx-breadcrumb-children": CustomEvent<import("./types").BreadcrumbChildrenDetail>;
+    "nx-breadcrumb-expand": CustomEvent<import("./types").BreadcrumbExpandDetail>;
   }
 }

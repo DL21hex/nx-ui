@@ -7,7 +7,7 @@
  * final y el CSS esconde los originales. Sin JavaScript se ven como una ruta de enlaces.
  *
  * - **Separadores:** se abren si el nivel tiene `children` con alternativas, o si se pueden pedir
- *   (`expandable: true` o `children-endpoint`): al abrir se emite `nx-breadcrumb-children`, donde la
+ *   (`expandable: true` o `children-endpoint`): al abrir se emite `nx-breadcrumb-expand`, donde la
  *   app puede responder; si no, se piden a `children-endpoint`. Se guardan por camino. Más de 7
  *   traen buscador (sin tildes).
  * - **Colapso:** si no cabe, los niveles del medio pasan a un «…» que se abre como menú; el primero
@@ -21,7 +21,7 @@ import { glyph, hasIcon, icon } from "../../core/icons";
 import { mergeLabels } from "../../core/labels";
 import type { BreadcrumbMenu } from "./breadcrumb-menu";
 import { cleanItems, collapseCount, itemKey } from "./logic";
-import type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
+import type { BreadcrumbExpandDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail, BreadcrumbVia } from "./types";
 
 export const BREADCRUMB_LABELS: BreadcrumbLabels = {
   label: "Ruta",
@@ -361,7 +361,7 @@ export class NxBreadcrumb extends Base {
   }
 
   /**
-   * Los hijos de un nivel: los da la app (`nx-breadcrumb-children`, ya o tras `preventDefault()`)
+   * Los hijos de un nivel: los da la app (`nx-breadcrumb-expand`, ya o tras `preventDefault()`)
    * o `children-endpoint`. `null` si no hay quién (se ve «Sin resultados» y no se guarda).
    */
   #children(item: BreadcrumbItem, level: number): Promise<unknown> {
@@ -372,8 +372,8 @@ export class NxBreadcrumb extends Base {
         answered = true;
         Promise.resolve(v).then(resolve, reject);
       };
-      const detail: BreadcrumbChildrenDetail = { item, level, respond };
-      const free = this.dispatchEvent(new CustomEvent("nx-breadcrumb-children", { detail, bubbles: true, composed: true, cancelable: true }));
+      const detail: BreadcrumbExpandDetail = { item, level, respond };
+      const free = this.dispatchEvent(new CustomEvent("nx-breadcrumb-expand", { detail, bubbles: true, composed: true, cancelable: true }));
       if (answered || !free) return;
       const tpl = this.childrenEndpoint;
       if (!tpl) return resolve(null);

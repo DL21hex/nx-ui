@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../src/components/breadcrumb/index";
-import type { BreadcrumbChildrenDetail, BreadcrumbItem, NxBreadcrumb } from "../src/components/breadcrumb/index";
+import type { BreadcrumbExpandDetail, BreadcrumbItem, NxBreadcrumb } from "../src/components/breadcrumb/index";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -179,14 +179,14 @@ describe("<nx-breadcrumb>", () => {
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ level: 1, via: "link" }));
   });
 
-  it("nx-breadcrumb-children se emite al abrir, una vez por camino; la app responde después de cancelarlo; si falla, lo dice", async () => {
+  it("nx-breadcrumb-expand se emite al abrir, una vez por camino; la app responde después de cancelarlo; si falla, lo dice", async () => {
     const b = await mount(`<nx-breadcrumb><a href="/a" data-expandable="true">A</a><a href="/b" data-expandable="false">B</a><span>C</span></nx-breadcrumb>`);
     let respond!: (v: BreadcrumbItem[] | Promise<BreadcrumbItem[]>) => void;
-    const asked = vi.fn((e: CustomEvent<BreadcrumbChildrenDetail>) => {
+    const asked = vi.fn((e: CustomEvent<BreadcrumbExpandDetail>) => {
       e.preventDefault();
       respond = e.detail.respond;
     });
-    b.addEventListener("nx-breadcrumb-children", asked);
+    b.addEventListener("nx-breadcrumb-expand", asked);
     expect(b.querySelectorAll("button.nx-breadcrumb__sep")).toHaveLength(1);
     const sep = await open(b, '[data-sep="0"]');
     expect(menu(b).textContent).toBe("Cargando…");
@@ -213,7 +213,7 @@ describe("<nx-breadcrumb>", () => {
 
   it("si la app responde en el momento, no hace falta cancelar; si nadie responde, «Sin resultados»", async () => {
     const b = await withItems([{ label: "A", expandable: true }, { label: "B", expandable: true }, { label: "C" }]);
-    b.addEventListener("nx-breadcrumb-children", (e) => {
+    b.addEventListener("nx-breadcrumb-expand", (e) => {
       if (e.detail.level === 0) e.detail.respond([{ label: "B" }, { label: "Otra" }]);
     });
     await open(b, '[data-sep="0"]');
@@ -363,7 +363,7 @@ describe("<nx-breadcrumb> hijos pedidos, foco y lugar del menú", () => {
   it("lo guardado es por camino: dos «General» sin id ni href, en ramas distintas, no comparten hijos", async () => {
     const asked: string[] = [];
     const b = await withItems([{ label: "Raíz" }, { label: "General", expandable: true }, { label: "X" }]);
-    b.addEventListener("nx-breadcrumb-children", (e) => {
+    b.addEventListener("nx-breadcrumb-expand", (e) => {
       const root = b.path[0].label;
       asked.push(root);
       e.detail.respond([{ label: `hijo de ${root}` }, { label: "X" }]);
@@ -396,7 +396,7 @@ describe("<nx-breadcrumb> hijos pedidos, foco y lugar del menú", () => {
     const b = await withItems([{ label: "A", expandable: true }, { label: "B" }, { label: "C" }]);
     const other = document.body.appendChild(document.createElement("input"));
     let respond!: (v: BreadcrumbItem[]) => void;
-    b.addEventListener("nx-breadcrumb-children", (e) => {
+    b.addEventListener("nx-breadcrumb-expand", (e) => {
       e.preventDefault();
       respond = e.detail.respond;
     });

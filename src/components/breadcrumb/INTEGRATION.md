@@ -15,7 +15,7 @@ página «Ruta navegable» (`gallery/demo-breadcrumb.ts`). Maqueta: `maquetas/nx
 ## Los hermanos
 
 - En el payload: `children` en cada nivel (solo se usa un nivel hacia abajo).
-- Al abrir, si el nivel no trae `children`: se emite `nx-breadcrumb-children` `{item, level,
+- Al abrir, si el nivel no trae `children`: se emite `nx-breadcrumb-expand` `{item, level,
   respond}` (cancelable). La app da los hijos con `respond(hijos)` (un arreglo o una promesa): ya,
   o después de `preventDefault()`. Si nadie responde, se piden a `children-endpoint`: `GET`, con
   `{id}` (la clave del nivel, codificada) y `{level}` en la plantilla (sin `{id}`, va como `?id=`),
@@ -36,7 +36,7 @@ página «Ruta navegable» (`gallery/demo-breadcrumb.ts`). Maqueta: `maquetas/nx
 `Breadcrumb: "breadcrumb"` en el registro de `src/bdui.ts` (las props salen de los setters: `items`,
 `childrenEndpoint`, `label`, `labels`). Todo es serializable: un payload trae los hermanos en
 `children` o los pide con `childrenEndpoint`; la app que los da ella misma escucha
-`nx-breadcrumb-children`.
+`nx-breadcrumb-expand`.
 
 ## Peso
 

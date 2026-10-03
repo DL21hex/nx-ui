@@ -4227,7 +4227,7 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
               <thead><tr><th>Pieza</th><th>Qué hace</th></tr></thead>
               <tbody>
                 <tr><td>Nombres</td><td>Suben a ese nivel. El último es la página actual (<code>aria-current="page"</code>) y no es un enlace. Los largos se cortan y muestran el nombre completo al pasar el ratón.</td></tr>
-                <tr><td>Separadores</td><td>Abren los hijos del nivel (los hermanos del siguiente), con el actual marcado. Llegan en <code>children</code> o se piden al abrir, una vez por camino: la app responde a <code>nx-breadcrumb-children</code> con <code>e.detail.respond(hijos)</code>, o se piden a <code>children-endpoint</code> (<code>{id}</code>, <code>{level}</code>). Sin alternativas, el <strong>›</strong> no se abre. Más de 7 traen buscador.</td></tr>
+                <tr><td>Separadores</td><td>Abren los hijos del nivel (los hermanos del siguiente), con el actual marcado. Llegan en <code>children</code> o se piden al abrir, una vez por camino: la app responde a <code>nx-breadcrumb-expand</code> con <code>e.detail.respond(hijos)</code>, o se piden a <code>children-endpoint</code> (<code>{id}</code>, <code>{level}</code>). Sin alternativas, el <strong>›</strong> no se abre. Más de 7 traen buscador.</td></tr>
                 <tr><td>Colapso</td><td>Si no cabe, los niveles del medio pasan a un «…» que se abre como menú. Siempre quedan el primero y los dos últimos; si aun así no cabe, se corta el último.</td></tr>
                 <tr><td>Angosto</td><td>Por debajo de 480 px de ancho del componente queda «‹ Padre»: el título de la página ya dice dónde estás.</td></tr>
                 <tr><td>Navegar</td><td><code>nx-breadcrumb-navigate</code> <code>{item, level, via}</code> es cancelable: un router SPA lo cancela y navega él. Si nadie lo cancela, se sigue el <code>href</code>. Para conservar la sección al cambiar de persona, el <code>href</code> de cada hermano ya apunta a ella.</td></tr>
@@ -4251,8 +4251,10 @@ import { PasteFill } from "nx32-elements/solid/paste-fill";
     &lt;/nx-breadcrumb&gt;</code></pre>
             <pre role="tabpanel" hidden><code>import { Breadcrumb } from "nx32-elements/solid/breadcrumb";
 
+    // Sin children-endpoint, los niveles de ruta() que se abren llevan `expandable: true`
+    // (o sus `children`): si no, el › no se abre y onExpand no llega.
     &lt;Breadcrumb items={ruta()}
-      onChildren={(e) =&gt; e.detail.respond(hermanos(e.detail.item))}
+      onExpand={(e) =&gt; e.detail.respond(hermanos(e.detail.item))}
       onNavigate={(e) =&gt; { e.preventDefault(); navigate(e.detail.item.href!); }} /&gt;</code></pre>
           </div>
         </template>

@@ -23,7 +23,7 @@ import type { FieldItem, FieldsActionDetail, FieldsLabels, FieldsVariant } from 
 import type { NxTabs } from "../components/tabs/tabs";
 import type { TabItem, TabsChangeDetail, TabsLabels } from "../components/tabs/types";
 import type { NxBreadcrumb } from "../components/breadcrumb/breadcrumb";
-import type { BreadcrumbChildrenDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail } from "../components/breadcrumb/types";
+import type { BreadcrumbExpandDetail, BreadcrumbItem, BreadcrumbLabels, BreadcrumbNavigateDetail } from "../components/breadcrumb/types";
 import type { NxOrg } from "../components/org/org";
 import type { OrgContact, OrgFocusDetail, OrgLabels, OrgMetric, OrgPerson, OrgUnit, OrgView } from "../components/org/types";
 import type { NxAgent } from "../components/agent/agent";
@@ -433,7 +433,7 @@ declare module "solid-js" {
       "nx-fields-action": CustomEvent<FieldsActionDetail>;
       "nx-tabs-change": CustomEvent<TabsChangeDetail>;
       "nx-breadcrumb-navigate": CustomEvent<BreadcrumbNavigateDetail>;
-      "nx-breadcrumb-children": CustomEvent<BreadcrumbChildrenDetail>;
+      "nx-breadcrumb-expand": CustomEvent<BreadcrumbExpandDetail>;
       "nx-grid-selection": CustomEvent<{ ids: string[]; count: number }>;
       "nx-agent-tool": CustomEvent<AgentToolDetail>;
       "nx-agent-state": CustomEvent<{ state: unknown }>;
