@@ -344,15 +344,16 @@ Una tabla de datos que se explora sola:
 - **Filtro por columna.** El embudo de cada cabecera (o Alt+↓) abre el filtro de la columna, que
   sale del dato:
   - estados y texto con pocos valores: una lista con cuántas filas quedan en cada uno, «Solo» y un
-    buscador si son muchos;
+    buscador si son muchos (se pintan hasta 200; las demás aparecen al buscar);
   - montos y números: barras, dos manijas y campos que aceptan «5 M» o «5 millones»;
   - fechas: «Antes de hoy», «Últimos 30 días», «Próximos 30 días», «Este mes», «Mes pasado», «Este
     año» (se guardan relativos, con `rel`) o entre dos fechas;
   - el resto: «contiene», con ejemplos de lo que coincide.
 
-  Se aplica mientras se elige y dice cuántas filas quedan; el chip lo vuelve a abrir. Con más de la
-  mitad marcada se guarda como exclusión («Proveedor: sin Aceros»). `filter` en la columna lo fuerza
-  o lo quita (`false`). El panel se carga aparte, la primera vez que hace falta.
+  Se aplica mientras se elige y dice cuántas filas quedan (lo anuncia la tabla, una vez); lo escrito
+  en «contiene», «Desde» o «Hasta» también se aplica al cerrar o al pasar a otra columna. El chip lo
+  vuelve a abrir. Con más de la mitad marcada se guarda como exclusión («Proveedor: sin Aceros»).
+  `filter` en la columna lo fuerza o lo quita (`false`). El panel se carga aparte, la primera vez que hace falta.
 - **Buscar en la tabla.** La caja de la barra deja las filas que contienen lo escrito en alguna
   columna visible, sin tildes ni mayúsculas: lo que se ve (la etiqueta de un estado, el monto con
   formato) y, en números y fechas, también el valor sin formato. Busca un momento después de la
@@ -382,11 +383,15 @@ Una tabla de datos que se explora sola:
   guardar los cambios o guardarla como nueva; también renombrar, borrar y volver a la tabla
   original. Una puede abrir la tabla. Los tramos de fechas relativos siguen siendo ciertos otro
   día, lo de columnas que ya no existen se quita (y se dice) y otra pestaña que guarda se ve al
-  instante. `grid.view` lee o aplica ese estado sin guardarlo; el menú se carga aparte.
+  instante. Guardar, renombrar o borrar cambia solo esa vista sobre lo guardado en ese momento: no
+  pisa lo que guardó otra pestaña u otra tabla con la misma clave. `grid.view` lee o aplica ese
+  estado sin guardarlo; el menú se carga aparte.
 - **Exportar a .xlsx.** Es un Excel de verdad: números, montos (con el símbolo de su moneda y
   decimales solo si los hay) y fechas como valores, cabecera fija y autofiltro. El generador no
   tiene dependencias y se carga solo al exportar. Con `source`, las filas se piden por bloques de
-  5.000 (hasta el tope de una hoja de Excel); si el servidor falla, `exportXlsx()` se rechaza.
+  5.000 (hasta el tope de una hoja de Excel); si el servidor falla, `exportXlsx()` se rechaza. La
+  hoja se arma por partes, sin una cadena gigante, y un texto de más de 32.767 caracteres (el tope
+  de una celda de Excel) se recorta con «…».
 - **Copiar sin fórmulas.** Un texto que empieza con `=`, `+`, `-` o `@` se copia con un apóstrofo
   delante (Excel lo pega como texto, no como fórmula); al pegarlo de vuelta en la tabla se quita.
 - **Cliente o servidor.** Con `rows`, todo pasa en el navegador. Con `source`, se pide por bloques

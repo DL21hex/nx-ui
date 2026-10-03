@@ -109,6 +109,7 @@ export const GRID_LABELS: GridLabels = {
   searchIn: "Buscar en {n} valores",
   enterOnly: "Enter deja marcados solo estos.",
   noValues: "Ningún valor coincide.",
+  moreValues: "Y {n} más: busca para verlos.",
   from: "Desde",
   to: "Hasta",
   fromValue: "Desde {v}",

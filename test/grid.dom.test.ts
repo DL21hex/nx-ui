@@ -210,7 +210,9 @@ describe("<nx-grid>", () => {
     expect(el.filters).toEqual([{ key: "oc", op: "contains", value: "oc-3" }]);
     expect(column(el, 0)).toEqual(["OC-3"]);
     expect(pop.querySelector(".nx-grid__f-sample mark")!.textContent).toBe("OC-3");
-    expect(pop.querySelector(".nx-grid__f-body [role=status]")!.textContent).toBe("1 fila coincide");
+    expect(pop.querySelector(".nx-grid__f-stack > .nx-grid__f-hint")!.textContent).toBe("1 fila coincide");
+    // Lo que queda lo anuncia una sola región viva, la de la tabla (no dos o tres a la vez).
+    expect(pop.querySelectorAll("[role=status]")).toHaveLength(0);
   });
 
   it("clic derecho en una celda: «Solo» o «Sin» ese valor, «Desde» un monto", async () => {
