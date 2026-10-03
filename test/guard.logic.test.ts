@@ -316,6 +316,10 @@ describe("guardCheck: entradas raras y textos", () => {
     expect(readAmount("1,234.5", "en-US")).toBe(1234.5);
     expect(readAmount("12.000.000", "en-US")).toBe(12000000);
     expect(readAmount("abc", "es-CO")).toBeNull();
+    // Negativos contables y el menos tipográfico (U+2212): antes perdían el signo.
+    expect(readAmount("(1.234)", "es-CO")).toBe(-1234);
+    expect(readAmount("($ 1.234,50)", "es-CO")).toBe(-1234.5);
+    expect(readAmount("\u22121.200", "es-CO")).toBe(-1200);
     expect(otherReadings("1.5")).toEqual([15, 1.5]);
     expect(otherReadings("1,234.50")).toEqual([123450, 1234.5]);
     expect(otherReadings("-1.500")).toEqual([-1500, -1.5]);

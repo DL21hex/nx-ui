@@ -60,7 +60,12 @@ que todo funcione, después se optimiza (`NX_SIZE_STRICT=1 npm run size` vuelve 
 5. **Habla el formato de quien la usa.** Números, montos, fechas y tiempos salen de `Intl` con el
    locale de cada componente: su atributo `locale`, o el `lang` más cercano (el de la página), o
    «es-CO». Es un solo formateador compartido (`nxFormat`), cacheado por locale. Los textos de la
-   interfaz van aparte, en `labels`.
+   interfaz van aparte, en `labels`. Lo que alguien escribe o pega se lee con `nxFormat().parse`, que
+   prefiere `null` a un número equivocado: con «.» y «,» a la vez, el último es el decimal si el
+   otro agrupa de a tres («1,234.56» es 1234,56 también en es-CO; «12.34,5» no se entiende); un
+   separador repetido es de miles; uno solo es el decimal del locale, o de miles si agrupa («1.234»
+   en es). Son negativos «-1.234», «1.234-», «−1.234» (U+2212) y «(1.234)», el formato contable.
+   Si cambia el `lang` de la página, los componentes conectados repintan con el nuevo locale.
 6. **Rápida con muchos datos, no solo liviana.** Reglas para todos los componentes:
    - solo se pinta lo que se ve: filas virtualizadas que se reutilizan al desplazarse, o un tope
      (`limit`);

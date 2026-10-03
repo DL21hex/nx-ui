@@ -138,9 +138,11 @@ export function robustRange(values: readonly unknown[] | null | undefined): Robu
  * decimal; si uno se repite, es de miles. Ignora símbolos y espacios. `null` si no hay un número.
  */
 export function readAmount(text: string, locale = "es-CO"): number | null {
-  const t = String(text ?? "").replace(/[^\d.,-]/g, "");
+  const raw = String(text ?? "").trim();
+  // El menos tipográfico (U+2212) y los paréntesis contables «(1.234)» también son negativos.
+  const t = raw.replace(/\u2212/g, "-").replace(/[^\d.,-]/g, "");
   if (!/\d/.test(t)) return null;
-  const neg = t.startsWith("-") || t.endsWith("-");
+  const neg = t.startsWith("-") || t.endsWith("-") || /^\(.*\)$/.test(raw);
   const body = t.replace(/-/g, "");
   const dots = body.split(".").length - 1;
   const commas = body.split(",").length - 1;
