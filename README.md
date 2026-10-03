@@ -603,6 +603,8 @@ fuentes, todas JSON:
   Con `href` es un `<a>` de verdad (el router de la app lo intercepta; ⌘/Ctrl + Enter abre otra
   pestaña); con `children` abre un submenú; sin ninguno de los dos, avisa con `nx-command-select`.
 - `menu="id"`: las pantallas de un `<nx-sidemenu>`, con su ruta como pista («Ventas › Pedidos»).
+- `account="id"`: las acciones de un `<nx-account>` (tema, paleta, empresa, idioma, salir…); las
+  ejecuta la propia cuenta al oír `nx-command-select`.
 - `source="/url"`: registros del servidor mientras se escribe (`GET /url?q=…` → entradas, o `{items}`).
 - `agent="id"`: lo que se escribe se le puede preguntar a ese `<nx-agent>`.
 
@@ -612,9 +614,13 @@ mitad) y sin escribir nada aparece en «Recientes». Eso se recuerda en `localSt
 navegador (`storage="none"` lo desactiva). Se guarda solo `{id, label, href, icon, group}`, nunca
 `data` ni `hint`. Los registros de `source` no se guardan. Un reciente se muestra solo si sigue en
 la paleta (`items`, sus submenús o `menu`). En un equipo compartido, la clave debe incluir al
-usuario (`storage="nx-command:ana"`). `source` va al mismo origen (o `allowOrigins`). Un `hotkey`
-sin modificador (`"/"`) no se atiende mientras se escribe en un campo. El elemento es la capa
-superior (Popover API): `<button popovertarget="cmd">` la abre sin JS.
+usuario (`storage="nx-command:ana"`); al cambiar la clave, lo del anterior deja de verse. `source`
+va al mismo origen (o `allowOrigins`). Un `hotkey` sin modificador (`"/"`) no se atiende mientras se
+escribe en un campo, tampoco en la caja de la paleta. El atajo compara el carácter: «/» vale aunque
+el teclado lo escriba con Shift (Shift+7 en español), y una letra vale por su tecla física con una
+distribución no latina. Cuántos resultados hay, «Sin resultados» o «Buscando…» se anuncian al lector
+de pantalla. El elemento es la capa superior (Popover API): `<button popovertarget="cmd">` la abre
+sin JS.
 
 ```html
 <button popovertarget="cmd">Buscar… ⌘K</button>
@@ -630,9 +636,10 @@ superior (Popover API): `<button popovertarget="cmd">` la abre sin JS.
 
 | | |
 |---|---|
-| Propiedades / atributos | `items`, `menu`, `source`, `agent`, `hotkey` (`"mod+k"`; `"none"` lo quita), `placeholder`, `limit`, `storage`, `labels` |
-| Métodos | `show(q?)`, `hide()`, `clearHistory()`, `open`, `query` |
-| Eventos | `nx-command-select` `{item, query, newTab}` (cancelable: no navega y la paleta sigue abierta), `nx-command-ask` `{query}` (cancelable), `nx-open-change` |
+| Propiedades / atributos | `items`, `menu`, `account`, `source`, `agent`, `hotkey` (`"mod+k"`; `"none"` lo quita), `placeholder`, `limit`, `storage`, `labels` |
+| Solo lectura | `open`, `query` |
+| Métodos | `show(q?)`, `hide()`, `clearHistory()` |
+| Eventos | `nx-command-select` `{item, query, newTab}` (cancelable: no navega y la paleta sigue abierta), `nx-command-ask` `{query}` (cancelable), `nx-open-change` `{open}` |
 
 ## `<nx-explain>`
 

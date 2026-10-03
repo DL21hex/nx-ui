@@ -1,4 +1,5 @@
 /** Lógica pura de `<nx-launcher>`: sin DOM, para probarse en node. */
+import { safeHref } from "../../core/dom";
 import { foldText } from "../../core/text";
 import type { LauncherItem, LauncherProgress, LauncherView } from "./types";
 
@@ -95,12 +96,12 @@ export function clampMeter(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : null;
 }
 
-/** «Enter abre {name}» con el nombre puesto. */
+/** «Enter abre {name}» con el nombre puesto (tal cual: un «$&» o «$'» del nombre no es un patrón). */
 export function fill(template: string, name: string): string {
-  return template.replace("{name}", name);
+  return template.replace("{name}", () => name);
 }
 
-/** El destino de la tarjeta: el suyo, o el de su primera vista. */
+/** El destino de la tarjeta: el suyo, o el de la primera vista con uno seguro (un `javascript:` no cuenta). */
 export function itemHref(item: LauncherItem): string | undefined {
-  return item.href ?? (Array.isArray(item.views) ? item.views.find((v) => v?.href)?.href : undefined);
+  return safeHref(item.href) ?? (Array.isArray(item.views) ? safeHref(item.views.find((v) => safeHref(v?.href))?.href) : undefined);
 }

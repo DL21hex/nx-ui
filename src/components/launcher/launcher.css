@@ -279,8 +279,7 @@ nx-launcher input {
   grid-area: 1 / 1;
   transition:
     opacity var(--nx-motion-base) var(--nx-ease-out),
-    translate var(--nx-motion-base) var(--nx-ease-out),
-    visibility 0s;
+    translate var(--nx-motion-base) var(--nx-ease-out);
 }
 .nx-launcher__desc {
   margin: 0;
@@ -336,13 +335,14 @@ nx-launcher input {
   font-weight: 600;
 }
 
+/* Ocultas solo a la vista (no con `visibility`): siguen en el árbol de accesibilidad, así el lector en
+   modo exploración las descubre, y con Tab se llega a ellas (al enfocarlas, la tarjeta las muestra). */
 @media (hover: hover) {
   .nx-launcher__card.has-views {
     & .nx-launcher__views {
       opacity: 0;
-      visibility: hidden;
+      pointer-events: none;
       translate: 0 6px;
-      transition-delay: 0s, 0s, var(--nx-motion-base);
     }
     &:hover,
     &:focus-within,
@@ -353,9 +353,8 @@ nx-launcher input {
       }
       & .nx-launcher__views {
         opacity: 1;
-        visibility: visible;
+        pointer-events: auto;
         translate: none;
-        transition-delay: 0s;
       }
     }
   }
@@ -551,6 +550,19 @@ nx-launcher input {
 ::view-transition-new(nx-launcher-label) {
   block-size: 100%;
   inline-size: auto;
+}
+
+/* Alto contraste: el borde y el fondo los pone el sistema; lo que abre Enter y las vistas que coinciden
+   se marcan con el color de resaltado. */
+@media (forced-colors: active) {
+  .nx-launcher__card.is-first {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .nx-launcher__view.is-hit {
+    border-color: Highlight;
+    outline: 1px solid Highlight;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

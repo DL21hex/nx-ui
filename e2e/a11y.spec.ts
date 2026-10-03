@@ -80,6 +80,23 @@ test("paleta de comandos abierta, con resultados del servidor", async ({ page })
   await audit(page, ["#cmd"]);
 });
 
+test("paleta de comandos sin resultados (el listbox no queda sin opciones)", async ({ page }) => {
+  await open(page, "#/command");
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("zzzz");
+  await expect(page.locator("#cmd .nx-command__empty")).toBeVisible();
+  await expect(page.locator("#cmd .nx-command__spin")).toBeHidden();
+  await audit(page, ["#cmd"]);
+});
+
+test("launcher, en reposo y filtrado", async ({ page }) => {
+  await open(page, "#/launcher");
+  await expect(page.locator('[data-la-demo="compras"] .nx-launcher__card').first()).toBeVisible();
+  await audit(page, ["[data-la-demo] nx-launcher"]);
+  await page.locator('[data-la-demo="compras"] .nx-launcher__input').fill("orden");
+  await audit(page, ['[data-la-demo="compras"] nx-launcher']);
+});
+
 test("desglose de una cifra", async ({ page }) => {
   await open(page, "#/explain");
   await page.locator("nx-explain[endpoint*=factura]").click();

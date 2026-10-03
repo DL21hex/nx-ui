@@ -31,6 +31,7 @@ export const COMMAND_LABELS: CommandLabels = {
   empty: "Sin resultados",
   loading: "Buscando…",
   error: "No se pudo buscar en el servidor",
+  results: "1 resultado|{n} resultados",
   recent: "Recientes",
   navigate: "Ir a",
   commands: "Comandos",
@@ -46,20 +47,40 @@ export const COMMAND_LABELS: CommandLabels = {
 const SPARK = '<path d="M9.94 14.06 5 19"/><path d="m14 4 1.27 3.73L19 9l-3.73 1.27L14 14l-1.27-3.73L9 9l3.73-1.27Z"/>';
 const RECENT = '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>';
 const DEBOUNCE_MS = 200;
+/** Espera antes de anunciar cuántos resultados hay: no se lee una cifra por tecla. */
+const ANNOUNCE_MS = 450;
 
 type Row = { kind: "item"; item: CommandItem; recent?: boolean } | { kind: "ask" };
+/** La identidad de una fila, para conservar el resaltado cuando la lista se rehace. */
+const rowKey = (r: Row | undefined): string | null => (!r ? null : r.kind === "ask" ? "\0ask" : itemKey(r.item));
 
 let uid = 0;
 const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+/** ¿Se está escribiendo en un campo? Se mira el origen real del evento (`composedPath`): un campo dentro
+ *  del shadow DOM de otra librería llega reapuntado a su host. */
+const typing = (e: Event) => {
+  const t = e.composedPath?.()[0] ?? e.target;
+  return t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+};
 
 export class NxCommand extends Base {
-  static observedAttributes = ["items", "labels", "placeholder", "hotkey"];
+  static observedAttributes = ["items", "labels", "placeholder", "hotkey", "storage", "account"];
 
   #uid = `nx-cmd${++uid}`;
   #items: CommandItem[] = [];
   #labels: CommandLabels = COMMAND_LABELS;
   #usage: CommandUsage | null = null;
+  /** `items` con sus submenús aplanados (para «Recientes»); se rehace al cambiar `items`. */
+  #flat: CommandItem[] | null = null;
+  /** Las acciones de la cuenta, leídas al abrir (la cuenta las arma de nuevo en cada lectura). */
+  #acc: CommandItem[] | null = null;
+  /** Las pantallas del menú, aplanadas al abrir (o si cambia su arreglo) y no en cada tecla: así las
+   *  entradas son las mismas y su texto sin tildes se reutiliza. */
+  #nav: { src: readonly MenuItem[]; group: string; items: CommandItem[] } | null = null;
+  /** Las filas pintadas, por entrada: si siguen en la lista se actualizan en su lugar. */
+  #nodes = new Map<CommandItem | "ask", HTMLElement>();
+  #seq = 0;
+  #sayTimer = 0;
   #built = false;
   #open = false;
   #query = "";
@@ -76,8 +97,9 @@ export class NxCommand extends Base {
   #returnTo: HTMLElement | null = null;
   #onKey = (e: KeyboardEvent) => {
     if (e.defaultPrevented || !matchesHotkey(e, this.hotkey)) return;
-    // Un atajo sin modificador («/») es una letra más mientras se escribe en un campo de la página.
-    if (!hotkeyHasModifier(this.hotkey) && typing(e.target) && !this.contains(e.target as Node)) return;
+    // Un atajo sin modificador («/») es una letra más mientras se escribe en un campo, también en la
+    // caja de la propia paleta («15/09»): ahí solo abre, no cierra.
+    if (!hotkeyHasModifier(this.hotkey) && typing(e)) return;
     e.preventDefault();
     if (this.#open) this.hide();
     else this.show();
@@ -87,6 +109,10 @@ export class NxCommand extends Base {
   #input?: HTMLInputElement;
   #spin?: HTMLSpanElement;
   #list?: HTMLDivElement;
+  /** «Sin resultados», «Buscando…» o el error: fuera del listbox (que solo lleva opciones). */
+  #msg?: HTMLParagraphElement;
+  /** Región viva (oculta): cuántos resultados hay, o el mensaje. */
+  #status?: HTMLParagraphElement;
   #foot?: HTMLElement;
 
   // ---------------------------------------------------------------- propiedades
@@ -97,7 +123,9 @@ export class NxCommand extends Base {
   }
   set items(v: CommandItem[] | null | undefined) {
     this.#items = cleanItems(v);
-    if (this.#open) this.#refresh(false);
+    this.#flat = null;
+    // Lo del servidor no depende de `items`: no se vuelve a pedir, y el resaltado se queda donde estaba.
+    if (this.#open) this.#render(true);
   }
   /** Id de un `<nx-sidemenu>`: sus pantallas entran en la paleta (se leen al abrir). */
   get menu(): string | null {
@@ -151,7 +179,6 @@ export class NxCommand extends Base {
   }
   set storage(v: string) {
     this.#attr("storage", v);
-    this.#usage = null;
   }
   /** Máximo de filas a la vista (50). */
   get limit(): number {
@@ -167,6 +194,8 @@ export class NxCommand extends Base {
   set labels(v: Partial<CommandLabels> | null | undefined) {
     this.#labels = mergeLabels(COMMAND_LABELS, v);
     this.#paint();
+    // Los títulos de grupo («Recientes», «Comandos», «Ir a») también son textos.
+    if (this.#open) this.#render(true);
   }
   get open(): boolean {
     return this.#open;
@@ -207,9 +236,28 @@ export class NxCommand extends Base {
     document.removeEventListener("keydown", this.#onKey);
     this.#abort?.abort();
     clearTimeout(this.#timer);
+    clearTimeout(this.#sayTimer);
+    if (this.#open) {
+      // Sacado del DOM abierto (un layout que lo mueve, un portal): el navegador oculta el popover sin
+      // `beforetoggle`. Si `#open` siguiera en `true`, ni el atajo ni `show()` lo volverían a abrir.
+      this.#open = false;
+      this.#loading = false;
+      this.#query = "";
+      this.#pages = [];
+      this.#returnTo = null;
+      this.dispatchEvent(new CustomEvent("nx-open-change", { detail: { open: false }, bubbles: true, composed: true }));
+    }
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
+    if (name === "storage" || name === "account") {
+      // Otra clave es otro usuario: lo reciente del anterior no se muestra ni se copia a la nueva. Otra
+      // cuenta, otras acciones.
+      if (name === "storage") this.#usage = null;
+      else this.#acc = null;
+      if (this.#open) this.#render(true);
+      return;
+    }
     if ((name === "items" || name === "labels") && value !== null) {
       try {
         (this as unknown as Record<string, unknown>)[name] = JSON.parse(value);
@@ -234,7 +282,9 @@ export class NxCommand extends Base {
     this.setAttribute("role", "dialog");
     this.setAttribute("aria-modal", "true");
     const listId = `${this.#uid}-list`;
-    this.#crumbs = h("span", { class: "nx-command__crumbs" });
+    // La miga del submenú: un clic vuelve (desde el teclado, Escape o Backspace). La caja la tiene
+    // como descripción, así el lector sabe en qué submenú está.
+    this.#crumbs = h("span", { id: `${this.#uid}-crumbs`, class: "nx-command__crumbs", role: "button" });
     this.#input = h("input", {
       type: "text",
       class: "nx-command__input",
@@ -251,8 +301,10 @@ export class NxCommand extends Base {
     });
     this.#spin = h("span", { class: "nx-spinner nx-command__spin", hidden: true });
     this.#list = h("div", { id: listId, class: "nx-command__list", role: "listbox" });
+    this.#msg = h("p", { class: "nx-command__empty", hidden: true });
+    this.#status = h("p", { class: "nx-sr-only", role: "status", "aria-live": "polite" });
     this.#foot = h("footer", { class: "nx-command__foot", "aria-hidden": "true" });
-    this.append(h("div", { class: "nx-command__bar" }, glyph("search", "nx-command__search"), this.#crumbs, this.#input, this.#spin), this.#list, this.#foot);
+    this.append(h("div", { class: "nx-command__bar" }, glyph("search", "nx-command__search"), this.#crumbs, this.#input, this.#spin), this.#msg, this.#list, this.#status, this.#foot);
 
     this.addEventListener("beforetoggle", (e) => {
       const open = (e as ToggleEvent).newState === "open";
@@ -262,11 +314,15 @@ export class NxCommand extends Base {
         const a = document.activeElement;
         this.#returnTo = a instanceof HTMLElement && a !== document.body && !this.contains(a) ? a : null;
         this.#pages = [];
+        this.#acc = null;
+        this.#nav = null;
         this.#input!.value = this.#query;
         this.#refresh(true);
       } else {
         this.#abort?.abort();
         clearTimeout(this.#timer);
+        clearTimeout(this.#sayTimer);
+        this.#status!.textContent = "";
         this.#loading = false;
         this.#query = "";
       }
@@ -292,8 +348,9 @@ export class NxCommand extends Base {
     this.#input.addEventListener("keydown", (e) => this.#key(e));
     this.#crumbs.addEventListener("click", () => this.#back());
 
-    // Clic en una fila sin robarle el foco al buscador.
+    // Clic en una fila (o en el mensaje) sin robarle el foco al buscador.
     this.#list.addEventListener("mousedown", (e) => e.preventDefault());
+    this.#msg.addEventListener("mousedown", (e) => e.preventDefault());
     this.#list.addEventListener("click", (e) => {
       const el = (e.target as Element).closest<HTMLElement>('[role="option"]');
       if (!el) return;
@@ -309,6 +366,8 @@ export class NxCommand extends Base {
   }
 
   #key(e: KeyboardEvent): void {
+    // Enter o las flechas que confirman una composición (IME: japonés, chino) son de la composición.
+    if (e.isComposing || e.keyCode === 229) return;
     const mod = e.ctrlKey || e.metaKey;
     if (e.key === "Escape") {
       // Se atiende aquí (y no se deja al navegador): primero se sale del submenú.
@@ -422,7 +481,7 @@ export class NxCommand extends Base {
     } catch {
       /* nada que hacer */
     }
-    if (this.#open) this.#refresh(true);
+    if (this.#open) this.#render(true);
   }
 
   // ---------------------------------------------------------------- resultados
@@ -431,10 +490,20 @@ export class NxCommand extends Base {
   #pool(): CommandItem[] {
     const page = this.#pages[this.#pages.length - 1];
     if (page) return page.children ?? [];
+    // Las mismas entradas en cada tecla (no copias nuevas): el texto sin tildes se calcula una vez.
     const menu = this.menu ? (document.getElementById(this.menu) as (HTMLElement & { items?: MenuItem[] }) | null) : null;
-    const nav = Array.isArray(menu?.items) ? flattenMenu(menu.items, this.#labels.navigate) : [];
-    const acc = this.account ? (document.getElementById(this.account) as (HTMLElement & { commands?: unknown }) | null) : null;
-    return [...this.#items, ...cleanItems(acc?.commands), ...nav];
+    let nav: CommandItem[] = [];
+    if (Array.isArray(menu?.items)) {
+      const group = this.#labels.navigate;
+      const n = this.#nav;
+      if (!n || n.src !== menu.items || n.group !== group) this.#nav = { src: menu.items, group, items: flattenMenu(menu.items, group) };
+      nav = this.#nav!.items;
+    }
+    if (!this.#acc) {
+      const acc = this.account ? (document.getElementById(this.account) as (HTMLElement & { commands?: unknown }) | null) : null;
+      this.#acc = cleanItems(acc?.commands);
+    }
+    return [...this.#items, ...this.#acc, ...nav];
   }
 
   /** Recalcula las filas; con `source`, pide al servidor (con espera entre teclas). */
@@ -467,10 +536,16 @@ export class NxCommand extends Base {
       this.#failed = true;
     }
     this.#loading = false;
-    this.#render();
+    // La persona pudo haber bajado mientras llegaba la respuesta: Enter abre lo que ella resaltó.
+    this.#render(true);
   }
 
-  #render(): void {
+  /**
+   * Pinta las filas. Con `keep` (la misma consulta: llegó el servidor, cambiaron `items` o los
+   * textos), el resaltado sigue en la misma entrada si sigue en la lista; si no, va a la primera y la
+   * lista vuelve arriba.
+   */
+  #render(keep = false): void {
     const L = this.#labels;
     const q = this.#query.trim();
     const pool = this.#pool();
@@ -485,7 +560,7 @@ export class NxCommand extends Base {
 
     if (!q) {
       // Lo reciente, solo si sigue en la paleta (también dentro de un submenú de `items`).
-      const recent = atRoot ? recentItems(this.#usageMap(), [...flattenItems(this.#items), ...pool.slice(this.#items.length)]) : [];
+      const recent = atRoot ? recentItems(this.#usageMap(), [...(this.#flat ??= flattenItems(this.#items)), ...pool.slice(this.#items.length)]) : [];
       const seen = new Set(recent.map(itemKey));
       if (recent.length) sections.push({ group: L.recent, rows: take(recent, true), icon: RECENT });
       for (const g of groupItems(pool.filter((i) => !seen.has(itemKey(i))), L.commands)) sections.push({ group: g.group, rows: take(g.items) });
@@ -499,12 +574,25 @@ export class NxCommand extends Base {
       if (atRoot && this.agent) sections.push({ group: "", rows: [{ kind: "ask" }] });
     }
 
+    const was = keep ? rowKey(this.#rows[this.#hl]) : null;
     this.#rows = sections.flatMap((s) => s.rows);
-    this.#hl = this.#rows.length ? 0 : -1;
+    const at = was === null ? -1 : this.#rows.findIndex((r) => rowKey(r) === was);
+    this.#hl = at >= 0 ? at : this.#rows.length ? 0 : -1;
     const list = this.#list!;
     list.classList.toggle("nx-command__list--stale", this.#loading);
     this.#spin!.hidden = !this.#loading;
+    // Las filas que siguen se actualizan en su lugar (sin volver a clonar íconos); las demás se crean.
+    const prev = this.#nodes;
+    const next = new Map<CommandItem | "ask", HTMLElement>();
     let i = 0;
+    const node = (r: Row): HTMLElement => {
+      const k = r.kind === "ask" ? "ask" : r.item;
+      const old = next.has(k) ? undefined : prev.get(k);
+      const el = old ? this.#update(old, r, i, q) : this.#row(r, i, q);
+      i++;
+      next.set(k, el);
+      return el;
+    };
     list.replaceChildren(
       ...sections
         .filter((s) => s.rows.length)
@@ -514,21 +602,51 @@ export class NxCommand extends Base {
             "div",
             { class: "nx-command__group", role: "group", "aria-labelledby": s.group ? hid : null },
             s.group ? h("div", { class: "nx-command__group-h", id: hid }, s.icon ? glyph(s.icon) : null, s.group) : null,
-            ...s.rows.map((r) => this.#row(r, i++, q)),
+            ...s.rows.map(node),
           );
         }),
     );
-    const onlyAsk = this.#rows.length === 1 && this.#rows[0].kind === "ask";
-    if (!this.#rows.length || onlyAsk) {
-      const msg = this.#loading ? L.loading : this.#failed ? L.error : L.empty;
-      list.prepend(h("p", { class: "nx-command__empty" }, msg));
-    } else if (this.#failed) list.append(h("p", { class: "nx-command__empty" }, L.error));
-    this.#highlight(this.#hl, false);
+    this.#nodes = next;
+    // El listbox solo lleva opciones: sin ninguna se oculta y el mensaje va afuera.
+    list.hidden = !this.#rows.length;
+    if (this.#loading) list.setAttribute("aria-busy", "true");
+    else list.removeAttribute("aria-busy");
+    this.#input!.setAttribute("aria-expanded", String(!!this.#rows.length));
+    const count = this.#rows.filter((r) => r.kind === "item").length;
+    const msg = !count ? (this.#loading ? L.loading : this.#failed ? L.error : L.empty) : this.#failed ? L.error : "";
+    this.#msg!.textContent = msg;
+    this.#msg!.hidden = !msg;
+    if (!keep) list.scrollTop = 0;
+    this.#highlight(this.#hl, keep);
     this.#paintCrumbs();
+    this.#announce(count ? [(L.results.split("|")[count === 1 ? 0 : 1] ?? L.results).replace("{n}", String(count)), this.#failed ? L.error : ""].filter(Boolean).join(". ") : msg);
+  }
+
+  /** Cuántos resultados hay (o el mensaje), en la región viva, cuando se deja de escribir. */
+  #announce(text: string): void {
+    clearTimeout(this.#sayTimer);
+    const say = this.#query.trim() ? text : "";
+    this.#sayTimer = window.setTimeout(() => {
+      if (this.#open) this.#status!.textContent = say;
+    }, ANNOUNCE_MS);
+  }
+
+  /** Una fila que ya estaba: su posición, su resaltado y lo que coincide con la nueva consulta. */
+  #update(el: HTMLElement, r: Row, i: number, q: string): HTMLElement {
+    el.dataset.i = String(i);
+    el.setAttribute("aria-selected", "false");
+    const label = el.querySelector(".nx-command__label")!;
+    if (r.kind === "ask") label.replaceChildren(`${this.#labels.ask}: `, h("q", null, q));
+    else {
+      label.replaceChildren(this.#marked(r.item.label, q));
+      if (r.item.hint) el.querySelector(".nx-command__hint")?.replaceChildren(this.#marked(r.item.hint, q));
+    }
+    return el;
   }
 
   #row(r: Row, i: number, q: string): HTMLElement {
-    const attrs = { id: `${this.#uid}-o${i}`, class: "nx-command__opt", role: "option", "data-i": i, "aria-selected": "false" };
+    // El id es de la fila, no de la posición: si la primera opción pasa a ser otra, `aria-activedescendant` cambia.
+    const attrs = { id: `${this.#uid}-o${++this.#seq}`, class: "nx-command__opt", role: "option", "data-i": i, "aria-selected": "false" };
     if (r.kind === "ask") {
       return h("div", { ...attrs, class: "nx-command__opt nx-command__opt--ask" }, glyph(SPARK, "nx-command__icon"), h("span", { class: "nx-command__text" }, h("span", { class: "nx-command__label" }, `${this.#labels.ask}: `, h("q", null, q))));
     }
@@ -573,9 +691,13 @@ export class NxCommand extends Base {
 
   #paintCrumbs(): void {
     const c = this.#crumbs!;
-    c.hidden = !this.#pages.length;
-    c.replaceChildren(...this.#pages.map((p) => h("span", { class: "nx-command__crumb" }, p.label)));
+    const path = this.#pages.map((p) => p.label);
+    c.hidden = !path.length;
+    c.replaceChildren(...path.map((label) => h("span", { class: "nx-command__crumb" }, label)));
     c.title = this.#labels.back;
+    c.setAttribute("aria-label", `${this.#labels.back}: ${path.join(" › ")}`);
+    if (path.length) this.#input!.setAttribute("aria-describedby", c.id);
+    else this.#input!.removeAttribute("aria-describedby");
   }
 
   #paint(): void {

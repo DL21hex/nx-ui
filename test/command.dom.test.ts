@@ -25,6 +25,9 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Lo que la paleta espera entre teclas antes de pedir al servidor, y antes de anunciar los resultados. */
+const DEBOUNCE = 220;
+const ANNOUNCE = 480;
 
 const ITEMS: CommandItem[] = [
   { id: "nuevo", label: "Nuevo pedido", group: "Acciones", keywords: ["crear"], shortcut: "N" },
@@ -283,5 +286,168 @@ describe("<nx-command>", () => {
     el.show();
     expect(el.querySelector("img")).toBeNull();
     expect(opts(el)[0].tagName).toBe("DIV"); // un href inseguro no se pinta como enlace
+  });
+});
+
+describe("<nx-command>: casos de borde", () => {
+  it("sacado del DOM con la paleta abierta, se cierra; al volver, el atajo y show() la abren", () => {
+    const el = mount();
+    const changes: boolean[] = [];
+    el.addEventListener("nx-open-change", (e) => changes.push((e as CustomEvent<{ open: boolean }>).detail.open));
+    hotkey();
+    expect(el.open).toBe(true);
+    const otro = document.createElement("div");
+    document.body.append(otro);
+    otro.append(el); // el navegador oculta el popover sin `beforetoggle`
+    expect(el.open).toBe(false);
+    expect(changes).toEqual([true, false]);
+    hotkey();
+    expect(el.open).toBe(true);
+    el.remove();
+    otro.append(el);
+    el.show("pedi");
+    expect(el.open).toBe(true);
+    expect(texts(el)).toEqual(["Pedidos", "Nuevo pedido"]);
+  });
+
+  it("cambiar storage por atributo cambia de usuario: lo reciente del anterior no se ve ni se copia", () => {
+    const el = mount('storage="nx-command:ana"');
+    el.show("nuevo");
+    key(el, "Enter");
+    expect(localStorage.getItem("nx-command:ana")).toContain("Nuevo pedido");
+    el.setAttribute("storage", "nx-command:luis");
+    el.show();
+    expect(groups(el)[0]).not.toBe("Recientes");
+    type(el, "pedidos");
+    key(el, "Enter");
+    expect(localStorage.getItem("nx-command:luis")).not.toContain("Nuevo pedido");
+    // Ana vuelve: lo suyo sigue en su clave.
+    el.setAttribute("storage", "nx-command:ana");
+    el.show();
+    expect(groups(el)[0]).toBe("Recientes");
+  });
+
+  it("hotkey='/': con Shift (Shift+7 en español) abre; escrito en la propia caja no la cierra", () => {
+    const el = mount('hotkey="/"');
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "/", shiftKey: true, bubbles: true, cancelable: true }));
+    expect(el.open).toBe(true);
+    const slash = new KeyboardEvent("keydown", { key: "/", shiftKey: true, bubbles: true, cancelable: true });
+    input(el).dispatchEvent(slash);
+    expect(el.open).toBe(true);
+    expect(slash.defaultPrevented).toBe(false);
+  });
+
+  it("un campo dentro de un shadow DOM ajeno cuenta como campo (se mira composedPath)", () => {
+    const el = mount('hotkey="/"');
+    const host = document.createElement("div");
+    document.body.append(host);
+    const campo = host.attachShadow({ mode: "open" }).appendChild(document.createElement("input"));
+    const slash = new KeyboardEvent("keydown", { key: "/", bubbles: true, composed: true, cancelable: true });
+    // Como en el navegador: afuera del shadow root, el evento llega reapuntado al host.
+    Object.defineProperty(slash, "composedPath", { value: () => [campo, host, document.body, document] });
+    host.dispatchEvent(slash);
+    expect(el.open).toBe(false);
+    expect(slash.defaultPrevented).toBe(false);
+  });
+
+  it("cuando llega el servidor, el resaltado sigue en la fila que la persona eligió", async () => {
+    let answer: (r: Response) => void = () => {};
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((r) => (answer = r))));
+    const el = mount('source="/buscar"', (c) => (c.items = [{ id: "a", label: "Pedido nuevo" }, { id: "b", label: "Pedido anulado" }, { id: "c", label: "Pedido en curso" }]));
+    el.show();
+    type(el, "pedido");
+    await sleep(DEBOUNCE);
+    key(el, "ArrowDown");
+    expect(opts(el).find((o) => o.getAttribute("aria-selected") === "true")!.textContent).toBe("Pedido anulado");
+    answer(new Response(JSON.stringify([{ id: "r1", label: "Pedido 9001" }])));
+    await sleep(10);
+    expect(texts(el)).toContain("Pedido 9001");
+    expect(opts(el).find((o) => o.getAttribute("aria-selected") === "true")!.textContent).toBe("Pedido anulado");
+  });
+
+  it("al escribir, la lista vuelve arriba (la fila resaltada se ve)", () => {
+    const el = mount();
+    el.show();
+    const list = el.querySelector<HTMLElement>('[role="listbox"]')!;
+    list.scrollTop = 200;
+    type(el, "pedi");
+    expect(list.scrollTop).toBe(0);
+  });
+
+  it("sin resultados el listbox no queda vacío de opciones: se oculta y el mensaje va afuera, en una región viva", async () => {
+    const el = mount();
+    el.show();
+    type(el, "zzzz");
+    const list = el.querySelector<HTMLElement>('[role="listbox"]')!;
+    expect(list.hidden).toBe(true);
+    expect(list.children).toHaveLength(0);
+    expect(input(el).getAttribute("aria-expanded")).toBe("false");
+    const msg = el.querySelector<HTMLElement>(".nx-command__empty")!;
+    expect(list.contains(msg)).toBe(false);
+    expect(msg.hidden).toBe(false);
+    expect(msg.textContent).toBe("Sin resultados");
+    const status = el.querySelector('[role="status"]')!;
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    await sleep(ANNOUNCE);
+    expect(status.textContent).toBe("Sin resultados");
+    type(el, "nuevo");
+    expect(list.hidden).toBe(false);
+    expect(msg.hidden).toBe(true);
+    expect(input(el).getAttribute("aria-expanded")).toBe("true");
+    await sleep(ANNOUNCE);
+    expect(status.textContent).toBe("1 resultado");
+    type(el, "pedido");
+    await sleep(ANNOUNCE);
+    expect(status.textContent).toBe("2 resultados");
+  });
+
+  it("las filas que siguen en la lista se actualizan en su lugar, también las del menú", () => {
+    document.body.innerHTML = '<nx-sidemenu id="nav"></nx-sidemenu><nx-command menu="nav"></nx-command>';
+    document.querySelector<NxSidemenu>("#nav")!.items = [{ id: "ventas", label: "Ventas", children: [{ id: "facturas", label: "Facturas", href: "/ventas/facturas" }] }];
+    const el = document.querySelector("nx-command")!;
+    el.items = ITEMS;
+    el.show("fa");
+    const before = opts(el)[0];
+    type(el, "fact");
+    expect(opts(el)[0]).toBe(before);
+    expect(before.querySelector("mark")!.textContent).toBe("Fact");
+    expect(before.dataset.i).toBe("0");
+    type(el, "nuevo");
+    const nuevo = opts(el)[0];
+    type(el, "nuevo p");
+    expect(opts(el)[0]).toBe(nuevo);
+  });
+
+  it("cambiar labels con la paleta abierta repinta también los títulos de grupo", () => {
+    const el = mount("", (c) => (c.items = [{ label: "Suelto" }]));
+    el.show();
+    expect(groups(el)).toEqual(["Comandos"]);
+    el.labels = { commands: "Commands" };
+    expect(groups(el)).toEqual(["Commands"]);
+  });
+
+  it("la miga del submenú describe la caja y se puede usar como botón", () => {
+    const el = mount();
+    el.show();
+    type(el, "paleta");
+    key(el, "Enter");
+    const crumbs = el.querySelector<HTMLElement>(".nx-command__crumbs")!;
+    expect(crumbs.getAttribute("role")).toBe("button");
+    expect(crumbs.getAttribute("aria-label")).toBe("Volver: Cambiar paleta");
+    expect(input(el).getAttribute("aria-describedby")).toBe(crumbs.id);
+    crumbs.click();
+    expect(texts(el)).toContain("Cambiar paleta");
+    expect(input(el).hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it("el Enter que confirma una composición (IME) no elige", () => {
+    const el = mount();
+    const got: string[] = [];
+    el.addEventListener("nx-command-select", (e) => got.push(e.detail.item.id!));
+    el.show();
+    type(el, "nuevo");
+    key(el, "Enter", { isComposing: true });
+    expect(got).toEqual([]);
+    expect(el.open).toBe(true);
   });
 });

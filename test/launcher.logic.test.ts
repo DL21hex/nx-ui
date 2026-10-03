@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceColumns, clampMeter, firstTarget, fitColumns, itemHref, matchItem, moveIndex, progressParts, sectionCells, sparkPaths } from "../src/components/launcher/logic";
+import { balanceColumns, clampMeter, fill, firstTarget, fitColumns, itemHref, matchItem, moveIndex, progressParts, sectionCells, sparkPaths } from "../src/components/launcher/logic";
 import type { LauncherItem } from "../src/components/launcher/types";
 
 const ITEMS: LauncherItem[] = [
@@ -103,6 +103,14 @@ describe("señal y barra", () => {
     expect(itemHref(ITEMS[3])).toBe("/cesantias");
     expect(itemHref(ITEMS[0])).toBe("/cert/con");
     expect(itemHref(ITEMS[1])).toBeUndefined();
+  });
+  it("el destino salta un href inseguro (propio o de una vista) y toma la primera vista segura", () => {
+    expect(itemHref({ id: "x", label: "X", views: [{ label: "Mala", href: "javascript:x" }, { label: "Buena", href: "/ok" }] })).toBe("/ok");
+    expect(itemHref({ id: "x", label: "X", href: "javascript:x", views: [{ label: "Buena", href: "/ok" }] })).toBe("/ok");
+  });
+  it("fill pone el nombre tal cual: «$'», «$&» o «$`» no son patrones", () => {
+    expect(fill("Vistas de {name}", "Pagos $' extra")).toBe("Vistas de Pagos $' extra");
+    expect(fill("Enter abre {name}", "A $& B $` C")).toBe("Enter abre A $& B $` C");
   });
 });
 

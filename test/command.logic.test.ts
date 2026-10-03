@@ -135,6 +135,28 @@ describe("menú, grupos y datos", () => {
     expect(matchesHotkey(k("p", { ctrlKey: true, shiftKey: true }), "mod+shift+p")).toBe(true);
     expect(matchesHotkey(k("k", { ctrlKey: true }), "none")).toBe(false);
   });
+
+  it("matchesHotkey: «/» con Shift (teclado español o latinoamericano: Shift+7) y «?» valen; en una letra, Shift cuenta", () => {
+    const k = (key: string, o: Partial<KeyboardEvent> = {}) => ({ key, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...o });
+    expect(matchesHotkey(k("/", { shiftKey: true }), "/")).toBe(true);
+    expect(matchesHotkey(k("/"), "/")).toBe(true);
+    expect(matchesHotkey(k("?", { shiftKey: true }), "?")).toBe(true);
+    expect(matchesHotkey(k("/", { ctrlKey: true }), "/")).toBe(false);
+    // Si el atajo pide Shift, Shift se exige.
+    expect(matchesHotkey(k("/"), "shift+/")).toBe(false);
+    expect(matchesHotkey(k("/", { shiftKey: true }), "shift+/")).toBe(true);
+    // En una letra, Shift sigue contando.
+    expect(matchesHotkey(k("K", { shiftKey: true }), "k")).toBe(false);
+  });
+
+  it("matchesHotkey: con una distribución no latina vale la tecla física; con una latina, el carácter", () => {
+    const k = (key: string, code: string, o: Partial<KeyboardEvent> = {}) => ({ key, code, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...o });
+    expect(matchesHotkey(k("л", "KeyK", { ctrlKey: true }), "mod+k")).toBe(true);
+    expect(matchesHotkey(k("л", "KeyL", { ctrlKey: true }), "mod+k")).toBe(false);
+    // Dvorak: la «k» está en otra tecla física; manda el carácter.
+    expect(matchesHotkey(k("k", "KeyV", { ctrlKey: true }), "mod+k")).toBe(true);
+    expect(matchesHotkey(k("t", "KeyK", { ctrlKey: true }), "mod+k")).toBe(false);
+  });
 });
 
 describe("recientes empatados", () => {
