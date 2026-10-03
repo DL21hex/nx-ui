@@ -7,7 +7,8 @@ import type { LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDeta
 
 export type { NxLauncher, LauncherItem, LauncherLabels, LauncherProgress, LauncherSelectDetail, LauncherSignal, LauncherTone, LauncherView };
 
-export interface LauncherProps extends Omit<JSX.HTMLAttributes<NxLauncher>, "onSelect"> {
+/** Sin `children`: las tarjetas las pinta el componente desde `items`. */
+export interface LauncherProps extends Omit<JSX.HTMLAttributes<NxLauncher>, "onSelect" | "children"> {
   /** Las tarjetas `{id, label, href?, icon?, description?, section?, views?, signal?, featured?, eyebrow?, progress?}`. */
   items: LauncherItem[];
   /** Muestra el buscador «Ir a» (lo que no coincide se apaga en su sitio; `Enter` abre la primera). */
@@ -22,10 +23,11 @@ export interface LauncherProps extends Omit<JSX.HTMLAttributes<NxLauncher>, "onS
   labels?: Partial<LauncherLabels>;
   /** Una tarjeta o una vista elegida. Cancelable: `preventDefault()` y la app navega (p. ej. dentro de `startViewTransition`). */
   onSelect?: (e: CustomEvent<LauncherSelectDetail>) => void;
+  children?: never;
 }
 
 export function Launcher(props: LauncherProps): JSX.Element {
-  const [local, rest] = splitProps(props, ["items", "search", "query", "columns", "headingLevel", "locale", "labels", "onSelect"]);
+  const [local, rest] = splitProps(props, ["items", "search", "query", "columns", "headingLevel", "locale", "labels", "onSelect", "children"]);
   return (
     <nx-launcher
       {...rest}
@@ -36,7 +38,7 @@ export function Launcher(props: LauncherProps): JSX.Element {
       attr:heading-level={local.headingLevel === undefined ? undefined : String(local.headingLevel)}
       attr:locale={local.locale}
       bool:search={!!local.search}
-      on:nx-launcher-select={(e) => local.onSelect?.(e)}
+      on:nx-launcher-select={(e) => e.target === e.currentTarget && local.onSelect?.(e)}
     />
   );
 }
